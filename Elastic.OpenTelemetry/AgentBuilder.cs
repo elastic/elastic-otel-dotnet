@@ -1,5 +1,3 @@
-using System.ComponentModel.Design;
-using System.Net.Http.Headers;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -20,18 +18,18 @@ public class Service
     public string Name { get; }
 
 
-    private static Service? CalculatedService = null;
+    private static Service? _calculatedService;
     public static Service DefaultService
     {
         get
         {
-            if (CalculatedService != null) return CalculatedService;
+            if (_calculatedService != null) return _calculatedService;
             
             // hardcoded for now
             var name = "Example.Elastic.OpenTelemetry";
             var version = "1.0.0";
-            CalculatedService = new Service(name, version);
-            return CalculatedService;
+            _calculatedService = new Service(name, version);
+            return _calculatedService;
 
         }
     }
@@ -55,28 +53,27 @@ public static class Agent
 
 public class AgentBuilder 
 {
-    private readonly TracerProviderBuilder tracerProvider;
-    private readonly MeterProviderBuilder meterProvider;
+    private readonly TracerProviderBuilder _tracerProvider;
+    private readonly MeterProviderBuilder _meterProvider;
 
     public AgentBuilder(Service service)
     {
         Service = service;
         
-        tracerProvider = Sdk.CreateTracerProviderBuilder()
+        _tracerProvider = Sdk.CreateTracerProviderBuilder()
             .AddSource(service.Name)
             .ConfigureResource(resource =>
                 resource.AddService(
                     serviceName: service.Name,
                     serviceVersion: service.Version))
             .AddElastic();
-        meterProvider = Sdk.CreateMeterProviderBuilder()
+        _meterProvider = Sdk.CreateMeterProviderBuilder()
             .ConfigureResource(resource =>
                 resource.AddService(
                     serviceName: service.Name,
                     serviceVersion: service.Version))
             .AddElastic();
     }
-    
 
     public Service Service { get; }
 
@@ -85,10 +82,10 @@ public class AgentBuilder
         Action<MeterProviderBuilder>? metricConfiguration = null
     )
     {
-        traceConfiguration?.Invoke(tracerProvider);
-        metricConfiguration?.Invoke(meterProvider);
+        traceConfiguration?.Invoke(_tracerProvider);
+        metricConfiguration?.Invoke(_meterProvider);
 
-        return new Agent(Service, tracerProvider.Build(), meterProvider.Build());
+        return new Agent(Service, _tracerProvider.Build(), _meterProvider.Build());
     }
 
     private class Agent : IAgent
