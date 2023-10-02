@@ -1,37 +1,18 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
 using System.Diagnostics;
-using OpenTelemetry;
+using Elastic.OpenTelemetry;
 using OpenTelemetry.Metrics;
-using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-
-var serviceName = "Example.Elastic.OpenTelemetry";
-var serviceVersion = "1.0.0";
-
-var activitySource = new ActivitySource(serviceName);
 
 Console.WriteLine("Hello, World!");
 
-using var tracerProvider = Sdk.CreateTracerProviderBuilder()
-    .AddSource(serviceName)
-    .ConfigureResource(resource =>
-        resource.AddService(
-            serviceName: serviceName,
-            serviceVersion: serviceVersion))
-    .AddElastic()
-    .AddConsoleExporter()
-    .Build();
-var meterProvider = Sdk.CreateMeterProviderBuilder()
-    .ConfigureResource(resource =>
-        resource.AddService(
-            serviceName: serviceName,
-            serviceVersion: serviceVersion))
-    .AddElastic()
-    .AddConsoleExporter()
-    .Build();
+using var agent = Agent.Build(
+    traceConfiguration: trace =>  trace.AddConsoleExporter(),
+    metricConfiguration: metric => metric.AddConsoleExporter()
+);
 
-//var tracer = tracerProvider.GetTracer(serviceName, serviceVersion);
+var activitySource = new ActivitySource(agent.Service.Name);
 
 for (var i = 0; i < 2; i++)
 {
@@ -40,9 +21,6 @@ for (var i = 0; i < 2; i++)
     StartChildSpan();
 }
 
-
-tracerProvider.ForceFlush((int)TimeSpan.FromSeconds(5).TotalMilliseconds);
-meterProvider.ForceFlush((int)TimeSpan.FromSeconds(5).TotalMilliseconds);
 
 void StartChildSpan()
 {
