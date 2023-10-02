@@ -3,6 +3,7 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 
+// ReSharper disable once CheckNamespace
 namespace OpenTelemetry.Trace;
 
 public static class TraceBuilderProviderExtensions
@@ -20,9 +21,12 @@ public static class TraceBuilderProviderExtensions
 
 public class TransactionIdProcessor : BaseProcessor<Activity>
 {
-    public override void OnStart(Activity data)
+	private readonly AsyncLocal<ActivitySpanId?> _currentTransactionId = new();
+    public override void OnStart(Activity activity)
     {
-        data.SetTag("transaction.id", "x");
+        if (activity.Parent == null)
+            _currentTransactionId.Value = activity.SpanId;
+        activity.SetTag("transaction.id", _currentTransactionId.Value);
     }
 }
 
@@ -51,8 +55,6 @@ public class StackTraceProcessor : BaseProcessor<Activity>
 
     public override void OnEnd(Activity data)
     {
-        data.SetTag("on_end", "data");
-
         //for now always capture stacktrace on start
         var stacktrace = data.GetTagItem("_stack_trace") as StackTrace;
         data.SetTag("_stack_trace", null);

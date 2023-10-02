@@ -104,9 +104,6 @@ public class AgentBuilder
 
         public void Dispose()
         {
-            //_tracerProvider?.ForceFlush((int)TimeSpan.FromSeconds(5).TotalMilliseconds);
-            //_meterProvider?.ForceFlush((int)TimeSpan.FromSeconds(5).TotalMilliseconds);
-
             _tracerProvider?.Dispose();
             _meterProvider?.Dispose();
         }

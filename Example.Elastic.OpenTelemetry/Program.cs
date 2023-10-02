@@ -18,13 +18,19 @@ for (var i = 0; i < 2; i++)
 {
     using var parent = activitySource.StartActivity("Parent");
     await Task.Delay(TimeSpan.FromMilliseconds(10));
-    StartChildSpan();
+    await StartChildSpans();
 }
 
 
-void StartChildSpan()
+async Task StartChildSpans()
 {
     using var child = activitySource.StartActivity("Child");
+    await Task.Delay(TimeSpan.FromMilliseconds(10));
+
+    // These have effectively ActivitySource = "", there is no way to include this without enabling ALL
+    // activities on TracerBuilderProvider.AddSource("*")
+    using var a = new Activity("Child2").Start();
+    await Task.Delay(TimeSpan.FromMilliseconds(10));
 }
 
 
