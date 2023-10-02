@@ -2,6 +2,7 @@
 
 using System.Diagnostics;
 using OpenTelemetry;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
@@ -18,11 +19,19 @@ using var tracerProvider = Sdk.CreateTracerProviderBuilder()
         resource.AddService(
             serviceName: serviceName,
             serviceVersion: serviceVersion))
-    .AddConsoleExporter()
     .AddElastic()
+    .AddConsoleExporter()
+    .Build();
+var meterProvider = Sdk.CreateMeterProviderBuilder()
+    .ConfigureResource(resource =>
+        resource.AddService(
+            serviceName: serviceName,
+            serviceVersion: serviceVersion))
+    .AddElastic()
+    .AddConsoleExporter()
     .Build();
 
-var tracer = tracerProvider.GetTracer(serviceName, serviceVersion);
+//var tracer = tracerProvider.GetTracer(serviceName, serviceVersion);
 
 for (var i = 0; i < 2; i++)
 {
@@ -32,11 +41,8 @@ for (var i = 0; i < 2; i++)
 }
 
 
-await Task.Delay(TimeSpan.FromSeconds(5));
-
-
-//tracerProvider.ForceFlush((int)TimeSpan.FromSeconds(5).TotalMilliseconds);
-
+tracerProvider.ForceFlush((int)TimeSpan.FromSeconds(5).TotalMilliseconds);
+meterProvider.ForceFlush((int)TimeSpan.FromSeconds(5).TotalMilliseconds);
 
 void StartChildSpan()
 {
