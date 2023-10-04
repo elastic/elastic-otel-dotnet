@@ -7,8 +7,8 @@ using var agent = Agent.Build(
     traceConfiguration: trace => trace.AddConsoleExporter(),
     metricConfiguration: metric => metric.AddConsoleExporter()
 );
-
-var activitySource = new ActivitySource(agent.Service.Name);
+//agent && Agent.Current now pointing to the same instance;
+var activitySource = Agent.Current.ActivitySource;
 
 for (var i = 0; i < 2; i++)
 {
