@@ -107,7 +107,6 @@ public class SpanCompressionProcessor : BaseProcessor<Activity>
             if (!compressionBuffer.TryCompress(data))
             {
                 FlushBuffer(data.Parent!);
-                _compressionBuffer.Remove(data.Parent!);
                 _compressionBuffer.Add(data.Parent!, data);
             }
         }
