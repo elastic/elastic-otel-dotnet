@@ -107,6 +107,5 @@ public class AgentBuilder
             _tracerProvider?.Dispose();
             _meterProvider?.Dispose();
         }
-
     }
 }
