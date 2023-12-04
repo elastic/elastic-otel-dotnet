@@ -1,0 +1,6 @@
+include::{asciidoc-dir}/../../shared/versions/stack/current.asciidoc[]
+include::{asciidoc-dir}/../../shared/attributes.asciidoc[]
+
+= Elastic OpenTelemetry Agent Distribution
+
+Docs TODO

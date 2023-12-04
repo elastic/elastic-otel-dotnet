@@ -1,7 +1,6 @@
-// ReSharper disable once CheckNamespace
+using OpenTelemetry.Metrics;
 
-// ReSharper disable once CheckNamespace
-namespace OpenTelemetry.Metrics;
+namespace Elastic.OpenTelemetry.Extensions;
 
 public static class MeterBuilderProviderExtensions
 {
