@@ -4,6 +4,6 @@ namespace Elastic.OpenTelemetry;
 
 public interface IAgent : IDisposable
 {
-    Resource Service { get; }
+    Resource Resource { get; }
     ActivitySource ActivitySource { get; }
 }

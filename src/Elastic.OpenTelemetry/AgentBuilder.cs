@@ -11,7 +11,7 @@ namespace Elastic.OpenTelemetry;
 /// Supports building <see cref="IAgent"/> instances which include Elastic defaults, but can also be configured using OpenTelemetry
 /// builders.
 /// </summary>
-/// <param name="resource">A <see cref="Resource"/> instance.</param>
+/// <param name="resource">A <see cref="OpenTelemetry.Resource"/> instance.</param>
 public class AgentBuilder(Resource resource)
 {
     private readonly TracerProviderBuilder _tracerProvider = Sdk.CreateTracerProviderBuilder()
@@ -29,7 +29,7 @@ public class AgentBuilder(Resource resource)
                     serviceVersion: resource.Version))
             .AddElastic();
 
-    public Resource Service { get; } = resource;
+    public Resource Resource { get; } = resource;
 
     public IAgent Build(
         Action<TracerProviderBuilder>? traceConfiguration = null,
@@ -41,7 +41,7 @@ public class AgentBuilder(Resource resource)
         traceConfiguration?.Invoke(_tracerProvider);
         metricConfiguration?.Invoke(_meterProvider);
 
-        return new Agent(Service, _tracerProvider.Build(), _meterProvider.Build());
+        return new Agent(Resource, _tracerProvider.Build(), _meterProvider.Build());
     }
 
     private class Agent : IAgent
@@ -49,16 +49,16 @@ public class AgentBuilder(Resource resource)
         private readonly TracerProvider? _tracerProvider;
         private readonly MeterProvider? _meterProvider;
 
-        public Agent(Resource service, TracerProvider? tracerProvider, MeterProvider? meterProvider)
+        public Agent(Resource resource, TracerProvider? tracerProvider, MeterProvider? meterProvider)
         {
             _tracerProvider = tracerProvider;
             _meterProvider = meterProvider;
 
-            Service = service;
-            ActivitySource = new ActivitySource(Service.ServiceName, Service.Version);
+            Resource = resource;
+            ActivitySource = new ActivitySource(Resource.ServiceName, Resource.Version);
         }
 
-        public Resource Service { get; }
+        public Resource Resource { get; }
         public ActivitySource ActivitySource { get; }
 
         public void Dispose()
