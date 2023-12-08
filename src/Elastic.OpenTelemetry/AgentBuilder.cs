@@ -1,71 +1,99 @@
-using System.Diagnostics;
 using Elastic.OpenTelemetry.Extensions;
 using OpenTelemetry;
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
-using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
 namespace Elastic.OpenTelemetry;
 
 /// <summary>
-/// Supports building <see cref="IAgent"/> instances which include Elastic defaults, but can also be configured using OpenTelemetry
-/// builders.
+/// Supports building <see cref="IAgent"/> instances which include Elastic defaults, but can also be customised.
 /// </summary>
-/// <param name="resource">A <see cref="OpenTelemetry.Resource"/> instance.</param>
-public class AgentBuilder(Resource resource)
+public class AgentBuilder
 {
-    private readonly TracerProviderBuilder _tracerProvider = Sdk.CreateTracerProviderBuilder()
-            .AddSource(resource.ServiceName)
-            .ConfigureResource(resourceBuilder =>
-                resourceBuilder.AddService(
-                    serviceName: resource.ServiceName,
-                    serviceVersion: resource.Version))
-            .AddElastic();
+    // TODO - We need to decide which sources and how to handle conditional things such as ASP.NET Core.
+    private readonly TracerProviderBuilder _tracerProviderBuilder =
+        Sdk.CreateTracerProviderBuilder()
+            .AddHttpClientInstrumentation()
+            .AddGrpcClientInstrumentation()
+            .AddEntityFrameworkCoreInstrumentation();
 
-    private readonly MeterProviderBuilder _meterProvider = Sdk.CreateMeterProviderBuilder()
-            .ConfigureResource(resourceBuilder =>
-                resourceBuilder.AddService(
-                    serviceName: resource.ServiceName,
-                    serviceVersion: resource.Version))
-            .AddElastic();
+    private readonly MeterProviderBuilder _meterProvider =
+        Sdk.CreateMeterProviderBuilder()
+            .AddProcessInstrumentation()
+            .AddRuntimeInstrumentation()
+            .AddHttpClientInstrumentation();
 
-    public Resource Resource { get; } = resource;
+    private Action<OtlpExporterOptions>? _otlpExporerConfiguration;
+    private string? _otlpExporerName;
 
-    public IAgent Build(
-        Action<TracerProviderBuilder>? traceConfiguration = null,
-        Action<MeterProviderBuilder>? metricConfiguration = null
-    )
+    public AgentBuilder()
     {
-        // TODO - These always apply after our defaults.
-        // What about cases where users want to register processors before any exporters we add by default (OTLP)?
-        traceConfiguration?.Invoke(_tracerProvider);
-        metricConfiguration?.Invoke(_meterProvider);
-
-        return new Agent(Resource, _tracerProvider.Build(), _meterProvider.Build());
+        Tracer = new Tracer(this, _tracerProviderBuilder);
     }
 
-    private class Agent : IAgent
+    /// <summary>
+    /// Build an instance of <see cref="IAgent"/>.
+    /// </summary>
+    /// <returns>A new instance of <see cref="IAgent"/>.</returns>
+    public IAgent Build()
     {
-        private readonly TracerProvider? _tracerProvider;
-        private readonly MeterProvider? _meterProvider;
+        //// TODO - These always apply after our defaults.
+        //// What about cases where users want to register processors before any exporters we add by default (OTLP)?
+        //traceConfiguration?.Invoke(_tracerProvider);
+        //metricConfiguration?.Invoke(_meterProvider);
 
-        public Agent(Resource resource, TracerProvider? tracerProvider, MeterProvider? meterProvider)
+        // TODO: In the future we will allow consumers to register additional exporters. We need to consider how adding this exporter
+        // may affect those and the order of registration.
+        _tracerProviderBuilder.AddElasticExporter(_otlpExporerConfiguration, _otlpExporerName);
+
+        var tracerProvider = _tracerProviderBuilder.Build();
+
+        return tracerProvider is not null ? new Agent(tracerProvider) : new Agent();
+    }
+
+    public void ConfigureOtlpExporter(Action<OtlpExporterOptions> configure, string? name = null)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        _otlpExporerConfiguration = configure;
+        _otlpExporerName = name;
+    }
+
+    public Tracer Tracer { get; }
+
+    private sealed class Agent(TracerProvider? tracerProvider, MeterProvider? meterProvider) : IAgent
+    {
+        private bool _disposedValue;
+
+        private readonly TracerProvider? _tracerProvider = tracerProvider;
+        private readonly MeterProvider? _meterProvider = meterProvider;
+
+        internal Agent() : this(null, null)
         {
-            _tracerProvider = tracerProvider;
-            _meterProvider = meterProvider;
-
-            Resource = resource;
-            ActivitySource = new ActivitySource(Resource.ServiceName, Resource.Version);
         }
 
-        public Resource Resource { get; }
-        public ActivitySource ActivitySource { get; }
+        internal Agent(TracerProvider tracerProvider) : this(tracerProvider, null)
+        {
+        }
+
+        private void Dispose(bool disposing)
+        {
+            if (!_disposedValue)
+            {
+                if (disposing)
+                {
+                    _tracerProvider?.Dispose();
+                    _meterProvider?.Dispose();
+                }
+
+                _disposedValue = true;
+            }
+        }
 
         public void Dispose()
         {
-            _tracerProvider?.Dispose();
-            _meterProvider?.Dispose();
-            ActivitySource.Dispose();
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
     }
 }

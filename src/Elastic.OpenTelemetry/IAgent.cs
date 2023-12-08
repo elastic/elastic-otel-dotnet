@@ -1,9 +1,8 @@
-﻿using System.Diagnostics;
-
 namespace Elastic.OpenTelemetry;
 
+/// <summary>
+/// An Elastic OpenTelemetry Distribution agent.
+/// </summary>
 public interface IAgent : IDisposable
 {
-    Resource Resource { get; }
-    ActivitySource ActivitySource { get; }
 }
