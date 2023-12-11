@@ -1,3 +1,6 @@
+using OpenTelemetry;
+using System.Reflection;
+
 namespace Elastic.OpenTelemetry;
 
 /// <summary>
@@ -7,6 +10,12 @@ public static class Agent
 {
     private static readonly object Lock = new();
     private static IAgent? _current;
+
+    static Agent()
+    {
+        var assemblyInformationalVersion = typeof(Agent).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        InformationalVersion = ParseAssemblyInformationalVersion(assemblyInformationalVersion);
+    }
 
     /// <summary>
     /// Returns the singleton <see cref="IAgent"/> instance.
@@ -35,6 +44,8 @@ public static class Agent
         }
     }
 
+    internal static string InformationalVersion { get; }
+
     ///// <summary>
     ///// Builds an <see cref="IAgent"/>.
     ///// </summary>
@@ -62,4 +73,24 @@ public static class Agent
     //        return _current;
     //    }
     //}
+
+    internal static string ParseAssemblyInformationalVersion(string? informationalVersion)
+    {
+        if (string.IsNullOrWhiteSpace(informationalVersion))
+        {
+            informationalVersion = "1.0.0";
+        }
+
+        /*
+         * InformationalVersion will be in the following format:
+         *   {majorVersion}.{minorVersion}.{patchVersion}.{pre-release label}.{pre-release version}.{gitHeight}+{Git SHA of current commit}
+         * Ex: 1.5.0-alpha.1.40+807f703e1b4d9874a92bd86d9f2d4ebe5b5d52e4
+         * The following parts are optional: pre-release label, pre-release version, git height, Git SHA of current commit
+         */
+
+        var indexOfPlusSign = informationalVersion!.IndexOf('+');
+        return indexOfPlusSign > 0
+            ? informationalVersion[..indexOfPlusSign]
+            : informationalVersion;
+    }
 }

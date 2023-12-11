@@ -16,6 +16,11 @@ internal static class Usage
         // Build an agent by creating and using an agent builder, adding a single source defined in this sample application.
         using var agent = new AgentBuilder().Tracer.AddSource(ActivitySourceName).Build();
 
+        //using var agent = new AgentBuilder()
+        //    .Tracer.AddSource(ActivitySourceName)
+        //    .Tracer.ConfigureResourceBuilder(b => b.Clear().AddService("CustomServiceName", serviceVersion: "2.2.2"))
+        //    .Build();
+
         await DoStuffAsync();
 
         static async Task DoStuffAsync()

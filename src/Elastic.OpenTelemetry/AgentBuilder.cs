@@ -1,7 +1,9 @@
 using Elastic.OpenTelemetry.Extensions;
+using Elastic.OpenTelemetry.Resources;
 using OpenTelemetry;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
 namespace Elastic.OpenTelemetry;
@@ -11,6 +13,15 @@ namespace Elastic.OpenTelemetry;
 /// </summary>
 public class AgentBuilder
 {
+    private static readonly Action<ResourceBuilder> DefaultResourceBuilderConfiguration = builder =>
+        builder
+            .Clear()
+            .AddDetector(new DefaultServiceDetector())
+            .AddTelemetrySdk()
+            .AddDetector(new ElasticEnvironmentVariableDetector())
+            .AddEnvironmentVariableDetector()
+            .AddDistroAttributes();
+
     // TODO - We need to decide which sources and how to handle conditional things such as ASP.NET Core.
     private readonly TracerProviderBuilder _tracerProviderBuilder =
         Sdk.CreateTracerProviderBuilder()
@@ -27,10 +38,7 @@ public class AgentBuilder
     private Action<OtlpExporterOptions>? _otlpExporerConfiguration;
     private string? _otlpExporerName;
 
-    public AgentBuilder()
-    {
-        Tracer = new Tracer(this, _tracerProviderBuilder);
-    }
+    public AgentBuilder() => Tracer = new Tracer(this, _tracerProviderBuilder);
 
     /// <summary>
     /// Build an instance of <see cref="IAgent"/>.
@@ -46,6 +54,17 @@ public class AgentBuilder
         // TODO: In the future we will allow consumers to register additional exporters. We need to consider how adding this exporter
         // may affect those and the order of registration.
         _tracerProviderBuilder.AddElasticExporter(_otlpExporerConfiguration, _otlpExporerName);
+
+        if (Tracer.ResourceBuilderAction is not null)
+        {
+            var action = Tracer.ResourceBuilderAction;
+            action += b => b.AddDistroAttributes();
+            _tracerProviderBuilder.ConfigureResource(action);
+        }
+        else
+        {
+            _tracerProviderBuilder.ConfigureResource(DefaultResourceBuilderConfiguration);
+        }
 
         var tracerProvider = _tracerProviderBuilder.Build();
 

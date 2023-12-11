@@ -1,8 +1,9 @@
+using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
 namespace Elastic.OpenTelemetry;
 
-public readonly struct Tracer(AgentBuilder agentBuilder, TracerProviderBuilder tracerProviderBuilder)
+public class Tracer(AgentBuilder agentBuilder, TracerProviderBuilder tracerProviderBuilder)
 {
     // TODO - This is a POC of a mechanism to configure the tracer.
     // Right now the methods return the agent builder, which is nice if you only need to update one thing on the tracer
@@ -18,4 +19,13 @@ public readonly struct Tracer(AgentBuilder agentBuilder, TracerProviderBuilder t
         _tracerProviderBuilder.AddSource(source);
         return _agentBuilder;
     }
+
+    public AgentBuilder ConfigureResourceBuilder(Action<ResourceBuilder> configure)
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        ResourceBuilderAction = configure;
+        return _agentBuilder;
+    }
+
+    internal Action<ResourceBuilder>? ResourceBuilderAction { get; private set; }
 }
