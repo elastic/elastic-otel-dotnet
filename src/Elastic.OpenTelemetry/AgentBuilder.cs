@@ -22,12 +22,7 @@ public class AgentBuilder
             .AddEnvironmentVariableDetector()
             .AddDistroAttributes();
 
-    // TODO - We need to decide which sources and how to handle conditional things such as ASP.NET Core.
-    private readonly TracerProviderBuilder _tracerProviderBuilder =
-        Sdk.CreateTracerProviderBuilder()
-            .AddHttpClientInstrumentation()
-            .AddGrpcClientInstrumentation()
-            .AddEntityFrameworkCoreInstrumentation();
+    private readonly TracerProviderBuilder _tracerProviderBuilder = Sdk.CreateTracerProviderBuilder();
 
     private readonly MeterProviderBuilder _meterProvider =
         Sdk.CreateMeterProviderBuilder()
@@ -35,10 +30,102 @@ public class AgentBuilder
             .AddRuntimeInstrumentation()
             .AddHttpClientInstrumentation();
 
+    private readonly string[]? _activitySourceNames;
+    private Action<TracerProviderBuilder>? _tracerProviderBuilderAction;
+    private Action<ResourceBuilder>? _resourceBuilderAction;
     private Action<OtlpExporterOptions>? _otlpExporerConfiguration;
     private string? _otlpExporerName;
 
-    public AgentBuilder() => Tracer = new Tracer(this, _tracerProviderBuilder);
+    public AgentBuilder() { }
+
+    // NOTE - Applies to all signals
+    public AgentBuilder(params string[] activitySourceNames) => _activitySourceNames = activitySourceNames;
+
+    // NOTE: The builder methods below are extremely experimental and will go through a final API design and
+    // refinement before alpha 1
+
+    public AgentBuilder AddTracerSource(string activitySourceName)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(activitySourceName);
+        _tracerProviderBuilder.AddSource(activitySourceName);
+        return this;
+    }
+
+    public AgentBuilder AddTracerSources(string activitySourceNameA, string activitySourceNameB)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(activitySourceNameA);
+        ArgumentException.ThrowIfNullOrEmpty(activitySourceNameB);
+
+        _tracerProviderBuilder.AddSource(activitySourceNameA);
+        _tracerProviderBuilder.AddSource(activitySourceNameB);
+
+        return this;
+    }
+
+    // TODO - Other AddTracerSources for up to x sources to avoid params allocation.
+
+    public AgentBuilder AddTracerSources(params string[] activitySourceNames)
+    {
+        _tracerProviderBuilder.AddSource(activitySourceNames);
+        return this;
+    }
+
+    public AgentBuilder ConfigureResource(Action<ResourceBuilder> configureResourceBuilder)
+    {
+        // NOTE: Applies to all signals
+
+        ArgumentNullException.ThrowIfNull(configureResourceBuilder);
+        _resourceBuilderAction = configureResourceBuilder;
+        return this;
+    }
+
+    public AgentBuilder ConfigureTracer(params string[] activitySourceNames)
+    {
+        TracerInternal(null, activitySourceNames);
+        return this;
+    }
+
+    public AgentBuilder ConfigureTracer(Action<ResourceBuilder> configureResourceBuilder)
+    {
+        TracerInternal(configureResourceBuilder, null);
+        return this;
+    }
+
+    public AgentBuilder ConfigureTracer(Action<ResourceBuilder> configureResourceBuilder, params string[] activitySourceNames)
+    {
+        TracerInternal(configureResourceBuilder, activitySourceNames);
+        return this;
+    }
+
+    public AgentBuilder ConfigureTracer(Action<ResourceBuilder> configureResourceBuilder, string activitySourceName)
+    {
+        TracerInternal(configureResourceBuilder, [activitySourceName]);
+        return this;
+    }
+
+    public AgentBuilder ConfigureTracer(Action<TracerProviderBuilder> configure)
+    {
+        // This is the most customisable overload as the consumer can provide a complete
+        // Action to configure the TracerProviderBuilder. It is the best option (right now)
+        // if a consumer needs to add other instrumentation via extension methods on the
+        // TracerProviderBuilder. We will then add the Elastic distro defaults as appropriately
+        // as possible. Elastic processors will be registered before running this action. The
+        // Elastic exporter will be added after.
+
+        ArgumentNullException.ThrowIfNull(configure);
+        _tracerProviderBuilderAction = configure;
+        return this;
+    }
+
+    private AgentBuilder TracerInternal(Action<ResourceBuilder>? configureResourceBuilder = null, string[]? activitySourceNames = null)
+    {
+        _resourceBuilderAction = configureResourceBuilder;
+
+        if (activitySourceNames is not null)
+            _tracerProviderBuilder.AddSource(activitySourceNames);
+
+        return this;
+    }
 
     /// <summary>
     /// Build an instance of <see cref="IAgent"/>.
@@ -46,25 +133,46 @@ public class AgentBuilder
     /// <returns>A new instance of <see cref="IAgent"/>.</returns>
     public IAgent Build()
     {
-        //// TODO - These always apply after our defaults.
-        //// What about cases where users want to register processors before any exporters we add by default (OTLP)?
-        //traceConfiguration?.Invoke(_tracerProvider);
-        //metricConfiguration?.Invoke(_meterProvider);
-
-        // TODO: In the future we will allow consumers to register additional exporters. We need to consider how adding this exporter
-        // may affect those and the order of registration.
-        _tracerProviderBuilder.AddElasticExporter(_otlpExporerConfiguration, _otlpExporerName);
-
-        if (Tracer.ResourceBuilderAction is not null)
+        if (_tracerProviderBuilderAction is null)
         {
-            var action = Tracer.ResourceBuilderAction;
-            action += b => b.AddDistroAttributes();
-            _tracerProviderBuilder.ConfigureResource(action);
+            if (_activitySourceNames is not null)
+                _tracerProviderBuilder.AddSource(_activitySourceNames);
+
+            // Set up a default tracer provider.
+            // TODO - We need to decide which sources and how to handle conditional things such as ASP.NET Core.
+            _tracerProviderBuilder
+               .AddHttpClientInstrumentation()
+               .AddGrpcClientInstrumentation()
+               .AddEntityFrameworkCoreInstrumentation()
+               .AddElasticProcessors();
+
+            if (_resourceBuilderAction is not null)
+            {
+                var action = _resourceBuilderAction;
+                action += b => b.AddDistroAttributes();
+                _tracerProviderBuilder.ConfigureResource(action);
+            }
+            else
+            {
+                _tracerProviderBuilder.ConfigureResource(DefaultResourceBuilderConfiguration);
+            }
         }
         else
         {
-            _tracerProviderBuilder.ConfigureResource(DefaultResourceBuilderConfiguration);
+            // Add Elastic processors before consumer action is invoked, so that they run before everything else.
+            // TODO - What about cases where users want to register processors which run before ours?
+            _tracerProviderBuilder.AddElasticProcessors();
+
+            // Then apply the consumer configuration.
+            _tracerProviderBuilderAction.Invoke(_tracerProviderBuilder);
         }
+
+        // Ensure the distro attributes are always added to the resource.
+        _tracerProviderBuilder.ConfigureResource(r => r.AddDistroAttributes());
+
+        // Add the OTLP exporter configured to ship data to an Elastic backend.
+        // TODO - What about cases where users want to register processors/exporters after any exporters we add by default (OTLP)?
+        _tracerProviderBuilder.AddElasticOtlpExporter(_otlpExporerConfiguration, _otlpExporerName);
 
         var tracerProvider = _tracerProviderBuilder.Build();
 
@@ -77,8 +185,6 @@ public class AgentBuilder
         _otlpExporerConfiguration = configure;
         _otlpExporerName = name;
     }
-
-    public Tracer Tracer { get; }
 
     private sealed class Agent(TracerProvider? tracerProvider, MeterProvider? meterProvider) : IAgent
     {

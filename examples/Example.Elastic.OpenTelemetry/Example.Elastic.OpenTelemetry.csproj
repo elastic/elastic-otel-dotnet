@@ -9,6 +9,7 @@
 
     <ItemGroup>
       <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.6.0" />
+      <PackageReference Include="OpenTelemetry.Instrumentation.StackExchangeRedis" Version="1.0.0-rc9.12" />
     </ItemGroup>
 
     <ItemGroup>

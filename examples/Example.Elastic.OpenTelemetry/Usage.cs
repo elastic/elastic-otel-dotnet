@@ -1,5 +1,9 @@
 using System.Diagnostics;
 using Elastic.OpenTelemetry;
+using Elastic.OpenTelemetry.Extensions;
+using OpenTelemetry;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 namespace Example.Elastic.OpenTelemetry;
 
@@ -13,12 +17,35 @@ internal static class Usage
     {
         // NOTE: This sample assumes ENV VARs have been set to configure the Endpoint and Authorization header.
 
-        // Build an agent by creating and using an agent builder, adding a single source defined in this sample application.
-        using var agent = new AgentBuilder().Tracer.AddSource(ActivitySourceName).Build();
+        // Build an agent by creating and using an agent builder, adding a single source (for traces and metrics) defined in this sample application.
+        //using var agent = new AgentBuilder(ActivitySourceName).Build();
+
+        // Build an agent by creating and using an agent builder, adding a single source for the app just to the tracer.
+        //using var agent = new AgentBuilder().AddTracerSource(ActivitySourceName).Build();
+
+        // This example adds the application activity source and fully customises the resource
+        //using var agent = new AgentBuilder(ActivitySourceName)
+        //    .ConfigureTracer(b => b.Clear().AddService("CustomServiceName", serviceVersion: "2.2.2"))
+        //    .Build();
 
         //using var agent = new AgentBuilder()
-        //    .Tracer.AddSource(ActivitySourceName)
-        //    .Tracer.ConfigureResourceBuilder(b => b.Clear().AddService("CustomServiceName", serviceVersion: "2.2.2"))
+        //    .ConfigureTracer(tpb => tpb
+        //        .ConfigureResource(rb => rb.AddService("TracerProviderBuilder", "3.3.3"))
+        //        .AddRedisInstrumentation() // This can currently only be achieved using this overload
+        //        .AddSource(ActivitySourceName)
+        //        .AddConsoleExporter())
+        //    .Build();
+
+        // This is the most flexible approach for a consumer as they can include our processor(s) and exporter(s)
+        //using var tracerProvider = Sdk.CreateTracerProviderBuilder()
+        //    .AddSource(ActivitySourceName)
+        //    .ConfigureResource(resource =>
+        //        resource.AddService(
+        //          serviceName: "OtelSdkApp",
+        //          serviceVersion: "1.0.0"))
+        //    .AddConsoleExporter()
+        //    .AddElasticProcessors()
+        //    .AddElasticOtlpExporter()
         //    .Build();
 
         await DoStuffAsync();
@@ -29,7 +56,7 @@ internal static class Usage
             activity?.SetTag("CustomTag", "TagValue");
 
             await Task.Delay(100);
-            var response = await HttpClient.GetAsync("https://elastic.co");
+            var response = await HttpClient.GetAsync("http://elastic.co");
             await Task.Delay(50);
 
             if (response.StatusCode == System.Net.HttpStatusCode.OK)

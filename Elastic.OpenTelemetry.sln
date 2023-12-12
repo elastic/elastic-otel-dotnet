@@ -24,6 +24,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{8FF8AFC2-7
 		index.asciidoc = index.asciidoc
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "design", "design", "{EE3E1E3E-898C-41F0-8854-5046CE6FE274}"
+	ProjectSection(SolutionItems) = preProject
+		design-required.md = design-required.md
+		usage-scenarios.md = usage-scenarios.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

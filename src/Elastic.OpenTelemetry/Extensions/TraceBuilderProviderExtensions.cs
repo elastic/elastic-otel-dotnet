@@ -13,7 +13,7 @@ public static class TraceBuilderProviderExtensions
             .AddProcessor(new TransactionIdProcessor());
     }
 
-    public static TracerProviderBuilder AddElasticExporter(this TracerProviderBuilder builder) => AddElasticExporter(builder, null, null);
+    public static TracerProviderBuilder AddElasticOtlpExporter(this TracerProviderBuilder builder) => AddElasticOtlpExporter(builder, null, null);
 
     /// <summary>
     /// Adds the OTLP exporter to the tracer, configured to send data to an Elastic APM backend.
@@ -25,7 +25,7 @@ public static class TraceBuilderProviderExtensions
     /// <param name="configure"></param>
     /// <param name="name"></param>
     /// <returns></returns>
-    public static TracerProviderBuilder AddElasticExporter(this TracerProviderBuilder builder, Action<OtlpExporterOptions>? configure, string? name)
+    public static TracerProviderBuilder AddElasticOtlpExporter(this TracerProviderBuilder builder, Action<OtlpExporterOptions>? configure, string? name)
     {
         // TODO - We need a clean way to test this behaviour
 
