@@ -19,7 +19,7 @@ public static class TraceBuilderProviderExtensions
     /// Adds the OTLP exporter to the tracer, configured to send data to an Elastic APM backend.
     /// </summary>
     /// <remarks>
-    /// 
+    ///
     /// </remarks>
     /// <param name="builder"></param>
     /// <param name="configure"></param>
@@ -113,7 +113,7 @@ public static class TraceBuilderProviderExtensions
         }
 
         return builder.AddOtlpExporter();
-    }a
+    }
 }
 
 internal sealed class UserAgentMessageHandler(HttpMessageHandler handler) : DelegatingHandler(handler)
