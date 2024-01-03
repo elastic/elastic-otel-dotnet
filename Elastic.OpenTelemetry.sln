@@ -8,6 +8,9 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Example.Elastic.OpenTelemetry", "examples\Example.Elastic.OpenTelemetry\Example.Elastic.OpenTelemetry.csproj", "{32DF4F56-1773-49E9-A8AE-0573F0AA57DE}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{E622CFF2-C6C4-40FB-BE42-7C4F2B38B75A}"
+	ProjectSection(SolutionItems) = preProject
+		src\Directory.Build.props = src\Directory.Build.props
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "examples", "examples", "{4E95C87B-655B-4BC3-8F2A-DF06B7AAB7E9}"
 EndProject

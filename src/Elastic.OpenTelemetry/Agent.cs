@@ -21,7 +21,7 @@ public static class Agent
     /// Returns the singleton <see cref="IAgent"/> instance.
     /// </summary>
     /// <remarks>
-    /// If an instance is not already initialized, this will create and return a 
+    /// If an instance is not already initialized, this will create and return a
     /// default <see cref="IAgent"/> configured with recommended Elastic defaults.
     /// </remarks>
     public static IAgent Current
@@ -49,11 +49,9 @@ public static class Agent
     /// <summary>
     /// Builds an <see cref="IAgent"/>.
     /// </summary>
-    /// <param name="traceConfiguration">An action which configures the OpenTelemetry <see cref="TracerProvider"/>.</param>
-    /// <param name="metricConfiguration">An action which configures the OpenTelemetry <see cref="MeterProvider"/>.</param>
     /// <returns>An <see cref="IAgent"/> instance.</returns>
     /// <exception cref="Exception">
-    /// An exception will be thrown if <see cref="Build(Action{TracerProviderBuilder}?, Action{MeterProviderBuilder}?)"/>
+    /// An exception will be thrown if <see cref="Build"/>
     /// is called more than once during the lifetime of an application.
     /// </exception>
     public static IAgent Build(Action<AgentBuilder>? configuration = null)

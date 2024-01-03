@@ -4,16 +4,19 @@ using OpenTelemetry.Trace;
 
 namespace Elastic.OpenTelemetry.Extensions;
 
+/// <summary> Provides Elastic APM extensions to <see cref="TracerProviderBuilder"/> </summary>
 public static class TraceBuilderProviderExtensions
 {
     //TODO binder source generator on Build() to make it automatic?
-    public static TracerProviderBuilder AddElasticProcessors(this TracerProviderBuilder builder)
-    {
-        return builder
-            .AddProcessor(new TransactionIdProcessor());
-    }
+	/// <summary> Include Elastic APM Trace Processors to ensure data is enriched and extended.</summary>
+    public static TracerProviderBuilder AddElasticProcessors(this TracerProviderBuilder builder) =>
+		builder
+			.AddProcessor(new TransactionIdProcessor());
 
-    public static TracerProviderBuilder AddElasticOtlpExporter(this TracerProviderBuilder builder) => AddElasticOtlpExporter(builder, null, null);
+    /// <summary>
+    /// Adds the OTLP exporter to the tracer, configured to send data to an Elastic APM backend.
+    /// </summary>
+	public static TracerProviderBuilder AddElasticOtlpExporter(this TracerProviderBuilder builder) => AddElasticOtlpExporter(builder, null, null);
 
     /// <summary>
     /// Adds the OTLP exporter to the tracer, configured to send data to an Elastic APM backend.

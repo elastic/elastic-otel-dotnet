@@ -17,6 +17,7 @@
     <LangVersion>latest</LangVersion>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <UseArtifactsOutput>true</UseArtifactsOutput>
+    <SolutionRoot>$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), build.bat))</SolutionRoot>
     <ArtifactsPath>$(MSBuildThisFileDirectory).artifacts</ArtifactsPath>
   </PropertyGroup>
   <ItemGroup>
