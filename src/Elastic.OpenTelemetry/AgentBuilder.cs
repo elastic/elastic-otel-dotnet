@@ -33,8 +33,8 @@ public class AgentBuilder
     private readonly string[]? _activitySourceNames;
     private Action<TracerProviderBuilder>? _tracerProviderBuilderAction;
     private Action<ResourceBuilder>? _resourceBuilderAction;
-    private Action<OtlpExporterOptions>? _otlpExporerConfiguration;
-    private string? _otlpExporerName;
+    private Action<OtlpExporterOptions>? _otlpExporterConfiguration;
+    private string? _otlpExporterName;
 
     /// <summary>
     /// TODO
@@ -205,7 +205,7 @@ public class AgentBuilder
 
         // Add the OTLP exporter configured to ship data to an Elastic backend.
         // TODO - What about cases where users want to register processors/exporters after any exporters we add by default (OTLP)?
-        _tracerProviderBuilder.AddElasticOtlpExporter(_otlpExporerConfiguration, _otlpExporerName);
+        _tracerProviderBuilder.AddElasticOtlpExporter(_otlpExporterConfiguration, _otlpExporterName);
 
         var tracerProvider = _tracerProviderBuilder.Build();
 
@@ -218,8 +218,8 @@ public class AgentBuilder
     public void ConfigureOtlpExporter(Action<OtlpExporterOptions> configure, string? name = null)
     {
         ArgumentNullException.ThrowIfNull(configure);
-        _otlpExporerConfiguration = configure;
-        _otlpExporerName = name;
+        _otlpExporterConfiguration = configure;
+        _otlpExporterName = name;
     }
 
     private sealed class Agent(TracerProvider? tracerProvider, MeterProvider? meterProvider) : IAgent
