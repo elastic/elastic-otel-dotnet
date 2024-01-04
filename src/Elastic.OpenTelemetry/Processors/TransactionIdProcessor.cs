@@ -1,5 +1,4 @@
 using OpenTelemetry;
-
 using System.Diagnostics;
 
 namespace Elastic.OpenTelemetry.Processors;
@@ -9,6 +8,11 @@ namespace Elastic.OpenTelemetry.Processors;
 /// </summary>
 public class TransactionIdProcessor : BaseProcessor<Activity>
 {
+	/// <summary>
+	/// 
+	/// </summary>
+    public const string TransactionIdTagName = "transaction.id";
+
     private readonly AsyncLocal<ActivitySpanId?> _currentTransactionId = new();
 
 	/// <inheritdoc cref="OnStart"/>
@@ -17,6 +21,7 @@ public class TransactionIdProcessor : BaseProcessor<Activity>
         if (activity.Parent == null)
             _currentTransactionId.Value = activity.SpanId;
 
-        activity.SetTag("transaction.id", _currentTransactionId.Value);
+        if (_currentTransactionId.Value.HasValue)
+            activity.SetTag(TransactionIdTagName, _currentTransactionId.Value.Value.ToString());
     }
 }
