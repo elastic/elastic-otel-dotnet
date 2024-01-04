@@ -36,14 +36,23 @@ public class AgentBuilder
     private Action<OtlpExporterOptions>? _otlpExporerConfiguration;
     private string? _otlpExporerName;
 
+    /// <summary>
+    /// TODO
+    /// </summary>
     public AgentBuilder() { }
 
     // NOTE - Applies to all signals
+    /// <summary>
+    /// TODO
+    /// </summary>
     public AgentBuilder(params string[] activitySourceNames) => _activitySourceNames = activitySourceNames;
 
     // NOTE: The builder methods below are extremely experimental and will go through a final API design and
     // refinement before alpha 1
 
+    /// <summary>
+    /// TODO
+    /// </summary>
     public AgentBuilder AddTracerSource(string activitySourceName)
     {
         ArgumentException.ThrowIfNullOrEmpty(activitySourceName);
@@ -51,6 +60,9 @@ public class AgentBuilder
         return this;
     }
 
+    /// <summary>
+    /// TODO
+    /// </summary>
     public AgentBuilder AddTracerSources(string activitySourceNameA, string activitySourceNameB)
     {
         ArgumentException.ThrowIfNullOrEmpty(activitySourceNameA);
@@ -64,12 +76,18 @@ public class AgentBuilder
 
     // TODO - Other AddTracerSources for up to x sources to avoid params allocation.
 
+    /// <summary>
+    /// TODO
+    /// </summary>
     public AgentBuilder AddTracerSources(params string[] activitySourceNames)
     {
         _tracerProviderBuilder.AddSource(activitySourceNames);
         return this;
     }
 
+    /// <summary>
+    /// TODO
+    /// </summary>
     public AgentBuilder ConfigureResource(Action<ResourceBuilder> configureResourceBuilder)
     {
         // NOTE: Applies to all signals
@@ -79,30 +97,45 @@ public class AgentBuilder
         return this;
     }
 
+    /// <summary>
+    /// TODO
+    /// </summary>
     public AgentBuilder ConfigureTracer(params string[] activitySourceNames)
     {
         TracerInternal(null, activitySourceNames);
         return this;
     }
 
+    /// <summary>
+    /// TODO
+    /// </summary>
     public AgentBuilder ConfigureTracer(Action<ResourceBuilder> configureResourceBuilder)
     {
         TracerInternal(configureResourceBuilder, null);
         return this;
     }
 
+    /// <summary>
+    /// TODO
+    /// </summary>
     public AgentBuilder ConfigureTracer(Action<ResourceBuilder> configureResourceBuilder, params string[] activitySourceNames)
     {
         TracerInternal(configureResourceBuilder, activitySourceNames);
         return this;
     }
 
+    /// <summary>
+    /// TODO
+    /// </summary>
     public AgentBuilder ConfigureTracer(Action<ResourceBuilder> configureResourceBuilder, string activitySourceName)
     {
         TracerInternal(configureResourceBuilder, [activitySourceName]);
         return this;
     }
 
+    /// <summary>
+    /// TODO
+    /// </summary>
     public AgentBuilder ConfigureTracer(Action<TracerProviderBuilder> configure)
     {
         // This is the most customisable overload as the consumer can provide a complete
@@ -179,6 +212,9 @@ public class AgentBuilder
         return tracerProvider is not null ? new Agent(tracerProvider) : new Agent();
     }
 
+    /// <summary>
+    /// TODO
+    /// </summary>
     public void ConfigureOtlpExporter(Action<OtlpExporterOptions> configure, string? name = null)
     {
         ArgumentNullException.ThrowIfNull(configure);

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))"/>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>$(SolutionRoot)\build\keys\keypair.snk</AssemblyOriginatorKeyFile>
+
+    <PackageIcon>nuget-icon.png</PackageIcon>
+    <PackageReadmeFile>$(SolutionRoot)\README.md</PackageReadmeFile>
+    <!-- Include .pdb in package -->
+    <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
+    <!-- Generate documentation files for each package -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <DebugSymbols>true</DebugSymbols>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <Content Include="README.md" Pack="true" PackagePath="README.md" CopyToOutputDirectory="PreserveNewest"/>
+    <Content Include="$(SolutionRoot)\build\nuget-icon.png" CopyToOutputDirectory="PreserveNewest">
+      <Link>nuget-icon.png</Link>
+      <Pack>True</Pack>
+      <PackagePath>nuget-icon.png</PackagePath>
+    </Content>
+    <None Include="$(SolutionRoot)\LICENSE" CopyToOutputDirectory="PreserveNewest">
+      <Pack>True</Pack>
+      <PackagePath>LICENSE</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All"/>
+    <PackageReference Include="ConfigureAwaitChecker.Analyzer" Version="4.0.0" PrivateAssets="All" />
+  </ItemGroup>
+</Project>

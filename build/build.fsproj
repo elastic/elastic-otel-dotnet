@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net7.0</TargetFramework>
+        <OutputType>Exe</OutputType>
+        <NoWarn>$(NoWarn);NU1701</NoWarn>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="Argu" Version="6.1.1"/>
+        <PackageReference Include="Bullseye" Version="3.5.0"/>
+        <PackageReference Include="Proc" Version="0.6.2"/>
+        <PackageReference Include="Fake.Tools.Git" Version="5.20.3"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="..\*" LinkBase="_root"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Include="scripts\Paths.fs"/>
+        <Compile Include="scripts\CommandLine.fs"/>
+        <Compile Include="scripts\Targets.fs"/>
+        <Compile Include="scripts\Program.fs"/>
+        <None Include="**\*" />
+        <None Remove="bin\**" />
+        <None Remove="obj\**" />
+        <None Remove="scripts\**" />
+        <None Remove="output\**" />
+    </ItemGroup>
+
+</Project>

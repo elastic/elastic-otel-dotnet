@@ -3,8 +3,10 @@ using System.Diagnostics;
 
 namespace Elastic.OpenTelemetry.Processors;
 
+/// <summary> A processor that includes stack trace information of long running span </summary>
 public class StackTraceProcessor : BaseProcessor<Activity>
 {
+	/// <inheritdoc cref="OnStart"/>
     public override void OnStart(Activity data)
     {
         //for now always capture stack trace on start
@@ -13,6 +15,7 @@ public class StackTraceProcessor : BaseProcessor<Activity>
         base.OnStart(data);
     }
 
+	/// <inheritdoc cref="OnEnd"/>
     public override void OnEnd(Activity data)
     {
         if (data.GetCustomProperty("_stack_trace") is not StackTrace stackTrace) return;

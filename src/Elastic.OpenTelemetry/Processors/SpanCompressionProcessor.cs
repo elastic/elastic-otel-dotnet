@@ -7,10 +7,12 @@ using System.Runtime.CompilerServices;
 
 namespace Elastic.OpenTelemetry.Processors;
 
+/// <summary> A processor that can mark spans as compressed/composite </summary>
 public class SpanCompressionProcessor : BaseProcessor<Activity>
 {
     private readonly ConditionalWeakTable<Activity, Activity> _compressionBuffer = [];
 
+	/// <inheritdoc cref="OnStart"/>
     public override void OnStart(Activity data)
     {
         if (data.DisplayName == "ChildSpanCompression")
@@ -19,6 +21,7 @@ public class SpanCompressionProcessor : BaseProcessor<Activity>
         base.OnStart(data);
     }
 
+	/// <inheritdoc cref="OnStart"/>
     public override void OnEnd(Activity data)
     {
         if (data.Parent is null)
