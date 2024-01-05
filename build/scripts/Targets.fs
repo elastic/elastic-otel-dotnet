@@ -71,7 +71,7 @@ let rec private test (arguments:ParseResults<Arguments>) =
     let loggerPathArgs = sprintf "LogFilePath=%s" junitOutput
     let loggerArg = sprintf "--logger:\"junit;%s\"" loggerPathArgs
     let tfmArgs =
-        if getOS = OS.Windows then [] else ["-f"; "net6.0"]
+        if getOS = OS.Windows then [] else ["-f"; "net8.0"]
     exec "dotnet" (["test"; "-c"; "Release"; loggerArg] @ tfmArgs) |> ignore
 
 let private generatePackages (arguments:ParseResults<Arguments>) = exec "dotnet" ["pack" ] |> ignore
