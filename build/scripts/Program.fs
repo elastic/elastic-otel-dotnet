@@ -12,6 +12,7 @@ open CommandLine
 [<EntryPoint>]
 let main argv =
     let parser = ArgumentParser.Create<Arguments>(programName = "./build.sh")
+    let argv = if argv.Length = 0 then ["build"] |> Array.ofList else argv
     let parsed = 
         try
             let parsed = parser.ParseCommandLine(inputs = argv, raiseOnUsage = true)

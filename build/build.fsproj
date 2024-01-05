@@ -6,7 +6,7 @@
         <IsPackable>false</IsPackable>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="Argu" Version="6.1.1"/>
+        <PackageReference Include="Argu" Version="6.1.4" />
         <PackageReference Include="Bullseye" Version="3.5.0"/>
         <PackageReference Include="Proc" Version="0.6.2"/>
         <PackageReference Include="Fake.Tools.Git" Version="5.20.3"/>

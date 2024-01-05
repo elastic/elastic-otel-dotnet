@@ -19,9 +19,6 @@ type Arguments =
     | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] GenerateApiChanges 
     | [<CliPrefix(CliPrefix.None);SubCommand>] Release
     
-    | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] CreateReleaseOnGithub 
-    | [<CliPrefix(CliPrefix.None);SubCommand>] Publish
-    
     | [<Inherit;AltCommandLine("-s")>] SingleTarget of bool
     | [<Inherit>] Token of string 
     | [<Inherit;AltCommandLine("-c")>] CleanCheckout of bool
@@ -33,7 +30,6 @@ with
             | Build -> "Run build"
             | Test -> "Runs build then tests"
             | Release -> "runs build, tests, and create and validates the packages shy of publishing them"
-            | Publish -> "Runs the full release"
             
             | SingleTarget _ -> "Runs the provided sub command without running their dependencies"
             | Token _ -> "Token to be used to authenticate with github"
@@ -44,7 +40,6 @@ with
             | ValidatePackages 
             | GenerateReleaseNotes
             | GenerateApiChanges
-            | CreateReleaseOnGithub 
                 -> "Undocumented, dependent target"
     member this.Name =
         match FSharpValue.GetUnionFields(this, typeof<Arguments>) with

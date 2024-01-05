@@ -54,7 +54,6 @@ let private currentVersionInformational =
     )
 
 let private clean (arguments:ParseResults<Arguments>) =
-    if (Paths.Output.Exists) then Paths.Output.Delete (true)
     exec "dotnet" ["clean"] |> ignore
     
 let private build (arguments:ParseResults<Arguments>) = exec "dotnet" ["build"; "-c"; "Release"] |> ignore
@@ -66,22 +65,23 @@ let private pristineCheck (arguments:ParseResults<Arguments>) =
     | false, _ -> printf "Checkout is dirty but -c was specified to ignore this"
     | _ -> failwithf "The checkout folder has pending changes, aborting"
 
-let private test (arguments:ParseResults<Arguments>) =
-    let junitOutput = Path.Combine(Paths.Output.FullName, "junit-{assembly}-{framework}-test-results.xml")
+let rec private test (arguments:ParseResults<Arguments>) =
+    let testOutputPath = Paths.ArtifactPath "tests"
+    let junitOutput = Path.Combine(testOutputPath.FullName, "junit-{assembly}-{framework}-test-results.xml")
     let loggerPathArgs = sprintf "LogFilePath=%s" junitOutput
     let loggerArg = sprintf "--logger:\"junit;%s\"" loggerPathArgs
     let tfmArgs =
         if getOS = OS.Windows then [] else ["-f"; "net6.0"]
     exec "dotnet" (["test"; "-c"; "Release"; loggerArg] @ tfmArgs) |> ignore
 
-let private generatePackages (arguments:ParseResults<Arguments>) =
-    let output = Paths.RootRelative Paths.Output.FullName
-    exec "dotnet" ["pack"; "-c"; "Release"; "-o"; output] |> ignore
+let private generatePackages (arguments:ParseResults<Arguments>) = exec "dotnet" ["pack" ] |> ignore
     
 let private validatePackages (arguments:ParseResults<Arguments>) =
-    let output = Paths.RootRelative <| Paths.Output.FullName
+    let packagesPath = Paths.ArtifactPath "package"
+    let output = Paths.RootRelative <| packagesPath.FullName
     let nugetPackages =
-        Paths.Output.GetFiles("*.nupkg") |> Seq.sortByDescending(fun f -> f.CreationTimeUtc)
+        packagesPath.GetFiles("*.nupkg", SearchOption.AllDirectories)
+        |> Seq.sortByDescending(_.CreationTimeUtc)
         |> Seq.map (fun p -> Paths.RootRelative p.FullName)
         
     let jenkinsOnWindowsArgs =
@@ -91,21 +91,24 @@ let private validatePackages (arguments:ParseResults<Arguments>) =
     nugetPackages |> Seq.iter (fun p -> exec "dotnet" (["nupkg-validator"; p] @ args) |> ignore)
 
 let private generateApiChanges (arguments:ParseResults<Arguments>) =
-    let output = Paths.RootRelative <| Paths.Output.FullName
+    let packagesPath = Paths.ArtifactPath "package"
+    let output = Paths.RootRelative <| packagesPath.FullName
     let currentVersion = currentVersion.Value
     let nugetPackages =
-        Paths.Output.GetFiles("*.nupkg") |> Seq.sortByDescending(fun f -> f.CreationTimeUtc)
+        packagesPath.GetFiles("*.nupkg", SearchOption.AllDirectories)
+        |> Seq.sortByDescending(_.CreationTimeUtc)
         |> Seq.map (fun p -> Path.GetFileNameWithoutExtension(Paths.RootRelative p.FullName).Replace("." + currentVersion, ""))
     nugetPackages
     |> Seq.iter(fun p ->
         let outputFile =
             let f = sprintf "breaking-changes-%s.md" p
             Path.Combine(output, f)
+        let tfm = "net8.0"
         let args =
             [
                 "assembly-differ"
-                (sprintf "previous-nuget|%s|%s|%s" p currentVersion Paths.MainTFM);
-                (sprintf "directory|src/%s/bin/Release/%s" p Paths.MainTFM);
+                (sprintf "previous-nuget|%s|%s|%s" p currentVersion tfm);
+                (sprintf "directory|src/%s/bin/Release/%s" p tfm);
                 "-a"; "true"; "--target"; p; "-f"; "github-comment"; "--output"; outputFile
             ]
         
@@ -114,8 +117,9 @@ let private generateApiChanges (arguments:ParseResults<Arguments>) =
     
 let private generateReleaseNotes (arguments:ParseResults<Arguments>) =
     let currentVersion = currentVersion.Value
+    let releaseNotesPath = Paths.ArtifactPath "release-notes"
     let output =
-        Paths.RootRelative <| Path.Combine(Paths.Output.FullName, sprintf "release-notes-%s.md" currentVersion)
+        Paths.RootRelative <| Path.Combine(releaseNotesPath.FullName, sprintf "release-notes-%s.md" currentVersion)
     let tokenArgs =
         match arguments.TryGetResult Token with
         | None -> []
@@ -131,28 +135,6 @@ let private generateReleaseNotes (arguments:ParseResults<Arguments>) =
         
     exec "dotnet" (["release-notes"] @ releaseNotesArgs) |> ignore
 
-let private createReleaseOnGithub (arguments:ParseResults<Arguments>) =
-    let currentVersion = currentVersion.Value
-    let tokenArgs =
-        match arguments.TryGetResult Token with
-        | None -> []
-        | Some token -> ["--token"; token;]
-    let releaseNotes = Paths.RootRelative <| Path.Combine(Paths.Output.FullName, sprintf "release-notes-%s.md" currentVersion)
-    let breakingChanges =
-        let breakingChangesDocs = Paths.Output.GetFiles("breaking-changes-*.md")
-        breakingChangesDocs 
-        |> Seq.map(fun f -> ["--body"; Paths.RootRelative f.FullName])
-        |> Seq.collect id
-        |> Seq.toList
-    let releaseArgs =
-        (Paths.Repository.Split("/") |> Seq.toList)
-        @ ["create-release"
-           "--version"; currentVersion
-           "--body"; releaseNotes; 
-        ] @ breakingChanges @ tokenArgs
-        
-    exec "dotnet" (["release-notes"] @ releaseArgs) |> ignore
-    
 let private release (arguments:ParseResults<Arguments>) = printfn "release"
     
 let private publish (arguments:ParseResults<Arguments>) = printfn "publish" 
@@ -185,8 +167,3 @@ let Setup (parsed:ParseResults<Arguments>) (subCommand:Arguments) =
         (Some [GeneratePackages.Name; ValidatePackages.Name; GenerateReleaseNotes.Name; GenerateApiChanges.Name])
         <| fun _ -> release parsed
         
-    step CreateReleaseOnGithub.Name createReleaseOnGithub 
-    cmd Publish.Name
-        (Some [Release.Name])
-        (Some [CreateReleaseOnGithub.Name; ])
-        <| fun _ -> publish parsed

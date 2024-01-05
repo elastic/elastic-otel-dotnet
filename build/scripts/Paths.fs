@@ -7,9 +7,8 @@ module Paths
 open System
 open System.IO
 
-let ToolName = "elastic-transport-net"
+let ToolName = "elastic-otel-dotnet"
 let Repository = sprintf "elastic/%s" ToolName
-let MainTFM = "netstandard2.0"
 let SignKey = "069ca2728db333c1"
 
 let ValidateAssemblyName = false
@@ -24,6 +23,4 @@ let Root =
     
 let RootRelative path = Path.GetRelativePath(Root.FullName, path) 
     
-let Output = DirectoryInfo(Path.Combine(Root.FullName, "build", "output"))
-
-let ToolProject = DirectoryInfo(Path.Combine(Root.FullName, "src", ToolName))
+let ArtifactPath t = DirectoryInfo(Path.Combine(Root.FullName, ".artifacts", t))
