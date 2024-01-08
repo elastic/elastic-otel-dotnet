@@ -1,3 +1,3 @@
-@echo off 
-dotnet run --project build/scripts -- %*
+@echo off
+dotnet run --project build -- %*
 
