@@ -45,9 +45,14 @@ let private test _ =
     let junitOutput = Path.Combine(testOutputPath.FullName, "junit-{assembly}-{framework}-test-results.xml")
     let loggerPathArgs = $"LogFilePath=%s{junitOutput}"
     let loggerArg = $"--logger:\"junit;%s{loggerPathArgs}\""
+    let githubActionsLogger = $"--logger:\"GitHubActions:summary.includePassedTests\""
     let tfmArgs = if OS.Current = OS.Windows then [] else ["-f"; "net8.0"]
     exec {
-        run "dotnet" (["test"; "-c"; "Release"; loggerArg] @ tfmArgs)
+        run "dotnet" (
+            ["test"; "-c"; "Release"; loggerArg; githubActionsLogger]
+            @ tfmArgs
+            @ ["--"; "RunConfiguration.CollectSourceInformation=true"]
+        )
     } 
 
 let private validatePackages _ =
