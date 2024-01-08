@@ -1,3 +1,3 @@
 @echo off
-dotnet run --project build -c release -- %*
+dotnet run --project build -c debug -- %*
 
