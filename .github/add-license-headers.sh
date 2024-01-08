@@ -1,5 +1,5 @@
 #!/bin/bash
-script_path=$(dirname $(realpath -s $0))/../
+script_path=$(dirname $(realpath $0))/../
 
 function add_license () {
     (find "$script_path" -name $1 | grep -v "/bin/" | grep -v "/obj/" )|while read fname; do
