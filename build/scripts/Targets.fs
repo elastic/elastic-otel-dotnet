@@ -14,7 +14,7 @@ open Proc.Fs
 open BuildInformation
 
 let private clean _ =
-    exec { run "dotnet" "clean" }
+    exec { run "dotnet" "clean" "-c" "release" }
     let removeArtifacts folder = Shell.cleanDir (Paths.ArtifactPath folder).FullName
     removeArtifacts "package"
     removeArtifacts "release-notes"
