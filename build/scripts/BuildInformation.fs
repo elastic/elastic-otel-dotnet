@@ -29,7 +29,7 @@ type Software =
             let sha = Information.getCurrentSHA1 "."
             let output = exec {
                 binary "dotnet"
-                arguments "minver" "-p" "canary" "-m" "0.1"
+                arguments "minver" "-p" "canary.0" "-m" "0.1"
                 find (fun l -> not(l.Error))
             }
             SemVer.parse <| $"%s{output.Line}+%s{sha}"

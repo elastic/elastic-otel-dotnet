@@ -24,7 +24,7 @@ type Build =
     
     | [<Inherit;AltCommandLine("-s")>] SingleTarget
     | [<Inherit>] Token of string 
-    | [<Inherit;AltCommandLine("-c")>] CleanCheckout
+    | [<Inherit;AltCommandLine("-c")>] SkipDirtyCheck
 with
     interface IArgParserTemplate with
         member this.Usage =
@@ -46,7 +46,7 @@ with
             // flags
             | SingleTarget -> "Runs the provided sub command without running their dependencies"
             | Token _ -> "Token to be used to authenticate with github"
-            | CleanCheckout -> "Skip the clean checkout check that guards the release/publish targets"
+            | SkipDirtyCheck -> "Skip the clean checkout check that guards the release/publish targets"
             
     member this.StepName =
         match FSharpValue.GetUnionFields(this, typeof<Build>) with

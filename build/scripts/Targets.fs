@@ -31,11 +31,11 @@ let private version _ =
 let private generatePackages _ = exec { run "dotnet" "pack" }
     
 let private pristineCheck (arguments:ParseResults<Build>) =
-    let doCheck = arguments.TryGetResult CleanCheckout |> Option.isSome
-    match doCheck, Information.isCleanWorkingCopy "." with
-    | false, _ -> printfn "Checkout is dirty but -c was specified to ignore this"
+    let skipCheck = arguments.TryGetResult SkipDirtyCheck |> Option.isSome
+    match skipCheck, Information.isCleanWorkingCopy "." with
+    | true, _ -> printfn "Checkout is dirty but -c was specified to ignore this"
     | _, true  -> printfn "The checkout folder does not have pending changes, proceeding"
-    | _ -> failwithf "The checkout folder has pending changes, aborting"
+    | _ -> failwithf "The checkout folder has pending changes, aborting. Specify -c to ./build.sh to skip this check"
 
 let private test _ =
     let testOutputPath = Paths.ArtifactPath "tests"
@@ -77,7 +77,8 @@ let private generateApiChanges _ =
             [
                 "assembly-differ"
                 $"previous-nuget|%s{p}|%s{currentVersion}|%s{tfm}";
-                $"directory|src/%s{p}/bin/Release/%s{tfm}";
+                //$"directory|.artifacts/bin/%s{p}/release/%s{tfm}";
+                $"directory|.artifacts/bin/%s{p}/release";
                 "-a"; "true"; "--target"; p; "-f"; "github-comment"; "--output"; outputFile
             ]
         exec { run "dotnet" args }
@@ -95,9 +96,9 @@ let private generateReleaseNotes (arguments:ParseResults<Build>) =
     let releaseNotesArgs =
         (Software.GithubMoniker.Split("/") |> Seq.toList)
         @ ["--version"; currentVersion
-           "--label"; "enhancement"; "New Features"
-           "--label"; "bug"; "Bug Fixes"
-           "--label"; "documentation"; "Docs Improvements"
+           "--label"; "enhancement"; "Features"
+           "--label"; "bug"; "Fixes"
+           "--label"; "documentation"; "Documentation"
         ] @ tokenArgs
         @ ["--output"; output]
         
@@ -108,8 +109,8 @@ let Setup (parsed:ParseResults<Build>) =
     let wireCommandLine (t: Build) =
         match t with
         // commands
-        | Clean -> Build.Step clean 
         | Version -> Build.Step version
+        | Clean -> Build.Cmd [Version] [] clean
         | Build -> Build.Cmd [Clean] [] build
         | Test -> Build.Cmd [Build] [] test
         | Release -> 
@@ -128,7 +129,7 @@ let Setup (parsed:ParseResults<Build>) =
         // flags
         | SingleTarget
         | Token _
-        | CleanCheckout -> Build.Ignore
+        | SkipDirtyCheck -> Build.Ignore
 
     for target in Build.Targets do
         let setup = wireCommandLine target 
