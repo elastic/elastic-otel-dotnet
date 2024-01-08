@@ -19,32 +19,40 @@ let private clean _ =
     
 let private build _ = exec { run "dotnet" "build" "-c" "Release" }
 
+let private release _ = printfn "release"
+    
+let private publish _ = printfn "publish"
+
+let private version _ =
+    let version = Software.Version
+    printfn $"Informational version: %s{version.AsString}"
+    printfn $"Semantic version: %s{version.NormalizeToShorter()}"
+
 let private generatePackages _ = exec { run "dotnet" "pack" }
     
 let private pristineCheck (arguments:ParseResults<Build>) =
     let doCheck = arguments.TryGetResult CleanCheckout |> Option.isSome
     match doCheck, Information.isCleanWorkingCopy "." with
+    | false, _ -> printfn "Checkout is dirty but -c was specified to ignore this"
     | _, true  -> printfn "The checkout folder does not have pending changes, proceeding"
-    | false, _ -> printf "Checkout is dirty but -c was specified to ignore this"
     | _ -> failwithf "The checkout folder has pending changes, aborting"
 
-let rec private test _ =
+let private test _ =
     let testOutputPath = Paths.ArtifactPath "tests"
     let junitOutput = Path.Combine(testOutputPath.FullName, "junit-{assembly}-{framework}-test-results.xml")
-    let loggerPathArgs = sprintf "LogFilePath=%s" junitOutput
-    let loggerArg = sprintf "--logger:\"junit;%s\"" loggerPathArgs
-    let tfmArgs =
-        if OS.Current = OS.Windows then [] else ["-f"; "net8.0"]
+    let loggerPathArgs = $"LogFilePath=%s{junitOutput}"
+    let loggerArg = $"--logger:\"junit;%s{loggerPathArgs}\""
+    let tfmArgs = if OS.Current = OS.Windows then [] else ["-f"; "net8.0"]
     exec {
         run "dotnet" (["test"; "-c"; "Release"; loggerArg] @ tfmArgs)
     } 
 
-let private validatePackages (arguments:ParseResults<Build>) =
+let private validatePackages _ =
     let packagesPath = Paths.ArtifactPath "package"
     let output = Paths.RelativePathToRoot <| packagesPath.FullName
     let nugetPackages =
         packagesPath.GetFiles("*.nupkg", SearchOption.AllDirectories)
-        |> Seq.sortByDescending(_.CreationTimeUtc)
+        |> Seq.sortByDescending(fun f -> f.CreationTimeUtc)
         |> Seq.map (fun p -> Paths.RelativePathToRoot p.FullName)
         
     let args = ["-v"; Software.Version.AsString; "-k"; Software.SignKey; "-t"; output]
@@ -53,25 +61,23 @@ let private validatePackages (arguments:ParseResults<Build>) =
         exec { run "dotnet" (["nupkg-validator"; p] @ args) } 
     )
 
-let private generateApiChanges (arguments:ParseResults<Build>) =
+let private generateApiChanges _ =
     let packagesPath = Paths.ArtifactPath "package"
     let output = Paths.RelativePathToRoot <| packagesPath.FullName
     let currentVersion = Software.Version.NormalizeToShorter()
     let nugetPackages =
         packagesPath.GetFiles("*.nupkg", SearchOption.AllDirectories)
-        |> Seq.sortByDescending(_.CreationTimeUtc)
+        |> Seq.sortByDescending(fun f -> f.CreationTimeUtc)
         |> Seq.map (fun p -> Path.GetFileNameWithoutExtension(Paths.RelativePathToRoot p.FullName).Replace("." + currentVersion, ""))
     nugetPackages
     |> Seq.iter(fun p ->
-        let outputFile =
-            let f = sprintf "breaking-changes-%s.md" p
-            Path.Combine(output, f)
+        let outputFile = Path.Combine(output, $"breaking-changes-%s{p}.md")
         let tfm = "net8.0"
         let args =
             [
                 "assembly-differ"
-                (sprintf "previous-nuget|%s|%s|%s" p currentVersion tfm);
-                (sprintf "directory|src/%s/bin/Release/%s" p tfm);
+                $"previous-nuget|%s{p}|%s{currentVersion}|%s{tfm}";
+                $"directory|src/%s{p}/bin/Release/%s{tfm}";
                 "-a"; "true"; "--target"; p; "-f"; "github-comment"; "--output"; outputFile
             ]
         exec { run "dotnet" args }
@@ -81,7 +87,7 @@ let private generateReleaseNotes (arguments:ParseResults<Build>) =
     let currentVersion = Software.Version.NormalizeToShorter()
     let releaseNotesPath = Paths.ArtifactPath "release-notes"
     let output =
-        Paths.RelativePathToRoot <| Path.Combine(releaseNotesPath.FullName, sprintf "release-notes-%s.md" currentVersion)
+        Paths.RelativePathToRoot <| Path.Combine(releaseNotesPath.FullName, $"release-notes-%s{currentVersion}.md")
     let tokenArgs =
         match arguments.TryGetResult Token with
         | None -> []
@@ -98,18 +104,8 @@ let private generateReleaseNotes (arguments:ParseResults<Build>) =
     let args = ["release-notes"] @ releaseNotesArgs
     exec { run "dotnet" args }
 
-let private release _ = printfn "release"
-    
-let private publish _ = printfn "publish"
-
-let private version _ =
-    printfn $"hello world"
-    let version = Software.Version
-    printfn $"Informational version: %s{version.AsString}"
-    printfn $"Semantic version: %s{version.NormalizeToShorter()}"
-
 let Setup (parsed:ParseResults<Build>) =
-    let wireSteps (t: Build) =
+    let wireCommandLine (t: Build) =
         match t with
         // commands
         | Clean -> Build.Step clean 
@@ -135,5 +131,5 @@ let Setup (parsed:ParseResults<Build>) =
         | CleanCheckout -> Build.Ignore
 
     for target in Build.Targets do
-        let setup = wireSteps target 
+        let setup = wireCommandLine target 
         setup target parsed
