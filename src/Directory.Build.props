@@ -6,7 +6,7 @@
     <AssemblyOriginatorKeyFile>$(SolutionRoot)\build\keys\keypair.snk</AssemblyOriginatorKeyFile>
 
     <PackageIcon>nuget-icon.png</PackageIcon>
-    <PackageReadmeFile>$(SolutionRoot)\README.md</PackageReadmeFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <!-- Include .pdb in package -->
     <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
     <!-- Generate documentation files for each package -->

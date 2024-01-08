@@ -5,188 +5,132 @@
 module Targets
 
 open Argu
-open System
 open System.IO
-open Bullseye
 open CommandLine
+open Fake.Core
+open Fake.IO
 open Fake.Tools.Git
-open ProcNet
-open System
+open Proc.Fs
+open BuildInformation
 
-type OS =
-    | OSX
-    | Windows
-    | Linux
-
-let getOS = 
-    match int Environment.OSVersion.Platform with
-    | 4 | 128 -> Linux
-    | 6       -> OSX
-    | _       -> Windows
+let private clean _ =
+    exec { run "dotnet" "clean" } 
+    Shell.cleanDir Paths.ArtifactFolder.FullName
     
-let execWithTimeout binary args timeout =
-    let opts =
-        ExecArguments(binary, args |> List.map (sprintf "\"%s\"") |> List.toArray)
-    let options = args |> String.concat " "
-    printfn ":: Running command: %s %s" binary options
-    let r = Proc.Exec(opts, timeout)
+let private build _ = exec { run "dotnet" "build" "-c" "Release" }
 
-    match r.HasValue with
-    | true -> r.Value
-    | false -> failwithf "invocation of `%s` timed out" binary
-
-let exec binary args =
-    execWithTimeout binary args (TimeSpan.FromMinutes 10)
+let private release _ = printfn "release"
     
-let private restoreTools = lazy(exec "dotnet" ["tool"; "restore"])
-let private currentVersion =
-    lazy(
-        restoreTools.Value |> ignore
-        let r = Proc.Start("dotnet", "minver", "--default-pre-release-phase", "canary", "-m", "0.1")
-        let o = r.ConsoleOut |> Seq.find (fun l -> not(l.Line.StartsWith("MinVer:")))
-        o.Line
-    )
-let private currentVersionInformational =
-    lazy(
-        match Paths.IncludeGitHashInInformational with
-        | false -> currentVersion.Value
-        | true -> sprintf "%s+%s" currentVersion.Value (Information.getCurrentSHA1( "."))
-    )
+let private publish _ = printfn "publish"
 
-let private clean (arguments:ParseResults<Arguments>) =
-    if (Paths.Output.Exists) then Paths.Output.Delete (true)
-    exec "dotnet" ["clean"] |> ignore
+let private version _ =
+    let version = Software.Version
+    printfn $"Informational version: %s{version.AsString}"
+    printfn $"Semantic version: %s{version.NormalizeToShorter()}"
+
+let private generatePackages _ = exec { run "dotnet" "pack" }
     
-let private build (arguments:ParseResults<Arguments>) = exec "dotnet" ["build"; "-c"; "Release"] |> ignore
-
-let private pristineCheck (arguments:ParseResults<Arguments>) =
-    let doCheck = arguments.TryGetResult CleanCheckout |> Option.defaultValue true
-    match doCheck, Information.isCleanWorkingCopy "." with
+let private pristineCheck (arguments:ParseResults<Build>) =
+    let skipCheck = arguments.TryGetResult SkipDirtyCheck |> Option.isSome
+    match skipCheck, Information.isCleanWorkingCopy "." with
+    | true, _ -> printfn "Checkout is dirty but -c was specified to ignore this"
     | _, true  -> printfn "The checkout folder does not have pending changes, proceeding"
-    | false, _ -> printf "Checkout is dirty but -c was specified to ignore this"
-    | _ -> failwithf "The checkout folder has pending changes, aborting"
+    | _ -> failwithf "The checkout folder has pending changes, aborting. Specify -c to ./build.sh to skip this check"
 
-let private test (arguments:ParseResults<Arguments>) =
-    let junitOutput = Path.Combine(Paths.Output.FullName, "junit-{assembly}-{framework}-test-results.xml")
-    let loggerPathArgs = sprintf "LogFilePath=%s" junitOutput
-    let loggerArg = sprintf "--logger:\"junit;%s\"" loggerPathArgs
-    let tfmArgs =
-        if getOS = OS.Windows then [] else ["-f"; "net6.0"]
-    exec "dotnet" (["test"; "-c"; "Release"; loggerArg] @ tfmArgs) |> ignore
+let private test _ =
+    let testOutputPath = Paths.ArtifactPath "tests"
+    let junitOutput = Path.Combine(testOutputPath.FullName, "junit-{assembly}-{framework}-test-results.xml")
+    let loggerPathArgs = $"LogFilePath=%s{junitOutput}"
+    let loggerArg = $"--logger:\"junit;%s{loggerPathArgs}\""
+    let tfmArgs = if OS.Current = OS.Windows then [] else ["-f"; "net8.0"]
+    exec {
+        run "dotnet" (["test"; "-c"; "Release"; loggerArg] @ tfmArgs)
+    } 
 
-let private generatePackages (arguments:ParseResults<Arguments>) =
-    let output = Paths.RootRelative Paths.Output.FullName
-    exec "dotnet" ["pack"; "-c"; "Release"; "-o"; output] |> ignore
-    
-let private validatePackages (arguments:ParseResults<Arguments>) =
-    let output = Paths.RootRelative <| Paths.Output.FullName
+let private validatePackages _ =
+    let packagesPath = Paths.ArtifactPath "package"
+    let output = Paths.RelativePathToRoot <| packagesPath.FullName
     let nugetPackages =
-        Paths.Output.GetFiles("*.nupkg") |> Seq.sortByDescending(fun f -> f.CreationTimeUtc)
-        |> Seq.map (fun p -> Paths.RootRelative p.FullName)
+        packagesPath.GetFiles("*.nupkg", SearchOption.AllDirectories)
+        |> Seq.sortByDescending(fun f -> f.CreationTimeUtc)
+        |> Seq.map (fun p -> Paths.RelativePathToRoot p.FullName)
         
-    let jenkinsOnWindowsArgs =
-        if Fake.Core.Environment.hasEnvironVar "JENKINS_URL" && Fake.Core.Environment.isWindows then ["-r"; "true"] else []
-    
-    let args = ["-v"; currentVersionInformational.Value; "-k"; Paths.SignKey; "-t"; output] @ jenkinsOnWindowsArgs
-    nugetPackages |> Seq.iter (fun p -> exec "dotnet" (["nupkg-validator"; p] @ args) |> ignore)
+    let args = ["-v"; Software.Version.AsString; "-k"; Software.SignKey; "-t"; output]
+    nugetPackages
+    |> Seq.iter (fun p ->
+        exec { run "dotnet" (["nupkg-validator"; p] @ args) } 
+    )
 
-let private generateApiChanges (arguments:ParseResults<Arguments>) =
-    let output = Paths.RootRelative <| Paths.Output.FullName
-    let currentVersion = currentVersion.Value
+let private generateApiChanges _ =
+    let packagesPath = Paths.ArtifactPath "package"
+    let output = Paths.RelativePathToRoot <| packagesPath.FullName
+    let currentVersion = Software.Version.NormalizeToShorter()
     let nugetPackages =
-        Paths.Output.GetFiles("*.nupkg") |> Seq.sortByDescending(fun f -> f.CreationTimeUtc)
-        |> Seq.map (fun p -> Path.GetFileNameWithoutExtension(Paths.RootRelative p.FullName).Replace("." + currentVersion, ""))
+        packagesPath.GetFiles("*.nupkg", SearchOption.AllDirectories)
+        |> Seq.sortByDescending(fun f -> f.CreationTimeUtc)
+        |> Seq.map (fun p -> Path.GetFileNameWithoutExtension(Paths.RelativePathToRoot p.FullName).Replace("." + currentVersion, ""))
     nugetPackages
     |> Seq.iter(fun p ->
-        let outputFile =
-            let f = sprintf "breaking-changes-%s.md" p
-            Path.Combine(output, f)
+        let outputFile = Path.Combine(output, $"breaking-changes-%s{p}.md")
+        let tfm = "net8.0"
         let args =
             [
                 "assembly-differ"
-                (sprintf "previous-nuget|%s|%s|%s" p currentVersion Paths.MainTFM);
-                (sprintf "directory|src/%s/bin/Release/%s" p Paths.MainTFM);
+                $"previous-nuget|%s{p}|%s{currentVersion}|%s{tfm}";
+                //$"directory|.artifacts/bin/%s{p}/release/%s{tfm}";
+                $"directory|.artifacts/bin/%s{p}/release";
                 "-a"; "true"; "--target"; p; "-f"; "github-comment"; "--output"; outputFile
             ]
-        
-        exec "dotnet" args |> ignore
+        exec { run "dotnet" args }
     )
     
-let private generateReleaseNotes (arguments:ParseResults<Arguments>) =
-    let currentVersion = currentVersion.Value
+let private generateReleaseNotes (arguments:ParseResults<Build>) =
+    let currentVersion = Software.Version.NormalizeToShorter()
+    let releaseNotesPath = Paths.ArtifactPath "release-notes"
     let output =
-        Paths.RootRelative <| Path.Combine(Paths.Output.FullName, sprintf "release-notes-%s.md" currentVersion)
+        Paths.RelativePathToRoot <| Path.Combine(releaseNotesPath.FullName, $"release-notes-%s{currentVersion}.md")
     let tokenArgs =
         match arguments.TryGetResult Token with
         | None -> []
         | Some token -> ["--token"; token;]
     let releaseNotesArgs =
-        (Paths.Repository.Split("/") |> Seq.toList)
+        (Software.GithubMoniker.Split("/") |> Seq.toList)
         @ ["--version"; currentVersion
-           "--label"; "enhancement"; "New Features"
-           "--label"; "bug"; "Bug Fixes"
-           "--label"; "documentation"; "Docs Improvements"
+           "--label"; "enhancement"; "Features"
+           "--label"; "bug"; "Fixes"
+           "--label"; "documentation"; "Documentation"
         ] @ tokenArgs
         @ ["--output"; output]
         
-    exec "dotnet" (["release-notes"] @ releaseNotesArgs) |> ignore
+    let args = ["release-notes"] @ releaseNotesArgs
+    exec { run "dotnet" args }
 
-let private createReleaseOnGithub (arguments:ParseResults<Arguments>) =
-    let currentVersion = currentVersion.Value
-    let tokenArgs =
-        match arguments.TryGetResult Token with
-        | None -> []
-        | Some token -> ["--token"; token;]
-    let releaseNotes = Paths.RootRelative <| Path.Combine(Paths.Output.FullName, sprintf "release-notes-%s.md" currentVersion)
-    let breakingChanges =
-        let breakingChangesDocs = Paths.Output.GetFiles("breaking-changes-*.md")
-        breakingChangesDocs 
-        |> Seq.map(fun f -> ["--body"; Paths.RootRelative f.FullName])
-        |> Seq.collect id
-        |> Seq.toList
-    let releaseArgs =
-        (Paths.Repository.Split("/") |> Seq.toList)
-        @ ["create-release"
-           "--version"; currentVersion
-           "--body"; releaseNotes; 
-        ] @ breakingChanges @ tokenArgs
-        
-    exec "dotnet" (["release-notes"] @ releaseArgs) |> ignore
-    
-let private release (arguments:ParseResults<Arguments>) = printfn "release"
-    
-let private publish (arguments:ParseResults<Arguments>) = printfn "publish" 
+let Setup (parsed:ParseResults<Build>) =
+    let wireCommandLine (t: Build) =
+        match t with
+        // commands
+        | Version -> Build.Step version
+        | Clean -> Build.Cmd [Version] [] clean
+        | Build -> Build.Cmd [Clean] [] build
+        | Test -> Build.Cmd [Build] [] test
+        | Release -> 
+            Build.Cmd 
+                [PristineCheck; Test]
+                [GeneratePackages; ValidatePackages; GenerateReleaseNotes; GenerateApiChanges]
+                release
+            
+        // steps
+        | PristineCheck -> Build.Step pristineCheck  
+        | GeneratePackages -> Build.Step generatePackages
+        | ValidatePackages -> Build.Step validatePackages
+        | GenerateReleaseNotes -> Build.Step generateReleaseNotes
+        | GenerateApiChanges -> Build.Step generateApiChanges
+            
+        // flags
+        | SingleTarget
+        | Token _
+        | SkipDirtyCheck -> Build.Ignore
 
-let Setup (parsed:ParseResults<Arguments>) (subCommand:Arguments) =
-    let step (name:string) action = Targets.Target(name, new Action(fun _ -> action(parsed)))
-    
-    let cmd (name:string) commandsBefore steps action =
-        let singleTarget = (parsed.TryGetResult SingleTarget |> Option.defaultValue false)
-        let deps =
-            match (singleTarget, commandsBefore) with
-            | (true, _) -> [] 
-            | (_, Some d) -> d
-            | _ -> []
-        let steps = steps |> Option.defaultValue []
-        Targets.Target(name, deps @ steps, Action(action))
-        
-    step Clean.Name clean
-    cmd Build.Name None (Some [Clean.Name]) <| fun _ -> build parsed
-    
-    cmd Test.Name (Some [Build.Name;]) None <| fun _ -> test parsed
-    
-    step PristineCheck.Name pristineCheck
-    step GeneratePackages.Name generatePackages 
-    step ValidatePackages.Name validatePackages 
-    step GenerateReleaseNotes.Name generateReleaseNotes
-    step GenerateApiChanges.Name generateApiChanges
-    cmd Release.Name
-        (Some [PristineCheck.Name; Test.Name;])
-        (Some [GeneratePackages.Name; ValidatePackages.Name; GenerateReleaseNotes.Name; GenerateApiChanges.Name])
-        <| fun _ -> release parsed
-        
-    step CreateReleaseOnGithub.Name createReleaseOnGithub 
-    cmd Publish.Name
-        (Some [Release.Name])
-        (Some [CreateReleaseOnGithub.Name; ])
-        <| fun _ -> publish parsed
+    for target in Build.Targets do
+        let setup = wireCommandLine target 
+        setup target parsed

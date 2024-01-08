@@ -11,26 +11,30 @@ open CommandLine
     
 [<EntryPoint>]
 let main argv =
-    let parser = ArgumentParser.Create<Arguments>(programName = "./build.sh")
+    let argv = if argv.Length = 0 then ["build"] |> Array.ofList else argv
+    let parser = ArgumentParser.Create<Build>(programName = "./build.sh")
     let parsed = 
         try
             let parsed = parser.ParseCommandLine(inputs = argv, raiseOnUsage = true)
-            let arguments = parsed.GetSubCommand()
-            Some (parsed, arguments)
+            Some parsed
         with e ->
-            printfn "%s" e.Message
+            printfn $"%s{e.Message}"
             None
     
     match parsed with
     | None -> 2
-    | Some (parsed, arguments) ->
+    | Some parsed ->
         
-        let target = arguments.Name
+        let target = parsed.GetSubCommand().StepName
+        Targets.Setup parsed
         
-        Targets.Setup parsed arguments
         let swallowTypes = [typeof<ProcExecException>; typeof<ExceptionExiter>]
+        let shortErrorsFor = (fun e -> swallowTypes |> List.contains (e.GetType()) )
         
-        Targets.RunTargetsAndExit
-            ([target], (fun e -> swallowTypes |> List.contains (e.GetType()) ), ":")
+        async {
+            do! Async.SwitchToThreadPool ()
+            return! Targets.RunTargetsAndExitAsync([target], shortErrorsFor, fun _ -> ":") |> Async.AwaitTask
+        } |> Async.RunSynchronously
+        
         0
         

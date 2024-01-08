@@ -11,7 +11,7 @@
   </PropertyGroup>
   
   <PropertyGroup>
-    <MinVerDefaultPreReleasePhase>canary</MinVerDefaultPreReleasePhase>
+    <MinVerDefaultPreReleaseIdentifiers>canary.0</MinVerDefaultPreReleaseIdentifiers>
     <MinVerMinimumMajorMinor>0.1</MinVerMinimumMajorMinor>
 
     <LangVersion>latest</LangVersion>
@@ -21,6 +21,6 @@
     <ArtifactsPath>$(MSBuildThisFileDirectory).artifacts</ArtifactsPath>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="MinVer" Version="2.3.1" PrivateAssets="all" />
+    <PackageReference Include="MinVer" Version="4.3.0" PrivateAssets="all" />
   </ItemGroup>
 </Project>
