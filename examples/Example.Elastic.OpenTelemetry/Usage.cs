@@ -18,43 +18,44 @@ internal static class Usage
 
     public static async Task BasicBuilderUsageAsync()
     {
-        // NOTE: This sample assumes ENV VARs have been set to configure the Endpoint and Authorization header.
+		// NOTE: This sample assumes ENV VARs have been set to configure the Endpoint and Authorization header.
 
-        // The simplest scenario with has default listeners and the OTLP exporter.
-        //using var agent = Agent.Build();
+		// The simplest scenario with has default listeners and the OTLP exporter.
+		//using var agent = Agent.Build();
 
-        // Build an agent by creating and using an agent builder, adding a single source (for traces and metrics) defined in this sample application.
-        //using var agent = new AgentBuilder(ActivitySourceName).Build();
+		// Build an agent by creating and using an agent builder, adding a single source (for traces and metrics) defined in this sample application.
+		using var agent = new AgentBuilder(ActivitySourceName).Build();
 
-        // Build an agent by creating and using an agent builder, adding a single source for the app just to the tracer.
-        using var agent = new AgentBuilder().AddTracerSource(ActivitySourceName).Build();
+		// Build an agent by creating and using an agent builder, adding a single source for the app just to the tracer.
+		//using var agent = new AgentBuilder().AddTracerSource(ActivitySourceName).Build();
 
-        // This example adds the application activity source and fully customises the resource
-        //using var agent = new AgentBuilder(ActivitySourceName)
-        //    .ConfigureTracer(b => b.Clear().AddService("CustomServiceName", serviceVersion: "2.2.2"))
-        //    .Build();
+		// This example adds the application activity source and fully customises the resource
+		//using var agent = new AgentBuilder(ActivitySourceName)
+		//	.ConfigureTracer(b => b.Clear().AddService("CustomServiceName", serviceVersion: "2.2.2"))
+		//	.Build();
 
-        //using var agent = new AgentBuilder()
-        //    .ConfigureTracer(tpb => tpb
-        //        .ConfigureResource(rb => rb.AddService("TracerProviderBuilder", "3.3.3"))
-        //        .AddRedisInstrumentation() // This can currently only be achieved using this overload
-        //        .AddSource(ActivitySourceName)
-        //        .AddConsoleExporter())
-        //    .Build();
+		//using var agent = new AgentBuilder()
+		//	.AddTracerSource(ActivitySourceName) // Intentionally duplicating to test the effect
+		//	.ConfigureTracer(tpb => tpb
+		//		.ConfigureResource(rb => rb.AddService("TracerProviderBuilder", "3.3.3"))
+		//		.AddRedisInstrumentation() // This can currently only be achieved using this overload or adding Elastic processors to the TPB (as below)
+		//		.AddSource(ActivitySourceName)
+		//		.AddConsoleExporter())
+		//	.Build();
 
-        // This is the most flexible approach for a consumer as they can include our processor(s) and exporter(s)
-        //using var tracerProvider = Sdk.CreateTracerProviderBuilder()
-        //    .AddSource(ActivitySourceName)
-        //    .ConfigureResource(resource =>
-        //        resource.AddService(
-        //          serviceName: "OtelSdkApp",
-        //          serviceVersion: "1.0.0"))
-        //    .AddConsoleExporter()
-        //    .AddElasticProcessors()
-        //    .AddElasticOtlpExporter()
-        //    .Build();
+		//This is the most flexible approach for a consumer as they can include our processor(s) and exporter(s)
+		//using var tracerProvider = Sdk.CreateTracerProviderBuilder()
+		//	.AddSource(ActivitySourceName)
+		//	.ConfigureResource(resource =>
+		//		resource.AddService(
+		//		  serviceName: "OtelSdkApp",
+		//		  serviceVersion: "1.0.0"))
+		//	.AddConsoleExporter()
+		//	.AddElasticProcessors()
+		//	.AddElasticOtlpExporter()
+		//	.Build();
 
-        await DoStuffAsync();
+		await DoStuffAsync();
 
         static async Task DoStuffAsync()
         {
