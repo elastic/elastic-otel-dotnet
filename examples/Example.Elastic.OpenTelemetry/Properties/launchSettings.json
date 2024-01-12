@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Example.Elastic.OpenTelemetry": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "OTEL_RESOURCE_ATTRIBUTES": "service.name=SampleConsoleApp,service.version=1.0.0,deployment.environment=development"
+      }
+    }
+  }
+}

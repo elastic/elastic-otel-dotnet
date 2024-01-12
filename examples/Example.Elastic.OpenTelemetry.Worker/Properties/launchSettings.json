@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "Example.Elastic.OpenTelemetry.Worker": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development",
+        "OTEL_RESOURCE_ATTRIBUTES": "service.name=WorkerService,service.version=1.0.0,deployment.environment=development"
+      }
+    }
+  }
+}

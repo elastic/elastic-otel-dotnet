@@ -4,6 +4,7 @@
 using Elastic.OpenTelemetry.Processors;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Trace;
+using OpenTelemetry;
 
 namespace Elastic.OpenTelemetry.Extensions;
 
@@ -43,7 +44,7 @@ public static class TraceBuilderProviderExtensions
         if (configure is not null)
             return name is not null ? builder.AddOtlpExporter(name, configure): builder.AddOtlpExporter(configure);
 
-        // Access OpenTelemetry environment variables used to configure the OTLP exporer.
+        // Access OpenTelemetry environment variables used to configure the OTLP exporter.
         // When these are present, we won't attempt to fallback to elastic environment variables.
         var otlpExporterTracesEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT");
         var otlpExporterEndpoint = Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT");
@@ -115,7 +116,11 @@ public static class TraceBuilderProviderExtensions
             if (otlpExporterHeaders is not null)
                 configure += options => options.Headers = otlpExporterHeaders;
 
-            return builder.AddOtlpExporter(configure);
+#if DEBUG
+			configure += options => options.ExportProcessorType = ExportProcessorType.Simple;
+#endif
+
+			return builder.AddOtlpExporter(configure);
         }
 
         return builder.AddOtlpExporter();
