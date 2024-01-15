@@ -30,7 +30,7 @@ let private version _ =
     let version = Software.Version
     printfn $"Informational version: %s{version.AsString}"
     printfn $"Semantic version: %s{version.NormalizeToShorter()}"
-
+    
 let private generatePackages _ = exec { run "dotnet" "pack" }
     
 let private pristineCheck (arguments:ParseResults<Build>) =
@@ -54,6 +54,12 @@ let private test _ =
             @ ["--"; "RunConfiguration.CollectSourceInformation=true"]
         )
     } 
+
+let private validateLicenses _ =
+    let args = ["-u"; "-t"; "-i"; "Elastic.OpenTelemetry.sln"; "--use-project-assets-json"
+                "--forbidden-license-types"; "build/forbidden-license-types.json"
+                "--packages-filter"; "#System\..*#";]
+    exec { run "dotnet" (["dotnet-project-licenses"] @ args) }
 
 let private validatePackages _ =
     let packagesPath = Paths.ArtifactPath "package"
@@ -124,12 +130,13 @@ let Setup (parsed:ParseResults<Build>) =
         | Release -> 
             Build.Cmd 
                 [PristineCheck; Test]
-                [GeneratePackages; ValidatePackages; GenerateReleaseNotes; GenerateApiChanges]
+                [ValidateLicenses; GeneratePackages; ValidatePackages; GenerateReleaseNotes; GenerateApiChanges]
                 release
             
         // steps
         | PristineCheck -> Build.Step pristineCheck  
         | GeneratePackages -> Build.Step generatePackages
+        | ValidateLicenses -> Build.Step validateLicenses
         | ValidatePackages -> Build.Step validatePackages
         | GenerateReleaseNotes -> Build.Step generateReleaseNotes
         | GenerateApiChanges -> Build.Step generateApiChanges
