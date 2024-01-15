@@ -24,7 +24,7 @@
       <PackagePath>nuget-icon.png</PackagePath>
     </Content>
     <None Include="$(SolutionRoot)\NOTICE.txt" CopyToOutputDirectory="PreserveNewest" Pack="True" PackagePath="NOTICE.txt" />
-    <None Include="$(SolutionRoot)\LICENSE" CopyToOutputDirectory="PreserveNewest">
+    <None Include="$(SolutionRoot)\LICENSE.txt" CopyToOutputDirectory="PreserveNewest">
       <Pack>True</Pack>
       <PackagePath>LICENSE</PackagePath>
     </None>
