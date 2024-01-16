@@ -17,6 +17,7 @@ type Build =
     
     | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] PristineCheck 
     | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] GeneratePackages
+    | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] ValidateLicenses 
     | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] ValidatePackages 
     | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] GenerateReleaseNotes 
     | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] GenerateApiChanges 
@@ -39,6 +40,7 @@ with
             // steps
             | PristineCheck  
             | GeneratePackages
+            | ValidateLicenses
             | ValidatePackages 
             | GenerateReleaseNotes
             | GenerateApiChanges -> "Undocumented, dependent target"
