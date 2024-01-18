@@ -86,8 +86,6 @@ public class AgentBuilder
 		return this;
 	}
 
-	internal string Thing { get; } = "HI";
-
 	// TODO - Other AddTracerSources for up to x sources to avoid params allocation.
 
 	/// <summary>
@@ -186,7 +184,12 @@ public class AgentBuilder
 		return tracerProvider is not null ? new Agent(tracerProvider) : new Agent();
 	}
 
-	internal IServiceCollection Build(IServiceCollection serviceCollection)
+	/// <summary>
+	/// Register the OpenTelemetry SDK services and Elastic defaults into the supplied <see cref="IServiceCollection"/>.
+	/// </summary>
+	/// <param name="serviceCollection">A <see cref="IServiceCollection"/> to which OpenTelemetry SDK services will be added.</param>
+	/// <returns>The supplied <see cref="IServiceCollection"/>.</returns>
+	public IServiceCollection Register(IServiceCollection serviceCollection)
 	{
 		_ = serviceCollection
 			.AddOpenTelemetry()

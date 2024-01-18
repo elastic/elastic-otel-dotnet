@@ -17,7 +17,7 @@ public static class ServiceCollectionExtensions
 	/// <param name="serviceCollection">TODO</param>
 	/// <returns>TODO</returns>
 	public static IServiceCollection AddElasticOpenTelemetry(this IServiceCollection serviceCollection) =>
-		new AgentBuilder().Build(serviceCollection);
+		new AgentBuilder().Register(serviceCollection);
 
 	/// <summary>
 	/// TODO
@@ -26,7 +26,7 @@ public static class ServiceCollectionExtensions
 	/// <param name="activitySourceNames"></param>
 	/// <returns></returns>
 	public static IServiceCollection AddElasticOpenTelemetry(this IServiceCollection serviceCollection, params string[] activitySourceNames) =>
-		new AgentBuilder(activitySourceNames).Build(serviceCollection);
+		new AgentBuilder(activitySourceNames).Register(serviceCollection);
 
 	/// <summary>
 	/// TODO
@@ -35,5 +35,5 @@ public static class ServiceCollectionExtensions
 	/// <param name="configureTracerProvider"></param>
 	/// <returns></returns>
 	public static IServiceCollection AddElasticOpenTelemetry(this IServiceCollection serviceCollection, Action<TracerProviderBuilder> configureTracerProvider) =>
-		new AgentBuilder().ConfigureTracer(configureTracerProvider).Build(serviceCollection);
+		new AgentBuilder().ConfigureTracer(configureTracerProvider).Register(serviceCollection);
 }

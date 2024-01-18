@@ -18,9 +18,5 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.Process" Version="0.5.0-beta.4" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.7.0" />
   </ItemGroup>
-
-  <ItemGroup>
-    <InternalsVisibleTo Include="Elastic.OpenTelemetry.AspNetCore" Key="$(ExposedPublicKey)" />
-  </ItemGroup>
   
 </Project>

@@ -18,7 +18,7 @@ public static class ServiceCollectionExtensions
 	/// <param name="serviceCollection">TODO</param>
 	/// <returns>TODO</returns>
 	public static IServiceCollection AddElasticOpenTelemetryForAspNetCore(this IServiceCollection serviceCollection) =>
-		new AgentBuilder().AddAspNetCore().Build(serviceCollection);
+		new AgentBuilder().AddAspNetCore().Register(serviceCollection);
 
 	/// <summary>
 	/// TODO
@@ -27,7 +27,7 @@ public static class ServiceCollectionExtensions
 	/// <param name="activitySourceNames"></param>
 	/// <returns></returns>
 	public static IServiceCollection AddElasticOpenTelemetryForAspNetCore(this IServiceCollection serviceCollection, params string[] activitySourceNames) =>
-		new AgentBuilder(activitySourceNames).AddAspNetCore().Build(serviceCollection);
+		new AgentBuilder(activitySourceNames).AddAspNetCore().Register(serviceCollection);
 
 	/// <summary>
 	/// TODO
@@ -36,5 +36,5 @@ public static class ServiceCollectionExtensions
 	/// <param name="configureTracerProvider"></param>
 	/// <returns></returns>
 	public static IServiceCollection AddElasticOpenTelemetryForAspNetCore(this IServiceCollection serviceCollection, Action<TracerProviderBuilder> configureTracerProvider) =>
-		new AgentBuilder().AddAspNetCore().ConfigureTracer(configureTracerProvider).Build(serviceCollection);
+		new AgentBuilder().AddAspNetCore().ConfigureTracer(configureTracerProvider).Register(serviceCollection);
 }

@@ -6,9 +6,10 @@ using Example.Elastic.OpenTelemetry.AspNetCore.Controllers;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddHttpClient();
-builder.Services.AddElasticOpenTelemetryForAspNetCore(HomeController.ActivitySourceName);
-builder.Services.AddControllersWithViews();
+builder.Services
+	.AddHttpClient()
+	.AddElasticOpenTelemetryForAspNetCore(HomeController.ActivitySourceName)
+	.AddControllersWithViews();
 
 var app = builder.Build();
 
