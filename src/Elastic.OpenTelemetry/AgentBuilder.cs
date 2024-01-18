@@ -86,6 +86,8 @@ public class AgentBuilder
 		return this;
 	}
 
+	internal string Thing { get; } = "HI";
+
 	// TODO - Other AddTracerSources for up to x sources to avoid params allocation.
 
 	/// <summary>
@@ -158,7 +160,7 @@ public class AgentBuilder
 		// Elastic exporter will be added after.
 
 		ArgumentNullException.ThrowIfNull(configure);
-		_tracerProviderBuilderAction = configure;
+		_tracerProviderBuilderAction += configure;
 		return this;
 	}
 
@@ -199,8 +201,6 @@ public class AgentBuilder
 			if (_activitySourceNames is not null)
 				tracerProviderBuilder.AddSource(_activitySourceNames);
 
-			// Set up a default tracer provider.
-			// TODO - We need to decide which sources and how to handle conditional things such as ASP.NET Core.
 			tracerProviderBuilder
 				.AddHttpClientInstrumentation()
 				.AddGrpcClientInstrumentation()
@@ -219,9 +219,6 @@ public class AgentBuilder
 			}
 
 			_tracerProviderBuilderAction?.Invoke(tracerProviderBuilder);
-
-			// Ensure the distro attributes are always added to the resource.
-			tracerProviderBuilder.ConfigureResource(r => r.AddDistroAttributes());
 
 			// Add the OTLP exporter configured to ship data to an Elastic backend.
 			// TODO - What about cases where users want to register processors/exporters after any exporters we add by default (OTLP)?

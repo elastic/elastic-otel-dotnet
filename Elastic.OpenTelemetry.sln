@@ -26,11 +26,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{AAD39891
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Elastic.OpenTelemetry.Tests", "tests\Elastic.OpenTelemetry.Tests\Elastic.OpenTelemetry.Tests.csproj", "{22BF9223-3A6D-4197-8527-3E4E43A98A81}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = ".github", ".github\.github.csproj", "{B701E33D-D777-4BD4-A4EC-1F63FE69AF7A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = ".github", ".github\.github.csproj", "{B701E33D-D777-4BD4-A4EC-1F63FE69AF7A}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Example.Elastic.OpenTelemetry.AspNetCore", "examples\Example.Elastic.OpenTelemetry.AspNetCore\Example.Elastic.OpenTelemetry.AspNetCore.csproj", "{EC81FA30-C765-4F04-8679-86F16DA3CC65}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Example.Elastic.OpenTelemetry.Worker", "examples\Example.Elastic.OpenTelemetry.Worker\Example.Elastic.OpenTelemetry.Worker.csproj", "{4377A059-16E0-4D5D-AC03-44C09BCE5BC4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Example.Elastic.OpenTelemetry.Worker", "examples\Example.Elastic.OpenTelemetry.Worker\Example.Elastic.OpenTelemetry.Worker.csproj", "{4377A059-16E0-4D5D-AC03-44C09BCE5BC4}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Elastic.OpenTelemetry.AspNetCore", "src\Elastic.OpenTelemetry.AspNetCore\Elastic.OpenTelemetry.AspNetCore.csproj", "{2139F902-B10D-475D-8A38-F78962CEBFD3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -70,6 +72,10 @@ Global
 		{4377A059-16E0-4D5D-AC03-44C09BCE5BC4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4377A059-16E0-4D5D-AC03-44C09BCE5BC4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4377A059-16E0-4D5D-AC03-44C09BCE5BC4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2139F902-B10D-475D-8A38-F78962CEBFD3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2139F902-B10D-475D-8A38-F78962CEBFD3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2139F902-B10D-475D-8A38-F78962CEBFD3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2139F902-B10D-475D-8A38-F78962CEBFD3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -80,6 +86,7 @@ Global
 		{22BF9223-3A6D-4197-8527-3E4E43A98A81} = {AAD39891-0B70-47FA-A212-43E1AAE5DF56}
 		{EC81FA30-C765-4F04-8679-86F16DA3CC65} = {4E95C87B-655B-4BC3-8F2A-DF06B7AAB7E9}
 		{4377A059-16E0-4D5D-AC03-44C09BCE5BC4} = {4E95C87B-655B-4BC3-8F2A-DF06B7AAB7E9}
+		{2139F902-B10D-475D-8A38-F78962CEBFD3} = {E622CFF2-C6C4-40FB-BE42-7C4F2B38B75A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {573B2B5F-8CBB-4D52-A55A-4E65E282AAFB}
