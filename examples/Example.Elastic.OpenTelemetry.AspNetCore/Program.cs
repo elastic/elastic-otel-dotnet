@@ -1,6 +1,8 @@
-// Licensed to Elasticsearch B.V under one or more agreements.
+// Licensed to Elasticsearch B.V under
+// one or more agreements.
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
+
 using Example.Elastic.OpenTelemetry.AspNetCore.Controllers;
 using OpenTelemetry.Trace;
 
@@ -14,6 +16,8 @@ builder.Services.AddOtelElasticAgent(t => t
 builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
+
+app.Logger.LogInformation("Process Id {ProcesId}", Environment.ProcessId);
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -31,7 +35,7 @@ app.UseRouting();
 app.UseAuthorization();
 
 app.MapControllerRoute(
-	name: "default",
-	pattern: "{controller=Home}/{action=Index}/{id?}");
+	"default",
+	"{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
