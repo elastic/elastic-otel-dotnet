@@ -7,11 +7,15 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <NoWarn>xUnit1041</NoWarn>
+    <UserSecretsId>588f828e-db42-4b45-9783-023f03243753</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Proc" Version="0.8.1"/>
     <PackageReference Include="Xunit.Extensions.AssemblyFixture" Version="2.4.1"/>
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0"/>
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="8.0.0"/>
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0"/>
   </ItemGroup>
 
 </Project>
