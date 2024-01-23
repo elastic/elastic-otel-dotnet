@@ -7,6 +7,8 @@ using System.Globalization;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Playwright;
 
 namespace Elastic.OpenTelemetry.IntegrationTests.DistributedFixture;
 
@@ -19,12 +21,23 @@ public class DistributedApplicationFixture : IDisposable, IAsyncLifetime
 	{
 		ServiceName = $"dotnet-e2e-{ShaForCurrentTicks()}";
 		HttpClient = new HttpClient { BaseAddress = new Uri("http://localhost:5247") };
-		_aspNetApplication = new AspNetCoreExampleApplication(ServiceName);
+
+		var configuration = new ConfigurationBuilder()
+			.AddEnvironmentVariables()
+			.AddUserSecrets<DotNetRunApplication>()
+			.Build();
+
+		_aspNetApplication = new AspNetCoreExampleApplication(ServiceName, configuration);
 		_trafficSimulators =
 		[
 			new DefaultTrafficSimulator()
 		];
+		ApmUIContext = new ApmUIBrowserContext(configuration, ApmKibanaUrl);
 	}
+
+	public ApmUIBrowserContext ApmUIContext { get; }
+
+	public Uri ApmKibanaUrl => _aspNetApplication.ApmKibanaUrl;
 
 	public HttpClient HttpClient { get; }
 
@@ -57,33 +70,47 @@ public class DistributedApplicationFixture : IDisposable, IAsyncLifetime
 		await Task.Delay(5000);
 
 		// Stateless refresh
-		await Task.Delay(TimeSpan.FromSeconds(10));
+		//https://github.com/elastic/elasticsearch/blob/main/server/src/main/java/org/elasticsearch/index/IndexSettings.java#L286
+		await Task.Delay(TimeSpan.FromSeconds(15));
+		await ApmUIContext.InitializeAsync();
 	}
 
-	public Task DisposeAsync()
+	public async Task DisposeAsync()
 	{
 		Dispose();
-		return Task.CompletedTask;
+		await ApmUIContext.DisposeAsync();
 	}
 }
 
-public class AspNetCoreExampleApplication(string serviceName)
-	: DotNetRunApplication(serviceName, "Example.Elastic.OpenTelemetry.AspNetCore");
+public class AspNetCoreExampleApplication(string serviceName, IConfiguration configuration)
+	: DotNetRunApplication(serviceName, configuration, "Example.Elastic.OpenTelemetry.AspNetCore");
 
-public interface ITrafficSimulator
-{
-	Task Start(string serviceName, HttpClient client);
-}
 
-public class DefaultTrafficSimulator : ITrafficSimulator
+public class ApmUIBrowserContext(IConfigurationRoot configuration, Uri kibanaUrl) : IAsyncLifetime
 {
-	public async Task Start(string serviceName, HttpClient client)
+
+	public IPage Page { get; private set; } = null!;
+	public IBrowser Browser { get; private set; } = null!;
+	public IPlaywright HeadlessTester { get; private set; } = null!;
+
+	public async Task InitializeAsync()
 	{
-		for (var i = 0; i < 10; i++)
-		{
-			var get = await client.GetAsync("e2e");
-			get.StatusCode.Should().Be(HttpStatusCode.OK);
-			var response = await get.Content.ReadAsStringAsync();
-		}
+		var username = configuration["E2E:BrowserEmail"]?.Trim() ?? string.Empty;
+		var password = configuration["E2E:BrowserPassword"]?.Trim() ?? string.Empty;
+		Program.Main(["install", "chromium"]);
+		HeadlessTester = await Playwright.CreateAsync();
+		Browser = await HeadlessTester.Chromium.LaunchAsync();
+		Page = await Browser.NewPageAsync();
+		await Page.GotoAsync(kibanaUrl.ToString());
+
+		await Page.GetByRole(AriaRole.Textbox, new () { Name = "email" }).FillAsync(username);
+		await Page.GetByRole(AriaRole.Textbox, new () { Name = "password" }).FillAsync(password);
+		await Page.GetByRole(AriaRole.Button, new() { Name = "Log in" }).ClickAsync();
+	}
+
+	public async Task DisposeAsync()
+	{
+		await Browser.DisposeAsync();
+		HeadlessTester.Dispose();
 	}
 }

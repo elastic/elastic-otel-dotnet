@@ -20,20 +20,22 @@ public abstract class DotNetRunApplication
 	private readonly string _endpoint;
 	private readonly string _serviceName;
 
-	public DotNetRunApplication(string serviceName, string applicationName)
+	public DotNetRunApplication(string serviceName, IConfiguration configuration, string applicationName)
 	{
 		_serviceName = serviceName;
 		_applicationName = applicationName;
-		var args = CreateStartArgs();
-		var configuration = new ConfigurationBuilder()
-			.AddEnvironmentVariables()
-			.AddUserSecrets<DotNetRunApplication>()
-			.Build();
 		_endpoint = configuration["E2E:Endpoint"]?.Trim() ?? string.Empty;
 		_authorization = configuration["E2E:Authorization"]?.Trim() ?? string.Empty;
 
+		var args = CreateStartArgs();
+
+		var newBase = _endpoint.Replace(".apm.", ".kb.");
+		ApmKibanaUrl = new Uri(new Uri(newBase), "app/apm");
+
 		_app = Proc.StartLongRunning(args, TimeSpan.FromSeconds(10));
 	}
+
+	public Uri ApmKibanaUrl { get; }
 
 	public int? ProcessId { get; private set; }
 
