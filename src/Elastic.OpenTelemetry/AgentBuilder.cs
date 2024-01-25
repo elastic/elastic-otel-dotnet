@@ -158,7 +158,7 @@ public class AgentBuilder
 		// Elastic exporter will be added after.
 
 		ArgumentNullException.ThrowIfNull(configure);
-		_tracerProviderBuilderAction = configure;
+		_tracerProviderBuilderAction += configure;
 		return this;
 	}
 
@@ -184,7 +184,12 @@ public class AgentBuilder
 		return tracerProvider is not null ? new Agent(tracerProvider) : new Agent();
 	}
 
-	internal IServiceCollection Build(IServiceCollection serviceCollection)
+	/// <summary>
+	/// Register the OpenTelemetry SDK services and Elastic defaults into the supplied <see cref="IServiceCollection"/>.
+	/// </summary>
+	/// <param name="serviceCollection">A <see cref="IServiceCollection"/> to which OpenTelemetry SDK services will be added.</param>
+	/// <returns>The supplied <see cref="IServiceCollection"/>.</returns>
+	public IServiceCollection Register(IServiceCollection serviceCollection)
 	{
 		_ = serviceCollection
 			.AddOpenTelemetry()
@@ -199,8 +204,6 @@ public class AgentBuilder
 			if (_activitySourceNames is not null)
 				tracerProviderBuilder.AddSource(_activitySourceNames);
 
-			// Set up a default tracer provider.
-			// TODO - We need to decide which sources and how to handle conditional things such as ASP.NET Core.
 			tracerProviderBuilder
 				.AddHttpClientInstrumentation()
 				.AddGrpcClientInstrumentation()
@@ -219,9 +222,6 @@ public class AgentBuilder
 			}
 
 			_tracerProviderBuilderAction?.Invoke(tracerProviderBuilder);
-
-			// Ensure the distro attributes are always added to the resource.
-			tracerProviderBuilder.ConfigureResource(r => r.AddDistroAttributes());
 
 			// Add the OTLP exporter configured to ship data to an Elastic backend.
 			// TODO - What about cases where users want to register processors/exporters after any exporters we add by default (OTLP)?

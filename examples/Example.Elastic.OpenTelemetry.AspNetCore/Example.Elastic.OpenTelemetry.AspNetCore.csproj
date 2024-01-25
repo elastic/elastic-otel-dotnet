@@ -7,11 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.7.0"/>
+    <ProjectReference Include="..\..\src\Elastic.OpenTelemetry.AspNetCore\Elastic.OpenTelemetry.AspNetCore.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\src\Elastic.OpenTelemetry\Elastic.OpenTelemetry.csproj"/>
-  </ItemGroup>
-
+  
 </Project>
