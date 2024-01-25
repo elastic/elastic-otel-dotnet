@@ -6,7 +6,16 @@
 global using Xunit;
 global using System.Diagnostics;
 global using FluentAssertions;
-
+using System.Runtime.CompilerServices;
 using Xunit.Extensions.AssemblyFixture;
 
 [assembly: TestFramework(AssemblyFixtureFramework.TypeName, AssemblyFixtureFramework.AssemblyName)]
+
+namespace Elastic.OpenTelemetry.IntegrationTests;
+
+public static class GlobalSetup
+{
+	[ModuleInitializer]
+	public static void Setup() =>
+		XunitContext.EnableExceptionCapture();
+}

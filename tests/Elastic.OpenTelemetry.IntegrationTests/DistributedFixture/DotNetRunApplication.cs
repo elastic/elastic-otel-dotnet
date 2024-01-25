@@ -28,20 +28,14 @@ public abstract class DotNetRunApplication
 		_authorization = configuration["E2E:Authorization"]?.Trim() ?? string.Empty;
 
 		var args = CreateStartArgs();
-
-		var newBase = _endpoint.Replace(".apm.", ".kb.");
-		ApmKibanaUrl = new Uri(new Uri(newBase), "app/apm");
-
 		_app = Proc.StartLongRunning(args, TimeSpan.FromSeconds(10));
 	}
-
-	public Uri ApmKibanaUrl { get; }
 
 	public int? ProcessId { get; private set; }
 
 	protected virtual string[] GetArguments() => Array.Empty<string>();
 
-	private DirectoryInfo GetSolutionRoot()
+	public static DirectoryInfo GetSolutionRoot()
 	{
 		var root = CurrentDirectory;
 		while (root != null && root.GetFiles("*.sln").Length == 0)
@@ -72,7 +66,7 @@ public abstract class DotNetRunApplication
 				{ "OTEL_METRICS_EXPORTER", "otlp" },
 				{ "OTEL_LOGS_EXPORTER", "otlp" },
 				{ "OTEL_BSP_SCHEDULE_DELAY", "1000" },
-				{ "OTEL_BSP_MAX_EXPORT_BATCH_SIZE", "10" },
+				{ "OTEL_BSP_MAX_EXPORT_BATCH_SIZE", "5" },
 				{ "OTEL_RESOURCE_ATTRIBUTES", $"service.name={_serviceName},service.version=1.0,1,deployment.environment=e2e" },
 			},
 			StartedConfirmationHandler = (l) =>
@@ -87,7 +81,7 @@ public abstract class DotNetRunApplication
 		};
 	}
 
-	public void Dispose()
+	public virtual void Dispose()
 	{
 		var pid = _app.Process.ProcessId;
 		if (ProcessId.HasValue)

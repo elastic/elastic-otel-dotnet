@@ -13,44 +13,38 @@ namespace Elastic.OpenTelemetry.IntegrationTests;
 public class EndToEndTests(ITestOutputHelper output, DistributedApplicationFixture fixture)
 	: XunitContextBase(output), IAssemblyFixture<DistributedApplicationFixture>, IAsyncLifetime
 {
-	public IPage Page => fixture.ApmUIContext.Page;
 	private string _testName = string.Empty;
+	private IPage _page = null!;
 
 	[Fact]
-	public async Task Test()
+	public void EnsureApplicationWasStarted() => fixture.Started.Should().BeTrue();
+
+	[Fact]
+	public async Task LatencyShowsAGraph()
 	{
-		fixture.Started.Should().BeTrue();
-
-		Page.SetDefaultTimeout((float)TimeSpan.FromSeconds(20).TotalMilliseconds);
-		var servicesHeader = Page.GetByRole(AriaRole.Heading, new() { Name = "Services" });
-		await servicesHeader.WaitForAsync(new () { State = WaitForSelectorState.Visible });
-
-		var serviceLink = Page.GetByRole(AriaRole.Link, new() { Name = fixture.ServiceName });
-		await serviceLink.WaitForAsync(new () { State = WaitForSelectorState.Visible });
-		Page.SetDefaultTimeout((float)TimeSpan.FromSeconds(5).TotalMilliseconds);
-
-		await Expect(Page.GetByRole(AriaRole.Link, new() { Name = "Get started" })).ToBeVisibleAsync();
+		// click on service in service overview page.
+		_page.SetDefaultTimeout((float)TimeSpan.FromSeconds(30).TotalMilliseconds);
+		var uri = new Uri(fixture.ApmUI.KibanaAppUri, $"/app/apm/services/{fixture.ServiceName}/overview").ToString();
+		await _page.GotoAsync(uri);
+		await Expect(_page.GetByRole(AriaRole.Heading, new() { Name = "Latency", Exact = true })).ToBeVisibleAsync();
 	}
+
 
 	public async Task InitializeAsync()
 	{
-		_testName = XunitContext.Context.ClassName + "." + XunitContext.Context.Test.DisplayName;
-		await Page.Context.Tracing.StartAsync(new()
+		_testName = XunitContext.Context.UniqueTestName;
+		_page = await fixture.ApmUI.OpenApmLandingPage(_testName);
+		try
 		{
-			Title = _testName,
-			Screenshots = true,
-			Snapshots = true,
-			Sources = true
-		});
+			await fixture.ApmUI.WaitForServiceOnOverview(_page);
+		}
+		catch
+		{
+			await fixture.ApmUI.StopTrace(_page, _testName);
+			throw;
+		}
+
 	}
 
-	public async Task DisposeAsync() =>
-		await Page.Context.Tracing.StopAsync(new()
-		{
-			Path = Path.Combine(
-				Path.Combine(XunitContext.Context.SolutionDirectory, ".artifacts"),
-				"playwright-traces",
-				$"{_testName}.zip"
-			)
-		});
+	public async Task DisposeAsync() => await fixture.ApmUI.StopTrace(_page, XunitContext.Context.TestException == null ? null : _testName);
 }

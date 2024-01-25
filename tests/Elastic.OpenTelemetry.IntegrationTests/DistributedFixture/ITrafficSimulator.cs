@@ -9,16 +9,16 @@ namespace Elastic.OpenTelemetry.IntegrationTests.DistributedFixture;
 
 public interface ITrafficSimulator
 {
-	Task Start(string serviceName, HttpClient client);
+	Task Start(DistributedApplicationFixture distributedInfra);
 }
 
 public class DefaultTrafficSimulator : ITrafficSimulator
 {
-	public async Task Start(string serviceName, HttpClient client)
+	public async Task Start(DistributedApplicationFixture distributedInfra)
 	{
 		for (var i = 0; i < 10; i++)
 		{
-			var get = await client.GetAsync("e2e");
+			var get = await distributedInfra.AspNetApplication.HttpClient.GetAsync("e2e");
 			get.StatusCode.Should().Be(HttpStatusCode.OK);
 			var response = await get.Content.ReadAsStringAsync();
 		}
