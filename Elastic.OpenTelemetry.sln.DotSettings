@@ -84,8 +84,7 @@
     &amp;lt;Reformat&amp;gt;false&amp;lt;/Reformat&amp;gt;
   &amp;lt;/Language&amp;gt;
 &amp;lt;/profile&amp;gt;&lt;/RIDER_SETTINGS&gt;&lt;/Profile&gt;</s:String>
-	<s:String x:Key="/Default/CodeStyle/FileHeader/FileHeaderText/@EntryValue">Licensed to Elasticsearch B.V under 
-one or more agreements.
+	<s:String x:Key="/Default/CodeStyle/FileHeader/FileHeaderText/@EntryValue">Licensed to Elasticsearch B.V under one or more agreements.
 Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 See the LICENSE file in the project root for more information</s:String>
 	<s:Boolean x:Key="/Default/CodeEditing/GenerateMemberBody/PlaceBackingFieldAboveProperty/@EntryValue">True</s:Boolean>
