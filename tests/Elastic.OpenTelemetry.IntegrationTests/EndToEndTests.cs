@@ -29,21 +29,7 @@ public class EndToEndTests(ITestOutputHelper output, DistributedApplicationFixtu
 	}
 
 
-	public async Task InitializeAsync()
-	{
-		_testName = XunitContext.Context.UniqueTestName;
-		_page = await fixture.ApmUI.OpenApmLandingPage(_testName);
-		try
-		{
-			await fixture.ApmUI.WaitForServiceOnOverview(_page);
-		}
-		catch
-		{
-			await fixture.ApmUI.StopTrace(_page, _testName);
-			throw;
-		}
-
-	}
+	public async Task InitializeAsync() => _page = await fixture.ApmUI.NewProfiledPage(_testName);
 
 	public async Task DisposeAsync() => await fixture.ApmUI.StopTrace(_page, XunitContext.Context.TestException == null ? null : _testName);
 }

@@ -58,7 +58,8 @@ public class ApmUIBrowserContext : IAsyncLifetime
 
 	public string? StorageState { get; set; }
 
-	public async Task<IPage> OpenApmLandingPage(string testName)
+
+	public async Task<IPage> NewProfiledPage(string testName)
 	{
 		var page = await Browser.NewPageAsync(new () { StorageState = StorageState });
 		await page.Context.Tracing.StartAsync(new()
@@ -68,6 +69,14 @@ public class ApmUIBrowserContext : IAsyncLifetime
 			Snapshots = true,
 			Sources = true
 		});
+
+		return page;
+	}
+
+
+	public async Task<IPage> OpenApmLandingPage(string testName)
+	{
+		var page = await NewProfiledPage(testName);
 		await page.GotoAsync(KibanaAppUri.ToString());
 		return page;
 	}

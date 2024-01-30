@@ -45,15 +45,23 @@ let private test _ =
     let junitOutput = Path.Combine(testOutputPath.FullName, "junit-{assembly}-{framework}-test-results.xml")
     let loggerPathArgs = $"LogFilePath=%s{junitOutput}"
     let loggerArg = $"--logger:\"junit;%s{loggerPathArgs}\""
-    let githubActionsLogger = $"--logger:\"GitHubActions;summary.includePassedTests=true\""
+    let githubActionsLogger = $"--logger:\"GitHubActions;summary.includePassedTests=false\""
     let tfmArgs = if OS.Current = OS.Windows then [] else ["-f"; "net8.0"]
+    //exec { run "dotnet" "test" "-c" "release" }
     exec {
         run "dotnet" (
-            ["test"; "-c"; "release"; loggerArg; githubActionsLogger]
+            ["test"; "-c"; "release"; "--no-restore"; "--no-build"; githubActionsLogger]
             @ tfmArgs
             @ ["--"; "RunConfiguration.CollectSourceInformation=true"]
         )
-    } 
+    }
+    (*exec {
+        run "dotnet" (
+            ["test"; "-c"; "release"; "-v"; "diag"; "--no-restore"; "--no-build"; loggerArg; githubActionsLogger]
+            @ tfmArgs
+            @ ["--"; "RunConfiguration.CollectSourceInformation=true"]
+        )
+    } *)
 
 let private validateLicenses _ =
     let args = ["-u"; "-t"; "-i"; "Elastic.OpenTelemetry.sln"; "--use-project-assets-json"
