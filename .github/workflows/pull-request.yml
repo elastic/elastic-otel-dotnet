@@ -1,0 +1,50 @@
+name: Pull Request Validation
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '*.md'
+      - '*.asciidoc'
+      - 'docs/**'
+  pull_request:
+    paths-ignore:
+      - '*.md'
+      - '*.asciidoc'
+      - 'docs/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+
+jobs:
+  test-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bootstrap Action Workspace
+        id: bootstrap
+        uses: ./.github/workflows/bootstrap
+
+      - run: build.bat test
+        shell: cmd
+        name: Test
+  
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bootstrap Action Workspace
+        id: bootstrap
+        uses: ./.github/workflows/bootstrap
+
+      # We still run the full release build on pull-requests this ensures packages are validated ahead of time
+      - run: ./build.sh release
+        name: Release

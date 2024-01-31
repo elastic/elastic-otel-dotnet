@@ -1,0 +1,112 @@
+name: release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+env:
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+  JOB_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+  SLACK_CHANNEL: "#apm-agent-dotnet"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Bootstrap Action Workspace
+      id: bootstrap
+      uses: ./.github/workflows/bootstrap
+
+    - run: ./build.sh release --skiptests
+      name: Release
+
+    - name: Prepare Nuget
+      uses: hashicorp/vault-action@v2.7.4
+      with:
+        url: ${{ secrets.VAULT_ADDR }}
+        method: approle
+        roleId: ${{ secrets.VAULT_ROLE_ID }}
+        secretId: ${{ secrets.VAULT_SECRET_ID }}
+        secrets: |
+          secret/apm-team/ci/elastic-observability-nuget apiKey | REPO_API_KEY ;
+          secret/apm-team/ci/elastic-observability-nuget url | REPO_API_URL
+
+    - name: Release to Nuget
+      run: dotnet nuget push '.artifacts/package/release/*.nupkg' -k ${REPO_API_KEY} -s  ${REPO_API_URL} --skip-duplicate --no-symbols
+
+    - if: ${{ success() }}
+      uses: elastic/apm-pipeline-library/.github/actions/slack-message@current
+      with:
+        url: ${{ secrets.VAULT_ADDR }}
+        roleId: ${{ secrets.VAULT_ROLE_ID }}
+        secretId: ${{ secrets.VAULT_SECRET_ID }}
+        channel: ${{ env.SLACK_CHANNEL }}
+        message: |
+          :large_green_circle: [${{ github.repository }}] Release *${{ github.ref_name }}* published.
+          Build: (<${{ env.JOB_URL }}|here>)
+          Release URL: (<https://github.com/elastic/apm-agent-dotnet/releases/tag/${{ github.ref_name }}|${{ github.ref_name }}>)
+
+    - if: ${{ failure() }}
+      uses: elastic/apm-pipeline-library/.github/actions/slack-message@current
+      with:
+        url: ${{ secrets.VAULT_ADDR }}
+        roleId: ${{ secrets.VAULT_ROLE_ID }}
+        secretId: ${{ secrets.VAULT_SECRET_ID }}
+        channel: ${{ env.SLACK_CHANNEL }}
+        message: |
+          :large_yellow_circle: [${{ github.repository }}] Release *${{ github.ref_name }}* could not be published.
+          Build: (<${{ env.JOB_URL }}|here>)
+          
+  post-release:
+    needs: [ 'release']
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GIT_TAG: v${{ needs.release.outputs.agent-version }}
+      NEW_BRANCH: update/${{ needs.release.outputs.agent-version }}
+      TARGET_BRANCH: ${{ needs.release.outputs.major-version }}.x
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup git config
+        uses: elastic/apm-pipeline-library/.github/actions/setup-git@current
+
+      - name: Create GitHub Pull Request if minor release.
+        run: |
+          echo "as long as there is a major.x branch"
+          existed_in_local=$(git ls-remote --heads origin ${TARGET_BRANCH})
+          if [ -z "${existed_in_local}" ]; then
+            echo -e "::warning::Target branch '${TARGET_BRANCH}' does not exist."
+            exit 0
+          fi
+          git checkout $TARGET_BRANCH
+          git checkout -b ${NEW_BRANCH}
+          git format-patch -k --stdout ${TARGET_BRANCH}...origin/main -- docs CHANGELOG.asciidoc | git am -3 -k
+          git push origin ${NEW_BRANCH}
+          gh pr create \
+            --title "post-release: ${GIT_TAG}" \
+            --body "Generated automatically with ${JOB_URL}" \
+            --head "elastic:${NEW_BRANCH}" \
+            --base "$TARGET_BRANCH" \
+            --repo "${{ github.repository }}"
+
+      - name: Create branch if major release
+        run: |
+          echo "as long as there is no a major.x branch"
+          existed_in_local=$(git ls-remote --heads origin ${TARGET_BRANCH})
+          if [ -n "${existed_in_local}" ]; then
+            echo -e "::warning::Target branch '${TARGET_BRANCH}' does exist."
+            exit 0
+          fi
+          git branch -D $TARGET_BRANCH
+          git push origin $TARGET_BRANCH

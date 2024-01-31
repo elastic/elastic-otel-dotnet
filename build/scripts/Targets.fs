@@ -40,7 +40,7 @@ let private pristineCheck (arguments:ParseResults<Build>) =
     | _, true  -> printfn "The checkout folder does not have pending changes, proceeding"
     | _ -> failwithf "The checkout folder has pending changes, aborting. Specify -c to ./build.sh to skip this check"
 
-let private test _ =
+let private runTests _ =
     let testOutputPath = Paths.ArtifactPath "tests"
     let junitOutput = Path.Combine(testOutputPath.FullName, "junit-{assembly}-{framework}-test-results.xml")
     let loggerPathArgs = $"LogFilePath=%s{junitOutput}"
@@ -53,7 +53,12 @@ let private test _ =
             @ tfmArgs
             @ ["--"; "RunConfiguration.CollectSourceInformation=true"]
         )
-    } 
+    }
+    
+let private test (arguments:ParseResults<Build>) =
+    match arguments.TryGetResult SkipTests with
+    | Some _ -> runTests arguments
+    | None -> printfn "Skipping tests because --skiptests was provided"
 
 let private validateLicenses _ =
     let args = ["-u"; "-t"; "-i"; "Elastic.OpenTelemetry.sln"; "--use-project-assets-json"
@@ -143,6 +148,7 @@ let Setup (parsed:ParseResults<Build>) =
             
         // flags
         | SingleTarget
+        | SkipTests
         | Token _
         | SkipDirtyCheck -> Build.Ignore
 
