@@ -40,7 +40,9 @@ let private pristineCheck (arguments:ParseResults<Build>) =
     | _, true  -> printfn "The checkout folder does not have pending changes, proceeding"
     | _ -> failwithf "The checkout folder has pending changes, aborting. Specify -c to ./build.sh to skip this check"
 
-let private runTests _ =
+type TestSuite = | Unit | Integration | E2E | All
+
+let private runTests suite _ =
     let logger =
         // use junit xml logging locally, github actions logs using console out formats
         match BuildServer.isGitHubActionsBuild with
@@ -50,20 +52,28 @@ let private runTests _ =
             let junitOutput = Path.Combine(testOutputPath.FullName, "junit-{assembly}-{framework}-test-results.xml")
             let loggerPathArgs = $"LogFilePath=%s{junitOutput}"
             $"--logger:\"junit;%s{loggerPathArgs}\""
-            
+    let filterArgs =
+        match suite with
+        | All -> []
+        | TestSuite.Unit ->  [ "--filter"; "FullyQualifiedName~.Tests" ]
+        | TestSuite.Integration -> [ "--filter"; "FullyQualifiedName~.IntegrationTests" ]
+        | TestSuite.E2E -> [ "--filter"; "FullyQualifiedName~.EndToEndTests" ]
+        
+    
     let tfmArgs = if OS.Current = OS.Windows then [] else ["-f"; "net8.0"]
     exec {
         run "dotnet" (
             ["test"; "-c"; "release"; "--no-restore"; "--no-build"; logger]
+            @ filterArgs
             @ tfmArgs
             @ ["--"; "RunConfiguration.CollectSourceInformation=true"]
         )
     }
     
-let private test (arguments:ParseResults<Build>) =
+let private test suite (arguments:ParseResults<Build>) =
     match arguments.TryGetResult SkipTests with
-    | Some _ -> runTests arguments
-    | None -> printfn "Skipping tests because --skiptests was provided"
+    | None -> runTests suite arguments 
+    | Some _ -> printfn "Skipping tests because --skiptests was provided"
 
 let private validateLicenses _ =
     let args = ["-u"; "-t"; "-i"; "Elastic.OpenTelemetry.sln"; "--use-project-assets-json"
@@ -136,7 +146,12 @@ let Setup (parsed:ParseResults<Build>) =
         | Version -> Build.Step version
         | Clean -> Build.Cmd [Version] [] clean
         | Build -> Build.Cmd [Clean] [] build
-        | Test -> Build.Cmd [Build] [] test
+        
+        | UnitTest -> Build.Cmd [Build] [] <| test TestSuite.Unit
+        | Integrate -> Build.Cmd [Build] [] <| test TestSuite.Integration
+        | EndToEnd -> Build.Cmd [Build] [] <| test TestSuite.E2E
+        | Test -> Build.Cmd [UnitTest; Integrate; EndToEnd] [] ignore
+        
         | Release -> 
             Build.Cmd 
                 [PristineCheck; Test]

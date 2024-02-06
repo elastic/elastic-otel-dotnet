@@ -15,6 +15,10 @@ type Build =
     | [<CliPrefix(CliPrefix.None);SubCommand>] Build
     | [<CliPrefix(CliPrefix.None);SubCommand>] Test
     
+    | [<CliPrefix(CliPrefix.None);SubCommand>] UnitTest 
+    | [<CliPrefix(CliPrefix.None);SubCommand>] Integrate
+    | [<CliPrefix(CliPrefix.None);SubCommand>] EndToEnd
+    
     | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] PristineCheck 
     | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] GeneratePackages
     | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] ValidateLicenses 
@@ -35,7 +39,12 @@ with
             | Clean -> "clean known output locations"
             | Version -> "print version information"
             | Build -> "Run build"
-            | Test -> "Runs build then tests"
+            
+            | UnitTest  -> "build then run only the unit tests"
+            | Integrate -> "build then run only the integration tests"
+            | EndToEnd -> "build then run only the e2e tests"
+            | Test -> "build then run ALL the tests"
+            
             | Release -> "runs build, tests, and create and validates the packages shy of publishing them"
             
             // steps
