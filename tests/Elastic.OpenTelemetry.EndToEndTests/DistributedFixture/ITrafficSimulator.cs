@@ -4,7 +4,7 @@
 
 using System.Net;
 
-namespace Elastic.OpenTelemetry.IntegrationTests.DistributedFixture;
+namespace Elastic.OpenTelemetry.EndToEndTests.DistributedFixture;
 
 public interface ITrafficSimulator
 {

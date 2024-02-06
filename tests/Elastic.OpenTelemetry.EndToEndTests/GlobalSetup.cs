@@ -10,7 +10,7 @@ using Xunit.Extensions.AssemblyFixture;
 
 [assembly: TestFramework(AssemblyFixtureFramework.TypeName, AssemblyFixtureFramework.AssemblyName)]
 
-namespace Elastic.OpenTelemetry.IntegrationTests;
+namespace Elastic.OpenTelemetry.EndToEndTests;
 
 public static class GlobalSetup
 {

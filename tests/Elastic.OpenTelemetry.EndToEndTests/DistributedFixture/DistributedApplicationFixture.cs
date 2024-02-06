@@ -8,7 +8,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 
-namespace Elastic.OpenTelemetry.IntegrationTests.DistributedFixture;
+namespace Elastic.OpenTelemetry.EndToEndTests.DistributedFixture;
 
 public class DistributedApplicationFixture : IDisposable, IAsyncLifetime
 {

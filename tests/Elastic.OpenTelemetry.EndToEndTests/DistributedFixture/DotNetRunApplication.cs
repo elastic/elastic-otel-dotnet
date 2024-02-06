@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 using Microsoft.Extensions.Configuration;
 using ProcNet;
 
-namespace Elastic.OpenTelemetry.IntegrationTests.DistributedFixture;
+namespace Elastic.OpenTelemetry.EndToEndTests.DistributedFixture;
 
 public abstract class DotNetRunApplication
 {

@@ -5,7 +5,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Playwright;
 
-namespace Elastic.OpenTelemetry.IntegrationTests.DistributedFixture;
+namespace Elastic.OpenTelemetry.EndToEndTests.DistributedFixture;
 
 public class ApmUIBrowserContext : IAsyncLifetime
 {

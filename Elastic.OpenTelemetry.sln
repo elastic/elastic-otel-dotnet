@@ -34,7 +34,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Example.Elastic.OpenTelemet
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Elastic.OpenTelemetry.AspNetCore", "src\Elastic.OpenTelemetry.AspNetCore\Elastic.OpenTelemetry.AspNetCore.csproj", "{2139F902-B10D-475D-8A38-F78962CEBFD3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Elastic.OpenTelemetry.IntegrationTests", "tests\Elastic.OpenTelemetry.IntegrationTests\Elastic.OpenTelemetry.IntegrationTests.csproj", "{B970DBE1-6A04-4014-A285-6A9F36421025}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Elastic.OpenTelemetry.EndToEndTests", "tests\Elastic.OpenTelemetry.EndToEndTests\Elastic.OpenTelemetry.EndToEndTests.csproj", "{B970DBE1-6A04-4014-A285-6A9F36421025}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -2,12 +2,13 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
-using Elastic.OpenTelemetry.IntegrationTests.DistributedFixture;
+using Elastic.OpenTelemetry.EndToEndTests.DistributedFixture;
 using Microsoft.Playwright;
+using Xunit.Abstractions;
 using Xunit.Extensions.AssemblyFixture;
 using static Microsoft.Playwright.Assertions;
 
-namespace Elastic.OpenTelemetry.IntegrationTests;
+namespace Elastic.OpenTelemetry.EndToEndTests;
 
 public class EndToEndTests(ITestOutputHelper output, DistributedApplicationFixture fixture)
 	: XunitContextBase(output), IAssemblyFixture<DistributedApplicationFixture>, IAsyncLifetime
