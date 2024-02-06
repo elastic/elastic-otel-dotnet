@@ -25,6 +25,8 @@ env:
   # keep_serverless-staging-oblt OR keep_serverless-qa-oblt
   SERVERLESS_PROJECT: serverless-production-oblt
 
+# NOTE: if you add a new job and it's a mandatory check then
+#       update e2e-docs.yml
 jobs:
   test:
     if: |
