@@ -40,28 +40,30 @@ let private pristineCheck (arguments:ParseResults<Build>) =
     | _, true  -> printfn "The checkout folder does not have pending changes, proceeding"
     | _ -> failwithf "The checkout folder has pending changes, aborting. Specify -c to ./build.sh to skip this check"
 
-let private test _ =
-    let testOutputPath = Paths.ArtifactPath "tests"
-    let junitOutput = Path.Combine(testOutputPath.FullName, "junit-{assembly}-{framework}-test-results.xml")
-    let loggerPathArgs = $"LogFilePath=%s{junitOutput}"
-    let loggerArg = $"--logger:\"junit;%s{loggerPathArgs}\""
-    let githubActionsLogger = $"--logger:\"GitHubActions;summary.includePassedTests=false\""
+let private runTests _ =
+    let logger =
+        // use junit xml logging locally, github actions logs using console out formats
+        match BuildServer.isGitHubActionsBuild with
+        | true -> "--logger:\"GitHubActions;summary.includePassedTests=false\""
+        | false ->
+            let testOutputPath = Paths.ArtifactPath "tests"
+            let junitOutput = Path.Combine(testOutputPath.FullName, "junit-{assembly}-{framework}-test-results.xml")
+            let loggerPathArgs = $"LogFilePath=%s{junitOutput}"
+            $"--logger:\"junit;%s{loggerPathArgs}\""
+            
     let tfmArgs = if OS.Current = OS.Windows then [] else ["-f"; "net8.0"]
-    //exec { run "dotnet" "test" "-c" "release" }
     exec {
         run "dotnet" (
-            ["test"; "-c"; "release"; "--no-restore"; "--no-build"; githubActionsLogger]
+            ["test"; "-c"; "release"; "--no-restore"; "--no-build"; logger]
             @ tfmArgs
             @ ["--"; "RunConfiguration.CollectSourceInformation=true"]
         )
     }
-    (*exec {
-        run "dotnet" (
-            ["test"; "-c"; "release"; "-v"; "diag"; "--no-restore"; "--no-build"; loggerArg; githubActionsLogger]
-            @ tfmArgs
-            @ ["--"; "RunConfiguration.CollectSourceInformation=true"]
-        )
-    } *)
+    
+let private test (arguments:ParseResults<Build>) =
+    match arguments.TryGetResult SkipTests with
+    | Some _ -> runTests arguments
+    | None -> printfn "Skipping tests because --skiptests was provided"
 
 let private validateLicenses _ =
     let args = ["-u"; "-t"; "-i"; "Elastic.OpenTelemetry.sln"; "--use-project-assets-json"
@@ -151,6 +153,7 @@ let Setup (parsed:ParseResults<Build>) =
             
         // flags
         | SingleTarget
+        | SkipTests
         | Token _
         | SkipDirtyCheck -> Build.Ignore
 

@@ -1,79 +1,50 @@
-name: Always be deploying
+name: Pull Request Validation
 
 on:
-    pull_request:
-        paths-ignore:
-            - 'README.md'
-            - '.editorconfig'
-    push:
-        paths-ignore:
-            - 'README.md'
-            - '.editorconfig'
-        branches:
-            - main
-        tags:
-            - "*.*.*"
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '*.md'
+      - '*.asciidoc'
+      - 'docs/**'
+  pull_request:
+    paths-ignore:
+      - '*.md'
+      - '*.asciidoc'
+      - 'docs/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
 
 jobs:
-    test-windows:
-        runs-on: windows-latest
-        steps:
-            - uses: actions/checkout@v2
-              with:
-                  fetch-depth: 1
-            - run: |
-                  git fetch --prune --unshallow --tags
-                  echo exit code $?
-                  git tag --list
-            - uses: actions/setup-dotnet@v1
-              with:
-                  dotnet-version: |
-                      8.0.x
-                      6.0.x
-                  source-url: https://nuget.pkg.github.com/elastic/index.json
-              env:
-                  NUGET_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
-            - run: build.bat test
-              shell: cmd
-              name: Test
-    
-    build:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v2
-              with:
-                  fetch-depth: 1
-            - run: |
-                  git fetch --prune --unshallow --tags
-                  echo exit code $?
-                  git tag --list
-            - uses: actions/setup-dotnet@v1
-              with:
-                  # .NET 7 is sadly required for the licenses check tool
-                  # https://github.com/tomchavakis/nuget-license/issues/200
-                  dotnet-version: |
-                      6.0.x
-                      7.0.x
-                      8.0.x
-                  source-url: https://nuget.pkg.github.com/elastic/index.json
-              env:
-                  NUGET_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+  test-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bootstrap Action Workspace
+        id: bootstrap
+        uses: ./.github/workflows/bootstrap
 
-            - run: ./build.sh release
-              name: Release
+      - run: build.bat test
+        shell: cmd
+        name: Test
+  
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bootstrap Action Workspace
+        id: bootstrap
+        uses: ./.github/workflows/bootstrap
 
-            - name: publish canary packages github package repository
-              if: github.event_name == 'push' && startswith(github.ref, 'refs/heads')
-              shell: bash
-                # this is a best effort to push to GHPR, we've observed it being unavailable intermittently
-              continue-on-error: true
-              run: dotnet nuget push '.artifacts/package/release/*.nupkg' -k ${{secrets.GITHUB_TOKEN}} --skip-duplicate --no-symbols
-            
-            # Github packages requires authentication, this is likely going away in the future so for now we publish to feedz.io
-            - run: dotnet nuget push '.artifacts/package/release/*.nupkg' -k ${{secrets.FEEDZ_IO_API_KEY}} -s https://f.feedz.io/elastic/all/nuget/index.json --skip-duplicate --no-symbols
-              name: publish canary packages to feedz.io
-              if: false && github.event_name == 'push' && startswith(github.ref, 'refs/heads')
-
-            - run: dotnet nuget push '.artifacts/package/release/*.nupkg' -k ${{secrets.NUGET_ORG_API_KEY}} -s https://api.nuget.org/v3/index.json --skip-duplicate --no-symbols
-              name: release to nuget.org
-              if: false && github.event_name == 'push' && startswith(github.ref, 'refs/tags')
+      # We still run the full release build on pull-requests this ensures packages are validated ahead of time
+      - run: ./build.sh release
+        name: Release

@@ -1,0 +1,56 @@
+name: e2e
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '*.md'
+      - '*.asciidoc'
+      - 'docs/**'
+  pull_request:
+    paths-ignore:
+      - '*.md'
+      - '*.asciidoc'
+      - 'docs/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  # keep_serverless-staging-oblt OR keep_serverless-qa-oblt
+  SERVERLESS_PROJECT: serverless-production-oblt
+
+jobs:
+  test:
+    if: |
+      github.event_name != 'pull_request' || 
+      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Git
+        uses: elastic/apm-pipeline-library/.github/actions/setup-git@current
+
+      - uses: elastic/apm-pipeline-library/.github/actions/github-token@current
+        with:
+          url: ${{ secrets.VAULT_ADDR }}
+          roleId: ${{ secrets.VAULT_ROLE_ID }}
+          secretId: ${{ secrets.VAULT_SECRET_ID }}
+
+      - uses: elastic/apm-pipeline-library/.github/actions/oblt-cli-cluster-credentials@current
+        with:
+          github-token: ${{ env.GITHUB_TOKEN }}
+          cluster-name: ${{ env.SERVERLESS_PROJECT }}
+          vault-url: ${{ secrets.VAULT_ADDR }}
+          vault-role-id: ${{ secrets.VAULT_ROLE_ID }}
+          vault-secret-id: ${{ secrets.VAULT_SECRET_ID }}
+
+      # TODO: run the e2e targeting the required endpoint.
+      #       those values can be found in https://github.com/elastic/apm-pipeline-library/tree/main/.github/actions/oblt-cli-cluster-credentials#outputs
+      - run: curl -X GET "${ELASTICSEARCH_HOST}/_cat/indices?v" -u ${ELASTICSEARCH_USERNAME}:${ELASTICSEARCH_PASSWORD}
