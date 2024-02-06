@@ -1,0 +1,37 @@
+name: release-main
+
+on:
+  push:
+    branches: [ "main" ]
+
+permissions:
+  contents: write
+  issues: write
+  packages: write
+
+env:
+  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bootstrap Action Workspace
+        id: bootstrap
+        uses: ./.github/workflows/bootstrap
+
+      - run: ./build.sh release
+        name: Release
+
+      - name: publish canary packages github package repository
+        shell: bash
+        # this is a best effort to push to GHPR, we've observed it being unavailable intermittently
+        continue-on-error: true
+        run: dotnet nuget push '.artifacts/package/release/*.nupkg' -k ${{secrets.GITHUB_TOKEN}} --skip-duplicate --no-symbols
+      
+      # Github packages requires authentication, this is likely going away in the future so for now we publish to feedz.io
+      - run: dotnet nuget push '.artifacts/package/release/*.nupkg' -k ${{secrets.FEEDZ_IO_API_KEY}} -s https://f.feedz.io/elastic/all/nuget/index.json --skip-duplicate --no-symbols
+        name: publish canary packages to feedz.io
+        if: false && github.event_name == 'push' && startswith(github.ref, 'refs/heads')
+
