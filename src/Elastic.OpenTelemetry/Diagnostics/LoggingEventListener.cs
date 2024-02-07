@@ -17,20 +17,17 @@ internal sealed class LoggingEventListener : EventListener, IAsyncDisposable
     {
 		_logFileWriter = logFileWriter;
 
-		var eventLevel = Environment.GetEnvironmentVariable(EnvironmentVariables.ElasticOtelLogLevelEnvironmentVariable);
+		var eventLevel = LogFileWriter.GetConfiguredLogLevel();
 
-		if (!string.IsNullOrEmpty(eventLevel))
+		_eventLevel = eventLevel switch
 		{
-			_eventLevel = eventLevel.ToLowerInvariant() switch
-			{
-				"trace" => EventLevel.Verbose,
-				"info" => EventLevel.Informational,
-				"warning" => EventLevel.Warning,
-				"error" => EventLevel.Error,
-				"critical" => EventLevel.Critical,
-				_ => EventLevel.Informational // fallback to info level
-			};
-		}
+			LogLevel.Trace => EventLevel.Verbose,
+			LogLevel.Info => EventLevel.Informational,
+			LogLevel.Warning => EventLevel.Warning,
+			LogLevel.Error => EventLevel.Error,
+			LogLevel.Critical => EventLevel.Critical,
+			_ => EventLevel.Informational // fallback to info level
+		};
 	}
 
 	public override void Dispose()
@@ -70,7 +67,7 @@ internal sealed class LoggingEventListener : EventListener, IAsyncDisposable
 			// TODO - We can only get the OS thread ID from the args - Do we send that instead??
 			// As per this issue - https://github.com/dotnet/runtime/issues/13125 - OnEventWritten may be on a different thread
 			// so we can't use the Environment.CurrentManagedThreadId value here.
-			_logFileWriter.WriteLogLine(null, -1, eventData.TimeStamp, GetLevel(eventData), StringBuilderCache.GetStringAndRelease(builder));
+			_logFileWriter.WriteLogLine(null, -1, eventData.TimeStamp, GetLogLevel(eventData), StringBuilderCache.GetStringAndRelease(builder));
 		}
 		catch (Exception)
 		{
@@ -78,16 +75,16 @@ internal sealed class LoggingEventListener : EventListener, IAsyncDisposable
 			// likely a file access issue
 		}
 
-		static string GetLevel(EventWrittenEventArgs eventData) =>
+		static LogLevel GetLogLevel(EventWrittenEventArgs eventData) =>
 			eventData.Level switch
 			{
-				EventLevel.Critical => DiagnosticErrorLevels.Critical,
-				EventLevel.Error => DiagnosticErrorLevels.Error,
-				EventLevel.Warning => DiagnosticErrorLevels.Warning,
-				EventLevel.Informational => DiagnosticErrorLevels.Info,
-				EventLevel.Verbose => DiagnosticErrorLevels.Trace,
-				EventLevel.LogAlways => "N/A",
-				_ => throw new Exception("Unhandled event data level")
+				EventLevel.Critical => LogLevel.Critical,
+				EventLevel.Error => LogLevel.Error,
+				EventLevel.Warning => LogLevel.Warning,
+				EventLevel.Informational => LogLevel.Info,
+				EventLevel.Verbose => LogLevel.Trace,
+				EventLevel.LogAlways => LogLevel.Unknown,
+				_ => LogLevel.Unknown
 			};
 
 		static void CreateLogMessage(EventWrittenEventArgs eventData, StringBuilder builder)

@@ -65,7 +65,8 @@ internal sealed class LogFileWriter : IDisposable, IAsyncDisposable
 
 		foreach (var item in preAmble)
 		{
-			WriteLogPrefix(DiagnosticErrorLevels.Info, builder);
+			// These preamble entries are ALWAYS logged, regardless of the configured log level
+			WriteLogPrefix(LogLevel.Info, builder);
 			builder.Append(item);
 			_streamWriter.WriteLine(builder.ToString());
 			builder.Clear();
@@ -77,17 +78,46 @@ internal sealed class LogFileWriter : IDisposable, IAsyncDisposable
 		StringBuilderCache.Release(builder);
 	}
 
-	private static void WriteLogPrefix(string logLevel, StringBuilder builder) =>
+	private static readonly LogLevel ConfiguredLogLevel = GetConfiguredLogLevel();
+
+	public static LogLevel GetConfiguredLogLevel()
+	{
+		var logLevel = LogLevel.Info;
+
+		var logLevelEnvironmentVariable = Environment.GetEnvironmentVariable(EnvironmentVariables.ElasticOtelLogLevelEnvironmentVariable);
+
+		if (!string.IsNullOrEmpty(logLevelEnvironmentVariable))
+		{
+			if (logLevelEnvironmentVariable.Equals(DiagnosticErrorLevels.Trace, StringComparison.OrdinalIgnoreCase))
+				logLevel = LogLevel.Trace;
+
+			else if (logLevelEnvironmentVariable.Equals(DiagnosticErrorLevels.Info, StringComparison.OrdinalIgnoreCase))
+				logLevel = LogLevel.Info;
+
+			else if (logLevelEnvironmentVariable.Equals(DiagnosticErrorLevels.Warning, StringComparison.OrdinalIgnoreCase))
+				logLevel = LogLevel.Warning;
+
+			else if (logLevelEnvironmentVariable.Equals(DiagnosticErrorLevels.Error, StringComparison.OrdinalIgnoreCase))
+				logLevel = LogLevel.Error;
+
+			else if (logLevelEnvironmentVariable.Equals(DiagnosticErrorLevels.Critical, StringComparison.OrdinalIgnoreCase))
+				logLevel = LogLevel.Critical;
+		}
+
+		return logLevel;
+	}
+
+	private static void WriteLogPrefix(LogLevel logLevel, StringBuilder builder) =>
 		WriteLogPrefix(Environment.CurrentManagedThreadId, DateTime.UtcNow, logLevel, builder);
 
-	private static void WriteLogPrefix(int managedThreadId, DateTime dateTime, string level, StringBuilder builder)
+	private static void WriteLogPrefix(int managedThreadId, DateTime dateTime, LogLevel level, StringBuilder builder)
 	{
 		builder.Append('[')
 			.Append(dateTime.ToString("yyyy-MM-dd HH:mm:ss.fff"))
 			.Append("][")
 			.Append(managedThreadId == -1 ? "-" : managedThreadId)
 			.Append("][")
-			.Append(level)
+			.Append(level.AsString())
 			.Append(']');
 
 		var length = builder.Length;
@@ -105,20 +135,30 @@ internal sealed class LogFileWriter : IDisposable, IAsyncDisposable
 
 	public Task WritingTask { get; }
 
+	public void WriteCriticalLogLine(IDiagnosticEvent diagnosticEvent, string message) =>
+		WriteLogLine(diagnosticEvent, LogLevel.Critical, message);
+
 	public void WriteErrorLogLine(IDiagnosticEvent diagnosticEvent, string message) =>
-		WriteLogLine(diagnosticEvent, DiagnosticErrorLevels.Error, message);
+		WriteLogLine(diagnosticEvent, LogLevel.Error, message);
+
+	public void WriteWarningLogLine(IDiagnosticEvent diagnosticEvent, string message) =>
+		WriteLogLine(diagnosticEvent, LogLevel.Warning, message);
 
 	public void WriteInfoLogLine(IDiagnosticEvent diagnosticEvent, string message) =>
-		WriteLogLine(diagnosticEvent, DiagnosticErrorLevels.Info, message);
+		WriteLogLine(diagnosticEvent, LogLevel.Info, message);
 
 	public void WriteTraceLogLine(IDiagnosticEvent diagnosticEvent, string message) =>
-		WriteLogLine(diagnosticEvent, DiagnosticErrorLevels.Trace, message);
+		WriteLogLine(diagnosticEvent, LogLevel.Trace, message);
 
-	public void WriteLogLine(IDiagnosticEvent diagnosticEvent, string logLevel, string message) =>
+	public void WriteLogLine(IDiagnosticEvent diagnosticEvent, LogLevel logLevel, string message) =>
 		WriteLogLine(diagnosticEvent.Activity, diagnosticEvent.ManagedThreadId, diagnosticEvent.DateTime, logLevel, message);
 
-	public void WriteLogLine(Activity? activity, int managedThreadId, DateTime dateTime, string logLevel, string logLine)
+	public void WriteLogLine(Activity? activity, int managedThreadId, DateTime dateTime, LogLevel logLevel, string logLine)
 	{
+		// We skip logging for any log level higher (numerically) than the configured log level
+		if (logLevel > ConfiguredLogLevel)
+			return;
+
 		var builder = StringBuilderCache.Acquire();
 		WriteLogPrefix(managedThreadId, dateTime, logLevel, builder);
 		builder.Append(logLine);
