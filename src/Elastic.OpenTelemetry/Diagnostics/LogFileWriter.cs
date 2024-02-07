@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Channels;
+using System.Xml.Serialization;
 
 namespace Elastic.OpenTelemetry.Diagnostics;
 
@@ -55,27 +56,75 @@ internal sealed class LogFileWriter : IDisposable, IAsyncDisposable
 			}
 		});
 
-		string[] preAmble = [
-			$"Elastic OpenTelemetry Distribution: {Agent.InformationalVersion}",
-			$"Process ID: {process.Id}",
-			$"Process started: {process.StartTime.ToUniversalTime():yyyy-MM-dd HH:mm:ss.fff}",
-		];
-
 		var builder = StringBuilderCache.Acquire();
 
-		foreach (var item in preAmble)
-		{
-			// These preamble entries are ALWAYS logged, regardless of the configured log level
-			WriteLogPrefix(LogLevel.Info, builder);
-			builder.Append(item);
-			_streamWriter.WriteLine(builder.ToString());
-			builder.Clear();
-		}
-
-		_streamWriter.Flush();
-		_streamWriter.AutoFlush = true; // Ensure we don't lose logs by not flushing to the file.
+		// Preamble and configuration entries are ALWAYS logged, regardless of the configured log level
+		LogPreamble(process, builder, _streamWriter);
+		LogConfiguration(builder, _streamWriter);
 
 		StringBuilderCache.Release(builder);
+
+		_streamWriter.AutoFlush = true; // Ensure we don't lose logs by not flushing to the file.
+
+		static void LogPreamble(Process process, StringBuilder stringBuilder, StreamWriter streamWriter)
+		{
+			string[] preAmble = [
+				$"Elastic OpenTelemetry Distribution: {Agent.InformationalVersion}",
+				$"Process ID: {process.Id}",
+				$"Process name: {process.ProcessName}",
+				$"Process path: {Environment.ProcessPath}",
+				$"Process started: {process.StartTime.ToUniversalTime():yyyy-MM-dd HH:mm:ss.fff}",
+				$"Machine name: {Environment.MachineName}",
+				$"Process username: {Environment.UserName}",
+				$"User domain name: {Environment.UserDomainName}",
+				$"Command line: {Environment.CommandLine}",
+				$"Command current directory: {Environment.CurrentDirectory}",
+				$"Processor count: {Environment.ProcessorCount}",
+				$"OS version: {Environment.OSVersion}",
+				$"CLR version: {Environment.Version}",
+			];
+
+			foreach (var item in preAmble)
+			{
+				WriteLogPrefix(LogLevel.Info, stringBuilder);
+				stringBuilder.Append(item);
+				streamWriter.WriteLine(stringBuilder.ToString());
+				stringBuilder.Clear();
+			}
+
+			streamWriter.Flush();
+		}
+
+		static void LogConfiguration(StringBuilder stringBuilder, StreamWriter streamWriter)
+		{
+			string[] environmentVariables = [
+				EnvironmentVariables.ElasticOtelFileLogging,
+				EnvironmentVariables.ElasticOtelLogDirectoryEnvironmentVariable,
+				EnvironmentVariables.ElasticOtelLogLevelEnvironmentVariable
+			];
+
+			foreach (var variable in environmentVariables)
+			{
+				var envVarValue = Environment.GetEnvironmentVariable(variable);
+
+				WriteLogPrefix(LogLevel.Info, stringBuilder);
+
+				if (!string.IsNullOrEmpty(envVarValue))
+				{
+					stringBuilder.Append($"Environment variable '{variable}' = '{envVarValue}'.");
+					streamWriter.WriteLine(stringBuilder.ToString());
+				}
+				else
+				{
+					stringBuilder.Append($"Environment variable '{variable}' is not configured.");
+					streamWriter.WriteLine(stringBuilder.ToString());
+				}
+
+				stringBuilder.Clear();
+			}
+
+			streamWriter.Flush();
+		}
 	}
 
 	private static readonly LogLevel ConfiguredLogLevel = GetConfiguredLogLevel();
