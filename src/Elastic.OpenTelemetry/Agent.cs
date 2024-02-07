@@ -131,11 +131,11 @@ public static partial class Agent
 		}
 
 		/*
-         * InformationalVersion will be in the following format:
-         *   {majorVersion}.{minorVersion}.{patchVersion}.{pre-release label}.{pre-release version}.{gitHeight}+{Git SHA of current commit}
-         * Ex: 1.5.0-alpha.1.40+807f703e1b4d9874a92bd86d9f2d4ebe5b5d52e4
-         * The following parts are optional: pre-release label, pre-release version, git height, Git SHA of current commit
-         */
+		 * InformationalVersion will be in the following format:
+		 *   {majorVersion}.{minorVersion}.{patchVersion}.{pre-release label}.{pre-release version}.{gitHeight}+{Git SHA of current commit}
+		 * Ex: 1.5.0-alpha.1.40+807f703e1b4d9874a92bd86d9f2d4ebe5b5d52e4
+		 * The following parts are optional: pre-release label, pre-release version, git height, Git SHA of current commit
+		 */
 
 		var indexOfPlusSign = informationalVersion!.IndexOf('+');
 		return indexOfPlusSign > 0
