@@ -6,6 +6,14 @@ namespace Elastic.OpenTelemetry;
 /// <summary>
 /// An Elastic OpenTelemetry Distribution agent.
 /// </summary>
-public interface IAgent : IDisposable
+public interface IAgent : IDisposable, IAsyncDisposable
 {
+}
+
+internal interface IServiceProviderAgent : IAgent
+{
+	/// <summary>
+	/// 
+	/// </summary>
+	IServiceProvider ServiceProvider { get; }
 }

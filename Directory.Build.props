@@ -18,6 +18,7 @@
     <UseArtifactsOutput>true</UseArtifactsOutput>
     <SolutionRoot>$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), build.bat))</SolutionRoot>
     <ArtifactsPath>$(MSBuildThisFileDirectory).artifacts</ArtifactsPath>
+    <ExposedPublicKey>002400000480000094000000060200000024000052534131000400000100010015b0fa59d868c7f3ea2ae67567b19e102465745f01b430a38a42b92fd41a0f5869bec1f2b33b589d78662af432fe6b789ef72d4738f7b1a86264d7aeb5185ed8995b2bb104e7c5c58845f1a618be829e410fa34a6bd7d714ece191ed68a66333a83ae7456ee32e9aeb54bc1d7410ae8c344367257e9001abb5e96ce1f1d97696</ExposedPublicKey>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="MinVer" Version="4.3.0" PrivateAssets="all" />
