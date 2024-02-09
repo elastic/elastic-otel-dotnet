@@ -60,10 +60,12 @@ let private runTests suite _ =
         | TestSuite.E2E -> [ "--filter"; "FullyQualifiedName~.EndToEndTests" ]
         
     
+    let settingsArg = ["-s"; "tests/.runsettings"]
     let tfmArgs = if OS.Current = OS.Windows then [] else ["-f"; "net8.0"]
     exec {
         run "dotnet" (
             ["test"; "-c"; "release"; "--no-restore"; "--no-build"; logger]
+            @ settingsArg
             @ filterArgs
             @ tfmArgs
             @ ["--"; "RunConfiguration.CollectSourceInformation=true"]

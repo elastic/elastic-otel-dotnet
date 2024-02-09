@@ -32,7 +32,6 @@ runs:
           dotnet-version: |
             6.0.x
             8.0.x
-            6.0.x
     - id: dotnet
       shell: bash
       run: |

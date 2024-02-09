@@ -23,7 +23,7 @@
     
     <PackageReference Include="GitHubActionsTestLogger" Version="2.3.3" PrivateAssets="All" />
     <PackageReference Include="JunitXml.TestLogger" Version="3.0.114" PrivateAssets="All" />
-    <PackageReference Include="Nullean.VsTest.Pretty.TestLogger" Version="0.3.0" PrivateAssets="All" />
+    <PackageReference Include="Nullean.VsTest.Pretty.TestLogger" Version="0.4.0" PrivateAssets="All" />
 
     <PackageReference Include="FluentAssertions" Version="6.12.0" />
     <PackageReference Include="FluentAssertions.Analyzers" Version="0.11.4" />

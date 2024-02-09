@@ -3,12 +3,11 @@
 // See the LICENSE file in the project root for more information
 
 global using Xunit;
-global using System.Diagnostics;
 global using FluentAssertions;
 using System.Runtime.CompilerServices;
-using Xunit.Extensions.AssemblyFixture;
+using Nullean.Xunit.Partitions;
 
-[assembly: TestFramework(AssemblyFixtureFramework.TypeName, AssemblyFixtureFramework.AssemblyName)]
+[assembly: TestFramework(Partition.TestFramework, Partition.Assembly)]
 
 namespace Elastic.OpenTelemetry.EndToEndTests;
 

@@ -3,38 +3,26 @@
 // See the LICENSE file in the project root for more information
 
 using System.Globalization;
-using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Configuration;
+using Nullean.Xunit.Partitions.Sdk;
 
 namespace Elastic.OpenTelemetry.EndToEndTests.DistributedFixture;
 
-public class DistributedApplicationFixture : IDisposable, IAsyncLifetime
+public class DistributedApplicationFixture : IPartitionLifetime
 {
-	public AspNetCoreExampleApplication AspNetApplication { get; }
+	private readonly ITrafficSimulator[] _trafficSimulators = [ new DefaultTrafficSimulator() ];
 
-	private readonly ITrafficSimulator[] _trafficSimulators;
-
-	public DistributedApplicationFixture()
-	{
-		ServiceName = $"dotnet-e2e-{ShaForCurrentTicks()}";
-
-		var configuration = new ConfigurationBuilder()
-			.AddEnvironmentVariables()
-			.AddUserSecrets<DotNetRunApplication>()
-			.Build();
-		_trafficSimulators = [ new DefaultTrafficSimulator() ];
-
-		AspNetApplication = new AspNetCoreExampleApplication(ServiceName, configuration);
-		ApmUI = new ApmUIBrowserContext(configuration, ServiceName);
-	}
-
-	public ApmUIBrowserContext ApmUI { get; }
-
-	public string ServiceName { get; }
+	public string ServiceName { get; } = $"dotnet-e2e-{ShaForCurrentTicks()}";
 
 	public bool Started => AspNetApplication.ProcessId.HasValue;
+
+	public int? MaxConcurrency => null;
+
+	public ApmUIBrowserContext ApmUI { get; private set; } = null!;
+
+	public AspNetCoreExampleApplication AspNetApplication { get; private set; } = null!;
 
 	private static string ShaForCurrentTicks()
 	{
@@ -46,10 +34,24 @@ public class DistributedApplicationFixture : IDisposable, IAsyncLifetime
 			.Substring(0, 12);
 	}
 
-	public void Dispose() => AspNetApplication.Dispose();
+	public async Task DisposeAsync()
+	{
+		AspNetApplication.Dispose();
+		await ApmUI.DisposeAsync();
+	}
 
 	public async Task InitializeAsync()
 	{
+		var configuration = new ConfigurationBuilder()
+			.AddEnvironmentVariables()
+			.AddUserSecrets<DotNetRunApplication>()
+			.Build();
+
+		AspNetApplication = new AspNetCoreExampleApplication(ServiceName, configuration);
+		ApmUI = new ApmUIBrowserContext(configuration, ServiceName);
+
+		Console.WriteLine("Initializing.......?");
+
 		foreach (var trafficSimulator in _trafficSimulators)
 			await trafficSimulator.Start(this);
 
@@ -62,11 +64,6 @@ public class DistributedApplicationFixture : IDisposable, IAsyncLifetime
 		await ApmUI.InitializeAsync();
 	}
 
-	public async Task DisposeAsync()
-	{
-		Dispose();
-		await ApmUI.DisposeAsync();
-	}
 }
 
 public class AspNetCoreExampleApplication : DotNetRunApplication

@@ -4,14 +4,13 @@
 
 using Elastic.OpenTelemetry.EndToEndTests.DistributedFixture;
 using Microsoft.Playwright;
-using Xunit.Abstractions;
-using Xunit.Extensions.AssemblyFixture;
+using Nullean.Xunit.Partitions.Sdk;
 using static Microsoft.Playwright.Assertions;
 
 namespace Elastic.OpenTelemetry.EndToEndTests;
 
 public class EndToEndTests(ITestOutputHelper output, DistributedApplicationFixture fixture)
-	: XunitContextBase(output), IAssemblyFixture<DistributedApplicationFixture>, IAsyncLifetime
+	: XunitContextBase(output), IPartitionFixture<DistributedApplicationFixture>, IAsyncLifetime
 {
 	private string _testName = string.Empty;
 	private IPage _page = null!;
