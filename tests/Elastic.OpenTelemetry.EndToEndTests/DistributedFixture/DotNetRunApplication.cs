@@ -68,9 +68,10 @@ public abstract class DotNetRunApplication
 				{ "OTEL_BSP_MAX_EXPORT_BATCH_SIZE", "5" },
 				{ "OTEL_RESOURCE_ATTRIBUTES", $"service.name={_serviceName},service.version=1.0,1,deployment.environment=e2e" },
 			},
-			StartedConfirmationHandler = (l) =>
+			StartedConfirmationHandler = l =>
 			{
 				//Grab actual process id to send SIGINT to.
+				if (l.Line == null) return false;
 				var processIdMatch = ProcessIdMatch.Match(l.Line);
 				if (processIdMatch.Success)
 					ProcessId = int.Parse(processIdMatch.Groups["processid"].Value);
@@ -82,7 +83,6 @@ public abstract class DotNetRunApplication
 
 	public virtual void Dispose()
 	{
-		var pid = _app.Process.ProcessId;
 		if (ProcessId.HasValue)
 			_app.SendControlC(ProcessId.Value);
 		_app.Dispose();
