@@ -50,8 +50,6 @@ public class DistributedApplicationFixture : IPartitionLifetime
 		AspNetApplication = new AspNetCoreExampleApplication(ServiceName, configuration);
 		ApmUI = new ApmUIBrowserContext(configuration, ServiceName);
 
-		Console.WriteLine("Initializing.......?");
-
 		foreach (var trafficSimulator in _trafficSimulators)
 			await trafficSimulator.Start(this);
 

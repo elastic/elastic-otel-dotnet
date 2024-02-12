@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information
 
 using System.Net;
+using FluentAssertions;
 
 namespace Elastic.OpenTelemetry.EndToEndTests.DistributedFixture;
 

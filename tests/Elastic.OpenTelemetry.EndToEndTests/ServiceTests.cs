@@ -3,15 +3,19 @@
 // See the LICENSE file in the project root for more information
 
 using Elastic.OpenTelemetry.EndToEndTests.DistributedFixture;
+using FluentAssertions;
 using Microsoft.Playwright;
 using Nullean.Xunit.Partitions.Sdk;
+using Xunit;
+using Xunit.Abstractions;
 using static Microsoft.Playwright.Assertions;
 
 namespace Elastic.OpenTelemetry.EndToEndTests;
 
 public class EndToEndTests(ITestOutputHelper output, DistributedApplicationFixture fixture)
-	: XunitContextBase(output), IPartitionFixture<DistributedApplicationFixture>, IAsyncLifetime
+	: IPartitionFixture<DistributedApplicationFixture>, IAsyncLifetime
 {
+	public ITestOutputHelper Output { get; } = output;
 	private string _testName = string.Empty;
 	private IPage _page = null!;
 
@@ -31,5 +35,5 @@ public class EndToEndTests(ITestOutputHelper output, DistributedApplicationFixtu
 
 	public async Task InitializeAsync() => _page = await fixture.ApmUI.NewProfiledPage(_testName);
 
-	public async Task DisposeAsync() => await fixture.ApmUI.StopTrace(_page, XunitContext.Context.TestException == null ? null : _testName);
+	public async Task DisposeAsync() => await fixture.ApmUI.StopTrace(_page, null == null ? null : _testName);
 }

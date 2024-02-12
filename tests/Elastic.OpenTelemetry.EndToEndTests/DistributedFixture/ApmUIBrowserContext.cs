@@ -4,6 +4,7 @@
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Playwright;
+using Xunit;
 
 namespace Elastic.OpenTelemetry.EndToEndTests.DistributedFixture;
 
