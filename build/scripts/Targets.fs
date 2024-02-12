@@ -34,13 +34,11 @@ let private version _ =
 let private generatePackages _ = exec { run "dotnet" "pack" }
     
 let private pristineCheck (arguments:ParseResults<Build>) =
-    let skipCheck = arguments.TryGetResult SkipDirtyCheck |> Option.isSome
+    let skipCheck = arguments.TryGetResult Skip_Dirty_Check |> Option.isSome
     match skipCheck, Information.isCleanWorkingCopy "." with
     | true, _ -> printfn "Checkout is dirty but -c was specified to ignore this"
     | _, true  -> printfn "The checkout folder does not have pending changes, proceeding"
     | _ -> failwithf "The checkout folder has pending changes, aborting. Specify -c to ./build.sh to skip this check"
-
-type TestSuite = | Unit | Integration | E2E | All
 
 let private runTests suite _ =
     let logger =
@@ -55,9 +53,11 @@ let private runTests suite _ =
     let filterArgs =
         match suite with
         | All -> []
-        | TestSuite.Unit ->  [ "--filter"; "FullyQualifiedName~.Tests" ]
-        | TestSuite.Integration -> [ "--filter"; "FullyQualifiedName~.IntegrationTests" ]
-        | TestSuite.E2E -> [ "--filter"; "FullyQualifiedName~.EndToEndTests" ]
+        | Skip_All -> ["--filter"; "FullyQualifiedName~.SKIPPING.ALL.TESTS"]
+        | Unit ->  [ "--filter"; "FullyQualifiedName~.Tests" ]
+        | Integration -> [ "--filter"; "FullyQualifiedName~.IntegrationTests" ]
+        | E2E -> [ "--filter"; "FullyQualifiedName~.EndToEndTests" ]
+        | Skip_E2E -> [ "--filter"; "FullyQualifiedName!~.EndToEndTests" ]
         
     
     let settingsArg = ["-s"; "tests/.runsettings"]
@@ -72,10 +72,14 @@ let private runTests suite _ =
         )
     }
     
-let private test suite (arguments:ParseResults<Build>) =
-    match arguments.TryGetResult SkipTests with
-    | None -> runTests suite arguments 
-    | Some _ -> printfn "Skipping tests because --skiptests was provided"
+let private test (arguments:ParseResults<Build>) =
+    let arg = arguments.TryGetResult Test_Suite
+    match arg with
+    | None -> runTests TestSuite.All arguments 
+    | Some suite ->
+        match suite with
+        | Skip_All -> printfn "Skipping tests because --test-suite skip was provided"
+        | _ -> runTests suite arguments   
 
 let private validateLicenses _ =
     let args = ["-u"; "-t"; "-i"; "Elastic.OpenTelemetry.sln"; "--use-project-assets-json"
@@ -149,10 +153,9 @@ let Setup (parsed:ParseResults<Build>) =
         | Clean -> Build.Cmd [Version] [] clean
         | Build -> Build.Cmd [Clean] [] build
         
-        | UnitTest -> Build.Cmd [Build] [] <| test TestSuite.Unit
-        | Integrate -> Build.Cmd [Build] [] <| test TestSuite.Integration
-        | EndToEnd -> Build.Cmd [Build] [] <| test TestSuite.E2E
-        | Test -> Build.Cmd [UnitTest; Integrate; EndToEnd] [] ignore
+        | End_To_End -> Build.Cmd [] [Build] <| runTests E2E
+        | Unit_Test -> Build.Cmd [] [Build] <| runTests Unit
+        | Test -> Build.Cmd [] [Build] test
         
         | Release -> 
             Build.Cmd 
@@ -169,10 +172,10 @@ let Setup (parsed:ParseResults<Build>) =
         | GenerateApiChanges -> Build.Step generateApiChanges
             
         // flags
-        | SingleTarget
-        | SkipTests
+        | Single_Target
+        | Test_Suite _
         | Token _
-        | SkipDirtyCheck -> Build.Ignore
+        | Skip_Dirty_Check -> Build.Ignore
 
     for target in Build.Targets do
         let setup = wireCommandLine target 
