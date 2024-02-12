@@ -159,18 +159,49 @@ internal sealed class LogFileWriter : IDisposable, IAsyncDisposable
 	private static void WriteLogPrefix(LogLevel logLevel, StringBuilder builder) =>
 		WriteLogPrefix(Environment.CurrentManagedThreadId, DateTime.UtcNow, logLevel, builder);
 
-	private static void WriteLogPrefix(int managedThreadId, DateTime dateTime, LogLevel level, StringBuilder builder)
+	private const string EmptySpanId = "------";
+
+	private static void WriteLogPrefix(int managedThreadId, DateTime dateTime, LogLevel level, StringBuilder builder, string spanId = "")
 	{
+		const int maxLength = 5;
+
+		if (string.IsNullOrEmpty(spanId))
+			spanId = EmptySpanId;
+
+		var threadId = new string('-', maxLength);
+
+		if (managedThreadId > 0)
+		{
+			var digits = (int)Math.Floor(Math.Log10(managedThreadId) + 1);
+
+			if (digits < 5)
+			{
+				Span<char> buffer = stackalloc char[maxLength];
+				for (var i = 0; i < maxLength - digits; i++)
+				{
+					buffer[i] = '0';
+				}
+				managedThreadId.TryFormat(buffer[(maxLength - digits)..], out _);
+				threadId = buffer.ToString();
+			}
+			else
+			{
+				threadId = managedThreadId.ToString();
+			}
+		}
+
 		builder.Append('[')
 			.Append(dateTime.ToString("yyyy-MM-dd HH:mm:ss.fff"))
 			.Append("][")
-			.Append(managedThreadId == -1 ? "-" : managedThreadId)
+			.Append(threadId)
+			.Append("][")
+			.Append(spanId[..6])
 			.Append("][")
 			.Append(level.AsString())
 			.Append(']');
 
 		var length = builder.Length;
-		var padding = 40 - length;
+		var padding = 52 - length;
 
 		for (var i = 0; i < padding; i++)
 		{
@@ -184,32 +215,35 @@ internal sealed class LogFileWriter : IDisposable, IAsyncDisposable
 
 	public Task WritingTask { get; }
 
-	public void WriteCriticalLogLine(IDiagnosticEvent diagnosticEvent, string message) =>
+	public void WriteCriticalLogLine(DiagnosticEvent diagnosticEvent, string message) =>
 		WriteLogLine(diagnosticEvent, LogLevel.Critical, message);
 
-	public void WriteErrorLogLine(IDiagnosticEvent diagnosticEvent, string message) =>
+	public void WriteErrorLogLine(DiagnosticEvent diagnosticEvent, string message) =>
 		WriteLogLine(diagnosticEvent, LogLevel.Error, message);
 
-	public void WriteWarningLogLine(IDiagnosticEvent diagnosticEvent, string message) =>
+	public void WriteWarningLogLine(DiagnosticEvent diagnosticEvent, string message) =>
 		WriteLogLine(diagnosticEvent, LogLevel.Warning, message);
 
-	public void WriteInfoLogLine(IDiagnosticEvent diagnosticEvent, string message) =>
+	public void WriteInfoLogLine(DiagnosticEvent diagnosticEvent, string message) =>
 		WriteLogLine(diagnosticEvent, LogLevel.Info, message);
 
-	public void WriteTraceLogLine(IDiagnosticEvent diagnosticEvent, string message) =>
+	public void WriteTraceLogLine(DiagnosticEvent diagnosticEvent, string message) =>
 		WriteLogLine(diagnosticEvent, LogLevel.Trace, message);
 
-	public void WriteLogLine(IDiagnosticEvent diagnosticEvent, LogLevel logLevel, string message) =>
+	public void WriteLogLine(DiagnosticEvent diagnosticEvent, LogLevel logLevel, string message) =>
 		WriteLogLine(diagnosticEvent.Activity, diagnosticEvent.ManagedThreadId, diagnosticEvent.DateTime, logLevel, message);
 
-	public void WriteLogLine(Activity? activity, int managedThreadId, DateTime dateTime, LogLevel logLevel, string logLine)
+	public void WriteLogLine(Activity? activity, int managedThreadId, DateTime dateTime, LogLevel logLevel, string logLine) =>
+		WriteLogLine(activity, managedThreadId, dateTime, logLevel, logLine, null);
+
+	public void WriteLogLine(Activity? activity, int managedThreadId, DateTime dateTime, LogLevel logLevel, string logLine, string? spanId)
 	{
 		// We skip logging for any log level higher (numerically) than the configured log level
 		if (logLevel > ConfiguredLogLevel)
 			return;
 
 		var builder = StringBuilderCache.Acquire();
-		WriteLogPrefix(managedThreadId, dateTime, logLevel, builder);
+		WriteLogPrefix(managedThreadId, dateTime, logLevel, builder, spanId ?? activity?.SpanId.ToHexString() ?? string.Empty);
 		builder.Append(logLine);
 
 		if (activity is not null)
@@ -220,7 +254,7 @@ internal sealed class LogFileWriter : IDisposable, IAsyncDisposable
 			// correct sampling flags
 			// https://github.com/dotnet/runtime/issues/61857
 
-			var activityId = string.Concat("00-", activity.TraceId.ToHexString(), "-", activity.SpanId.ToHexString());
+			var activityId = $"00-{activity.TraceId.ToHexString()}-{activity.SpanId.ToHexString()}-{(activity.ActivityTraceFlags.HasFlag(ActivityTraceFlags.Recorded) ? "01" : "00")}";
 			builder.Append($" <{activityId}>");
 		}
 

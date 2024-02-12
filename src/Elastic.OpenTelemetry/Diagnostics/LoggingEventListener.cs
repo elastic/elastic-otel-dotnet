@@ -3,18 +3,22 @@
 // See the LICENSE file in the project root for more information
 using System.Diagnostics.Tracing;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Elastic.OpenTelemetry.Diagnostics;
 
-internal sealed class LoggingEventListener : EventListener, IAsyncDisposable
+internal sealed partial class LoggingEventListener : EventListener, IAsyncDisposable
 {
 	public const string OpenTelemetrySdkEventSourceNamePrefix = "OpenTelemetry-";
 
 	private readonly LogFileWriter _logFileWriter;
 	private readonly EventLevel _eventLevel = EventLevel.Informational;
 
+	[GeneratedRegex("^\\d{2}-[a-f0-9]{32}-[a-f0-9]{16}-\\d{2}$")]
+	private static partial Regex TraceParentRegex();
+
 	public LoggingEventListener(LogFileWriter logFileWriter)
-    {
+	{
 		_logFileWriter = logFileWriter;
 
 		var eventLevel = LogFileWriter.GetConfiguredLogLevel();
@@ -60,14 +64,14 @@ internal sealed class LoggingEventListener : EventListener, IAsyncDisposable
 		// to a rented array and Span<char> if required.
 		var builder = StringBuilderCache.Acquire();
 
-		CreateLogMessage(eventData, builder);
+		var spanId = CreateLogMessage(eventData, builder);
 
 		try
 		{
 			// TODO - We can only get the OS thread ID from the args - Do we send that instead??
 			// As per this issue - https://github.com/dotnet/runtime/issues/13125 - OnEventWritten may be on a different thread
 			// so we can't use the Environment.CurrentManagedThreadId value here.
-			_logFileWriter.WriteLogLine(null, -1, eventData.TimeStamp, GetLogLevel(eventData), StringBuilderCache.GetStringAndRelease(builder));
+			_logFileWriter.WriteLogLine(null, -1, eventData.TimeStamp, GetLogLevel(eventData), StringBuilderCache.GetStringAndRelease(builder), spanId);
 		}
 		catch (Exception)
 		{
@@ -87,24 +91,36 @@ internal sealed class LoggingEventListener : EventListener, IAsyncDisposable
 				_ => LogLevel.Unknown
 			};
 
-		static void CreateLogMessage(EventWrittenEventArgs eventData, StringBuilder builder)
+		static string? CreateLogMessage(EventWrittenEventArgs eventData, StringBuilder builder)
 		{
-			// Handle events from the OpenTelemetry SDK
+			string? spanId = null;
+
 			if (eventData.EventSource.Name.StartsWith(OpenTelemetrySdkEventSourceNamePrefix) && eventData.Message is not null)
 			{
-				LogMessageAndPayload(eventData, builder);
-			}
-
-			static void LogMessageAndPayload(EventWrittenEventArgs eventData, StringBuilder builder)
-			{
 				builder.Append($"OTEL-SDK: [{eventData.OSThreadId}] ");
-				builder.Append(eventData.Message);
 
-				if (eventData.Payload is not null)
+				if (eventData.Payload is null)
+				{
+					builder.Append(eventData.Message);
+					return spanId;
+				}
+
+				try
+				{
+					var matchedActivityId = eventData.Payload.SingleOrDefault(p => p is string ps && TraceParentRegex().IsMatch(ps));
+
+					if (matchedActivityId is string payloadString)
+						spanId = payloadString[36..^3];
+
+					var message = string.Format(eventData.Message, [.. eventData.Payload]);
+					builder.Append(message);
+					return spanId;
+				}
+				catch
 				{
 					for (var i = 0; i < eventData.Payload.Count; i++)
 					{
-						builder.Append(" - ");
+						builder.Append(" | ");
 
 						var payload = eventData.Payload[i];
 
@@ -119,6 +135,8 @@ internal sealed class LoggingEventListener : EventListener, IAsyncDisposable
 					}
 				}
 			}
+
+			return spanId;
 		}
 	}
 }

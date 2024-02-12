@@ -7,7 +7,7 @@ internal static class DiagnosticErrorLevels
 {
 	public const string Critical = "Critical";
 	public const string Error = "Error";
-	public const string Warning = "Warning";
+	public const string Warning = "Warn";
 	public const string Info = "Info";
 	public const string Trace = "Trace";
 

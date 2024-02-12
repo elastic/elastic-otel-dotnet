@@ -9,11 +9,3 @@ namespace Elastic.OpenTelemetry;
 public interface IAgent : IDisposable, IAsyncDisposable
 {
 }
-
-internal interface IServiceProviderAgent : IAgent
-{
-	/// <summary>
-	/// 
-	/// </summary>
-	IServiceProvider ServiceProvider { get; }
-}

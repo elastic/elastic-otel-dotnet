@@ -26,19 +26,13 @@ public static class TraceBuilderProviderExtensions
 
 	internal static TracerProviderBuilder LogAndAddProcessor(this TracerProviderBuilder builder, BaseProcessor<Activity> processor)
 	{
-		Log(ProcessorAddedEvent, new DiagnosticEvent<AddProcessorEvent>()
-		{
-			Data = new(processor.GetType(), builder.GetType())
-		});
+		Log(ProcessorAddedEvent, () => new DiagnosticEvent<AddProcessorEvent>(new(processor.GetType(), builder.GetType())));
 		return builder.AddProcessor(processor);
 	}
 
 	internal static TracerProviderBuilder LogAndAddSource(this TracerProviderBuilder builder, string sourceName)
 	{
-		Log(SourceAddedEvent, new DiagnosticEvent<AddSourceEvent>()
-		{
-			Data = new(sourceName, builder.GetType())
-		});
+		Log(SourceAddedEvent, () => new DiagnosticEvent<AddSourceEvent>(new(sourceName, builder.GetType())));
 		return builder.AddSource(sourceName);
 	}
 

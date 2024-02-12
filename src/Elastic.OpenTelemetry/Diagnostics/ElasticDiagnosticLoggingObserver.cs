@@ -12,7 +12,7 @@ internal sealed class ElasticDiagnosticLoggingObserver(LogFileWriter logFileWrit
 
 	public void OnNext(KeyValuePair<string, object?> data)
 	{
-		if (data.Value is not IDiagnosticEvent)
+		if (data.Value is not DiagnosticEvent)
 			return;
 
 		switch (data.Key)
@@ -54,61 +54,63 @@ internal sealed class ElasticDiagnosticLoggingObserver(LogFileWriter logFileWrit
 				break;
 
 			default:
+				if (data.Value is DiagnosticEvent diagnostic)
+					_logFileWriter.LogUnhandledEvent(data.Key, diagnostic);
 				break;
 		}
 
 		void AgentBuilderInitialized(KeyValuePair<string, object?> data)
 		{
 			if (data.Value is DiagnosticEvent<StackTrace?> diagnostic)
-				_logFileWriter.LogAgentBuilderInitialized(in diagnostic);
+				_logFileWriter.LogAgentBuilderInitialized(diagnostic);
 		}
 
 		void AgentBuilderBuiltTracerProvider(KeyValuePair<string, object?> data)
 		{
 			if (data.Value is DiagnosticEvent diagnostic)
-				_logFileWriter.LogAgentBuilderBuiltTracerProvider(in diagnostic);
+				_logFileWriter.LogAgentBuilderBuiltTracerProvider(diagnostic);
 		}
 
 		void AgentBuilderBuiltAgent(KeyValuePair<string, object?> data)
 		{
 			if (data.Value is DiagnosticEvent diagnostic)
-				_logFileWriter.LogAgentBuilderBuiltAgent(in diagnostic);
+				_logFileWriter.LogAgentBuilderBuiltAgent(diagnostic);
 		}
 
 		void AgentBuilderRegisteredDistroServices(KeyValuePair<string, object?> data)
 		{
 			if (data.Value is DiagnosticEvent diagnostic)
-				_logFileWriter.LogAgentBuilderRegisteredServices(in diagnostic);
+				_logFileWriter.LogAgentBuilderRegisteredServices(diagnostic);
 		}
 
 		void AgentBuilderBuildCalledMultipleTimes(KeyValuePair<string, object?> data)
 		{
 			if (data.Value is DiagnosticEvent diagnostic)
-				_logFileWriter.LogAgentBuilderBuildCalledMultipleTimes(in diagnostic);
+				_logFileWriter.LogAgentBuilderBuildCalledMultipleTimes(diagnostic);
 		}
 
 		void AgentBuilderSetAgentCalledMultipleTimes(KeyValuePair<string, object?> data)
 		{
 			if (data.Value is DiagnosticEvent diagnostic)
-				_logFileWriter.LogAgentBuilderSetAgentCalledMultipleTimes(in diagnostic);
+				_logFileWriter.LogAgentBuilderSetAgentCalledMultipleTimes(diagnostic);
 		}
 
 		void TransactionIdAdded(KeyValuePair<string, object?> data)
 		{
 			if (data.Value is DiagnosticEvent diagnostic)
-				_logFileWriter.LogAddedTransactionIdTag(in diagnostic);
+				_logFileWriter.LogAddedTransactionIdTag(diagnostic);
 		}
 
 		void ProcessorAdded(KeyValuePair<string, object?> data)
 		{
 			if (data.Value is DiagnosticEvent<AddProcessorEvent> diagnostic)
-				_logFileWriter.LogProcessorAdded(in diagnostic);
+				_logFileWriter.LogProcessorAdded(diagnostic);
 		}
 
 		void SourceAdded(KeyValuePair<string, object?> data)
 		{
 			if (data.Value is DiagnosticEvent<AddSourceEvent> diagnostic)
-				_logFileWriter.LogSourceAdded(in diagnostic);
+				_logFileWriter.LogSourceAdded(diagnostic);
 		}
 	}
 

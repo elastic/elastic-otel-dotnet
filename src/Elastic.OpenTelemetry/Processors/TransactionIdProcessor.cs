@@ -4,6 +4,7 @@
 using System.Diagnostics;
 using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.Logging;
+using OpenTelemetry;
 
 using static Elastic.OpenTelemetry.Diagnostics.ElasticOpenTelemetryDiagnosticSource;
 
@@ -12,16 +13,17 @@ namespace Elastic.OpenTelemetry.Processors;
 /// <summary>
 ///
 /// </summary>
-public class TransactionIdProcessor : ElasticProcessor<TransactionIdProcessor>
+public class TransactionIdProcessor : BaseProcessor<Activity>
 {
+	private ILogger? _logger = null;
+	private readonly AsyncLocal<ActivitySpanId?> _currentTransactionId = new();
+
 	/// <summary>
 	/// 
 	/// </summary>
 	public const string TransactionIdTagName = "transaction.id";
 
-	private readonly AsyncLocal<ActivitySpanId?> _currentTransactionId = new();
-
-	/// <inheritdoc cref="OnStart"/>
+	/// <inheritdoc />
 	public override void OnStart(Activity activity)
 	{
 		if (activity.Parent == null)
@@ -30,9 +32,7 @@ public class TransactionIdProcessor : ElasticProcessor<TransactionIdProcessor>
 		if (_currentTransactionId.Value.HasValue)
 		{
 			activity.SetTag(TransactionIdTagName, _currentTransactionId.Value.Value.ToString());
-
-			Log(TransactionIdAddedEvent, new DiagnosticEvent(activity));
-			Logger.LogTrace(TransactionIdProcessorTagAddedLog);
+			Log(TransactionIdAddedEvent, () => DiagnosticEvent.Create<TransactionIdProcessor>(ref _logger, activity));
 		}
 	}
 }

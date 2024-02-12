@@ -2,9 +2,9 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 using System.Diagnostics;
+using Elastic.OpenTelemetry.DependencyInjection;
 using Elastic.OpenTelemetry.Diagnostics;
 using Elastic.OpenTelemetry.Extensions;
-using Elastic.OpenTelemetry.Processors;
 using Elastic.OpenTelemetry.Resources;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -59,7 +59,7 @@ public class AgentBuilder
 			DiagnosticListener.AllListeners.Subscribe(listener);
 		}
 
-		Log(AgentBuilderInitializedEvent, new DiagnosticEvent<StackTrace?>(new StackTrace(true)));
+		Log(AgentBuilderInitializedEvent, () => new DiagnosticEvent<StackTrace?>(new StackTrace(true)));
 	}
 
 	// NOTE - Applies to all signals
@@ -212,8 +212,8 @@ public class AgentBuilder
 
 		_ = serviceCollection
 			.AddHostedService<ElasticOtelDistroService>()
-			.AddSingleton<IElasticProcessor, TransactionIdProcessor>()
-			.AddSingleton<IAgent, ServiceProviderAgent>()
+			.AddSingleton<IAgent, Agent>()
+			.AddSingleton<LoggerResolver>()
 			.AddOpenTelemetry()
 				.WithTracing(TracerProviderBuilderAction);
 
@@ -267,17 +267,12 @@ public class AgentBuilder
 		_otlpExporterName = name;
 	}
 
-	private sealed class ServiceProviderAgent(IServiceProvider serviceProvider) : Agent, IServiceProviderAgent
-	{
-		public IServiceProvider ServiceProvider => serviceProvider;
-	}
-
 	private class Agent(TracerProvider? tracerProvider, MeterProvider? meterProvider) : IAgent
 	{
 		private readonly TracerProvider? _tracerProvider = tracerProvider;
 		private readonly MeterProvider? _meterProvider = meterProvider;
 
-		internal Agent() : this(null, null)
+		public Agent() : this(null, null)
 		{
 		}
 
