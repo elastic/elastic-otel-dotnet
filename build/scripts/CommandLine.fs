@@ -31,7 +31,7 @@ type Build =
     | [<Inherit;AltCommandLine("-s")>] Single_Target
     | [<Inherit>] Token of string 
     | [<Inherit;AltCommandLine("-c")>] Skip_Dirty_Check
-    | [<Inherit;>] Test_Suite of TestSuite 
+    | [<Inherit;EqualsAssignment>] Test_Suite of TestSuite 
 with
     interface IArgParserTemplate with
         member this.Usage =
