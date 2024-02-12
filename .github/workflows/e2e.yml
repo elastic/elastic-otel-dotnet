@@ -54,7 +54,7 @@ jobs:
         
       - run: ./build.sh test --test-suite=e2e
         env: 
-          E2E__ENDPOINT: "${ELASTIC_APM_SERVER_URL}"
-          E2E__Authorization: "Authentication=ApiKey ${ELASTIC_APM_API_KEY}"
-          E2E__BROWSEREMAIL: "${KIBANA_USERNAME}"
-          E2E__BROWSERPASSWORD: "${KIBANA_PASSWORD}"
+          E2E__ENDPOINT: "${{env.ELASTIC_APM_SERVER_URL}}"
+          E2E__Authorization: "Authentication=ApiKey ${{env.ELASTIC_APM_API_KEY}}"
+          E2E__BROWSEREMAIL: "${{env.KIBANA_USERNAME}}"
+          E2E__BROWSERPASSWORD: "${{env.KIBANA_PASSWORD}}"
