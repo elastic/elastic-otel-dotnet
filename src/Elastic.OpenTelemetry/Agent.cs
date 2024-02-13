@@ -4,7 +4,7 @@
 using System.Reflection;
 using Microsoft.Extensions.Logging;
 
-using static Elastic.OpenTelemetry.Diagnostics.ElasticOpenTelemetryDiagnosticSource;
+using static Elastic.OpenTelemetry.Diagnostics.ElasticOpenTelemetryDiagnostics;
 
 namespace Elastic.OpenTelemetry;
 

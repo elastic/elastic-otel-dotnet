@@ -6,7 +6,7 @@ using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 
-using static Elastic.OpenTelemetry.Diagnostics.ElasticOpenTelemetryDiagnosticSource;
+using static Elastic.OpenTelemetry.Diagnostics.ElasticOpenTelemetryDiagnostics;
 
 namespace Elastic.OpenTelemetry.Processors;
 

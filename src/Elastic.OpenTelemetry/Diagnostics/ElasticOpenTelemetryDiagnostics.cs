@@ -8,11 +8,16 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Elastic.OpenTelemetry.Diagnostics;
 
-internal static class ElasticOpenTelemetryDiagnosticSource
+internal static class ElasticOpenTelemetryDiagnostics
 {
+	private static readonly DiagnosticListener Listener = new(DiagnosticSourceName);
+
 	public const string DiagnosticSourceName = "Elastic.OpenTelemetry";
 
-	internal static readonly DiagnosticSource DiagnosticSource = new DiagnosticListener(DiagnosticSourceName);
+	internal static readonly DiagnosticSource DiagnosticSource = Listener;
+
+	public static IDisposable EnableFileLogging() =>
+		Listener.Subscribe(new ElasticDiagnosticLoggingObserver(LogFileWriter.Instance));
 
 	public static void Log(string name)
 	{

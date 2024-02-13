@@ -5,7 +5,7 @@ using Example.Elastic.OpenTelemetry.Worker;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-builder.EnableElasticOpenTelemetry("CustomActivitySource");
+builder.AddElasticOpenTelemetry("CustomActivitySource");
 
 builder.Services.AddHostedService<Worker>();
 

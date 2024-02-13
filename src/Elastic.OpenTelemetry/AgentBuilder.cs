@@ -14,7 +14,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
-using static Elastic.OpenTelemetry.Diagnostics.ElasticOpenTelemetryDiagnosticSource;
+using static Elastic.OpenTelemetry.Diagnostics.ElasticOpenTelemetryDiagnostics;
 
 namespace Elastic.OpenTelemetry;
 
@@ -43,6 +43,7 @@ public class AgentBuilder
 	private Action<ResourceBuilder>? _resourceBuilderAction;
 	private Action<OtlpExporterOptions>? _otlpExporterConfiguration;
 	private string? _otlpExporterName;
+	private readonly IDisposable? _diagnosticSourceSubscription;
 
 	/// <summary>
 	/// TODO
@@ -55,8 +56,7 @@ public class AgentBuilder
 			_ = new LoggingEventListener(LogFileWriter.Instance);
 
 			// Enables logging of Elastic OpenTelemetry diagnostic source events
-			var listener = new LoggingDiagnosticSourceListener(LogFileWriter.Instance);
-			DiagnosticListener.AllListeners.Subscribe(listener);
+			_diagnosticSourceSubscription = EnableFileLogging();
 		}
 
 		Log(AgentBuilderInitializedEvent, () => new DiagnosticEvent<StackTrace?>(new StackTrace(true)));
@@ -193,7 +193,7 @@ public class AgentBuilder
 
 		Log(AgentBuilderBuiltTracerProviderEvent);
 
-		var agent = tracerProvider is not null ? new Agent(tracerProvider) : new Agent();
+		var agent = tracerProvider is not null ? new Agent(_diagnosticSourceSubscription, tracerProvider) : new Agent(_diagnosticSourceSubscription);
 
 		Log(AgentBuilderBuiltAgentEvent);
 
@@ -212,7 +212,9 @@ public class AgentBuilder
 
 		_ = serviceCollection
 			.AddHostedService<ElasticOtelDistroService>()
-			.AddSingleton<IAgent, Agent>()
+			// This is purely to register an instance of the agent such that should the service provider be disposed, the agent
+			// will also be disposed which in turn avoids further diagnostics subscriptions and file logging.
+			.AddSingleton<IAgent>(new Agent(_diagnosticSourceSubscription))
 			.AddSingleton<LoggerResolver>()
 			.AddOpenTelemetry()
 				.WithTracing(TracerProviderBuilderAction);
@@ -233,11 +235,6 @@ public class AgentBuilder
 				.AddGrpcClientInstrumentation()
 				.AddEntityFrameworkCoreInstrumentation(); // TODO - Should we add this by default?
 
-			// TODO - Update these to capture the builder type also
-			//Log.AddedInstrumentation("HttpClient");
-			//Log.AddedInstrumentation("GrpcClient");
-			//Log.AddedInstrumentation("EntityFrameworkCore");
-
 			tracerProviderBuilder.AddElasticProcessors();
 
 			if (_resourceBuilderAction is not null)
@@ -251,7 +248,6 @@ public class AgentBuilder
 				tracerProviderBuilder.ConfigureResource(DefaultResourceBuilderConfiguration);
 			}
 
-			// TODO - Can/should we use reflection to determine and log what is configured by the user action?
 			_tracerProviderBuilderAction?.Invoke(tracerProviderBuilder);
 
 			tracerProviderBuilder.AddElasticOtlpExporter(_otlpExporterConfiguration, _otlpExporterName);
@@ -267,16 +263,19 @@ public class AgentBuilder
 		_otlpExporterName = name;
 	}
 
-	private class Agent(TracerProvider? tracerProvider, MeterProvider? meterProvider) : IAgent
+	private class Agent(IDisposable? diagnosticSubscription, TracerProvider? tracerProvider, MeterProvider? meterProvider) : IAgent
 	{
+		private readonly IDisposable? _diagnosticSubscription = diagnosticSubscription;
 		private readonly TracerProvider? _tracerProvider = tracerProvider;
 		private readonly MeterProvider? _meterProvider = meterProvider;
 
-		public Agent() : this(null, null)
+		public Agent(IDisposable? diagnosticSubscription)
+			: this(diagnosticSubscription,null, null)
 		{
 		}
 
-		internal Agent(TracerProvider tracerProvider) : this(tracerProvider, null)
+		internal Agent(IDisposable? diagnosticSubscription, TracerProvider tracerProvider)
+			: this(diagnosticSubscription, tracerProvider, null)
 		{
 		}
 
@@ -284,6 +283,7 @@ public class AgentBuilder
 		{
 			_tracerProvider?.Dispose();
 			_meterProvider?.Dispose();
+			_diagnosticSubscription?.Dispose();
 			LogFileWriter.Instance.Dispose();
 		}
 
@@ -291,6 +291,7 @@ public class AgentBuilder
 		{
 			_tracerProvider?.Dispose();
 			_meterProvider?.Dispose();
+			_diagnosticSubscription?.Dispose();
 			await LogFileWriter.Instance.DisposeAsync().ConfigureAwait(false);
 		}
 	}

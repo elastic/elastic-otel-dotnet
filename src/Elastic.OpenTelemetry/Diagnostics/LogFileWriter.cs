@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Channels;
-using System.Xml.Serialization;
 
 namespace Elastic.OpenTelemetry.Diagnostics;
 
