@@ -22,9 +22,13 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 env:
-  # keep_serverless-staging-oblt OR keep_serverless-qa-oblt
+  # (keep_serverless-staging-oblt, keep_serverless-qa-oblt or serverless-production-oblt)
   SERVERLESS_PROJECT: serverless-production-oblt
+  # (staging, qa or production)
+  VAULT_SECRET_SUFFIX: production
 
+# NOTE: if you add a new job and it's a mandatory check then
+#       update e2e-docs.yml
 jobs:
   test:
     if: |
@@ -51,10 +55,18 @@ jobs:
           vault-role-id: ${{ secrets.VAULT_ROLE_ID }}
           vault-secret-id: ${{ secrets.VAULT_SECRET_ID }}
 
+      - name: Get the browser email and password from Vault
+        uses: hashicorp/vault-action@v2.8.0
+        with:
+          url: ${{ secrets.VAULT_ADDR }}
+          roleId: ${{ secrets.VAULT_ROLE_ID }}
+          secretId: ${{ secrets.VAULT_SECRET_ID }}
+          method: approle
+          secrets: |
+            secret/observability-team/ci/elastic-cloud/observability-team-${{ env.VAULT_SECRET_SUFFIX }} username | E2E__BROWSEREMAIL
+            secret/observability-team/ci/elastic-cloud/observability-team-${{ env.VAULT_SECRET_SUFFIX }} password | E2E__BROWSERPASSWORD
         
       - run: ./build.sh test --test-suite=e2e
         env: 
           E2E__ENDPOINT: "${{env.ELASTIC_APM_SERVER_URL}}"
           E2E__AUTHORIZATION: "Authentication=ApiKey ${{env.ELASTIC_APM_API_KEY}}"
-          E2E__BROWSEREMAIL: "${{env.KIBANA_USERNAME}}"
-          E2E__BROWSERPASSWORD: "${{env.KIBANA_PASSWORD}}"

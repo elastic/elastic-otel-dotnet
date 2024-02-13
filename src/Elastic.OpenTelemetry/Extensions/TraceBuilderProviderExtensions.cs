@@ -5,22 +5,42 @@ using Elastic.OpenTelemetry.Processors;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Trace;
 using OpenTelemetry;
+using System.Diagnostics;
+using Elastic.OpenTelemetry.Diagnostics;
+
+using static Elastic.OpenTelemetry.Diagnostics.ElasticOpenTelemetryDiagnosticSource;
 
 namespace Elastic.OpenTelemetry.Extensions;
+
+internal readonly record struct AddProcessorEvent(Type ProcessorType, Type BuilderType);
+
+internal readonly record struct AddSourceEvent(string ActivitySourceName, Type BuilderType);
 
 /// <summary> Provides Elastic APM extensions to <see cref="TracerProviderBuilder"/> </summary>
 public static class TraceBuilderProviderExtensions
 {
-    //TODO binder source generator on Build() to make it automatic?
+	//TODO binder source generator on Build() to make it automatic?
 	/// <summary> Include Elastic APM Trace Processors to ensure data is enriched and extended.</summary>
-    public static TracerProviderBuilder AddElasticProcessors(this TracerProviderBuilder builder) =>
-		builder
-			.AddProcessor(new TransactionIdProcessor());
+	public static TracerProviderBuilder AddElasticProcessors(this TracerProviderBuilder builder) =>
+		builder.LogAndAddProcessor(new TransactionIdProcessor());
 
-    /// <summary>
-    /// Adds the OTLP exporter to the tracer, configured to send data to an Elastic APM backend.
-    /// </summary>
-	public static TracerProviderBuilder AddElasticOtlpExporter(this TracerProviderBuilder builder) => AddElasticOtlpExporter(builder, null, null);
+	internal static TracerProviderBuilder LogAndAddProcessor(this TracerProviderBuilder builder, BaseProcessor<Activity> processor)
+	{
+		Log(ProcessorAddedEvent, () => new DiagnosticEvent<AddProcessorEvent>(new(processor.GetType(), builder.GetType())));
+		return builder.AddProcessor(processor);
+	}
+
+	internal static TracerProviderBuilder LogAndAddSource(this TracerProviderBuilder builder, string sourceName)
+	{
+		Log(SourceAddedEvent, () => new DiagnosticEvent<AddSourceEvent>(new(sourceName, builder.GetType())));
+		return builder.AddSource(sourceName);
+	}
+
+	/// <summary>
+	/// Adds the OTLP exporter to the tracer, configured to send data to an Elastic APM backend.
+	/// </summary>
+	public static TracerProviderBuilder AddElasticOtlpExporter(this TracerProviderBuilder builder) =>
+		AddElasticOtlpExporter(builder, null, null);
 
     /// <summary>
     /// Adds the OTLP exporter to the tracer, configured to send data to an Elastic APM backend.
@@ -35,6 +55,7 @@ public static class TraceBuilderProviderExtensions
     public static TracerProviderBuilder AddElasticOtlpExporter(this TracerProviderBuilder builder, Action<OtlpExporterOptions>? configure, string? name)
     {
         // TODO - We need a clean way to test this behaviour
+		// TODO - Logging
 
         const string tracesPath = "/v1/traces";
 

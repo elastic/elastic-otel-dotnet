@@ -2,25 +2,21 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 using System.Diagnostics;
+using Elastic.OpenTelemetry.DependencyInjection;
+using Elastic.OpenTelemetry.Diagnostics;
 using Elastic.OpenTelemetry.Extensions;
 using Elastic.OpenTelemetry.Resources;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
-namespace Elastic.OpenTelemetry;
+using static Elastic.OpenTelemetry.Diagnostics.ElasticOpenTelemetryDiagnosticSource;
 
-/// <summary>
-/// 
-/// </summary>
-public class DebugExporter : BaseExporter<Activity>
-{
-	/// <inheritdoc/>
-	public override ExportResult Export(in Batch<Activity> batch) => ExportResult.Success;
-}
+namespace Elastic.OpenTelemetry;
 
 /// <summary>
 /// Supports building <see cref="IAgent"/> instances which include Elastic defaults, but can also be customised.
@@ -42,7 +38,7 @@ public class AgentBuilder
 			.AddRuntimeInstrumentation()
 			.AddHttpClientInstrumentation();
 
-	private readonly string[]? _activitySourceNames;
+	private readonly string[] _activitySourceNames = [];
 	private Action<TracerProviderBuilder> _tracerProviderBuilderAction = tpb => { };
 	private Action<ResourceBuilder>? _resourceBuilderAction;
 	private Action<OtlpExporterOptions>? _otlpExporterConfiguration;
@@ -51,13 +47,26 @@ public class AgentBuilder
 	/// <summary>
 	/// TODO
 	/// </summary>
-	public AgentBuilder() { }
+	public AgentBuilder()
+	{
+		if (LogFileWriter.FileLoggingEnabled)
+		{
+			// Enables logging of OpenTelemetry-SDK event source events
+			_ = new LoggingEventListener(LogFileWriter.Instance);
+
+			// Enables logging of Elastic OpenTelemetry diagnostic source events
+			var listener = new LoggingDiagnosticSourceListener(LogFileWriter.Instance);
+			DiagnosticListener.AllListeners.Subscribe(listener);
+		}
+
+		Log(AgentBuilderInitializedEvent, () => new DiagnosticEvent<StackTrace?>(new StackTrace(true)));
+	}
 
 	// NOTE - Applies to all signals
 	/// <summary>
 	/// TODO
 	/// </summary>
-	public AgentBuilder(params string[] activitySourceNames) => _activitySourceNames = activitySourceNames;
+	public AgentBuilder(params string[] activitySourceNames) : this() => _activitySourceNames = activitySourceNames;
 
 	// NOTE: The builder methods below are extremely experimental and will go through a final API design and
 	// refinement before alpha 1
@@ -181,7 +190,14 @@ public class AgentBuilder
 		var tracerProviderBuilder = Sdk.CreateTracerProviderBuilder();
 		TracerProviderBuilderAction.Invoke(tracerProviderBuilder);
 		var tracerProvider = tracerProviderBuilder.Build();
-		return tracerProvider is not null ? new Agent(tracerProvider) : new Agent();
+
+		Log(AgentBuilderBuiltTracerProviderEvent);
+
+		var agent = tracerProvider is not null ? new Agent(tracerProvider) : new Agent();
+
+		Log(AgentBuilderBuiltAgentEvent);
+
+		return agent;
 	}
 
 	/// <summary>
@@ -191,9 +207,17 @@ public class AgentBuilder
 	/// <returns>The supplied <see cref="IServiceCollection"/>.</returns>
 	public IServiceCollection Register(IServiceCollection serviceCollection)
 	{
+		// TODO - Docs, we should explain that prior to .NET 8, this needs to be added first if other hosted services emit signals.
+		// On .NET 8 we handle this with IHostedLifecycleService
+
 		_ = serviceCollection
+			.AddHostedService<ElasticOtelDistroService>()
+			.AddSingleton<IAgent, Agent>()
+			.AddSingleton<LoggerResolver>()
 			.AddOpenTelemetry()
 				.WithTracing(TracerProviderBuilderAction);
+
+		Log(AgentBuilderRegisteredDistroServicesEvent);
 
 		return serviceCollection;
 	}
@@ -201,14 +225,20 @@ public class AgentBuilder
 	private Action<TracerProviderBuilder> TracerProviderBuilderAction =>
 		tracerProviderBuilder =>
 		{
-			if (_activitySourceNames is not null)
-				tracerProviderBuilder.AddSource(_activitySourceNames);
+			foreach (var source in _activitySourceNames)
+				tracerProviderBuilder.LogAndAddSource(source);
 
 			tracerProviderBuilder
 				.AddHttpClientInstrumentation()
 				.AddGrpcClientInstrumentation()
-				.AddEntityFrameworkCoreInstrumentation()
-				.AddElasticProcessors();
+				.AddEntityFrameworkCoreInstrumentation(); // TODO - Should we add this by default?
+
+			// TODO - Update these to capture the builder type also
+			//Log.AddedInstrumentation("HttpClient");
+			//Log.AddedInstrumentation("GrpcClient");
+			//Log.AddedInstrumentation("EntityFrameworkCore");
+
+			tracerProviderBuilder.AddElasticProcessors();
 
 			if (_resourceBuilderAction is not null)
 			{
@@ -221,15 +251,10 @@ public class AgentBuilder
 				tracerProviderBuilder.ConfigureResource(DefaultResourceBuilderConfiguration);
 			}
 
+			// TODO - Can/should we use reflection to determine and log what is configured by the user action?
 			_tracerProviderBuilderAction?.Invoke(tracerProviderBuilder);
 
-			// Add the OTLP exporter configured to ship data to an Elastic backend.
-			// TODO - What about cases where users want to register processors/exporters after any exporters we add by default (OTLP)?
 			tracerProviderBuilder.AddElasticOtlpExporter(_otlpExporterConfiguration, _otlpExporterName);
-
-#if DEBUG
-			tracerProviderBuilder.AddProcessor(new SimpleActivityExportProcessor(new DebugExporter()));
-#endif
 		};
 
 	/// <summary>
@@ -242,14 +267,12 @@ public class AgentBuilder
 		_otlpExporterName = name;
 	}
 
-	private sealed class Agent(TracerProvider? tracerProvider, MeterProvider? meterProvider) : IAgent
+	private class Agent(TracerProvider? tracerProvider, MeterProvider? meterProvider) : IAgent
 	{
-		private bool _disposedValue;
-
 		private readonly TracerProvider? _tracerProvider = tracerProvider;
 		private readonly MeterProvider? _meterProvider = meterProvider;
 
-		internal Agent() : this(null, null)
+		public Agent() : this(null, null)
 		{
 		}
 
@@ -257,24 +280,18 @@ public class AgentBuilder
 		{
 		}
 
-		private void Dispose(bool disposing)
-		{
-			if (!_disposedValue)
-			{
-				if (disposing)
-				{
-					_tracerProvider?.Dispose();
-					_meterProvider?.Dispose();
-				}
-
-				_disposedValue = true;
-			}
-		}
-
 		public void Dispose()
 		{
-			Dispose(disposing: true);
-			GC.SuppressFinalize(this);
+			_tracerProvider?.Dispose();
+			_meterProvider?.Dispose();
+			LogFileWriter.Instance.Dispose();
+		}
+
+		public async ValueTask DisposeAsync()
+		{
+			_tracerProvider?.Dispose();
+			_meterProvider?.Dispose();
+			await LogFileWriter.Instance.DisposeAsync().ConfigureAwait(false);
 		}
 	}
 }

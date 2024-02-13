@@ -24,6 +24,8 @@ concurrency:
 env:
   NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
 
+# NOTE: if you add a new job and it's a mandatory check then
+#       update ci.yml
 jobs:
   test-windows:
     runs-on: windows-latest
