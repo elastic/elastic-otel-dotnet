@@ -63,6 +63,7 @@ let private runTests suite _ =
     let settingsArg = ["-s"; "tests/.runsettings"]
     let tfmArgs = if OS.Current = OS.Windows then [] else ["-f"; "net8.0"]
     exec {
+        env (Map ["TEST_SUITE", suite.SuitName])
         run "dotnet" (
             ["test"; "-c"; "release"; "--no-restore"; "--no-build"; logger]
             @ settingsArg

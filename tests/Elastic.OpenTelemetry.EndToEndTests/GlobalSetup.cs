@@ -24,6 +24,16 @@ public class EndToEndOptions : PartitionOptions
 			.AddEnvironmentVariables()
 			.AddUserSecrets<DotNetRunApplication>()
 			.Build();
+
+		var testSuite = Environment.GetEnvironmentVariable("TEST_SUITE");
+
+		//only validate credentials if we are actually running the e2e suite
+		if (testSuite == null || (
+				!testSuite.Equals("e2e", StringComparison.InvariantCultureIgnoreCase)
+				&& !testSuite.Equals("all", StringComparison.InvariantCultureIgnoreCase))
+			)
+			return;
+
 		try
 		{
 			configuration["E2E:Endpoint"].Should()

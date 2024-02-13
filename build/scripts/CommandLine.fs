@@ -9,7 +9,11 @@ open Microsoft.FSharp.Reflection
 open System
 open Bullseye
 
-type TestSuite = All | Unit | Integration | E2E | Skip_All | Skip_E2E 
+type TestSuite = All | Unit | Integration | E2E | Skip_All | Skip_E2E
+    with 
+    member this.SuitName =
+        match FSharpValue.GetUnionFields(this, typeof<TestSuite>) with
+        | case, _ -> case.Name.ToLowerInvariant()
 
 type Build =
     | [<CliPrefix(CliPrefix.None);SubCommand>] Clean
