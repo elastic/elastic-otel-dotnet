@@ -2,6 +2,7 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 using Elastic.OpenTelemetry;
+using Microsoft.Extensions.Hosting;
 using OpenTelemetry.Trace;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -11,6 +12,26 @@ namespace Microsoft.Extensions.DependencyInjection;
 /// </summary>
 public static class ServiceCollectionExtensions
 {
+	/// <summary>
+	/// TODO
+	/// </summary>
+	/// <param name="builder"></param>
+	/// <returns></returns>
+	public static IHostApplicationBuilder EnableElasticOpenTelemetry(this IHostApplicationBuilder builder) =>
+		EnableElasticOpenTelemetry(builder, []);
+
+	/// <summary>
+	/// TODO
+	/// </summary>
+	/// <param name="builder"></param>
+	/// <param name="activitySourceNames"></param>
+	/// <returns></returns>
+	public static IHostApplicationBuilder EnableElasticOpenTelemetry(this IHostApplicationBuilder builder, params string[] activitySourceNames)
+	{
+		builder.Services.AddElasticOpenTelemetry(activitySourceNames);
+		return builder;
+	}
+
 	/// <summary>
 	/// Adds the Elastic OpenTelemetry distribution to an application via the <see cref="IServiceCollection"/>.
 	/// </summary>
