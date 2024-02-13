@@ -8,7 +8,7 @@ using OpenTelemetry;
 using System.Diagnostics;
 using Elastic.OpenTelemetry.Diagnostics;
 
-using static Elastic.OpenTelemetry.Diagnostics.ElasticOpenTelemetryDiagnosticSource;
+using static Elastic.OpenTelemetry.Diagnostics.ElasticOpenTelemetryDiagnostics;
 
 namespace Elastic.OpenTelemetry.Extensions;
 

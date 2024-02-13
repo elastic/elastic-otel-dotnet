@@ -17,8 +17,8 @@ public static class ServiceCollectionExtensions
 	/// </summary>
 	/// <param name="builder"></param>
 	/// <returns></returns>
-	public static IHostApplicationBuilder EnableElasticOpenTelemetry(this IHostApplicationBuilder builder) =>
-		EnableElasticOpenTelemetry(builder, []);
+	public static IHostApplicationBuilder AddElasticOpenTelemetry(this IHostApplicationBuilder builder) =>
+		AddElasticOpenTelemetry(builder, []);
 
 	/// <summary>
 	/// TODO
@@ -26,7 +26,7 @@ public static class ServiceCollectionExtensions
 	/// <param name="builder"></param>
 	/// <param name="activitySourceNames"></param>
 	/// <returns></returns>
-	public static IHostApplicationBuilder EnableElasticOpenTelemetry(this IHostApplicationBuilder builder, params string[] activitySourceNames)
+	public static IHostApplicationBuilder AddElasticOpenTelemetry(this IHostApplicationBuilder builder, params string[] activitySourceNames)
 	{
 		builder.Services.AddElasticOpenTelemetry(activitySourceNames);
 		return builder;

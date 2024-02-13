@@ -17,39 +17,39 @@ internal sealed class ElasticDiagnosticLoggingObserver(LogFileWriter logFileWrit
 
 		switch (data.Key)
 		{
-			case ElasticOpenTelemetryDiagnosticSource.AgentBuilderInitializedEvent:
+			case ElasticOpenTelemetryDiagnostics.AgentBuilderInitializedEvent:
 				AgentBuilderInitialized(data);
 				break;
 
-			case ElasticOpenTelemetryDiagnosticSource.AgentBuilderBuiltTracerProviderEvent:
+			case ElasticOpenTelemetryDiagnostics.AgentBuilderBuiltTracerProviderEvent:
 				AgentBuilderBuiltTracerProvider(data);
 				break;
 
-			case ElasticOpenTelemetryDiagnosticSource.AgentBuilderBuiltAgentEvent:
+			case ElasticOpenTelemetryDiagnostics.AgentBuilderBuiltAgentEvent:
 				AgentBuilderBuiltAgent(data);
 				break;
 
-			case ElasticOpenTelemetryDiagnosticSource.AgentBuildCalledMultipleTimesEvent:
+			case ElasticOpenTelemetryDiagnostics.AgentBuildCalledMultipleTimesEvent:
 				AgentBuilderBuildCalledMultipleTimes(data);
 				break;
 
-			case ElasticOpenTelemetryDiagnosticSource.AgentSetAgentCalledMultipleTimesEvent:
+			case ElasticOpenTelemetryDiagnostics.AgentSetAgentCalledMultipleTimesEvent:
 				AgentBuilderSetAgentCalledMultipleTimes(data);
 				break;
 
-			case ElasticOpenTelemetryDiagnosticSource.AgentBuilderRegisteredDistroServicesEvent:
+			case ElasticOpenTelemetryDiagnostics.AgentBuilderRegisteredDistroServicesEvent:
 				AgentBuilderRegisteredDistroServices(data);
 				break;
 
-			case ElasticOpenTelemetryDiagnosticSource.TransactionIdAddedEvent:
+			case ElasticOpenTelemetryDiagnostics.TransactionIdAddedEvent:
 				TransactionIdAdded(data);
 				break;
 
-			case ElasticOpenTelemetryDiagnosticSource.ProcessorAddedEvent:
+			case ElasticOpenTelemetryDiagnostics.ProcessorAddedEvent:
 				ProcessorAdded(data);
 				break;
 
-			case ElasticOpenTelemetryDiagnosticSource.SourceAddedEvent:
+			case ElasticOpenTelemetryDiagnostics.SourceAddedEvent:
 				SourceAdded(data);
 				break;
 
