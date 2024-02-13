@@ -63,7 +63,7 @@ jobs:
           secretId: ${{ secrets.VAULT_SECRET_ID }}
           method: approle
           secrets: |
-            secret/observability-team/ci/elastic-cloud/observability-team-${{ env.VAULT_SECRET_SUFFIX }} username | E2E__BROWSEREMAIL
+            secret/observability-team/ci/elastic-cloud/observability-team-${{ env.VAULT_SECRET_SUFFIX }} username | E2E__BROWSEREMAIL ;
             secret/observability-team/ci/elastic-cloud/observability-team-${{ env.VAULT_SECRET_SUFFIX }} password | E2E__BROWSERPASSWORD
         
       - run: ./build.sh test --test-suite=e2e
