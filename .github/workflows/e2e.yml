@@ -24,8 +24,8 @@ concurrency:
 env:
   # (keep_serverless-staging-oblt, keep_serverless-qa-oblt or serverless-production-oblt)
   SERVERLESS_PROJECT: serverless-production-oblt
-  # (staging, qa or production)
-  VAULT_SECRET_SUFFIX: production
+  # (staging, qa or pro)
+  VAULT_SECRET_SUFFIX: pro
 
 # NOTE: if you add a new job and it's a mandatory check then
 #       update e2e-docs.yml
