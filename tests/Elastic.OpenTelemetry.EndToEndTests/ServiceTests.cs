@@ -35,5 +35,5 @@ public class EndToEndTests(ITestOutputHelper output, DistributedApplicationFixtu
 
 	public async Task InitializeAsync() => _page = await fixture.ApmUI.NewProfiledPage(_testName);
 
-	public async Task DisposeAsync() => await fixture.ApmUI.StopTrace(_page, null == null ? null : _testName);
+	public async Task DisposeAsync() => await fixture.ApmUI.StopTrace(_page, PartitionContext.TestException == null ? null : _testName);
 }
