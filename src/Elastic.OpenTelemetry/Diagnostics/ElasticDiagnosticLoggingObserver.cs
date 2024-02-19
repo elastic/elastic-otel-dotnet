@@ -2,7 +2,6 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 using System.Diagnostics;
-using Elastic.OpenTelemetry.Extensions;
 
 namespace Elastic.OpenTelemetry.Diagnostics;
 
@@ -103,13 +102,13 @@ internal sealed class ElasticDiagnosticLoggingObserver(LogFileWriter logFileWrit
 
 		void ProcessorAdded(KeyValuePair<string, object?> data)
 		{
-			if (data.Value is DiagnosticEvent<AddProcessorEvent> diagnostic)
+			if (data.Value is DiagnosticEvent<AddProcessorPayload> diagnostic)
 				_logFileWriter.LogProcessorAdded(diagnostic);
 		}
 
 		void SourceAdded(KeyValuePair<string, object?> data)
 		{
-			if (data.Value is DiagnosticEvent<AddSourceEvent> diagnostic)
+			if (data.Value is DiagnosticEvent<AddSourcePayload> diagnostic)
 				_logFileWriter.LogSourceAdded(diagnostic);
 		}
 	}

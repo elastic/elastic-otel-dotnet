@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information
 using System.Diagnostics;
 using Elastic.OpenTelemetry.DependencyInjection;
-using Elastic.OpenTelemetry.Extensions;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Elastic.OpenTelemetry.Diagnostics;
@@ -84,13 +83,13 @@ internal static class ElasticOpenTelemetryDiagnostics
 		logFileWriter.WriteTraceLogLine(diagnostic, LoggerMessages.TransactionIdProcessorTagAddedLog);
 	}
 
-	public static void LogProcessorAdded(this LogFileWriter logFileWriter, DiagnosticEvent<AddProcessorEvent> diagnostic)
+	public static void LogProcessorAdded(this LogFileWriter logFileWriter, DiagnosticEvent<AddProcessorPayload> diagnostic)
 	{
 		var message = $"Added '{diagnostic.Data.ProcessorType}' processor to '{diagnostic.Data.BuilderType.Name}'.";
 		logFileWriter.WriteInfoLogLine(diagnostic, message);
 	}
 
-	public static void LogSourceAdded(this LogFileWriter logFileWriter, DiagnosticEvent<AddSourceEvent> diagnostic)
+	public static void LogSourceAdded(this LogFileWriter logFileWriter, DiagnosticEvent<AddSourcePayload> diagnostic)
 	{
 		var message = $"Added '{diagnostic.Data.ActivitySourceName}' ActivitySource to '{diagnostic.Data.BuilderType.Name}'.";
 		logFileWriter.WriteInfoLogLine(diagnostic, message);

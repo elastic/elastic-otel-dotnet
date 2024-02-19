@@ -5,7 +5,6 @@ using System.Diagnostics;
 using Elastic.OpenTelemetry.DependencyInjection;
 using Elastic.OpenTelemetry.Diagnostics;
 using Elastic.OpenTelemetry.Extensions;
-using Elastic.OpenTelemetry.Resources;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
@@ -23,15 +22,6 @@ namespace Elastic.OpenTelemetry;
 /// </summary>
 public class AgentBuilder
 {
-	private static readonly Action<ResourceBuilder> DefaultResourceBuilderConfiguration = builder =>
-		builder
-			.Clear()
-			.AddDetector(new DefaultServiceDetector())
-			.AddTelemetrySdk()
-			.AddDetector(new ElasticEnvironmentVariableDetector())
-			.AddEnvironmentVariableDetector()
-			.AddDistroAttributes();
-
 	private readonly MeterProviderBuilder _meterProvider =
 		Sdk.CreateMeterProviderBuilder()
 			.AddProcessInstrumentation()
@@ -40,7 +30,7 @@ public class AgentBuilder
 
 	private readonly string[] _activitySourceNames = [];
 	private Action<TracerProviderBuilder> _tracerProviderBuilderAction = tpb => { };
-	private Action<ResourceBuilder>? _resourceBuilderAction;
+	private Action<ResourceBuilder>? _resourceBuilderAction = rb => { };
 	private Action<OtlpExporterOptions>? _otlpExporterConfiguration;
 	private string? _otlpExporterName;
 	private readonly IDisposable? _diagnosticSourceSubscription;
@@ -237,20 +227,13 @@ public class AgentBuilder
 
 			tracerProviderBuilder.AddElasticProcessors();
 
-			if (_resourceBuilderAction is not null)
-			{
-				var action = _resourceBuilderAction;
-				action += b => b.AddDistroAttributes();
-				tracerProviderBuilder.ConfigureResource(action);
-			}
-			else
-			{
-				tracerProviderBuilder.ConfigureResource(DefaultResourceBuilderConfiguration);
-			}
+			var action = _resourceBuilderAction;
+			action += b => b.AddDistroAttributes();
+			tracerProviderBuilder.ConfigureResource(action);
 
 			_tracerProviderBuilderAction?.Invoke(tracerProviderBuilder);
 
-			tracerProviderBuilder.AddElasticOtlpExporter(_otlpExporterConfiguration, _otlpExporterName);
+			tracerProviderBuilder.AddOtlpExporter(_otlpExporterName, _otlpExporterConfiguration);
 		};
 
 	/// <summary>
