@@ -1,31 +1,33 @@
 <Project Sdk="Microsoft.NET.Sdk">
-    <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
-        <OutputType>Exe</OutputType>
-        <NoWarn>$(NoWarn);NU1701</NoWarn>
-        <IsPackable>false</IsPackable>
-    </PropertyGroup>
-    <ItemGroup>
-        <PackageReference Include="Argu" Version="6.1.4" />
-        <PackageReference Include="Bullseye" Version="4.2.1" />
-        <PackageReference Include="Proc.Fs" Version="0.7.2" />
-        <PackageReference Include="Fake.Tools.Git" Version="5.20.3"/>
-    </ItemGroup>
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <NoWarn>$(NoWarn);NU1701</NoWarn>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Argu" Version="6.1.4"/>
+    <PackageReference Include="Bullseye" Version="4.2.1"/>
+    <PackageReference Include="Proc.Fs" Version="0.8.1"/>
+    <PackageReference Include="Fake.Tools.Git" Version="5.20.3"/>
+    <PackageReference Remove="FSharp.Core"/>
+    <PackageReference Include="FSharp.Core" Version="8.0.101"/>
+  </ItemGroup>
 
-    <ItemGroup>
-        <None Include="..\*" LinkBase="_root"/>
-    </ItemGroup>
+  <ItemGroup>
+    <None Include="..\*" LinkBase="_root"/>
+  </ItemGroup>
 
-    <ItemGroup>
-        <Compile Include="scripts\BuildInformation.fs" />
-        <Compile Include="scripts\CommandLine.fs"/>
-        <Compile Include="scripts\Targets.fs"/>
-        <Compile Include="scripts\Program.fs"/>
-        <None Include="**\*" />
-        <None Remove="bin\**" />
-        <None Remove="obj\**" />
-        <None Remove="scripts\**" />
-        <None Remove="output\**" />
-    </ItemGroup>
+  <ItemGroup>
+    <Compile Include="scripts\BuildInformation.fs"/>
+    <Compile Include="scripts\CommandLine.fs"/>
+    <Compile Include="scripts\Targets.fs"/>
+    <Compile Include="scripts\Program.fs"/>
+    <None Include="**\*"/>
+    <None Remove="bin\**"/>
+    <None Remove="obj\**"/>
+    <None Remove="scripts\**"/>
+    <None Remove="output\**"/>
+  </ItemGroup>
 
 </Project>

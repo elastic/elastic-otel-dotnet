@@ -21,7 +21,7 @@ jobs:
         id: bootstrap
         uses: ./.github/workflows/bootstrap
 
-      - run: ./build.sh release
+      - run: ./build.sh release --test-suite=skip-e2e
         name: Release
 
       - name: publish canary packages github package repository

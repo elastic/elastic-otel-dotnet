@@ -34,31 +34,53 @@ let private version _ =
 let private generatePackages _ = exec { run "dotnet" "pack" }
     
 let private pristineCheck (arguments:ParseResults<Build>) =
-    let skipCheck = arguments.TryGetResult SkipDirtyCheck |> Option.isSome
+    let skipCheck = arguments.TryGetResult Skip_Dirty_Check |> Option.isSome
     match skipCheck, Information.isCleanWorkingCopy "." with
     | true, _ -> printfn "Checkout is dirty but -c was specified to ignore this"
     | _, true  -> printfn "The checkout folder does not have pending changes, proceeding"
     | _ -> failwithf "The checkout folder has pending changes, aborting. Specify -c to ./build.sh to skip this check"
 
-let private runTests _ =
-    let testOutputPath = Paths.ArtifactPath "tests"
-    let junitOutput = Path.Combine(testOutputPath.FullName, "junit-{assembly}-{framework}-test-results.xml")
-    let loggerPathArgs = $"LogFilePath=%s{junitOutput}"
-    let loggerArg = $"--logger:\"junit;%s{loggerPathArgs}\""
-    let githubActionsLogger = $"--logger:\"GitHubActions;summary.includePassedTests=true\""
+let private runTests suite _ =
+    let logger =
+        // use junit xml logging locally, github actions logs using console out formats
+        match BuildServer.isGitHubActionsBuild with
+        | true -> "--logger:\"GitHubActions;summary.includePassedTests=false\""
+        | false ->
+            let testOutputPath = Paths.ArtifactPath "tests"
+            let junitOutput = Path.Combine(testOutputPath.FullName, "junit-{assembly}-{framework}-test-results.xml")
+            let loggerPathArgs = $"LogFilePath=%s{junitOutput}"
+            $"--logger:\"junit;%s{loggerPathArgs}\""
+    let filterArgs =
+        match suite with
+        | All -> []
+        | Skip_All -> ["--filter"; "FullyQualifiedName~.SKIPPING.ALL.TESTS"]
+        | Unit ->  [ "--filter"; "FullyQualifiedName~.Tests" ]
+        | Integration -> [ "--filter"; "FullyQualifiedName~.IntegrationTests" ]
+        | E2E -> [ "--filter"; "FullyQualifiedName~.EndToEndTests" ]
+        | Skip_E2E -> [ "--filter"; "FullyQualifiedName!~.EndToEndTests" ]
+        
+    
+    let settingsArg = ["-s"; "tests/.runsettings"]
     let tfmArgs = if OS.Current = OS.Windows then [] else ["-f"; "net8.0"]
     exec {
+        env (Map ["TEST_SUITE", suite.SuitName])
         run "dotnet" (
-            ["test"; "-c"; "release"; loggerArg; githubActionsLogger]
+            ["test"; "-c"; "release"; "--no-restore"; "--no-build"; logger]
+            @ settingsArg
+            @ filterArgs
             @ tfmArgs
             @ ["--"; "RunConfiguration.CollectSourceInformation=true"]
         )
     }
     
 let private test (arguments:ParseResults<Build>) =
-    match arguments.TryGetResult SkipTests with
-    | Some _ -> runTests arguments
-    | None -> printfn "Skipping tests because --skiptests was provided"
+    let arg = arguments.TryGetResult Test_Suite
+    match arg with
+    | None -> runTests TestSuite.All arguments 
+    | Some suite ->
+        match suite with
+        | Skip_All -> printfn "Skipping tests because --test-suite skip was provided"
+        | _ -> runTests suite arguments   
 
 let private validateLicenses _ =
     let args = ["-u"; "-t"; "-i"; "Elastic.OpenTelemetry.sln"; "--use-project-assets-json"
@@ -131,7 +153,11 @@ let Setup (parsed:ParseResults<Build>) =
         | Version -> Build.Step version
         | Clean -> Build.Cmd [Version] [] clean
         | Build -> Build.Cmd [Clean] [] build
-        | Test -> Build.Cmd [Build] [] test
+        
+        | End_To_End -> Build.Cmd [] [Build] <| runTests E2E
+        | Unit_Test -> Build.Cmd [] [Build] <| runTests Unit
+        | Test -> Build.Cmd [] [Build] test
+        
         | Release -> 
             Build.Cmd 
                 [PristineCheck; Test]
@@ -147,10 +173,10 @@ let Setup (parsed:ParseResults<Build>) =
         | GenerateApiChanges -> Build.Step generateApiChanges
             
         // flags
-        | SingleTarget
-        | SkipTests
+        | Single_Target
+        | Test_Suite _
         | Token _
-        | SkipDirtyCheck -> Build.Ignore
+        | Skip_Dirty_Check -> Build.Ignore
 
     for target in Build.Targets do
         let setup = wireCommandLine target 

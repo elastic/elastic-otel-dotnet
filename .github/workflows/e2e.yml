@@ -24,16 +24,17 @@ concurrency:
 env:
   # (keep_serverless-staging-oblt, keep_serverless-qa-oblt or serverless-production-oblt)
   SERVERLESS_PROJECT: serverless-production-oblt
-  # (staging, qa or production)
-  VAULT_SECRET_SUFFIX: production
+  # (staging, qa or pro)
+  VAULT_SECRET_SUFFIX: pro
 
 # NOTE: if you add a new job and it's a mandatory check then
 #       update e2e-docs.yml
 jobs:
   test:
-    if: |
-      github.event_name != 'pull_request' || 
-      (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false)
+    if: false()
+    #if: |
+    # github.event_name != 'pull_request' || 
+    # (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -55,10 +56,6 @@ jobs:
           vault-role-id: ${{ secrets.VAULT_ROLE_ID }}
           vault-secret-id: ${{ secrets.VAULT_SECRET_ID }}
 
-      # TODO: run the e2e targeting the required endpoint.
-      #       those values can be found in https://github.com/elastic/apm-pipeline-library/tree/main/.github/actions/oblt-cli-cluster-credentials#outputs
-      - run: curl -X GET "${ELASTICSEARCH_HOST}/_cat/indices?v" -u ${ELASTICSEARCH_USERNAME}:${ELASTICSEARCH_PASSWORD}
-
       - name: Get the browser email and password from Vault
         uses: hashicorp/vault-action@v2.8.0
         with:
@@ -67,5 +64,10 @@ jobs:
           secretId: ${{ secrets.VAULT_SECRET_ID }}
           method: approle
           secrets: |
-            secret/observability-team/ci/elastic-cloud/observability-team-${{ env.VAULT_SECRET_SUFFIX }} username | E2E__BROWSEREMAIL
+            secret/observability-team/ci/elastic-cloud/observability-team-${{ env.VAULT_SECRET_SUFFIX }} username | E2E__BROWSEREMAIL ;
             secret/observability-team/ci/elastic-cloud/observability-team-${{ env.VAULT_SECRET_SUFFIX }} password | E2E__BROWSERPASSWORD
+        
+      - run: ./build.sh test --test-suite=e2e
+        env: 
+          E2E__ENDPOINT: "${{env.ELASTIC_APM_SERVER_URL}}"
+          E2E__AUTHORIZATION: "Authentication=ApiKey ${{env.ELASTIC_APM_API_KEY}}"

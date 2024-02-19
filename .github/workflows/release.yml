@@ -24,7 +24,7 @@ jobs:
       id: bootstrap
       uses: ./.github/workflows/bootstrap
 
-    - run: ./build.sh release --skiptests
+    - run: ./build.sh release --test-suite=skip-all
       name: Release
 
     - name: Prepare Nuget
