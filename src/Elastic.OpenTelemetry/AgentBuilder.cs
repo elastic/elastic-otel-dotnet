@@ -22,14 +22,9 @@ namespace Elastic.OpenTelemetry;
 /// </summary>
 public class AgentBuilder
 {
-	private readonly MeterProviderBuilder _meterProvider =
-		Sdk.CreateMeterProviderBuilder()
-			.AddProcessInstrumentation()
-			.AddRuntimeInstrumentation()
-			.AddHttpClientInstrumentation();
-
 	private readonly string[] _activitySourceNames = [];
 	private Action<TracerProviderBuilder> _tracerProviderBuilderAction = tpb => { };
+	private Action<MeterProviderBuilder> _meterProviderBuilderAction = mpb => { };
 	private Action<ResourceBuilder>? _resourceBuilderAction = rb => { };
 	private Action<OtlpExporterOptions>? _otlpExporterConfiguration;
 	private string? _otlpExporterName;
@@ -147,6 +142,42 @@ public class AgentBuilder
 	/// <summary>
 	/// TODO
 	/// </summary>
+	public AgentBuilder ConfigureMeter(params string[] activitySourceNames)
+	{
+		MeterInternal(null, activitySourceNames);
+		return this;
+	}
+
+	/// <summary>
+	/// TODO
+	/// </summary>
+	public AgentBuilder ConfigureMeter(Action<ResourceBuilder> configureResourceBuilder)
+	{
+		MeterInternal(configureResourceBuilder, null);
+		return this;
+	}
+
+	/// <summary>
+	/// TODO
+	/// </summary>
+	public AgentBuilder ConfigureMeter(Action<ResourceBuilder> configureResourceBuilder, params string[] activitySourceNames)
+	{
+		MeterInternal(configureResourceBuilder, activitySourceNames);
+		return this;
+	}
+
+	/// <summary>
+	/// TODO
+	/// </summary>
+	public AgentBuilder ConfigureMeter(Action<ResourceBuilder> configureResourceBuilder, string activitySourceName)
+	{
+		MeterInternal(configureResourceBuilder, [activitySourceName]);
+		return this;
+	}
+
+	/// <summary>
+	/// TODO
+	/// </summary>
 	public AgentBuilder ConfigureTracer(Action<TracerProviderBuilder> configure)
 	{
 		// This is the most customisable overload as the consumer can provide a complete
@@ -158,6 +189,26 @@ public class AgentBuilder
 
 		ArgumentNullException.ThrowIfNull(configure);
 		_tracerProviderBuilderAction += configure;
+		return this;
+	}
+
+	/// <summary>
+	/// TODO
+	/// </summary>
+	public AgentBuilder ConfigureMeter(Action<MeterProviderBuilder> configure)
+	{
+		ArgumentNullException.ThrowIfNull(configure);
+		_meterProviderBuilderAction += configure;
+		return this;
+	}
+
+	private AgentBuilder MeterInternal(Action<ResourceBuilder>? configureResourceBuilder = null, string[]? activitySourceNames = null)
+	{
+		_resourceBuilderAction = configureResourceBuilder;
+
+		if (activitySourceNames is not null)
+			_meterProviderBuilderAction += mpb => mpb.AddMeter(activitySourceNames);
+
 		return this;
 	}
 
@@ -183,7 +234,13 @@ public class AgentBuilder
 
 		Log(AgentBuilderBuiltTracerProviderEvent);
 
-		var agent = tracerProvider is not null ? new Agent(_diagnosticSourceSubscription, tracerProvider) : new Agent(_diagnosticSourceSubscription);
+		var meterProviderBuilder = Sdk.CreateMeterProviderBuilder();
+		MeterProviderBuilderAction.Invoke(meterProviderBuilder);
+		var meterProvider = meterProviderBuilder.Build();
+
+		Log(AgentBuilderBuiltMeterProviderEvent);
+
+		var agent = new Agent(_diagnosticSourceSubscription, tracerProvider, meterProvider);
 
 		Log(AgentBuilderBuiltAgentEvent);
 
@@ -207,7 +264,8 @@ public class AgentBuilder
 			.AddSingleton<IAgent>(new Agent(_diagnosticSourceSubscription))
 			.AddSingleton<LoggerResolver>()
 			.AddOpenTelemetry()
-				.WithTracing(TracerProviderBuilderAction);
+				.WithTracing(TracerProviderBuilderAction)
+				.WithMetrics(MeterProviderBuilderAction);
 
 		Log(AgentBuilderRegisteredDistroServicesEvent);
 
@@ -234,6 +292,30 @@ public class AgentBuilder
 			_tracerProviderBuilderAction?.Invoke(tracerProviderBuilder);
 
 			tracerProviderBuilder.AddOtlpExporter(_otlpExporterName, _otlpExporterConfiguration);
+		};
+
+	private Action<MeterProviderBuilder> MeterProviderBuilderAction =>
+		builder =>
+		{
+			foreach (var source in _activitySourceNames)
+				builder.LogAndAddMeter(source);
+
+			builder
+				.AddProcessInstrumentation()
+				.AddRuntimeInstrumentation()
+				.AddHttpClientInstrumentation();
+
+			var action = _resourceBuilderAction;
+			action += b => b.AddDistroAttributes();
+			builder.ConfigureResource(action);
+
+			_meterProviderBuilderAction?.Invoke(builder);
+
+			builder.AddOtlpExporter(_otlpExporterName, o =>
+			{
+				o.ExportProcessorType = ExportProcessorType.Simple;
+				o.Protocol = OtlpExportProtocol.HttpProtobuf;
+			});
 		};
 
 	/// <summary>

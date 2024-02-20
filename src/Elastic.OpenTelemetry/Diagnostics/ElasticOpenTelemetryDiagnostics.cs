@@ -39,6 +39,8 @@ internal static class ElasticOpenTelemetryDiagnostics
 
 	public const string AgentBuilderBuiltTracerProviderEvent = "AgentBuilderBuiltTracerProvider";
 
+	public const string AgentBuilderBuiltMeterProviderEvent = "AgentBuilderBuiltMeterProvider";
+
 	public const string AgentBuilderRegisteredDistroServicesEvent = "RegisteredDistroServices";
 
 	public const string AgentBuilderBuiltAgentEvent = "AgentBuilderBuiltAgent";
@@ -48,6 +50,8 @@ internal static class ElasticOpenTelemetryDiagnostics
 	public const string ProcessorAddedEvent = "ProcessorAdded";
 
 	public const string SourceAddedEvent = "SourceAdded";
+
+	public const string MeterAddedEvent = "MeterAdded";
 
 	public const string AgentBuildCalledMultipleTimesEvent = "AgentBuildCalledMultipleTimes";
 
@@ -64,6 +68,9 @@ internal static class ElasticOpenTelemetryDiagnostics
 
 	public static void LogAgentBuilderBuiltTracerProvider(this LogFileWriter logFileWriter, DiagnosticEvent diagnostic) =>
 		logFileWriter.WriteInfoLogLine(diagnostic, "AgentBuilder built TracerProvider.");
+
+	public static void LogAgentBuilderBuiltMeterProvider(this LogFileWriter logFileWriter, DiagnosticEvent diagnostic) =>
+	logFileWriter.WriteInfoLogLine(diagnostic, "AgentBuilder built MeterProvider.");
 
 	public static void LogAgentBuilderBuiltAgent(this LogFileWriter logFileWriter, DiagnosticEvent diagnostic) =>
 		logFileWriter.WriteInfoLogLine(diagnostic, "AgentBuilder built Agent.");
@@ -91,7 +98,13 @@ internal static class ElasticOpenTelemetryDiagnostics
 
 	public static void LogSourceAdded(this LogFileWriter logFileWriter, DiagnosticEvent<AddSourcePayload> diagnostic)
 	{
-		var message = $"Added '{diagnostic.Data.ActivitySourceName}' ActivitySource to '{diagnostic.Data.BuilderType.Name}'.";
+		var message = $"Added '{diagnostic.Data.Name}' ActivitySource to '{diagnostic.Data.BuilderType.Name}'.";
+		logFileWriter.WriteInfoLogLine(diagnostic, message);
+	}
+
+	public static void LogMeterAdded(this LogFileWriter logFileWriter, DiagnosticEvent<AddSourcePayload> diagnostic)
+	{
+		var message = $"Added '{diagnostic.Data.Name}' Meter to '{diagnostic.Data.BuilderType.Name}'.";
 		logFileWriter.WriteInfoLogLine(diagnostic, message);
 	}
 

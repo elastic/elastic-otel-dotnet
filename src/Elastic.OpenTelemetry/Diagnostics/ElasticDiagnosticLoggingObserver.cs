@@ -24,6 +24,10 @@ internal sealed class ElasticDiagnosticLoggingObserver(LogFileWriter logFileWrit
 				AgentBuilderBuiltTracerProvider(data);
 				break;
 
+			case ElasticOpenTelemetryDiagnostics.AgentBuilderBuiltMeterProviderEvent:
+				AgentBuilderBuiltMeterProvider(data);
+				break;
+
 			case ElasticOpenTelemetryDiagnostics.AgentBuilderBuiltAgentEvent:
 				AgentBuilderBuiltAgent(data);
 				break;
@@ -52,6 +56,10 @@ internal sealed class ElasticDiagnosticLoggingObserver(LogFileWriter logFileWrit
 				SourceAdded(data);
 				break;
 
+			case ElasticOpenTelemetryDiagnostics.MeterAddedEvent:
+				MeterAdded(data);
+				break;
+
 			default:
 				if (data.Value is DiagnosticEvent diagnostic)
 					_logFileWriter.LogUnhandledEvent(data.Key, diagnostic);
@@ -68,6 +76,12 @@ internal sealed class ElasticDiagnosticLoggingObserver(LogFileWriter logFileWrit
 		{
 			if (data.Value is DiagnosticEvent diagnostic)
 				_logFileWriter.LogAgentBuilderBuiltTracerProvider(diagnostic);
+		}
+
+		void AgentBuilderBuiltMeterProvider(KeyValuePair<string, object?> data)
+		{
+			if (data.Value is DiagnosticEvent diagnostic)
+				_logFileWriter.LogAgentBuilderBuiltMeterProvider(diagnostic);
 		}
 
 		void AgentBuilderBuiltAgent(KeyValuePair<string, object?> data)
@@ -110,6 +124,12 @@ internal sealed class ElasticDiagnosticLoggingObserver(LogFileWriter logFileWrit
 		{
 			if (data.Value is DiagnosticEvent<AddSourcePayload> diagnostic)
 				_logFileWriter.LogSourceAdded(diagnostic);
+		}
+
+		void MeterAdded(KeyValuePair<string, object?> data)
+		{
+			if (data.Value is DiagnosticEvent<AddSourcePayload> diagnostic)
+				_logFileWriter.LogMeterAdded(diagnostic);
 		}
 	}
 
