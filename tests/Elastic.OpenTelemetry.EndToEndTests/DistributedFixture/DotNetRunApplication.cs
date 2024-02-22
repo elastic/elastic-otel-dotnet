@@ -73,7 +73,7 @@ public abstract class DotNetRunApplication
 
 				{ "ELASTIC_OTEL_ENABLE_FILE_LOGGING", "1" },
 				{ "ELASTIC_OTEL_LOG_DIRECTORY", LogDirectory.FullName },
-				{ "ELASTIC_OTEL_LOG_LEVEL", "Trace" },
+				{ "ELASTIC_OTEL_LOG_LEVEL", "INFO" },
 			},
 			StartedConfirmationHandler = l =>
 			{
@@ -87,6 +87,26 @@ public abstract class DotNetRunApplication
 				return l.Line.StartsWith("      Application started.");
 			}
 		};
+
+
+	}
+
+	public void IterateOverLog(Action<string> write)
+	{
+		 var logFile = DotNetRunApplication.LogDirectory
+			  .GetFiles($"{_app.Process.Binary}_*.log")
+			  .MaxBy(f => f.CreationTimeUtc);
+
+		 if (logFile == null)
+			  write($"Could not locate log files in {DotNetRunApplication.LogDirectory}");
+		 else
+		 {
+			  write($"Contents of: {logFile.FullName}");
+			  using var sr = logFile.OpenText();
+			  var s = string.Empty;
+			  while ((s = sr.ReadLine()) != null)
+				  write(s);
+		 }
 	}
 
 	public virtual void Dispose()

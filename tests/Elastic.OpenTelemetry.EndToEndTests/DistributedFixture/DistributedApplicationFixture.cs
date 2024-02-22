@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Configuration;
+using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Nullean.Xunit.Partitions.Sdk;
 using Xunit.Sdk;
 
@@ -19,10 +20,7 @@ public class DistributedApplicationFixture : IPartitionLifetime
 
 	public bool Started => AspNetApplication?.ProcessId.HasValue ?? false;
 
-
 	private List<string> _output = new();
-
-	public string FailureTestOutput() => string.Join(Environment.NewLine, _output);
 
 	public int? MaxConcurrency => null;
 
@@ -53,10 +51,27 @@ public class DistributedApplicationFixture : IPartitionLifetime
 			.Substring(0, 12);
 	}
 
+	public string FailureTestOutput()
+	{
+		var logLines = new List<string>();
+		if (_aspNetApplication?.ProcessId.HasValue ?? false)
+			AspNetApplication.IterateOverLog(s => logLines.Add(s));
+
+		var messages = string.Join(Environment.NewLine, _output.Concat(logLines));
+		return messages;
+
+	}
+
 	public async Task DisposeAsync()
 	{
 		_aspNetApplication?.Dispose();
 		await (_apmUI?.DisposeAsync() ?? Task.CompletedTask);
+	}
+
+	private void Log(string message)
+	{
+		Console.WriteLine(message);
+		_output.Add(message);
 	}
 
 	public async Task InitializeAsync()
@@ -66,31 +81,31 @@ public class DistributedApplicationFixture : IPartitionLifetime
 			.AddUserSecrets<DotNetRunApplication>()
 			.Build();
 
-		_output.Add("Created configuration");
+		Log("Created configuration");
 
 		AspNetApplication = new AspNetCoreExampleApplication(ServiceName, configuration);
 
-		_output.Add("Started ASP.NET application");
+		Log("Started ASP.NET application");
 
 		ApmUI = new ApmUIBrowserContext(configuration, ServiceName);
 
-		_output.Add("Started UI Browser context");
+		Log("Started UI Browser context");
 
 		foreach (var trafficSimulator in _trafficSimulators)
 			await trafficSimulator.Start(this);
 
-		_output.Add("Simulated traffic");
+		Log("Simulated traffic");
 
 		// TODO query OTEL_BSP_SCHEDULE_DELAY?
 		await Task.Delay(5000);
 
-		_output.Add("Waited for OTEL_BSP_SCHEDULE_DELAY");
+		Log("Waited for OTEL_BSP_SCHEDULE_DELAY");
 
 		// Stateless refresh
 		//https://github.com/elastic/elasticsearch/blob/main/server/src/main/java/org/elasticsearch/index/IndexSettings.java#L286
 		await Task.Delay(TimeSpan.FromSeconds(15));
 
-		_output.Add("Waited for Stateless refresh");
+		Log("Waited for Stateless refresh");
 
 		await ApmUI.InitializeAsync();
 	}
