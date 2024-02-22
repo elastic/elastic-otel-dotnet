@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 using Nullean.Xunit.Partitions.Sdk;
+using Xunit.Sdk;
 
 namespace Elastic.OpenTelemetry.EndToEndTests.DistributedFixture;
 
@@ -16,13 +17,26 @@ public class DistributedApplicationFixture : IPartitionLifetime
 
 	public string ServiceName { get; } = $"dotnet-e2e-{ShaForCurrentTicks()}";
 
-	public bool Started => AspNetApplication.ProcessId.HasValue;
+	public bool Started => AspNetApplication?.ProcessId.HasValue ?? false;
 
 	public int? MaxConcurrency => null;
 
-	public ApmUIBrowserContext ApmUI { get; private set; } = null!;
+	private ApmUIBrowserContext? _apmUI;
+	public ApmUIBrowserContext ApmUI
+	{
+		get => _apmUI ??
+			throw new NullReferenceException($"{nameof(DistributedApplicationFixture)} no yet initialized");
+		private set => _apmUI = value;
+	}
 
-	public AspNetCoreExampleApplication AspNetApplication { get; private set; } = null!;
+	private AspNetCoreExampleApplication? _aspNetApplication;
+
+	public AspNetCoreExampleApplication AspNetApplication
+	{
+		get => _aspNetApplication
+			?? throw new NullReferenceException($"{nameof(DistributedApplicationFixture)} no yet initialized");
+		private set => _aspNetApplication = value;
+	}
 
 	private static string ShaForCurrentTicks()
 	{
@@ -36,8 +50,8 @@ public class DistributedApplicationFixture : IPartitionLifetime
 
 	public async Task DisposeAsync()
 	{
-		AspNetApplication.Dispose();
-		await ApmUI.DisposeAsync();
+		_aspNetApplication?.Dispose();
+		await (_apmUI?.DisposeAsync() ?? Task.CompletedTask);
 	}
 
 	public async Task InitializeAsync()

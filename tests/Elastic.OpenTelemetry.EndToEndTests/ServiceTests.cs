@@ -38,8 +38,8 @@ public class EndToEndTests(ITestOutputHelper output, DistributedApplicationFixtu
 	public async Task DisposeAsync()
 	{
 
-		var hasFailures = PartitionContext.TestException == null;
-		await fixture.ApmUI.StopTrace(_page, hasFailures ? null : _testName);
+		var hasFailures = PartitionContext.TestException != null;
+		await fixture.ApmUI.StopTrace(_page, hasFailures ? _testName : null);
 
 		var logFile = DotNetRunApplication.LogDirectory
 			.GetFiles("*.log")
