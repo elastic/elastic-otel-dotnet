@@ -35,5 +35,29 @@ public class EndToEndTests(ITestOutputHelper output, DistributedApplicationFixtu
 
 	public async Task InitializeAsync() => _page = await fixture.ApmUI.NewProfiledPage(_testName);
 
-	public async Task DisposeAsync() => await fixture.ApmUI.StopTrace(_page, PartitionContext.TestException == null ? null : _testName);
+	public async Task DisposeAsync()
+	{
+
+		var hasFailures = PartitionContext.TestException == null;
+		await fixture.ApmUI.StopTrace(_page, hasFailures ? null : _testName);
+
+		var logFile = DotNetRunApplication.LogDirectory
+			.GetFiles("*.log")
+			.MaxBy(f => f.CreationTimeUtc);
+
+		if (!hasFailures)
+			return;
+
+		if (logFile == null)
+			Output.WriteLine($"Could not locate log files in {DotNetRunApplication.LogDirectory}");
+		else
+		{
+			Output.WriteLine($"Contents of: {logFile.FullName}");
+			using var sr = logFile.OpenText();
+			var s = string.Empty;
+			while ((s = await sr.ReadLineAsync()) != null)
+				Output.WriteLine(s);
+		}
+
+	}
 }
