@@ -94,7 +94,9 @@ public abstract class DotNetRunApplication
 	public void IterateOverLog(Action<string> write)
 	{
 		 var logFile = DotNetRunApplication.LogDirectory
-			  .GetFiles($"{_app.Process.Binary}_*.log")
+				 //TODO get last of this app specifically
+			  //.GetFiles($"{_app.Process.Binary}_*.log")
+			  .GetFiles($"_*.log")
 			  .MaxBy(f => f.CreationTimeUtc);
 
 		 if (logFile == null)
