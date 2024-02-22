@@ -96,7 +96,7 @@ public abstract class DotNetRunApplication
 		 var logFile = DotNetRunApplication.LogDirectory
 				 //TODO get last of this app specifically
 			  //.GetFiles($"{_app.Process.Binary}_*.log")
-			  .GetFiles($"_*.log")
+			  .GetFiles($"*.log")
 			  .MaxBy(f => f.CreationTimeUtc);
 
 		 if (logFile == null)
