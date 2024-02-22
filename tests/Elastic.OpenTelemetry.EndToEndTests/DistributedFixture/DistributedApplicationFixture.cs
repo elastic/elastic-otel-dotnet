@@ -55,7 +55,11 @@ public class DistributedApplicationFixture : IPartitionLifetime
 	{
 		var logLines = new List<string>();
 		if (_aspNetApplication?.ProcessId.HasValue ?? false)
-			AspNetApplication.IterateOverLog(s => logLines.Add(s));
+			AspNetApplication.IterateOverLog(s =>
+			{
+				Console.WriteLine(s);
+				logLines.Add(s);
+			});
 
 		var messages = string.Join(Environment.NewLine, _output.Concat(logLines));
 		return messages;
