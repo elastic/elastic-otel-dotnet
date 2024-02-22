@@ -69,4 +69,4 @@ jobs:
       - run: ./build.sh test --test-suite=e2e
         env: 
           E2E__ENDPOINT: "${{env.ELASTIC_APM_SERVER_URL}}"
-          E2E__AUTHORIZATION: "Authentication=ApiKey ${{env.ELASTIC_APM_API_KEY}}"
+          E2E__AUTHORIZATION: "Authorization=ApiKey ${{env.ELASTIC_APM_API_KEY}}"
