@@ -13,7 +13,7 @@ internal sealed class LogFileWriter : IDisposable, IAsyncDisposable
 	public static readonly bool FileLoggingEnabled = IsFileLoggingEnabled();
 
 	private bool _disposing;
-	private ManualResetEventSlim _syncDisposeWaitHandle = new(false);
+	private readonly ManualResetEventSlim _syncDisposeWaitHandle = new(false);
 	private readonly StreamWriter _streamWriter;
 	private readonly Channel<string> _channel = Channel.CreateBounded<string>(new BoundedChannelOptions(1024)
 	{
