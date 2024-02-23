@@ -29,6 +29,7 @@ public class EndToEndTests(ITestOutputHelper output, DistributedApplicationFixtu
 		_page.SetDefaultTimeout((float)TimeSpan.FromSeconds(30).TotalMilliseconds);
 		var uri = new Uri(fixture.ApmUI.KibanaAppUri, $"/app/apm/services/{fixture.ServiceName}/overview").ToString();
 		await _page.GotoAsync(uri);
+		_page.SetDefaultTimeout((float)TimeSpan.FromSeconds(30).TotalMilliseconds);
 		await Expect(_page.GetByRole(AriaRole.Heading, new() { Name = "Latency", Exact = true })).ToBeVisibleAsync();
 	}
 
