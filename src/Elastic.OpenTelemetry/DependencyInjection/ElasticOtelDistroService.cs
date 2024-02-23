@@ -11,18 +11,18 @@ namespace Elastic.OpenTelemetry
 {
 	internal sealed class ElasticOtelDistroService(IServiceProvider serviceProvider) : IHostedService, IHostedLifecycleService
 	{
-		private readonly IServiceProvider _serviceProvider = serviceProvider;
+		private IAgent? _agent;
 
 		public Task StartingAsync(CancellationToken cancellationToken)
 		{
-			var agent = _serviceProvider.GetRequiredService<IAgent>();
-			var loggerFactory = _serviceProvider.GetService<ILoggerFactory>();
-			var logger = loggerFactory?.CreateLogger($"{nameof(Elastic)}.{nameof(OpenTelemetry)}") ?? NullLogger.Instance;
+			serviceProvider.GetService<LoggerResolver>();
+			var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
+			var logger = loggerFactory?.CreateLogger($"{nameof(Elastic)}.{nameof(OpenTelemetry)}");
 
-			_serviceProvider.GetService<LoggerResolver>();
+			_agent = serviceProvider.GetRequiredService<AgentBuilder>().Build(logger);
 
-			logger.LogInformation("Initialising Agent.Current.");
-			Agent.SetAgent(agent, logger);
+			//logger.LogInformation("Initialising Agent.Current.");
+			//Agent.SetAgent(_agent, logger);
 
 			return Task.CompletedTask;
 		}
@@ -31,6 +31,11 @@ namespace Elastic.OpenTelemetry
 		public Task StartedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 		public Task StoppingAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 		public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-		public Task StoppedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+		public async Task StoppedAsync(CancellationToken cancellationToken)
+		{
+			if (_agent != null)
+				await _agent.DisposeAsync().ConfigureAwait(false);
+		}
 	}
 }

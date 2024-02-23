@@ -8,18 +8,10 @@ namespace Elastic.OpenTelemetry.Diagnostics
 {
 	internal static partial class LoggerMessages
 	{
-		public const string TransactionIdProcessorTagAddedLog =
-			$"{nameof(TransactionIdProcessor)} added 'transaction.id' tag to Activity.";
-
-		[LoggerMessage(
-			EventId = 1,
-			Level = Microsoft.Extensions.Logging.LogLevel.Trace,
-			Message = TransactionIdProcessorTagAddedLog)]
+		[LoggerMessage(EventId = 1, Level = LogLevel.Trace, Message = $"{nameof(TransactionIdProcessor)} added 'transaction.id' tag to Activity.")]
 		internal static partial void TransactionIdProcessorTagAdded(this ILogger logger);
 
-		[LoggerMessage(
-			EventId = 100,
-			Level = Microsoft.Extensions.Logging.LogLevel.Warning,
+		[LoggerMessage(EventId = 100, Level = LogLevel.Warning,
 			Message = "Received an unhandled diagnostic event '{EventName}'.")]
 		internal static partial void UnhandledDiagnosticEvent(this ILogger logger, string eventName);
 	}

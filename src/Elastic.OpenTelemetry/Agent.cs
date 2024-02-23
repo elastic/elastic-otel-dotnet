@@ -60,14 +60,14 @@ public static partial class Agent
 	/// An exception will be thrown if <see cref="Build"/>
 	/// is called more than once during the lifetime of an application.
 	/// </exception>
-	public static IAgent Build(Action<AgentBuilder>? configuration = null)
+	public static IAgent Build(Action<AgentBuilder>? configuration = null, ILogger? logger = null)
 	{
 		CheckCurrent();
 
 		lock (Lock)
 		{
 			CheckCurrent();
-			var agentBuilder = new AgentBuilder();
+			var agentBuilder = new AgentBuilder(logger);
 			configuration?.Invoke(agentBuilder);
 			var agent = agentBuilder.Build();
 			CurrentAgent = agent;

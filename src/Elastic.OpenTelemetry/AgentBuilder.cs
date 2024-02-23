@@ -4,6 +4,7 @@
 using System.Diagnostics;
 using Elastic.OpenTelemetry.DependencyInjection;
 using Elastic.OpenTelemetry.Diagnostics;
+using Elastic.OpenTelemetry.Diagnostics.Logging;
 using Elastic.OpenTelemetry.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -28,27 +29,30 @@ public class AgentBuilder
 			.AddRuntimeInstrumentation()
 			.AddHttpClientInstrumentation();
 
-	private readonly string[] _activitySourceNames = [];
+	private readonly List<string> _activitySourceNames = [];
 	private Action<TracerProviderBuilder> _tracerProviderBuilderAction = tpb => { };
 	private Action<ResourceBuilder>? _resourceBuilderAction = rb => { };
 	private Action<OtlpExporterOptions>? _otlpExporterConfiguration;
 	private string? _otlpExporterName;
 	private readonly IDisposable? _diagnosticSourceSubscription;
 
+	private readonly AgentCompositeLogger _logger;
+	private bool _skipOtlpRegistration;
+
 	/// <summary>
 	/// TODO
 	/// </summary>
-	public AgentBuilder()
+	public AgentBuilder(ILogger? logger = null)
 	{
-		if (LogFileWriter.FileLoggingEnabled)
-		{
-			// Enables logging of OpenTelemetry-SDK event source events
-			_ = new LoggingEventListener(LogFileWriter.Instance);
+		_logger = new AgentCompositeLogger(logger);
 
-			// Enables logging of Elastic OpenTelemetry diagnostic source events
-			_diagnosticSourceSubscription = EnableFileLogging();
-		}
+		// Enables logging of OpenTelemetry-SDK event source events
+		_ = new LoggingEventListener(_logger);
 
+		// Enables logging of Elastic OpenTelemetry diagnostic source events
+		_diagnosticSourceSubscription = EnableFileLogging(_logger);
+
+		Log(AgentBuilderInitializingEvent);
 		Log(AgentBuilderInitializedEvent, () => new DiagnosticEvent<StackTrace?>(new StackTrace(true)));
 	}
 
@@ -56,10 +60,19 @@ public class AgentBuilder
 	/// <summary>
 	/// TODO
 	/// </summary>
-	public AgentBuilder(params string[] activitySourceNames) : this() => _activitySourceNames = activitySourceNames;
+	public AgentBuilder(params string[] activitySourceNames) : this() => _activitySourceNames = activitySourceNames.ToList();
 
 	// NOTE: The builder methods below are extremely experimental and will go through a final API design and
 	// refinement before alpha 1
+
+	/// <summary>
+	/// TODO
+	/// </summary>
+	public AgentBuilder AddActivitySources(params string[] sources)
+	{
+		_activitySourceNames.AddRange(sources);
+		return this;
+	}
 
 	/// <summary>
 	/// TODO
@@ -120,33 +133,6 @@ public class AgentBuilder
 	/// <summary>
 	/// TODO
 	/// </summary>
-	public AgentBuilder ConfigureTracer(Action<ResourceBuilder> configureResourceBuilder)
-	{
-		TracerInternal(configureResourceBuilder, null);
-		return this;
-	}
-
-	/// <summary>
-	/// TODO
-	/// </summary>
-	public AgentBuilder ConfigureTracer(Action<ResourceBuilder> configureResourceBuilder, params string[] activitySourceNames)
-	{
-		TracerInternal(configureResourceBuilder, activitySourceNames);
-		return this;
-	}
-
-	/// <summary>
-	/// TODO
-	/// </summary>
-	public AgentBuilder ConfigureTracer(Action<ResourceBuilder> configureResourceBuilder, string activitySourceName)
-	{
-		TracerInternal(configureResourceBuilder, [activitySourceName]);
-		return this;
-	}
-
-	/// <summary>
-	/// TODO
-	/// </summary>
 	public AgentBuilder ConfigureTracer(Action<TracerProviderBuilder> configure)
 	{
 		// This is the most customisable overload as the consumer can provide a complete
@@ -175,8 +161,9 @@ public class AgentBuilder
 	/// Build an instance of <see cref="IAgent"/>.
 	/// </summary>
 	/// <returns>A new instance of <see cref="IAgent"/>.</returns>
-	public IAgent Build()
+	public IAgent Build(ILogger? logger = null)
 	{
+		_logger.SetAdditionalLogger(logger);
 		var tracerProviderBuilder = Sdk.CreateTracerProviderBuilder();
 		TracerProviderBuilderAction.Invoke(tracerProviderBuilder);
 		var tracerProvider = tracerProviderBuilder.Build();
@@ -214,6 +201,14 @@ public class AgentBuilder
 		return serviceCollection;
 	}
 
+	/// <summary> TODO </summary>
+	public AgentBuilder SkipOtlpExporter()
+	{
+		_skipOtlpRegistration = true;
+		return this;
+	}
+
+
 	private Action<TracerProviderBuilder> TracerProviderBuilderAction =>
 		tracerProviderBuilder =>
 		{
@@ -233,7 +228,8 @@ public class AgentBuilder
 
 			_tracerProviderBuilderAction?.Invoke(tracerProviderBuilder);
 
-			tracerProviderBuilder.AddOtlpExporter(_otlpExporterName, _otlpExporterConfiguration);
+			if (!_skipOtlpRegistration)
+				tracerProviderBuilder.AddOtlpExporter(_otlpExporterName, _otlpExporterConfiguration);
 		};
 
 	/// <summary>
@@ -267,7 +263,7 @@ public class AgentBuilder
 			_tracerProvider?.Dispose();
 			_meterProvider?.Dispose();
 			_diagnosticSubscription?.Dispose();
-			LogFileWriter.Instance.Dispose();
+			FileLogger.Instance.Dispose();
 		}
 
 		public async ValueTask DisposeAsync()
@@ -275,7 +271,7 @@ public class AgentBuilder
 			_tracerProvider?.Dispose();
 			_meterProvider?.Dispose();
 			_diagnosticSubscription?.Dispose();
-			await LogFileWriter.Instance.DisposeAsync().ConfigureAwait(false);
+			await FileLogger.Instance.DisposeAsync().ConfigureAwait(false);
 		}
 	}
 }

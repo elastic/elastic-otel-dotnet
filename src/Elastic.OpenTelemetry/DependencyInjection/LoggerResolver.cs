@@ -1,6 +1,7 @@
 // Licensed to Elasticsearch B.V under one or more agreements.
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -16,11 +17,5 @@ internal sealed class LoggerResolver
 			LoggerFactory = loggerFactory;
 	}
 
-	internal static ILogger GetLogger<T>() => LoggerFactory.CreateLogger<T>();
-
-	internal static ILogger GetLogger<T>(ref ILogger? logger)
-	{
-		logger = LoggerFactory.CreateLogger<T>();
-		return logger;
-	}
+	internal static ILogger GetLogger<T>() => new ScopedCompositeLogger<T>(LoggerFactory.CreateLogger<T>());
 }

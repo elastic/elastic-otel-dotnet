@@ -2,7 +2,6 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 using System.Diagnostics;
-using Elastic.OpenTelemetry.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -17,9 +16,6 @@ internal class DiagnosticEvent(Activity? activity = null, ILogger? logger = null
 	public Activity? Activity { get; } = activity ?? Activity.Current;
 
 	public ILogger Logger { get; } = logger ?? NullLogger.Instance;
-
-	public static DiagnosticEvent Create<TSource>(ref ILogger? logger, Activity? activity = null) =>
-		new(activity, logger ?? LoggerResolver.GetLogger<TSource>(ref logger));
 }
 
 internal class DiagnosticEvent<T>(T data, Activity? activity = null, ILogger? logger = null) : DiagnosticEvent(activity, logger)

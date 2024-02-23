@@ -4,6 +4,8 @@
 using System.Diagnostics.Tracing;
 using System.Text;
 using System.Text.RegularExpressions;
+using Elastic.OpenTelemetry.Diagnostics.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Elastic.OpenTelemetry.Diagnostics;
 
@@ -11,22 +13,22 @@ internal sealed partial class LoggingEventListener : EventListener, IAsyncDispos
 {
 	public const string OpenTelemetrySdkEventSourceNamePrefix = "OpenTelemetry-";
 
-	private readonly LogFileWriter _logFileWriter;
+	private readonly ILogger _logger;
 	private readonly EventLevel _eventLevel = EventLevel.Informational;
 
 	[GeneratedRegex("^\\d{2}-[a-f0-9]{32}-[a-f0-9]{16}-\\d{2}$")]
 	private static partial Regex TraceParentRegex();
 
-	public LoggingEventListener(LogFileWriter logFileWriter)
+	public LoggingEventListener(ILogger logger)
 	{
-		_logFileWriter = logFileWriter;
+		_logger = logger;
 
-		var eventLevel = LogFileWriter.GetConfiguredLogLevel();
+		var eventLevel = AgentLoggingHelpers.GetElasticOtelLogLevel();
 
 		_eventLevel = eventLevel switch
 		{
 			LogLevel.Trace => EventLevel.Verbose,
-			LogLevel.Info => EventLevel.Informational,
+			LogLevel.Information => EventLevel.Informational,
 			LogLevel.Warning => EventLevel.Warning,
 			LogLevel.Error => EventLevel.Error,
 			LogLevel.Critical => EventLevel.Critical,
@@ -36,11 +38,14 @@ internal sealed partial class LoggingEventListener : EventListener, IAsyncDispos
 
 	public override void Dispose()
 	{
-		_logFileWriter.Dispose();
+		if (_logger is IDisposable d)
+			d.Dispose();
 		base.Dispose();
 	}
 
-	public ValueTask DisposeAsync() => _logFileWriter.DisposeAsync();
+	public ValueTask DisposeAsync() =>
+		_logger is IAsyncDisposable d ? d.DisposeAsync() : ValueTask.CompletedTask;
+
 
 	protected override void OnEventSourceCreated(EventSource eventSource)
 	{
@@ -71,7 +76,7 @@ internal sealed partial class LoggingEventListener : EventListener, IAsyncDispos
 			// TODO - We can only get the OS thread ID from the args - Do we send that instead??
 			// As per this issue - https://github.com/dotnet/runtime/issues/13125 - OnEventWritten may be on a different thread
 			// so we can't use the Environment.CurrentManagedThreadId value here.
-			_logFileWriter.WriteLogLine(null, -1, eventData.TimeStamp, GetLogLevel(eventData), StringBuilderCache.GetStringAndRelease(builder), spanId);
+			_logger.WriteLogLine(null, -1, eventData.TimeStamp, GetLogLevel(eventData), StringBuilderCache.GetStringAndRelease(builder), spanId);
 		}
 		catch (Exception)
 		{
@@ -85,10 +90,10 @@ internal sealed partial class LoggingEventListener : EventListener, IAsyncDispos
 				EventLevel.Critical => LogLevel.Critical,
 				EventLevel.Error => LogLevel.Error,
 				EventLevel.Warning => LogLevel.Warning,
-				EventLevel.Informational => LogLevel.Info,
+				EventLevel.Informational => LogLevel.Information,
 				EventLevel.Verbose => LogLevel.Trace,
-				EventLevel.LogAlways => LogLevel.Unknown,
-				_ => LogLevel.Unknown
+				EventLevel.LogAlways => LogLevel.Information,
+				_ => LogLevel.None
 			};
 
 		static string? CreateLogMessage(EventWrittenEventArgs eventData, StringBuilder builder)

@@ -14,7 +14,6 @@ namespace Elastic.OpenTelemetry.Extensions;
 /// <summary> Provides Elastic APM extensions to <see cref="TracerProviderBuilder"/> </summary>
 public static class TraceBuilderProviderExtensions
 {
-	//TODO binder source generator on Build() to make it automatic?
 	/// <summary> Include Elastic APM Trace Processors to ensure data is enriched and extended.</summary>
 	public static TracerProviderBuilder AddElasticProcessors(this TracerProviderBuilder builder) =>
 		builder.LogAndAddProcessor(new TransactionIdProcessor());
