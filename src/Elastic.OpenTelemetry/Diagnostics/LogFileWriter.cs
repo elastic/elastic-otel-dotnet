@@ -12,6 +12,8 @@ internal sealed class LogFileWriter : IDisposable, IAsyncDisposable
 {
 	public static readonly bool FileLoggingEnabled = IsFileLoggingEnabled();
 
+	private bool _disposing;
+	private readonly ManualResetEventSlim _syncDisposeWaitHandle = new(false);
 	private readonly StreamWriter _streamWriter;
 	private readonly Channel<string> _channel = Channel.CreateBounded<string>(new BoundedChannelOptions(1024)
 	{
@@ -46,13 +48,11 @@ internal sealed class LogFileWriter : IDisposable, IAsyncDisposable
 
 		WritingTask = Task.Run(async () =>
 		{
-			while (await _channel.Reader.WaitToReadAsync().ConfigureAwait(false))
-			{
-				while (_channel.Reader.TryRead(out var logLine))
-				{
-					await _streamWriter.WriteLineAsync(logLine).ConfigureAwait(false);
-				}
-			}
+			while (await _channel.Reader.WaitToReadAsync().ConfigureAwait(false) && !_disposing)
+			while (_channel.Reader.TryRead(out var logLine) && !_disposing)
+				await _streamWriter.WriteLineAsync(logLine).ConfigureAwait(false);
+
+			_syncDisposeWaitHandle.Set();
 		});
 
 		var builder = StringBuilderCache.Acquire();
@@ -258,9 +258,10 @@ internal sealed class LogFileWriter : IDisposable, IAsyncDisposable
 		}
 
 		var spin = new SpinWait();
-		while (true)
+		var message = StringBuilderCache.GetStringAndRelease(builder);
+		while (!_disposing)
 		{
-			if (_channel.Writer.TryWrite(StringBuilderCache.GetStringAndRelease(builder)))
+			if (_channel.Writer.TryWrite(message))
 				break;
 			spin.SpinOnce();
 		}
@@ -288,23 +289,25 @@ internal sealed class LogFileWriter : IDisposable, IAsyncDisposable
 
 	public void Dispose()
 	{
-		// We don't wait for the channel to be drained which is probably the correct choice.
-		// Dispose should be a quick operation with no chance of exceptions.
-		// We should document methods to wait for the WritingTask, before disposal, if that matters to the
-		// consumer.
-
+		//tag that we are running a dispose this allows running tasks and spin waits to short circuit
+		_disposing = true;
 		_channel.Writer.TryComplete();
+
+		_syncDisposeWaitHandle.Wait(TimeSpan.FromSeconds(1));
+
 		_streamWriter.Dispose();
 	}
 
 	public async ValueTask DisposeAsync()
 	{
-		// We don't wait for the channel to be drained which is probably the correct choice.
-		// Dispose should be a quick operation with no chance of exceptions.
-		// We should document methods to await the WritingTask, before disposal, if that matters to the
-		// consumer.
+		//tag that we are running a dispose this allows running tasks and spin waits to short circuit
+		_disposing = true;
 
 		_channel.Writer.TryComplete();
+
+		//Writing task will short circuit once _disposing is flipped to true
+		await WritingTask.ConfigureAwait(false);
+
 		await _streamWriter.DisposeAsync().ConfigureAwait(false);
 	}
 }
