@@ -70,7 +70,7 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 	public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
 	{
 		// We skip logging for any log level higher (numerically) than the configured log level
-		if (logLevel > ConfiguredLogLevel)
+		if (!IsEnabled(logLevel))
 			return;
 
 		var logLine = LogFormatter.Format(logLevel, eventId, state, exception, formatter);

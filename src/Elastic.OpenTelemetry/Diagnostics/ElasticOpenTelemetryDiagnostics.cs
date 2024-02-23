@@ -60,28 +60,29 @@ internal static class ElasticOpenTelemetryDiagnostics
 	public static void LogAgentBuilderInitializing(this ILogger logger, DiagnosticEvent _)
 	{
 		var process = Process.GetCurrentProcess();
-		logger.LogTrace("Elastic OpenTelemetry Distribution: {AgentInformationalVersion}", Agent.InformationalVersion);
+		logger.LogInformation("Elastic OpenTelemetry Distribution: {AgentInformationalVersion}", Agent.InformationalVersion);
 		if (logger is AgentCompositeLogger agentLogger)
 		{
 			if (agentLogger.LogFileEnabled)
-				logger.LogDebug("Elastic OpenTelemetry Distribution, log file: {LogFilePath}", agentLogger.LogFilePath);
+				logger.LogInformation("Elastic OpenTelemetry Distribution, log file: {LogFilePath}", agentLogger.LogFilePath);
 			else
-				logger.LogDebug("Elastic OpenTelemetry Distribution, log file: <disabled>");
+				logger.LogInformation("Elastic OpenTelemetry Distribution, log file: <disabled>");
 		}
 
-		logger.LogDebug("Process ID: {ProcessId}", process.Id);
-		logger.LogDebug("Process name: {ProcessName}", process.ProcessName);
-		logger.LogDebug("Process path: {ProcessPath}", Environment.ProcessPath);
+		logger.LogInformation("Process ID: {ProcessId}", process.Id);
+		logger.LogInformation("Process name: {ProcessName}", process.ProcessName);
+		logger.LogInformation("Process path: {ProcessPath}", Environment.ProcessPath);
 
-		logger.LogDebug("Process started: {ProcessStartTime:yyyy-MM-dd HH:mm:ss.fff}", process.StartTime.ToUniversalTime());
-		logger.LogDebug("Machine name: {MachineName}", Environment.MachineName);
-		logger.LogDebug("Process username: {UserName}", Environment.UserName);
-		logger.LogDebug("User domain name: {UserDomainName}", Environment.UserDomainName);
-		logger.LogDebug("Command line: {ProcessCommandLine}", Environment.CommandLine);
-		logger.LogDebug("Command current directory: {CurrentDirectory}", Environment.CurrentDirectory);
-		logger.LogDebug("Processor count: {ProcessorCount}", Environment.ProcessorCount);
-		logger.LogDebug("OS version: {OSVersion}", Environment.OSVersion);
-		logger.LogDebug("CLR version: {CLRVersion}", Environment.Version);
+		logger.LogInformation("Process started: {ProcessStartTime:yyyy-MM-dd HH:mm:ss.fff}", process.StartTime.ToUniversalTime());
+		logger.LogInformation("Machine name: {MachineName}", Environment.MachineName);
+		logger.LogInformation("Process username: {UserName}", Environment.UserName);
+		logger.LogInformation("User domain name: {UserDomainName}", Environment.UserDomainName);
+		// Don't think we should log this for PII purposes?
+		//logger.LogInformation("Command line: {ProcessCommandLine}", Environment.CommandLine);
+		logger.LogInformation("Command current directory: {CurrentDirectory}", Environment.CurrentDirectory);
+		logger.LogInformation("Processor count: {ProcessorCount}", Environment.ProcessorCount);
+		logger.LogInformation("OS version: {OSVersion}", Environment.OSVersion);
+		logger.LogInformation("CLR version: {CLRVersion}", Environment.Version);
 
 		string[] environmentVariables =
 		[
