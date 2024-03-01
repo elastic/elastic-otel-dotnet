@@ -41,7 +41,7 @@ public class TestLogger(ITestOutputHelper testOutputHelper) : ILogger
 public class LoggingTests(ITestOutputHelper output)
 {
     [Fact]
-    public void ObserveLogging()
+    public async Task ObserveLogging()
 	{
 		var logger = new TestLogger(output);
         const string activitySourceName = "TestSource";
@@ -60,6 +60,9 @@ public class LoggingTests(ITestOutputHelper output)
         {
             activity?.SetStatus(ActivityStatusCode.Ok);
         }
+
+		//explicitly dispose agent so logging finishes too.
+		await agent.DisposeAsync();
 
 		//assert preamble information gets logged
 		logger.Messages.Should().ContainMatch("*Elastic OpenTelemetry Distribution:*");
