@@ -2,8 +2,7 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
-using System.ComponentModel;
-using Elastic.OpenTelemetry.Diagnostics;
+using System.Collections.ObjectModel;
 using Elastic.OpenTelemetry.Diagnostics.Logging;
 using Microsoft.Extensions.Logging;
 using Xunit.Abstractions;
@@ -13,7 +12,7 @@ namespace Elastic.OpenTelemetry.Tests;
 public class TestLogger(ITestOutputHelper testOutputHelper) : ILogger
 {
 	private readonly List<string> _messages = new();
-	public IReadOnlyCollection<string> Messages => _messages;
+	public IReadOnlyCollection<string> Messages => _messages.AsReadOnly();
 
 	public IDisposable BeginScope<TState>(TState state) where TState : notnull => NoopDisposable.Instance;
 
