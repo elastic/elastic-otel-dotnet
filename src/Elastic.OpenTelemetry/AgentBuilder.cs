@@ -38,6 +38,7 @@ public class AgentBuilder
 
 	private readonly AgentCompositeLogger _logger;
 	private bool _skipOtlpRegistration;
+	private readonly LoggingEventListener _loggingEventListener;
 
 	/// <summary>
 	/// TODO
@@ -47,7 +48,7 @@ public class AgentBuilder
 		_logger = new AgentCompositeLogger(logger);
 
 		// Enables logging of OpenTelemetry-SDK event source events
-		_ = new LoggingEventListener(_logger);
+		_loggingEventListener = new LoggingEventListener(_logger);
 
 		// Enables logging of Elastic OpenTelemetry diagnostic source events
 		_diagnosticSourceSubscription = EnableFileLogging(_logger);
@@ -170,7 +171,7 @@ public class AgentBuilder
 
 		Log(AgentBuilderBuiltTracerProviderEvent);
 
-		var agent = tracerProvider is not null ? new Agent(_diagnosticSourceSubscription, tracerProvider) : new Agent(_diagnosticSourceSubscription);
+		var agent = new Agent(_logger, _loggingEventListener, _diagnosticSourceSubscription, tracerProvider);
 
 		Log(AgentBuilderBuiltAgentEvent);
 
@@ -191,7 +192,7 @@ public class AgentBuilder
 			.AddHostedService<ElasticOtelDistroService>()
 			// This is purely to register an instance of the agent such that should the service provider be disposed, the agent
 			// will also be disposed which in turn avoids further diagnostics subscriptions and file logging.
-			.AddSingleton<IAgent>(new Agent(_diagnosticSourceSubscription))
+			.AddSingleton<IAgent>(new Agent(_logger, _loggingEventListener, _diagnosticSourceSubscription))
 			.AddSingleton<LoggerResolver>()
 			.AddOpenTelemetry()
 				.WithTracing(TracerProviderBuilderAction);
@@ -242,36 +243,30 @@ public class AgentBuilder
 		_otlpExporterName = name;
 	}
 
-	private class Agent(IDisposable? diagnosticSubscription, TracerProvider? tracerProvider, MeterProvider? meterProvider) : IAgent
+	private class Agent(
+		AgentCompositeLogger logger,
+		LoggingEventListener loggingEventListener,
+		IDisposable? diagnosticSubscription,
+		TracerProvider? tracerProvider = null,
+		MeterProvider? meterProvider = null
+	) : IAgent
 	{
-		private readonly IDisposable? _diagnosticSubscription = diagnosticSubscription;
-		private readonly TracerProvider? _tracerProvider = tracerProvider;
-		private readonly MeterProvider? _meterProvider = meterProvider;
-
-		public Agent(IDisposable? diagnosticSubscription)
-			: this(diagnosticSubscription,null, null)
-		{
-		}
-
-		internal Agent(IDisposable? diagnosticSubscription, TracerProvider tracerProvider)
-			: this(diagnosticSubscription, tracerProvider, null)
-		{
-		}
-
 		public void Dispose()
 		{
-			_tracerProvider?.Dispose();
-			_meterProvider?.Dispose();
-			_diagnosticSubscription?.Dispose();
-			FileLogger.Instance.Dispose();
+			tracerProvider?.Dispose();
+			meterProvider?.Dispose();
+			diagnosticSubscription?.Dispose();
+			loggingEventListener.Dispose();
+			logger.Dispose();
 		}
 
 		public async ValueTask DisposeAsync()
 		{
-			_tracerProvider?.Dispose();
-			_meterProvider?.Dispose();
-			_diagnosticSubscription?.Dispose();
-			await FileLogger.Instance.DisposeAsync().ConfigureAwait(false);
+			tracerProvider?.Dispose();
+			meterProvider?.Dispose();
+			diagnosticSubscription?.Dispose();
+			await loggingEventListener.DisposeAsync().ConfigureAwait(false);
+			await logger.DisposeAsync().ConfigureAwait(false);
 		}
 	}
 }

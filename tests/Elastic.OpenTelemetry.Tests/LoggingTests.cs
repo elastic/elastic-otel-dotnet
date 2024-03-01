@@ -26,42 +26,39 @@ public class TestLogger(ITestOutputHelper testOutputHelper) : ILogger
 		testOutputHelper.WriteLine(message);
 		if (exception != null)
 			testOutputHelper.WriteLine(exception.ToString());
-
 	}
 
 	private class NoopDisposable : IDisposable
 	{
 		public static readonly NoopDisposable Instance = new();
-		public void Dispose()
-		{ }
+
+		public void Dispose() { }
 	}
 }
 
 public class LoggingTests(ITestOutputHelper output)
 {
-    [Fact]
-    public async Task ObserveLogging()
+	[Fact]
+	public async Task ObserveLogging()
 	{
 		var logger = new TestLogger(output);
-        const string activitySourceName = "TestSource";
+		const string activitySourceName = "TestSource";
 
-        var activitySource = new ActivitySource(activitySourceName, "1.0.0");
+		var activitySource = new ActivitySource(activitySourceName, "1.0.0");
 
-        using var agent = new AgentBuilder(logger)
-			.SkipOtlpExporter()
-            .ConfigureTracer(tpb => tpb
-                .ConfigureResource(rb => rb.AddService("Test", "1.0.0"))
-                .AddSource(activitySourceName)
-                .AddInMemoryExporter(new List<Activity>()))
-            .Build();
-
-        using (var activity = activitySource.StartActivity("DoingStuff", ActivityKind.Internal))
-        {
-            activity?.SetStatus(ActivityStatusCode.Ok);
-        }
-
-		//explicitly dispose agent so logging finishes too.
-		await agent.DisposeAsync();
+		await using (new AgentBuilder(logger)
+						 .SkipOtlpExporter()
+						 .ConfigureTracer(tpb => tpb
+							 .ConfigureResource(rb => rb.AddService("Test", "1.0.0"))
+							 .AddSource(activitySourceName)
+							 .AddInMemoryExporter(new List<Activity>()))
+						 .Build())
+		{
+			using (var activity = activitySource.StartActivity("DoingStuff", ActivityKind.Internal))
+			{
+				activity?.SetStatus(ActivityStatusCode.Ok);
+			}
+		}
 
 		//assert preamble information gets logged
 		logger.Messages.Should().ContainMatch("*Elastic OpenTelemetry Distribution:*");
@@ -71,6 +68,5 @@ public class LoggingTests(ITestOutputHelper output)
 
 		// very lenient format check
 		logger.Messages.Should().ContainMatch("[*][*][*][Info]*");
-
 	}
 }
