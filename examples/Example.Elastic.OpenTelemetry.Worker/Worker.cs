@@ -10,7 +10,7 @@ public class Worker : BackgroundService
 	private readonly ILogger<Worker> _logger;
 
 	private static readonly HttpClient HttpClient = new();
-	private const string ActivitySourceName = "CustomActivitySource";
+	public const string ActivitySourceName = "CustomActivitySource";
 	private static readonly ActivitySource ActivitySource = new(ActivitySourceName, "1.0.0");
 
 	public Worker(ILogger<Worker> logger) => _logger = logger;
