@@ -3,61 +3,14 @@
 // See the LICENSE file in the project root for more information
 
 using System.Diagnostics;
-using System.Text;
-using Elastic.OpenTelemetry.DependencyInjection;
 using Elastic.OpenTelemetry.Diagnostics.Logging;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Elastic.OpenTelemetry.Diagnostics;
 
 internal static class ElasticOpenTelemetryDiagnostics
 {
-	private static readonly DiagnosticListener Listener = new(DiagnosticSourceName);
-
-	public const string DiagnosticSourceName = "Elastic.OpenTelemetry";
-
-	internal static readonly DiagnosticSource DiagnosticSource = Listener;
-
-	public static IDisposable EnableFileLogging(ILogger logger) =>
-		Listener.Subscribe(new ElasticDiagnosticLoggingObserver(logger));
-
-	public static void Log(string name)
-	{
-		if (DiagnosticSource.IsEnabled(name))
-			DiagnosticSource.Write(name, new DiagnosticEvent());
-	}
-
-	public static void Log(string name, Func<DiagnosticEvent> createDiagnosticEvent)
-	{
-		// We take a func here so that we only create an instance of the DiagnosticEvent when
-		// there is a listener for the event.
-
-		if (DiagnosticSource.IsEnabled(name))
-			DiagnosticSource.Write(name, createDiagnosticEvent.Invoke());
-	}
-
-	// Events
-
-	public const string AgentBuilderInitializingEvent = "AgentBuilderInitializing";
-
-	public const string AgentBuilderInitializedEvent = "AgentBuilderInitialized";
-
-	public const string AgentBuilderBuiltTracerProviderEvent = "AgentBuilderBuiltTracerProvider";
-
-	public const string AgentBuilderRegisteredDistroServicesEvent = "RegisteredDistroServices";
-
-	public const string AgentBuilderBuiltAgentEvent = "AgentBuilderBuiltAgent";
-
-	public const string ProcessorAddedEvent = "ProcessorAdded";
-
-	public const string SourceAddedEvent = "SourceAdded";
-
-	public const string AgentBuildCalledMultipleTimesEvent = "AgentBuildCalledMultipleTimes";
-
-	public const string AgentSetAgentCalledMultipleTimesEvent = "AgentSetAgentCalledMultipleTimes";
-
-	public static void LogAgentBuilderInitializing(this ILogger logger, DiagnosticEvent _)
+	public static void LogAgentPreamble(this ILogger logger)
 	{
 		var process = Process.GetCurrentProcess();
 		logger.LogInformation("Elastic OpenTelemetry Distribution: {AgentInformationalVersion}", Agent.InformationalVersion);
@@ -101,54 +54,30 @@ internal static class ElasticOpenTelemetryDiagnostics
 		}
 	}
 
-	public static void LogAgentBuilderInitialized(this ILogger logger, DiagnosticEvent<StackTrace?> diagnostic)
-	{
-		var message = diagnostic.Data is not null
-			? $"AgentBuilder initialized{Environment.NewLine}{diagnostic.Data}."
-			: "AgentBuilder initialized.";
+	public static void LogAgentBuilderInitialized(this ILogger logger, StackTrace stackTrace) =>
+		logger.LogInformation($"AgentBuilder initialized{Environment.NewLine}{{StackTrace}}.", stackTrace);
 
-		logger.WriteInfoLogLine(diagnostic, message);
+	public static void LogAgentBuilderBuiltTracerProvider(this ILogger logger) =>
+		logger.LogInformation("AgentBuilder built TracerProvider.");
+
+	public static void LogAgentBuilderBuiltAgent(this ILogger logger) =>
+		logger.LogInformation("AgentBuilder built Agent.");
+
+	public static void LogAgentBuilderRegisteredServices(this ILogger logger) =>
+		logger.LogInformation("AgentBuilder registered agent services into IServiceCollection.");
+
+	public static void LogProcessorAdded(this ILogger logger, Type processorType, Type builderType)
+	{
+		var message = $"Added '{processorType}' processor to '{builderType.Name}'.";
+		logger.LogInformation(message);
 	}
 
-	public static void LogAgentBuilderBuiltTracerProvider(this ILogger logger, DiagnosticEvent diagnostic) =>
-		logger.WriteInfoLogLine(diagnostic, "AgentBuilder built TracerProvider.");
-
-	public static void LogAgentBuilderBuiltAgent(this ILogger logger, DiagnosticEvent diagnostic) =>
-		logger.WriteInfoLogLine(diagnostic, "AgentBuilder built Agent.");
-
-	public static void LogAgentBuilderRegisteredServices(this ILogger logger, DiagnosticEvent diagnostic) =>
-		logger.WriteInfoLogLine(diagnostic, "AgentBuilder registered agent services into IServiceCollection.");
-
-	public static void LogAgentBuilderBuildCalledMultipleTimes(this ILogger logger, DiagnosticEvent diagnostic) =>
-		logger.WriteErrorLogLine(diagnostic, Agent.BuildErrorMessage);
-
-	public static void LogAgentBuilderSetAgentCalledMultipleTimes(this ILogger logger, DiagnosticEvent diagnostic) =>
-		logger.WriteErrorLogLine(diagnostic, Agent.SetAgentErrorMessage);
-
-	public static void LogProcessorAdded(this ILogger logger, DiagnosticEvent<AddProcessorPayload> diagnostic)
+	public static void LogSourceAdded(this ILogger logger, string activitySourceName, Type builderType)
 	{
-		var message = $"Added '{diagnostic.Data.ProcessorType}' processor to '{diagnostic.Data.BuilderType.Name}'.";
-		logger.WriteInfoLogLine(diagnostic, message);
+		var message = $"Added '{activitySourceName}' ActivitySource to '{builderType.Name}'.";
+		logger.LogInformation(message);
 	}
 
-	public static void LogSourceAdded(this ILogger logger, DiagnosticEvent<AddSourcePayload> diagnostic)
-	{
-		var message = $"Added '{diagnostic.Data.ActivitySourceName}' ActivitySource to '{diagnostic.Data.BuilderType.Name}'.";
-		logger.WriteInfoLogLine(diagnostic, message);
-	}
-
-	public static void LogUnhandledEvent(this ILogger logFileWriter, string eventKey, DiagnosticEvent diagnostic)
-	{
-		// Prefer the logger from the source of the event, when present, otherwise
-		// fallback to using a logger typed to the ElasticDiagnosticLoggingObserver instead.
-
-		var logger = diagnostic.Logger;
-
-		if (logger == NullLogger.Instance)
-			logger = LoggerResolver.GetLogger<ElasticDiagnosticLoggingObserver>();
-
+	public static void LogUnhandledEvent(this ILogger logger, string eventKey) =>
 		logger.UnhandledDiagnosticEvent(eventKey);
-
-		logFileWriter.WriteWarningLogLine(diagnostic, $"Received an unhandled diagnostic event '{eventKey}'.");
-	}
 }

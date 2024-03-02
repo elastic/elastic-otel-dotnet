@@ -6,8 +6,7 @@ using OpenTelemetry.Trace;
 using OpenTelemetry;
 using System.Diagnostics;
 using Elastic.OpenTelemetry.Diagnostics;
-
-using static Elastic.OpenTelemetry.Diagnostics.ElasticOpenTelemetryDiagnostics;
+using Microsoft.Extensions.Logging;
 
 namespace Elastic.OpenTelemetry.Extensions;
 
@@ -15,18 +14,18 @@ namespace Elastic.OpenTelemetry.Extensions;
 public static class TraceBuilderProviderExtensions
 {
 	/// <summary> Include Elastic APM Trace Processors to ensure data is enriched and extended.</summary>
-	public static TracerProviderBuilder AddElasticProcessors(this TracerProviderBuilder builder) =>
-		builder.LogAndAddProcessor(new TransactionIdProcessor());
+	public static TracerProviderBuilder AddElasticProcessors(this TracerProviderBuilder builder, ILogger logger) =>
+		builder.LogAndAddProcessor(new TransactionIdProcessor(logger), logger);
 
-	internal static TracerProviderBuilder LogAndAddProcessor(this TracerProviderBuilder builder, BaseProcessor<Activity> processor)
+	private static TracerProviderBuilder LogAndAddProcessor(this TracerProviderBuilder builder, BaseProcessor<Activity> processor, ILogger logger)
 	{
-		Log(ProcessorAddedEvent, () => new DiagnosticEvent<AddProcessorPayload>(new(processor.GetType(), builder.GetType())));
+		logger.LogProcessorAdded(processor.GetType(), builder.GetType());
 		return builder.AddProcessor(processor);
 	}
 
-	internal static TracerProviderBuilder LogAndAddSource(this TracerProviderBuilder builder, string sourceName)
+	internal static TracerProviderBuilder LogAndAddSource(this TracerProviderBuilder builder, string sourceName, ILogger logger)
 	{
-		Log(SourceAddedEvent, () => new DiagnosticEvent<AddSourcePayload>(new(sourceName, builder.GetType())));
+		logger.LogSourceAdded(sourceName, builder.GetType());
 		return builder.AddSource(sourceName);
 	}
 }

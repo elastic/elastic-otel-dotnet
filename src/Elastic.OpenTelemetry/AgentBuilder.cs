@@ -2,7 +2,6 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 using System.Diagnostics;
-using Elastic.OpenTelemetry.DependencyInjection;
 using Elastic.OpenTelemetry.Diagnostics;
 using Elastic.OpenTelemetry.Diagnostics.Logging;
 using Elastic.OpenTelemetry.Extensions;
@@ -13,8 +12,6 @@ using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-
-using static Elastic.OpenTelemetry.Diagnostics.ElasticOpenTelemetryDiagnostics;
 
 namespace Elastic.OpenTelemetry;
 
@@ -34,7 +31,6 @@ public class AgentBuilder
 	private Action<ResourceBuilder>? _resourceBuilderAction = rb => { };
 	private Action<OtlpExporterOptions>? _otlpExporterConfiguration;
 	private string? _otlpExporterName;
-	private readonly IDisposable? _diagnosticSourceSubscription;
 
 	private readonly AgentCompositeLogger _logger;
 	private bool _skipOtlpRegistration;
@@ -50,11 +46,8 @@ public class AgentBuilder
 		// Enables logging of OpenTelemetry-SDK event source events
 		_loggingEventListener = new LoggingEventListener(_logger);
 
-		// Enables logging of Elastic OpenTelemetry diagnostic source events
-		_diagnosticSourceSubscription = EnableFileLogging(_logger);
-
-		Log(AgentBuilderInitializingEvent);
-		Log(AgentBuilderInitializedEvent, () => new DiagnosticEvent<StackTrace?>(new StackTrace(true)));
+		_logger.LogAgentPreamble();
+		_logger.LogAgentBuilderInitialized(new StackTrace(true));
 	}
 
 	// NOTE - Applies to all signals
@@ -169,11 +162,11 @@ public class AgentBuilder
 		TracerProviderBuilderAction.Invoke(tracerProviderBuilder);
 		var tracerProvider = tracerProviderBuilder.Build();
 
-		Log(AgentBuilderBuiltTracerProviderEvent);
+		_logger.LogAgentBuilderBuiltTracerProvider();
 
-		var agent = new Agent(_logger, _loggingEventListener, _diagnosticSourceSubscription, tracerProvider);
+		var agent = new Agent(_logger, _loggingEventListener, tracerProvider);
 
-		Log(AgentBuilderBuiltAgentEvent);
+		_logger.LogAgentBuilderBuiltAgent();
 
 		return agent;
 	}
@@ -190,14 +183,10 @@ public class AgentBuilder
 
 		_ = serviceCollection
 			.AddHostedService<ElasticOtelDistroService>()
-			// This is purely to register an instance of the agent such that should the service provider be disposed, the agent
-			// will also be disposed which in turn avoids further diagnostics subscriptions and file logging.
-			.AddSingleton<IAgent>(new Agent(_logger, _loggingEventListener, _diagnosticSourceSubscription))
-			.AddSingleton<LoggerResolver>()
 			.AddOpenTelemetry()
 				.WithTracing(TracerProviderBuilderAction);
 
-		Log(AgentBuilderRegisteredDistroServicesEvent);
+		_logger.LogAgentBuilderRegisteredServices();
 
 		return serviceCollection;
 	}
@@ -214,14 +203,14 @@ public class AgentBuilder
 		tracerProviderBuilder =>
 		{
 			foreach (var source in _activitySourceNames)
-				tracerProviderBuilder.LogAndAddSource(source);
+				tracerProviderBuilder.LogAndAddSource(source, _logger);
 
 			tracerProviderBuilder
 				.AddHttpClientInstrumentation()
 				.AddGrpcClientInstrumentation()
 				.AddEntityFrameworkCoreInstrumentation(); // TODO - Should we add this by default?
 
-			tracerProviderBuilder.AddElasticProcessors();
+			tracerProviderBuilder.AddElasticProcessors(_logger);
 
 			var action = _resourceBuilderAction;
 			action += b => b.AddDistroAttributes();
@@ -246,7 +235,6 @@ public class AgentBuilder
 	private class Agent(
 		AgentCompositeLogger logger,
 		LoggingEventListener loggingEventListener,
-		IDisposable? diagnosticSubscription,
 		TracerProvider? tracerProvider = null,
 		MeterProvider? meterProvider = null
 	) : IAgent
@@ -255,7 +243,6 @@ public class AgentBuilder
 		{
 			tracerProvider?.Dispose();
 			meterProvider?.Dispose();
-			diagnosticSubscription?.Dispose();
 			loggingEventListener.Dispose();
 			logger.Dispose();
 		}
@@ -264,7 +251,6 @@ public class AgentBuilder
 		{
 			tracerProvider?.Dispose();
 			meterProvider?.Dispose();
-			diagnosticSubscription?.Dispose();
 			await loggingEventListener.DisposeAsync().ConfigureAwait(false);
 			await logger.DisposeAsync().ConfigureAwait(false);
 		}

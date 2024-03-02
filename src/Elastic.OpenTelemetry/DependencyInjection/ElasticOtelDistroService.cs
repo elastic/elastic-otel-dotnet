@@ -1,11 +1,9 @@
 // Licensed to Elasticsearch B.V under one or more agreements.
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
-using Elastic.OpenTelemetry.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Elastic.OpenTelemetry
 {
@@ -15,7 +13,6 @@ namespace Elastic.OpenTelemetry
 
 		public Task StartingAsync(CancellationToken cancellationToken)
 		{
-			serviceProvider.GetService<LoggerResolver>();
 			var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
 			var logger = loggerFactory?.CreateLogger($"{nameof(Elastic)}.{nameof(OpenTelemetry)}");
 

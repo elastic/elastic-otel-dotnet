@@ -74,11 +74,11 @@ public static partial class Agent
 			return CurrentAgent;
 		}
 
-		static void CheckCurrent()
+		void CheckCurrent()
 		{
 			if (CurrentAgent is not null)
 			{
-				Log(AgentBuildCalledMultipleTimesEvent);
+				logger?.AgentCalledMultipleTimes();
 				throw new Exception();
 			}
 		}
@@ -91,7 +91,7 @@ public static partial class Agent
 		$"or after {nameof(Agent)}.{nameof(Build)} or after {nameof(Agent)}.{nameof(Current)} was accessed.";
 
 	[LoggerMessage(EventId = 1, Level = LogLevel.Error, Message = SetAgentErrorMessage)]
-	internal static partial void SetAgentError(this ILogger logger);
+	internal static partial void AgentCalledMultipleTimes(this ILogger logger);
 
 	/// <summary>
 	/// TODO
@@ -116,8 +116,7 @@ public static partial class Agent
 		{
 			if (CurrentAgent is not null)
 			{
-				Log(AgentSetAgentCalledMultipleTimesEvent);
-				logger.SetAgentError();
+				logger.AgentCalledMultipleTimes();
 				throw new Exception(SetAgentErrorMessage);
 			}
 		}

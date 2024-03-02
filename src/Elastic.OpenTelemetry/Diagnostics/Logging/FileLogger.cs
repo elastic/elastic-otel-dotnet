@@ -29,7 +29,7 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 
 	private readonly LoggerExternalScopeProvider _scopeProvider;
 
-	private FileLogger()
+	public FileLogger()
 	{
 		_scopeProvider = new LoggerExternalScopeProvider();
 		var process = Process.GetCurrentProcess();
@@ -87,8 +87,6 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 	public bool IsEnabled(LogLevel logLevel) => FileLoggingEnabled && ConfiguredLogLevel <= logLevel;
 
 	public IDisposable? BeginScope<TState>(TState state) where TState : notnull => _scopeProvider.Push(state);
-
-	public static FileLogger Instance { get; } = new();
 
 	public string? LogFilePath { get; }
 

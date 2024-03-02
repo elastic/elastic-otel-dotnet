@@ -42,7 +42,7 @@ public class LoggingTests(ITestOutputHelper output)
 	public async Task ObserveLogging()
 	{
 		var logger = new TestLogger(output);
-		const string activitySourceName = "TestSource";
+		const string activitySourceName = nameof(ObserveLogging);
 
 		var activitySource = new ActivitySource(activitySourceName, "1.0.0");
 
@@ -62,6 +62,9 @@ public class LoggingTests(ITestOutputHelper output)
 
 		//assert preamble information gets logged
 		logger.Messages.Should().ContainMatch("*Elastic OpenTelemetry Distribution:*");
+
+		var preambles = logger.Messages.Where(l => l.Contains("[Info]      Elastic OpenTelemetry Distribution:")).ToList();
+		preambles.Should().HaveCount(1);
 
 		// assert agent initialized confirmation and stack trace gets dumped.
 		logger.Messages.Should().ContainMatch("*AgentBuilder initialized*");

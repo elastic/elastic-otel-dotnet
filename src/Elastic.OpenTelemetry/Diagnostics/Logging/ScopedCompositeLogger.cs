@@ -10,10 +10,8 @@ namespace Elastic.OpenTelemetry.Diagnostics.Logging;
 /// A logger that writes to both <see cref="FileLogger"/> and the user configured logger.
 /// <para> Instances of this never dispose <see cref="FileLogger"/> so can be used anywhere even on short lived objects</para>
 /// </summary>
-public sealed class ScopedCompositeLogger<T>(ILogger? additionalLogger) : IDisposable, IAsyncDisposable, ILogger<T>
+public sealed class ScopedCompositeLogger<T>(ILogger? additionalLogger, ILogger fileLogger) : IDisposable, IAsyncDisposable, ILogger<T>
 {
-	private readonly FileLogger _fileLogger = FileLogger.Instance;
-
 	/// <summary> TODO </summary>
 	public void Dispose()
 	{
@@ -27,8 +25,8 @@ public sealed class ScopedCompositeLogger<T>(ILogger? additionalLogger) : IDispo
 	/// <summary> TODO </summary>
 	public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
 	{
-		if (_fileLogger.IsEnabled(logLevel))
-			_fileLogger.Log(logLevel, eventId, state, exception, formatter);
+		if (fileLogger.IsEnabled(logLevel))
+			fileLogger.Log(logLevel, eventId, state, exception, formatter);
 
 		if (additionalLogger == null) return;
 
@@ -37,11 +35,11 @@ public sealed class ScopedCompositeLogger<T>(ILogger? additionalLogger) : IDispo
 	}
 
 	/// <summary> TODO </summary>
-	public bool IsEnabled(LogLevel logLevel) => _fileLogger.IsEnabled(logLevel) || (additionalLogger?.IsEnabled(logLevel) ?? false);
+	public bool IsEnabled(LogLevel logLevel) => fileLogger.IsEnabled(logLevel) || (additionalLogger?.IsEnabled(logLevel) ?? false);
 
 	/// <summary> TODO </summary>
 	public IDisposable BeginScope<TState>(TState state) where TState : notnull =>
-		new CompositeDisposable(_fileLogger.BeginScope(state), additionalLogger?.BeginScope(state));
+		new CompositeDisposable(fileLogger.BeginScope(state), additionalLogger?.BeginScope(state));
 
 	private class CompositeDisposable(params IDisposable?[] disposables) : IDisposable
 	{

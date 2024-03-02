@@ -6,22 +6,22 @@ using Microsoft.Extensions.Logging;
 
 namespace Elastic.OpenTelemetry.Diagnostics.Logging;
 
-/// <summary> A composite logger for use inside the agent, will dispose <see cref="FileLogger"/> </summary>
+/// <summary> A composite logger for use inside the agent, will dispose <see cref="Logging.FileLogger"/> </summary>
 internal sealed class AgentCompositeLogger(ILogger? additionalLogger) : IDisposable, IAsyncDisposable, ILogger
 {
-	private readonly FileLogger _fileLogger = FileLogger.Instance;
+	public FileLogger FileLogger { get; } = new();
 
 	/// <summary> TODO </summary>
-	public void Dispose() => _fileLogger.Dispose();
+	public void Dispose() => FileLogger.Dispose();
 
 	/// <summary> TODO </summary>
-	public ValueTask DisposeAsync() => _fileLogger.DisposeAsync();
+	public ValueTask DisposeAsync() => FileLogger.DisposeAsync();
 
 	/// <summary> TODO </summary>
 	public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
 	{
-		if (_fileLogger.IsEnabled(logLevel))
-			_fileLogger.Log(logLevel, eventId, state, exception, formatter);
+		if (FileLogger.IsEnabled(logLevel))
+			FileLogger.Log(logLevel, eventId, state, exception, formatter);
 
 		if (additionalLogger == null) return;
 
@@ -29,18 +29,18 @@ internal sealed class AgentCompositeLogger(ILogger? additionalLogger) : IDisposa
 			additionalLogger.Log(logLevel, eventId, state, exception, formatter);
 	}
 
-	public bool LogFileEnabled => _fileLogger.FileLoggingEnabled;
-	public string LogFilePath => _fileLogger.LogFilePath ?? string.Empty;
+	public bool LogFileEnabled => FileLogger.FileLoggingEnabled;
+	public string LogFilePath => FileLogger.LogFilePath ?? string.Empty;
 
 	/// <summary> TODO </summary>
 	public void SetAdditionalLogger(ILogger? logger) => additionalLogger ??= logger;
 
 	/// <summary> TODO </summary>
-	public bool IsEnabled(LogLevel logLevel) => _fileLogger.IsEnabled(logLevel) || (additionalLogger?.IsEnabled(logLevel) ?? false);
+	public bool IsEnabled(LogLevel logLevel) => FileLogger.IsEnabled(logLevel) || (additionalLogger?.IsEnabled(logLevel) ?? false);
 
 	/// <summary> TODO </summary>
 	public IDisposable BeginScope<TState>(TState state) where TState : notnull =>
-		new CompositeDisposable(_fileLogger.BeginScope(state), additionalLogger?.BeginScope(state));
+		new CompositeDisposable(FileLogger.BeginScope(state), additionalLogger?.BeginScope(state));
 
 	private class CompositeDisposable(params IDisposable?[] disposables) : IDisposable
 	{
