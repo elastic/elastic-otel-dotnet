@@ -56,29 +56,6 @@ internal static class AgentLoggingHelpers
 		return logLevel;
 	}
 
-
-
-	public static void WriteCriticalLogLine(this ILogger logger, DiagnosticEvent diagnosticEvent, string message) =>
-		logger.WriteLogLine(diagnosticEvent, LogLevel.Critical, message);
-
-	public static void WriteErrorLogLine(this ILogger logger, DiagnosticEvent diagnosticEvent, string message) =>
-		logger.WriteLogLine(diagnosticEvent, LogLevel.Error, message);
-
-	public static void WriteWarningLogLine(this ILogger logger, DiagnosticEvent diagnosticEvent, string message) =>
-		logger.WriteLogLine(diagnosticEvent, LogLevel.Warning, message);
-
-	public static void WriteInfoLogLine(this ILogger logger, DiagnosticEvent diagnosticEvent, string message) =>
-		logger.WriteLogLine(diagnosticEvent, LogLevel.Information, message);
-
-	public static void WriteTraceLogLine(this ILogger logger, DiagnosticEvent diagnosticEvent, string message) =>
-		logger.WriteLogLine(diagnosticEvent, LogLevel.Trace, message);
-
-	public static void WriteLogLine(this ILogger logger, DiagnosticEvent diagnosticEvent, LogLevel logLevel, string message) =>
-		logger.WriteLogLine(diagnosticEvent.Activity, diagnosticEvent.ManagedThreadId, diagnosticEvent.DateTime, logLevel, message);
-
-	public static void WriteLogLine(this ILogger logger, Activity? activity, int managedThreadId, DateTime dateTime, LogLevel logLevel, string logLine) =>
-		logger.WriteLogLine(activity, managedThreadId, dateTime, logLevel, logLine, null);
-
 	public static void WriteLogLine(this ILogger logger, Activity? activity, int managedThreadId, DateTime dateTime, LogLevel logLevel, string logLine, string? spanId)
 	{
 		var state = new LogState

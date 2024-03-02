@@ -18,11 +18,6 @@ internal static class LogFormatter
 		var activity = Activity.Current;
 		switch (state)
 		{
-			case DiagnosticEvent e:
-				managedThreadId = e.ManagedThreadId;
-				dateTime = e.DateTime;
-				activity = e.Activity;
-				break;
 			case LogState s:
 				managedThreadId = s.ManagedThreadId;
 				dateTime = s.DateTime;

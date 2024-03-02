@@ -20,11 +20,8 @@ internal static class Usage
     {
 		// NOTE: This sample assumes ENV VARs have been set to configure the Endpoint and Authorization header.
 
-		// The simplest scenario with has default listeners and the OTLP exporter.
-		//using var agent = Agent.Build();
-
 		// Build an agent by creating and using an agent builder, adding a single source (for traces and metrics) defined in this sample application.
-		using var agent = new AgentBuilder(ActivitySourceName).Build();
+		await using var agent = new AgentBuilder(ActivitySourceName).Build();
 
 		// Build an agent by creating and using an agent builder, adding a single source for the app just to the tracer.
 		//using var agent = new AgentBuilder().AddTracerSource(ActivitySourceName).Build();
