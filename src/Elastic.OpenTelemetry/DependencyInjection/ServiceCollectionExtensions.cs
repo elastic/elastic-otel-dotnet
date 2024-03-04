@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information
 using Elastic.OpenTelemetry;
 using Microsoft.Extensions.Hosting;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -22,6 +23,7 @@ public static class ServiceCollectionExtensions
 		builder.Services.AddElasticOpenTelemetry(activitySourceNames);
 		return builder;
 	}
+
 
 	/// <summary>
 	///

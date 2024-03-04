@@ -10,8 +10,10 @@ using Microsoft.Extensions.Logging;
 
 namespace Elastic.OpenTelemetry.Extensions;
 
-/// <summary> Provides Elastic APM extensions to <see cref="TracerProviderBuilder"/> </summary>
-public static class TraceBuilderProviderExtensions
+/// <summary>
+/// Provides Elastic APM extensions to <see cref="TracerProviderBuilder"/>.
+/// </summary>
+public static class TracerProviderBuilderExtensions
 {
 	/// <summary> Include Elastic APM Trace Processors to ensure data is enriched and extended.</summary>
 	public static TracerProviderBuilder AddElasticProcessors(this TracerProviderBuilder builder, ILogger logger) =>

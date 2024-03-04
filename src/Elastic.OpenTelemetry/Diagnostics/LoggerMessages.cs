@@ -20,6 +20,9 @@ internal static partial class LoggerMessages
 	[LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "Added '{ProcessorTypeName}' processor to '{BuilderTypeName}'.")]
 	public static partial void LogProcessorAdded(this ILogger logger, string processorTypeName, string builderTypeName);
 
+	[LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "Added '{MeterName}' meter to '{BuilderTypeName}'.")]
+	public static partial void LogMeterAdded(this ILogger logger, string meterName, string builderTypeName);
+
 	public static void LogAgentPreamble(this ILogger logger)
 	{
 		var process = Process.GetCurrentProcess();

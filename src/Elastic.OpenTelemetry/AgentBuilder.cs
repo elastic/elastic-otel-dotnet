@@ -20,14 +20,9 @@ namespace Elastic.OpenTelemetry;
 /// </summary>
 public class AgentBuilder
 {
-	private readonly MeterProviderBuilder _meterProvider =
-		Sdk.CreateMeterProviderBuilder()
-			.AddProcessInstrumentation()
-			.AddRuntimeInstrumentation()
-			.AddHttpClientInstrumentation();
-
-	private readonly List<string> _activitySourceNames = [];
+	private readonly string[] _activitySourceNames = [];
 	private Action<TracerProviderBuilder> _tracerProviderBuilderAction = tpb => { };
+	private Action<MeterProviderBuilder> _meterProviderBuilderAction = mpb => { };
 	private Action<ResourceBuilder>? _resourceBuilderAction = rb => { };
 	private Action<OtlpExporterOptions>? _otlpExporterConfiguration;
 	private string? _otlpExporterName;
@@ -55,19 +50,10 @@ public class AgentBuilder
 	/// <summary>
 	/// TODO
 	/// </summary>
-	public AgentBuilder(params string[] activitySourceNames) : this() => _activitySourceNames = activitySourceNames.ToList();
+	public AgentBuilder(params string[] activitySourceNames) : this() => _activitySourceNames = activitySourceNames;
 
 	// NOTE: The builder methods below are extremely experimental and will go through a final API design and
 	// refinement before alpha 1
-
-	/// <summary>
-	/// TODO
-	/// </summary>
-	public AgentBuilder AddActivitySources(params string[] sources)
-	{
-		_activitySourceNames.AddRange(sources);
-		return this;
-	}
 
 	/// <summary>
 	/// TODO
@@ -128,6 +114,69 @@ public class AgentBuilder
 	/// <summary>
 	/// TODO
 	/// </summary>
+	public AgentBuilder ConfigureTracer(Action<ResourceBuilder> configureResourceBuilder)
+	{
+		TracerInternal(configureResourceBuilder, null);
+		return this;
+	}
+
+	/// <summary>
+	/// TODO
+	/// </summary>
+	public AgentBuilder ConfigureTracer(Action<ResourceBuilder> configureResourceBuilder, params string[] activitySourceNames)
+	{
+		TracerInternal(configureResourceBuilder, activitySourceNames);
+		return this;
+	}
+
+	/// <summary>
+	/// TODO
+	/// </summary>
+	public AgentBuilder ConfigureTracer(Action<ResourceBuilder> configureResourceBuilder, string activitySourceName)
+	{
+		TracerInternal(configureResourceBuilder, [activitySourceName]);
+		return this;
+	}
+
+	/// <summary>
+	/// TODO
+	/// </summary>
+	public AgentBuilder ConfigureMeter(params string[] activitySourceNames)
+	{
+		MeterInternal(null, activitySourceNames);
+		return this;
+	}
+
+	/// <summary>
+	/// TODO
+	/// </summary>
+	public AgentBuilder ConfigureMeter(Action<ResourceBuilder> configureResourceBuilder)
+	{
+		MeterInternal(configureResourceBuilder, null);
+		return this;
+	}
+
+	/// <summary>
+	/// TODO
+	/// </summary>
+	public AgentBuilder ConfigureMeter(Action<ResourceBuilder> configureResourceBuilder, params string[] activitySourceNames)
+	{
+		MeterInternal(configureResourceBuilder, activitySourceNames);
+		return this;
+	}
+
+	/// <summary>
+	/// TODO
+	/// </summary>
+	public AgentBuilder ConfigureMeter(Action<ResourceBuilder> configureResourceBuilder, string activitySourceName)
+	{
+		MeterInternal(configureResourceBuilder, [activitySourceName]);
+		return this;
+	}
+
+	/// <summary>
+	/// TODO
+	/// </summary>
 	public AgentBuilder ConfigureTracer(Action<TracerProviderBuilder> configure)
 	{
 		// This is the most customisable overload as the consumer can provide a complete
@@ -139,6 +188,26 @@ public class AgentBuilder
 
 		ArgumentNullException.ThrowIfNull(configure);
 		_tracerProviderBuilderAction += configure;
+		return this;
+	}
+
+	/// <summary>
+	/// TODO
+	/// </summary>
+	public AgentBuilder ConfigureMeter(Action<MeterProviderBuilder> configure)
+	{
+		ArgumentNullException.ThrowIfNull(configure);
+		_meterProviderBuilderAction += configure;
+		return this;
+	}
+
+	private AgentBuilder MeterInternal(Action<ResourceBuilder>? configureResourceBuilder = null, string[]? activitySourceNames = null)
+	{
+		_resourceBuilderAction = configureResourceBuilder;
+
+		if (activitySourceNames is not null)
+			_meterProviderBuilderAction += mpb => mpb.AddMeter(activitySourceNames);
+
 		return this;
 	}
 
@@ -162,10 +231,14 @@ public class AgentBuilder
 		var tracerProviderBuilder = Sdk.CreateTracerProviderBuilder();
 		TracerProviderBuilderAction.Invoke(tracerProviderBuilder);
 		var tracerProvider = tracerProviderBuilder.Build();
-
 		_logger.LogAgentBuilderBuiltTracerProvider();
 
-		var agent = new Agent(_logger, _loggingEventListener, tracerProvider);
+		var meterProviderBuilder = Sdk.CreateMeterProviderBuilder();
+		MeterProviderBuilderAction.Invoke(meterProviderBuilder);
+		var meterProvider = meterProviderBuilder.Build();
+		_logger.LogAgentBuilderBuiltMeterProvider();
+
+		var agent = new Agent(_logger, _loggingEventListener, tracerProvider, meterProvider);
 
 		_logger.LogAgentBuilderBuiltAgent();
 
@@ -185,7 +258,8 @@ public class AgentBuilder
 		_ = serviceCollection
 			.AddHostedService<ElasticOtelDistroService>()
 			.AddOpenTelemetry()
-				.WithTracing(TracerProviderBuilderAction);
+				.WithTracing(TracerProviderBuilderAction)
+				.WithMetrics(MeterProviderBuilderAction);
 
 		_logger.LogAgentBuilderRegisteredServices();
 
@@ -221,6 +295,33 @@ public class AgentBuilder
 
 			if (!_skipOtlpRegistration)
 				tracerProviderBuilder.AddOtlpExporter(_otlpExporterName, _otlpExporterConfiguration);
+		};
+
+	private Action<MeterProviderBuilder> MeterProviderBuilderAction =>
+		builder =>
+		{
+			foreach (var source in _activitySourceNames)
+			{
+				_logger.LogMeterAdded(source, builder.GetType().Name);
+				builder.AddMeter(source);
+			}
+
+			builder
+				.AddProcessInstrumentation()
+				.AddRuntimeInstrumentation()
+				.AddHttpClientInstrumentation();
+
+			var action = _resourceBuilderAction;
+			action += b => b.AddDistroAttributes();
+			builder.ConfigureResource(action);
+
+			_meterProviderBuilderAction?.Invoke(builder);
+
+			builder.AddOtlpExporter(_otlpExporterName, o =>
+			{
+				o.ExportProcessorType = ExportProcessorType.Simple;
+				o.Protocol = OtlpExportProtocol.HttpProtobuf;
+			});
 		};
 
 	/// <summary>
@@ -265,6 +366,9 @@ internal static partial class LoggerMessages
 
 	[LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "AgentBuilder built TracerProvider.")]
 	public static partial void LogAgentBuilderBuiltTracerProvider(this ILogger logger);
+
+	[LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "AgentBuilder built MeterProvider.")]
+	public static partial void LogAgentBuilderBuiltMeterProvider(this ILogger logger);
 
 	[LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "AgentBuilder built Agent.")]
 	public static partial void LogAgentBuilderBuiltAgent(this ILogger logger);
