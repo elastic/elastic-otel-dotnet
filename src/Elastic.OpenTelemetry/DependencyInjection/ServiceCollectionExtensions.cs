@@ -13,50 +13,25 @@ namespace Microsoft.Extensions.DependencyInjection;
 /// </summary>
 public static class ServiceCollectionExtensions
 {
-	/// <summary>
-	/// TODO
-	/// </summary>
-	/// <param name="builder"></param>
-	/// <returns></returns>
+	/// <summary> TODO </summary>
 	public static IHostApplicationBuilder AddElasticOpenTelemetry(this IHostApplicationBuilder builder) =>
-		AddElasticOpenTelemetry(builder, []);
+		builder.AddElasticOpenTelemetry([]);
 
-	/// <summary>
-	/// TODO
-	/// </summary>
-	/// <param name="builder"></param>
-	/// <param name="activitySourceNames"></param>
-	/// <returns></returns>
+	/// <summary> </summary>
 	public static IHostApplicationBuilder AddElasticOpenTelemetry(this IHostApplicationBuilder builder, params string[] activitySourceNames)
 	{
 		builder.Services.AddElasticOpenTelemetry(activitySourceNames);
 		return builder;
 	}
 
+
 	/// <summary>
-	/// TODO
+	///
 	/// </summary>
-	/// <param name="builder"></param>
-	/// <param name="configureTracerProvider"></param>
-	/// <param name="configureMeterProvider"></param>
+	/// <param name="serviceCollection"></param>
 	/// <returns></returns>
-	public static IHostApplicationBuilder AddElasticOpenTelemetry(
-		this IHostApplicationBuilder builder,
-		Action<TracerProviderBuilder>? configureTracerProvider,
-		Action<MeterProviderBuilder>? configureMeterProvider)
-	{
-		builder.Services.AddElasticOpenTelemetry(configureTracerProvider, configureMeterProvider);
-		return builder;
-	}
-
-
-	/// <summary>
-	/// Adds the Elastic OpenTelemetry distribution to an application via the <see cref="IServiceCollection"/>.
-	/// </summary>
-	/// <param name="serviceCollection">TODO</param>
-	/// <returns>TODO</returns>
-	public static IServiceCollection AddElasticOpenTelemetry(this IServiceCollection serviceCollection) =>
-		new AgentBuilder().Register(serviceCollection);
+	public static AgentBuilder AddElasticOpenTelemetry(this IServiceCollection serviceCollection) =>
+		serviceCollection.AddElasticOpenTelemetry(null);
 
 	/// <summary>
 	/// TODO
@@ -64,29 +39,15 @@ public static class ServiceCollectionExtensions
 	/// <param name="serviceCollection"></param>
 	/// <param name="activitySourceNames"></param>
 	/// <returns></returns>
-	public static IServiceCollection AddElasticOpenTelemetry(this IServiceCollection serviceCollection, params string[] activitySourceNames) =>
-		new AgentBuilder(activitySourceNames).Register(serviceCollection);
-
-	/// <summary>
-	/// TODO
-	/// </summary>
-	/// <param name="serviceCollection"></param>
-	/// <param name="configureTracerProvider"></param>
-	/// <param name="configureMeterProvider"></param>
-	/// <returns></returns>
-	public static IServiceCollection AddElasticOpenTelemetry(
-		this IServiceCollection serviceCollection,
-		Action<TracerProviderBuilder>? configureTracerProvider,
-		Action<MeterProviderBuilder>? configureMeterProvider)
+	public static AgentBuilder AddElasticOpenTelemetry(this IServiceCollection serviceCollection, params string[]? activitySourceNames)
 	{
-		var builder = new AgentBuilder();
-
-		if (configureTracerProvider is not null)
-			builder.ConfigureTracer(configureTracerProvider);
-
-		if (configureMeterProvider is not null)
-			builder.ConfigureMeter(configureMeterProvider);
-
-		return builder.Register(serviceCollection);
+		//TODO return IAgentBuilder that does not expose Build()
+		var builder = new AgentBuilder(activitySourceNames ?? []);
+		serviceCollection
+			.AddHostedService<ElasticOtelDistroService>()
+			.AddSingleton(builder)
+			.AddOpenTelemetry();
+		return builder;
 	}
+
 }

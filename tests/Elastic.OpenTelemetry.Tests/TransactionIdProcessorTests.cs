@@ -8,13 +8,14 @@ public class TransactionIdProcessorTests
     [Fact]
     public void TransactionId_IsAddedToTags()
     {
-        const string activitySourceName = "TestSource";
+        const string activitySourceName = nameof(TransactionId_IsAddedToTags);
 
         var activitySource = new ActivitySource(activitySourceName, "1.0.0");
 
         var exportedItems = new List<Activity>();
 
         using var agent = new AgentBuilder()
+			.SkipOtlpExporter()
             .ConfigureTracer(tpb => tpb
                 .ConfigureResource(rb => rb.AddService("Test", "1.0.0"))
                 .AddSource(activitySourceName)

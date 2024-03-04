@@ -5,7 +5,6 @@ namespace Elastic.OpenTelemetry;
 
 internal static class EnvironmentVariables
 {
-	public const string ElasticOtelFileLogging = "ELASTIC_OTEL_ENABLE_FILE_LOGGING";
 	public const string ElasticOtelLogDirectoryEnvironmentVariable = "ELASTIC_OTEL_LOG_DIRECTORY";
 	public const string ElasticOtelLogLevelEnvironmentVariable = "ELASTIC_OTEL_LOG_LEVEL";
 }

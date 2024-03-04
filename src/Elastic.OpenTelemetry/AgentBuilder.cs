@@ -2,8 +2,8 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 using System.Diagnostics;
-using Elastic.OpenTelemetry.DependencyInjection;
 using Elastic.OpenTelemetry.Diagnostics;
+using Elastic.OpenTelemetry.Diagnostics.Logging;
 using Elastic.OpenTelemetry.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -12,8 +12,6 @@ using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-
-using static Elastic.OpenTelemetry.Diagnostics.ElasticOpenTelemetryDiagnostics;
 
 namespace Elastic.OpenTelemetry;
 
@@ -28,24 +26,25 @@ public class AgentBuilder
 	private Action<ResourceBuilder>? _resourceBuilderAction = rb => { };
 	private Action<OtlpExporterOptions>? _otlpExporterConfiguration;
 	private string? _otlpExporterName;
-	private readonly IDisposable? _diagnosticSourceSubscription;
+
+	private readonly AgentCompositeLogger _logger;
+	private bool _skipOtlpRegistration;
+	private readonly LoggingEventListener _loggingEventListener;
 
 	/// <summary>
 	/// TODO
 	/// </summary>
-	public AgentBuilder()
+	public AgentBuilder(ILogger? logger = null)
 	{
-		if (LogFileWriter.FileLoggingEnabled)
-		{
-			// Enables logging of OpenTelemetry-SDK event source events
-			_ = new LoggingEventListener(LogFileWriter.Instance);
+		_logger = new AgentCompositeLogger(logger);
 
-			// Enables logging of Elastic OpenTelemetry diagnostic source events
-			_diagnosticSourceSubscription = EnableFileLogging();
-		}
+		// Enables logging of OpenTelemetry-SDK event source events
+		_loggingEventListener = new LoggingEventListener(_logger);
 
-		Log(AgentBuilderInitializedEvent, () => new DiagnosticEvent<StackTrace?>(new StackTrace(true)));
+		_logger.LogAgentPreamble();
+		_logger.LogAgentBuilderInitialized(Environment.NewLine, new StackTrace(true));
 	}
+
 
 	// NOTE - Applies to all signals
 	/// <summary>
@@ -226,23 +225,22 @@ public class AgentBuilder
 	/// Build an instance of <see cref="IAgent"/>.
 	/// </summary>
 	/// <returns>A new instance of <see cref="IAgent"/>.</returns>
-	public IAgent Build()
+	public IAgent Build(ILogger? logger = null)
 	{
+		_logger.SetAdditionalLogger(logger);
 		var tracerProviderBuilder = Sdk.CreateTracerProviderBuilder();
 		TracerProviderBuilderAction.Invoke(tracerProviderBuilder);
 		var tracerProvider = tracerProviderBuilder.Build();
-
-		Log(AgentBuilderBuiltTracerProviderEvent);
+		_logger.LogAgentBuilderBuiltTracerProvider();
 
 		var meterProviderBuilder = Sdk.CreateMeterProviderBuilder();
 		MeterProviderBuilderAction.Invoke(meterProviderBuilder);
 		var meterProvider = meterProviderBuilder.Build();
+		_logger.LogAgentBuilderBuiltMeterProvider();
 
-		Log(AgentBuilderBuiltMeterProviderEvent);
+		var agent = new Agent(_logger, _loggingEventListener, tracerProvider, meterProvider);
 
-		var agent = new Agent(_diagnosticSourceSubscription, tracerProvider, meterProvider);
-
-		Log(AgentBuilderBuiltAgentEvent);
+		_logger.LogAgentBuilderBuiltAgent();
 
 		return agent;
 	}
@@ -259,31 +257,35 @@ public class AgentBuilder
 
 		_ = serviceCollection
 			.AddHostedService<ElasticOtelDistroService>()
-			// This is purely to register an instance of the agent such that should the service provider be disposed, the agent
-			// will also be disposed which in turn avoids further diagnostics subscriptions and file logging.
-			.AddSingleton<IAgent>(new Agent(_diagnosticSourceSubscription))
-			.AddSingleton<LoggerResolver>()
 			.AddOpenTelemetry()
 				.WithTracing(TracerProviderBuilderAction)
 				.WithMetrics(MeterProviderBuilderAction);
 
-		Log(AgentBuilderRegisteredDistroServicesEvent);
+		_logger.LogAgentBuilderRegisteredServices();
 
 		return serviceCollection;
 	}
+
+	/// <summary> TODO </summary>
+	public AgentBuilder SkipOtlpExporter()
+	{
+		_skipOtlpRegistration = true;
+		return this;
+	}
+
 
 	private Action<TracerProviderBuilder> TracerProviderBuilderAction =>
 		tracerProviderBuilder =>
 		{
 			foreach (var source in _activitySourceNames)
-				tracerProviderBuilder.LogAndAddSource(source);
+				tracerProviderBuilder.LogAndAddSource(source, _logger);
 
 			tracerProviderBuilder
 				.AddHttpClientInstrumentation()
 				.AddGrpcClientInstrumentation()
 				.AddEntityFrameworkCoreInstrumentation(); // TODO - Should we add this by default?
 
-			tracerProviderBuilder.AddElasticProcessors();
+			tracerProviderBuilder.AddElasticProcessors(_logger);
 
 			var action = _resourceBuilderAction;
 			action += b => b.AddDistroAttributes();
@@ -291,14 +293,18 @@ public class AgentBuilder
 
 			_tracerProviderBuilderAction?.Invoke(tracerProviderBuilder);
 
-			tracerProviderBuilder.AddOtlpExporter(_otlpExporterName, _otlpExporterConfiguration);
+			if (!_skipOtlpRegistration)
+				tracerProviderBuilder.AddOtlpExporter(_otlpExporterName, _otlpExporterConfiguration);
 		};
 
 	private Action<MeterProviderBuilder> MeterProviderBuilderAction =>
 		builder =>
 		{
 			foreach (var source in _activitySourceNames)
-				builder.LogAndAddMeter(source);
+			{
+				_logger.LogMeterAdded(source, builder.GetType().Name);
+				builder.AddMeter(source);
+			}
 
 			builder
 				.AddProcessInstrumentation()
@@ -328,36 +334,45 @@ public class AgentBuilder
 		_otlpExporterName = name;
 	}
 
-	private class Agent(IDisposable? diagnosticSubscription, TracerProvider? tracerProvider, MeterProvider? meterProvider) : IAgent
+	private class Agent(
+		AgentCompositeLogger logger,
+		LoggingEventListener loggingEventListener,
+		TracerProvider? tracerProvider = null,
+		MeterProvider? meterProvider = null
+	) : IAgent
 	{
-		private readonly IDisposable? _diagnosticSubscription = diagnosticSubscription;
-		private readonly TracerProvider? _tracerProvider = tracerProvider;
-		private readonly MeterProvider? _meterProvider = meterProvider;
-
-		public Agent(IDisposable? diagnosticSubscription)
-			: this(diagnosticSubscription,null, null)
-		{
-		}
-
-		internal Agent(IDisposable? diagnosticSubscription, TracerProvider tracerProvider)
-			: this(diagnosticSubscription, tracerProvider, null)
-		{
-		}
-
 		public void Dispose()
 		{
-			_tracerProvider?.Dispose();
-			_meterProvider?.Dispose();
-			_diagnosticSubscription?.Dispose();
-			LogFileWriter.Instance.Dispose();
+			tracerProvider?.Dispose();
+			meterProvider?.Dispose();
+			loggingEventListener.Dispose();
+			logger.Dispose();
 		}
 
 		public async ValueTask DisposeAsync()
 		{
-			_tracerProvider?.Dispose();
-			_meterProvider?.Dispose();
-			_diagnosticSubscription?.Dispose();
-			await LogFileWriter.Instance.DisposeAsync().ConfigureAwait(false);
+			tracerProvider?.Dispose();
+			meterProvider?.Dispose();
+			await loggingEventListener.DisposeAsync().ConfigureAwait(false);
+			await logger.DisposeAsync().ConfigureAwait(false);
 		}
 	}
+}
+
+internal static partial class LoggerMessages
+{
+	[LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = $"AgentBuilder initialized{{newline}}{{StackTrace}}.")]
+	public static partial void LogAgentBuilderInitialized(this ILogger logger, string newline, StackTrace stackTrace);
+
+	[LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "AgentBuilder built TracerProvider.")]
+	public static partial void LogAgentBuilderBuiltTracerProvider(this ILogger logger);
+
+	[LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "AgentBuilder built MeterProvider.")]
+	public static partial void LogAgentBuilderBuiltMeterProvider(this ILogger logger);
+
+	[LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "AgentBuilder built Agent.")]
+	public static partial void LogAgentBuilderBuiltAgent(this ILogger logger);
+
+	[LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "AgentBuilder registered agent services into IServiceCollection.")]
+	public static partial void LogAgentBuilderRegisteredServices(this ILogger logger);
 }

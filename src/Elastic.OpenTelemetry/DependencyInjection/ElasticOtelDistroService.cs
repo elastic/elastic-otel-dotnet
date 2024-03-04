@@ -1,28 +1,25 @@
 // Licensed to Elasticsearch B.V under one or more agreements.
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
-using Elastic.OpenTelemetry.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Elastic.OpenTelemetry
 {
 	internal sealed class ElasticOtelDistroService(IServiceProvider serviceProvider) : IHostedService, IHostedLifecycleService
 	{
-		private readonly IServiceProvider _serviceProvider = serviceProvider;
+		private IAgent? _agent;
 
 		public Task StartingAsync(CancellationToken cancellationToken)
 		{
-			var agent = _serviceProvider.GetRequiredService<IAgent>();
-			var loggerFactory = _serviceProvider.GetService<ILoggerFactory>();
-			var logger = loggerFactory?.CreateLogger($"{nameof(Elastic)}.{nameof(OpenTelemetry)}") ?? NullLogger.Instance;
+			var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
+			var logger = loggerFactory?.CreateLogger($"{nameof(Elastic)}.{nameof(OpenTelemetry)}");
 
-			_serviceProvider.GetService<LoggerResolver>();
+			_agent = serviceProvider.GetRequiredService<AgentBuilder>().Build(logger);
 
-			logger.LogInformation("Initialising Agent.Current.");
-			Agent.SetAgent(agent, logger);
+			//logger.LogInformation("Initialising Agent.Current.");
+			//Agent.SetAgent(_agent, logger);
 
 			return Task.CompletedTask;
 		}
@@ -31,6 +28,11 @@ namespace Elastic.OpenTelemetry
 		public Task StartedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 		public Task StoppingAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 		public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-		public Task StoppedAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+		public async Task StoppedAsync(CancellationToken cancellationToken)
+		{
+			if (_agent != null)
+				await _agent.DisposeAsync().ConfigureAwait(false);
+		}
 	}
 }
