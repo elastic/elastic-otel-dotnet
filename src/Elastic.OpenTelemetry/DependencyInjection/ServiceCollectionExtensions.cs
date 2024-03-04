@@ -26,14 +26,6 @@ public static class ServiceCollectionExtensions
 	/// <param name="serviceCollection"></param>
 	/// <param name="activitySourceNames"></param>
 	/// <returns></returns>
-	public static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection serviceCollection, params string[]? activitySourceNames)
-	{
-		var builder = new AgentBuilder(logger: null, services: serviceCollection, activitySourceNames ?? []);
-		serviceCollection
-			.AddHostedService<ElasticOtelDistroService>()
-			.AddSingleton(builder)
-			.AddOpenTelemetry();
-		return builder;
-	}
-
+	public static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection serviceCollection, params string[]? activitySourceNames) =>
+		new AgentBuilder(logger: null, services: serviceCollection, activitySourceNames ?? []);
 }
