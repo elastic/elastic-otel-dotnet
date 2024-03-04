@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information
 using Elastic.OpenTelemetry;
 using Microsoft.Extensions.Hosting;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -33,6 +34,23 @@ public static class ServiceCollectionExtensions
 	}
 
 	/// <summary>
+	/// TODO
+	/// </summary>
+	/// <param name="builder"></param>
+	/// <param name="configureTracerProvider"></param>
+	/// <param name="configureMeterProvider"></param>
+	/// <returns></returns>
+	public static IHostApplicationBuilder AddElasticOpenTelemetry(
+		this IHostApplicationBuilder builder,
+		Action<TracerProviderBuilder>? configureTracerProvider,
+		Action<MeterProviderBuilder>? configureMeterProvider)
+	{
+		builder.Services.AddElasticOpenTelemetry(configureTracerProvider, configureMeterProvider);
+		return builder;
+	}
+
+
+	/// <summary>
 	/// Adds the Elastic OpenTelemetry distribution to an application via the <see cref="IServiceCollection"/>.
 	/// </summary>
 	/// <param name="serviceCollection">TODO</param>
@@ -54,7 +72,21 @@ public static class ServiceCollectionExtensions
 	/// </summary>
 	/// <param name="serviceCollection"></param>
 	/// <param name="configureTracerProvider"></param>
+	/// <param name="configureMeterProvider"></param>
 	/// <returns></returns>
-	public static IServiceCollection AddElasticOpenTelemetry(this IServiceCollection serviceCollection, Action<TracerProviderBuilder> configureTracerProvider) =>
-		new AgentBuilder().ConfigureTracer(configureTracerProvider).Register(serviceCollection);
+	public static IServiceCollection AddElasticOpenTelemetry(
+		this IServiceCollection serviceCollection,
+		Action<TracerProviderBuilder>? configureTracerProvider,
+		Action<MeterProviderBuilder>? configureMeterProvider)
+	{
+		var builder = new AgentBuilder();
+
+		if (configureTracerProvider is not null)
+			builder.ConfigureTracer(configureTracerProvider);
+
+		if (configureMeterProvider is not null)
+			builder.ConfigureMeter(configureMeterProvider);
+
+		return builder.Register(serviceCollection);
+	}
 }

@@ -3,4 +3,4 @@
 // See the LICENSE file in the project root for more information
 namespace Elastic.OpenTelemetry.Diagnostics;
 
-internal readonly record struct AddSourcePayload(string ActivitySourceName, Type BuilderType);
+internal readonly record struct AddSourcePayload(string Name, Type BuilderType);
