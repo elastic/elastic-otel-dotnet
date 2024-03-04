@@ -3,8 +3,7 @@
 // See the LICENSE file in the project root for more information
 using Elastic.OpenTelemetry;
 using Microsoft.Extensions.Hosting;
-using OpenTelemetry.Metrics;
-using OpenTelemetry.Trace;
+using OpenTelemetry;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -13,24 +12,12 @@ namespace Microsoft.Extensions.DependencyInjection;
 /// </summary>
 public static class ServiceCollectionExtensions
 {
-	/// <summary> TODO </summary>
-	public static IHostApplicationBuilder AddElasticOpenTelemetry(this IHostApplicationBuilder builder) =>
-		builder.AddElasticOpenTelemetry([]);
-
-	/// <summary> </summary>
-	public static IHostApplicationBuilder AddElasticOpenTelemetry(this IHostApplicationBuilder builder, params string[] activitySourceNames)
-	{
-		builder.Services.AddElasticOpenTelemetry(activitySourceNames);
-		return builder;
-	}
-
-
 	/// <summary>
 	///
 	/// </summary>
 	/// <param name="serviceCollection"></param>
 	/// <returns></returns>
-	public static AgentBuilder AddElasticOpenTelemetry(this IServiceCollection serviceCollection) =>
+	public static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection serviceCollection) =>
 		serviceCollection.AddElasticOpenTelemetry(null);
 
 	/// <summary>
@@ -39,10 +26,9 @@ public static class ServiceCollectionExtensions
 	/// <param name="serviceCollection"></param>
 	/// <param name="activitySourceNames"></param>
 	/// <returns></returns>
-	public static AgentBuilder AddElasticOpenTelemetry(this IServiceCollection serviceCollection, params string[]? activitySourceNames)
+	public static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection serviceCollection, params string[]? activitySourceNames)
 	{
-		//TODO return IAgentBuilder that does not expose Build()
-		var builder = new AgentBuilder(activitySourceNames ?? []);
+		var builder = new AgentBuilder(logger: null, services: serviceCollection, activitySourceNames ?? []);
 		serviceCollection
 			.AddHostedService<ElasticOtelDistroService>()
 			.AddSingleton(builder)

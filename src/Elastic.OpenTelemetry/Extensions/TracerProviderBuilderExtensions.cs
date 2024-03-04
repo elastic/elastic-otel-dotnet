@@ -7,6 +7,7 @@ using OpenTelemetry;
 using System.Diagnostics;
 using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Elastic.OpenTelemetry.Extensions;
 
@@ -16,8 +17,8 @@ namespace Elastic.OpenTelemetry.Extensions;
 public static class TracerProviderBuilderExtensions
 {
 	/// <summary> Include Elastic APM Trace Processors to ensure data is enriched and extended.</summary>
-	public static TracerProviderBuilder AddElasticProcessors(this TracerProviderBuilder builder, ILogger logger) =>
-		builder.LogAndAddProcessor(new TransactionIdProcessor(logger), logger);
+	public static TracerProviderBuilder AddElasticProcessors(this TracerProviderBuilder builder, ILogger? logger = null) =>
+		builder.LogAndAddProcessor(new TransactionIdProcessor(logger ?? NullLogger.Instance), logger ?? NullLogger.Instance);
 
 	private static TracerProviderBuilder LogAndAddProcessor(this TracerProviderBuilder builder, BaseProcessor<Activity> processor, ILogger logger)
 	{

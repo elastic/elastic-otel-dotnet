@@ -9,7 +9,9 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services
 	.AddHttpClient()
-	.AddElasticOpenTelemetryForAspNetCore(HomeController.ActivitySourceName)
+	.AddElasticOpenTelemetryForAspNetCore(HomeController.ActivitySourceName);
+
+builder.Services
 	.AddControllersWithViews();
 
 var app = builder.Build();
