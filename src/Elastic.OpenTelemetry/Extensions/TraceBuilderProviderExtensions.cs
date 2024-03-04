@@ -19,13 +19,13 @@ public static class TraceBuilderProviderExtensions
 
 	private static TracerProviderBuilder LogAndAddProcessor(this TracerProviderBuilder builder, BaseProcessor<Activity> processor, ILogger logger)
 	{
-		logger.LogProcessorAdded(processor.GetType(), builder.GetType());
+		logger.LogProcessorAdded(processor.GetType().ToString(), builder.GetType().Name);
 		return builder.AddProcessor(processor);
 	}
 
 	internal static TracerProviderBuilder LogAndAddSource(this TracerProviderBuilder builder, string sourceName, ILogger logger)
 	{
-		logger.LogSourceAdded(sourceName, builder.GetType());
+		logger.LogSourceAdded(sourceName, builder.GetType().Name);
 		return builder.AddSource(sourceName);
 	}
 }

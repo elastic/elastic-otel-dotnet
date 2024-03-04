@@ -47,8 +47,9 @@ public class AgentBuilder
 		_loggingEventListener = new LoggingEventListener(_logger);
 
 		_logger.LogAgentPreamble();
-		_logger.LogAgentBuilderInitialized(new StackTrace(true));
+		_logger.LogAgentBuilderInitialized(Environment.NewLine, new StackTrace(true));
 	}
+
 
 	// NOTE - Applies to all signals
 	/// <summary>
@@ -255,4 +256,19 @@ public class AgentBuilder
 			await logger.DisposeAsync().ConfigureAwait(false);
 		}
 	}
+}
+
+internal static partial class LoggerMessages
+{
+	[LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = $"AgentBuilder initialized{{newline}}{{StackTrace}}.")]
+	public static partial void LogAgentBuilderInitialized(this ILogger logger, string newline, StackTrace stackTrace);
+
+	[LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "AgentBuilder built TracerProvider.")]
+	public static partial void LogAgentBuilderBuiltTracerProvider(this ILogger logger);
+
+	[LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "AgentBuilder built Agent.")]
+	public static partial void LogAgentBuilderBuiltAgent(this ILogger logger);
+
+	[LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "AgentBuilder registered agent services into IServiceCollection.")]
+	public static partial void LogAgentBuilderRegisteredServices(this ILogger logger);
 }
