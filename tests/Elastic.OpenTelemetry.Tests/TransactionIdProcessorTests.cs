@@ -20,7 +20,6 @@ public class TransactionIdProcessorTests(ITestOutputHelper output)
         var exportedItems = new List<Activity>();
 
         using var agent = new AgentBuilder(options)
-			.SkipOtlpExporter()
             .WithTracing(tpb =>
 			{
 				tpb

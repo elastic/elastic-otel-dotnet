@@ -19,7 +19,6 @@ public class LoggingTests(ITestOutputHelper output)
 		var activitySource = new ActivitySource(activitySourceName, "1.0.0");
 
 		await using (new AgentBuilder(options)
-						 .SkipOtlpExporter()
 						 .WithTracing(tpb => tpb
 							 .ConfigureResource(rb => rb.AddService("Test", "1.0.0"))
 							 .AddSource(activitySourceName)

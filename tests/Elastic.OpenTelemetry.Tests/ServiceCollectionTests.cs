@@ -24,7 +24,6 @@ public class ServiceCollectionTests(ITestOutputHelper output)
 		host.ConfigureServices(s =>
 		{
 			s.AddOpenTelemetry(options)
-				.SkipOtlpExporter()
 				.WithTracing(tpb => tpb
 					.ConfigureResource(rb => rb.AddService("Test", "1.0.0"))
 					.AddSource(activitySourceName)

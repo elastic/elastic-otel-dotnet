@@ -16,14 +16,6 @@ namespace Elastic.OpenTelemetry;
 public static class OpenTelemetryBuilderExtensions
 {
 	/// <summary> TODO </summary>
-	public static IOpenTelemetryBuilder SkipOtlpExporter(this IOpenTelemetryBuilder builder)
-	{
-		if (builder is not AgentBuilder agentBuilder) return builder;
-
-		return agentBuilder.SkipOtlpExporter();
-	}
-
-	/// <summary> TODO </summary>
 	public static IOpenTelemetryBuilder WithLogger(this IOpenTelemetryBuilder builder, ILogger logger)
 	{
 		if (builder is not AgentBuilder agentBuilder) return builder;
