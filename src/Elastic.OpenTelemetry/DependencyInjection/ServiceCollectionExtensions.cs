@@ -5,6 +5,7 @@
 using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -20,7 +21,7 @@ public static class ServiceCollectionExtensions
 	/// <param name="serviceCollection"></param>
 	/// <returns></returns>
 	public static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection serviceCollection) =>
-		serviceCollection.AddElasticOpenTelemetry(null);
+		serviceCollection.AddElasticOpenTelemetry(logger: null);
 
 	/// <summary>
 	/// TODO
@@ -29,7 +30,24 @@ public static class ServiceCollectionExtensions
 	/// <param name="activitySourceNames"></param>
 	/// <returns></returns>
 	public static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection serviceCollection, params string[]? activitySourceNames) =>
-		new AgentBuilder(logger: null, services: serviceCollection, activitySourceNames ?? []);
+		serviceCollection.AddElasticOpenTelemetry(logger: null, activitySourceNames);
+
+	/// <summary>
+	/// TODO
+	/// </summary>
+	/// <param name="serviceCollection"></param>
+	/// <param name="logger"></param>
+	/// <param name="activitySourceNames"></param>
+	/// <returns></returns>
+	public static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection serviceCollection, ILogger? logger, params string[]? activitySourceNames)
+	{
+        if (serviceCollection.Any(d => d.ServiceType == typeof(IHostedService) && d.ImplementationType == typeof(ElasticOtelDistroService)))
+        {
+			var sp = serviceCollection.BuildServiceProvider();
+			return sp.GetService<AgentBuilder>()!; //already registered as singleton
+		}
+		return new AgentBuilder(logger, services: serviceCollection, activitySourceNames ?? []);
+	}
 
 
 }

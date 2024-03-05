@@ -16,6 +16,24 @@ namespace Elastic.OpenTelemetry;
 /// <summary> TODO </summary>
 public static class OpenTelemetryBuilderExtensions
 {
+	/// <summary> TODO </summary>
+	public static IOpenTelemetryBuilder SkipOtlpExporter(this IOpenTelemetryBuilder builder)
+	{
+		if (builder is not AgentBuilder agentBuilder) return builder;
+
+		return agentBuilder.SkipOtlpExporter();
+	}
+
+	/// <summary> TODO </summary>
+	public static IOpenTelemetryBuilder WithLogger(this IOpenTelemetryBuilder builder, ILogger logger)
+	{
+		if (builder is not AgentBuilder agentBuilder) return builder;
+
+		agentBuilder.Logger.SetAdditionalLogger(logger);
+		return agentBuilder;
+	}
+
+
 	/// <summary>
 	/// Build an instance of <see cref="IAgent"/>.
 	/// </summary>
