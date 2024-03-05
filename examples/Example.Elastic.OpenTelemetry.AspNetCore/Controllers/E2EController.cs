@@ -19,7 +19,7 @@ public class E2EController : Controller
 
 		await Task.Delay(100);
 
-		using var childActivity = activity?.Source.StartActivity("childActivity", ActivityKind.Internal);
+		using var childActivity = activity?.Source.StartActivity(ActivityKind.Internal);
 		await Task.Delay(200);
 
 		return View();
@@ -34,7 +34,7 @@ public class E2EController : Controller
 
 		await Task.Delay(100);
 
-		using var childActivity = activity?.Source.StartActivity("childActivity", ActivityKind.Internal);
+		using var childActivity = activity?.Source.StartActivity(ActivityKind.Internal);
 		await Task.Delay(200);
 
 		throw new Exception("Random failure");

@@ -7,7 +7,6 @@ using Elastic.OpenTelemetry.Diagnostics.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
-using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
@@ -49,29 +48,6 @@ public static class OpenTelemetryBuilderExtensions
 		var log = agentBuilder.Logger;
 
 		log.SetAdditionalLogger(logger);
-
-		var openTelemetry =
-			Microsoft.Extensions.DependencyInjection.OpenTelemetryServicesExtensions.AddOpenTelemetry(agentBuilder.Services);
-
-		openTelemetry
-			.WithTracing(tracing =>
-			{
-				if (!agentBuilder.SkipOtlpRegistration)
-					tracing.AddOtlpExporter(agentBuilder.OtlpExporterName, agentBuilder.OtlpExporterConfiguration);
-				log.LogAgentBuilderBuiltTracerProvider();
-			})
-			.WithMetrics(metrics =>
-			{
-				if (!agentBuilder.SkipOtlpRegistration)
-				{
-					metrics.AddOtlpExporter(agentBuilder.OtlpExporterName, o =>
-					{
-						o.ExportProcessorType = ExportProcessorType.Simple;
-						o.Protocol = OtlpExportProtocol.HttpProtobuf;
-					});
-				}
-				log.LogAgentBuilderBuiltMeterProvider();
-			});
 
 		var sp = serviceProvider ?? agentBuilder.Services.BuildServiceProvider();
 		var tracerProvider = sp.GetService<TracerProvider>()!;

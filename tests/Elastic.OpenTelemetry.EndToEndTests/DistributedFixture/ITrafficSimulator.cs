@@ -20,7 +20,7 @@ public class DefaultTrafficSimulator : ITrafficSimulator
 		{
 			var get = await distributedInfra.AspNetApplication.HttpClient.GetAsync("e2e");
 			get.StatusCode.Should().Be(HttpStatusCode.OK);
-			var response = await get.Content.ReadAsStringAsync();
+			_ = await get.Content.ReadAsStringAsync();
 		}
 	}
 }

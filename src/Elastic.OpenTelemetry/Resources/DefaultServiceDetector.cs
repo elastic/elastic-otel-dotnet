@@ -22,9 +22,7 @@ internal class DefaultServiceDetector : IResourceDetector
         {
             var processName = Process.GetCurrentProcess().ProcessName;
             if (!string.IsNullOrWhiteSpace(processName))
-            {
                 defaultServiceName = $"{defaultServiceName}:{processName}";
-            }
         }
         catch
         {
