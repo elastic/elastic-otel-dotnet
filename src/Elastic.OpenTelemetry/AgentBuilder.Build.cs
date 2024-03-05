@@ -32,8 +32,10 @@ public static class OpenTelemetryBuilderExtensions
 
 		log.SetAdditionalLogger(logger);
 
-		var otelBuilder = agentBuilder.Services.AddOpenTelemetry();
-		otelBuilder
+		var openTelemetry =
+			Microsoft.Extensions.DependencyInjection.OpenTelemetryServicesExtensions.AddOpenTelemetry(agentBuilder.Services);
+
+		openTelemetry
 			.WithTracing(tracing =>
 			{
 				if (!agentBuilder.SkipOtlpRegistration)

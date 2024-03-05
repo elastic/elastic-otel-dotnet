@@ -50,9 +50,12 @@ public class AgentBuilder : IOpenTelemetryBuilder
 		if (services != null)
 			Services.AddHostedService<ElasticOtelDistroService>();
 
-		Services
-			.AddSingleton(this)
-			.AddOpenTelemetry()
+		Services.AddSingleton(this);
+
+		var openTelemetry =
+			Microsoft.Extensions.DependencyInjection.OpenTelemetryServicesExtensions.AddOpenTelemetry(Services);
+
+		openTelemetry
 			.WithTracing(tracing =>
 			{
 				tracing.ConfigureResource(r => r.AddDistroAttributes());
