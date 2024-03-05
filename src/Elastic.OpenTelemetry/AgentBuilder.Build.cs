@@ -67,7 +67,7 @@ internal class EmptyAgent : IAgent
 {
 	public void Dispose() { }
 
-	public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+	public ValueTask DisposeAsync() => default;
 }
 
 internal class ElasticAgent(

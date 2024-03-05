@@ -99,8 +99,7 @@ public class AgentBuilder : IOpenTelemetryBuilder
 	/// </summary>
 	public void ConfigureOtlpExporter(Action<OtlpExporterOptions> configure, string? name = null)
 	{
-		ArgumentNullException.ThrowIfNull(configure);
-		OtlpExporterConfiguration = configure;
+		OtlpExporterConfiguration = configure ?? throw new ArgumentNullException(nameof(configure));
 		OtlpExporterName = name;
 	}
 }

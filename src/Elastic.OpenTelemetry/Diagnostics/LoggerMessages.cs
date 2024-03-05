@@ -37,7 +37,11 @@ internal static partial class LoggerMessages
 
 		logger.LogInformation("Process ID: {ProcessId}", process.Id);
 		logger.LogInformation("Process name: {ProcessName}", process.ProcessName);
+#if NET6_0_OR_GREATER
 		logger.LogInformation("Process path: {ProcessPath}", Environment.ProcessPath);
+#else
+		logger.LogInformation("Process path: {ProcessPath}", "<Unknown>");
+#endif
 
 		logger.LogInformation("Process started: {ProcessStartTime:yyyy-MM-dd HH:mm:ss.fff}", process.StartTime.ToUniversalTime());
 		logger.LogInformation("Machine name: {MachineName}", Environment.MachineName);

@@ -16,8 +16,15 @@ internal sealed partial class LoggingEventListener : EventListener, IAsyncDispos
 	private readonly ILogger _logger;
 	private readonly EventLevel _eventLevel = EventLevel.Informational;
 
-	[GeneratedRegex("^\\d{2}-[a-f0-9]{32}-[a-f0-9]{16}-\\d{2}$")]
+	private const string TraceParentRegularExpressionString = "^\\d{2}-[a-f0-9]{32}-[a-f0-9]{16}-\\d{2}$";
+#if NET8_0_OR_GREATER
+	[GeneratedRegex(TraceParentRegularExpressionString)]
 	private static partial Regex TraceParentRegex();
+#else
+
+	private static Regex _traceParentRegex = new Regex(TraceParentRegularExpressionString);
+	private static Regex TraceParentRegex() => _traceParentRegex;
+#endif
 
 	public LoggingEventListener(ILogger logger)
 	{
@@ -44,7 +51,7 @@ internal sealed partial class LoggingEventListener : EventListener, IAsyncDispos
 	}
 
 	public ValueTask DisposeAsync() =>
-		_logger is IAsyncDisposable d ? d.DisposeAsync() : ValueTask.CompletedTask;
+		_logger is IAsyncDisposable d ? d.DisposeAsync() : default;
 
 
 	protected override void OnEventSourceCreated(EventSource eventSource)
@@ -69,20 +76,20 @@ internal sealed partial class LoggingEventListener : EventListener, IAsyncDispos
 		// to a rented array and Span<char> if required.
 		var builder = StringBuilderCache.Acquire();
 
-		var spanId = CreateLogMessage(eventData, builder);
+#if NETSTANDARD2_0 || NETFRAMEWORK
+		var timestamp = DateTime.UtcNow; //best effort in absense of real event timestamp
+		var osThreadId = 0L;
+#else
+		var timestamp = eventData.TimeStamp;
+		var osThreadId = eventData.OSThreadId;
+#endif
 
-		try
-		{
-			// TODO - We can only get the OS thread ID from the args - Do we send that instead??
-			// As per this issue - https://github.com/dotnet/runtime/issues/13125 - OnEventWritten may be on a different thread
-			// so we can't use the Environment.CurrentManagedThreadId value here.
-			_logger.WriteLogLine(null, -1, eventData.TimeStamp, GetLogLevel(eventData), StringBuilderCache.GetStringAndRelease(builder), spanId);
-		}
-		catch (Exception)
-		{
-			// TODO - We might want to block writing further events if we reach here as it's
-			// likely a file access issue
-		}
+		var spanId = CreateLogMessage(eventData, builder, osThreadId);
+
+		// TODO - We can only get the OS thread ID from the args - Do we send that instead??
+		// As per this issue - https://github.com/dotnet/runtime/issues/13125 - OnEventWritten may be on a different thread
+		// so we can't use the Environment.CurrentManagedThreadId value here.
+		_logger.WriteLogLine(null, -1, timestamp, GetLogLevel(eventData), StringBuilderCache.GetStringAndRelease(builder), spanId);
 
 		static LogLevel GetLogLevel(EventWrittenEventArgs eventData) =>
 			eventData.Level switch
@@ -96,13 +103,13 @@ internal sealed partial class LoggingEventListener : EventListener, IAsyncDispos
 				_ => LogLevel.None
 			};
 
-		static string? CreateLogMessage(EventWrittenEventArgs eventData, StringBuilder builder)
+		static string? CreateLogMessage(EventWrittenEventArgs eventData, StringBuilder builder, long threadId)
 		{
 			string? spanId = null;
 
 			if (eventData.EventSource.Name.StartsWith(OpenTelemetrySdkEventSourceNamePrefix) && eventData.Message is not null)
 			{
-				builder.Append($"OTEL-SDK: [{eventData.OSThreadId}] ");
+				builder.Append($"OTEL-SDK: [{threadId}] ");
 
 				if (eventData.Payload is null)
 				{

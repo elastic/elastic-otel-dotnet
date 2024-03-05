@@ -49,11 +49,9 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 		if (!Directory.Exists(path))
 			Directory.CreateDirectory(path);
 
-		_streamWriter = new StreamWriter(LogFilePath, Encoding.UTF8, new FileStreamOptions
-		{
-			Access = FileAccess.Write,
-			Mode = FileMode.OpenOrCreate,
-		});
+		//StreamWriter.Dispose disposes underlying stream too
+		var stream = new FileStream(LogFilePath, FileMode.OpenOrCreate, FileAccess.Write);
+		_streamWriter = new StreamWriter(stream, Encoding.UTF8);
 
 		WritingTask = Task.Run(async () =>
 		{
@@ -117,7 +115,13 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 			await WritingTask.ConfigureAwait(false);
 
 		if (_streamWriter != null)
+		{
+#if NETSTANDARD2_0 || NETFRAMEWORK
+			_streamWriter.Dispose();
+#else
 			await _streamWriter.DisposeAsync().ConfigureAwait(false);
+#endif
+		}
 	}
 
 }
