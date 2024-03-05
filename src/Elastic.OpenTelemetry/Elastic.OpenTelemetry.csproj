@@ -2,26 +2,30 @@
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFrameworks>netstandard2.0;net8.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>True</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="OpenTelemetry" Version="1.7.0" />
-    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.7.0" />
-    
-    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.7.0" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.7.0" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.GrpcNetClient" Version="1.6.0-beta.3" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.0.0-beta.9" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.7.0" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.Process" Version="0.5.0-beta.4" />
+    <PackageReference Include="OpenTelemetry" Version="1.7.0"/>
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.7.0"/>
+
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.7.0"/>
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.7.0"/>
+    <PackageReference Include="OpenTelemetry.Instrumentation.GrpcNetClient" Version="1.6.0-beta.3"/>
+    <PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.0.0-beta.9"/>
+    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.7.0"/>
+    <PackageReference Include="OpenTelemetry.Instrumentation.Process" Version="0.5.0-beta.4"/>
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)'=='netstandard2.0'">
+    <PackageReference Include="System.Threading.Channels" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="Elastic.OpenTelemetry.Tests" Key="$(ExposedPublicKey)" />
+    <InternalsVisibleTo Include="Elastic.OpenTelemetry.Tests" Key="$(ExposedPublicKey)"/>
   </ItemGroup>
-  
+
 </Project>
