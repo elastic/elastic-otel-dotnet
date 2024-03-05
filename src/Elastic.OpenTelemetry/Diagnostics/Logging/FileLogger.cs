@@ -116,7 +116,7 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 
 		if (_streamWriter != null)
 		{
-#if NETSTANDARD2_0
+#if NETSTANDARD2_0 || NETFRAMEWORK
 			_streamWriter.Dispose();
 #else
 			await _streamWriter.DisposeAsync().ConfigureAwait(false);

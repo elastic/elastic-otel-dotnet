@@ -76,14 +76,13 @@ internal sealed partial class LoggingEventListener : EventListener, IAsyncDispos
 		// to a rented array and Span<char> if required.
 		var builder = StringBuilderCache.Acquire();
 
-#if NETSTANDARD2_0
+#if NETSTANDARD2_0 || NETFRAMEWORK
 		var timestamp = DateTime.UtcNow; //best effort in absense of real event timestamp
 		var osThreadId = 0L;
 #else
 		var timestamp = eventData.TimeStamp;
 		var osThreadId = eventData.OSThreadId;
 #endif
-
 
 		var spanId = CreateLogMessage(eventData, builder, osThreadId);
 
