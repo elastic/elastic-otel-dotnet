@@ -16,13 +16,13 @@ internal sealed partial class LoggingEventListener : EventListener, IAsyncDispos
 	private readonly ILogger _logger;
 	private readonly EventLevel _eventLevel = EventLevel.Informational;
 
-	private const string TraceParentRe = "^\\d{2}-[a-f0-9]{32}-[a-f0-9]{16}-\\d{2}$";
+	private const string TraceParentRegularExpressionString = "^\\d{2}-[a-f0-9]{32}-[a-f0-9]{16}-\\d{2}$";
 #if NET8_0_OR_GREATER
-	[GeneratedRegex(TraceParentRe)]
+	[GeneratedRegex(TraceParentRegularExpressionString)]
 	private static partial Regex TraceParentRegex();
 #else
 
-	private static Regex _traceParentRegex = new Regex(TraceParentRe);
+	private static Regex _traceParentRegex = new Regex(TraceParentRegularExpressionString);
 	private static Regex TraceParentRegex() => _traceParentRegex;
 #endif
 
