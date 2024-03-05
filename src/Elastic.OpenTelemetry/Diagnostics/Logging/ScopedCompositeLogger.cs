@@ -20,7 +20,7 @@ public sealed class ScopedCompositeLogger<T>(ILogger? additionalLogger, ILogger 
 	}
 
 	/// <summary> TODO </summary>
-	public ValueTask DisposeAsync() => additionalLogger is IAsyncDisposable d ? d.DisposeAsync() : ValueTask.CompletedTask;
+	public ValueTask DisposeAsync() => additionalLogger is IAsyncDisposable d ? d.DisposeAsync() : default;
 
 	/// <summary> TODO </summary>
 	public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
