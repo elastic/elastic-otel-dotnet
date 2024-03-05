@@ -2,6 +2,7 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using System.Net.Sockets;
 using OpenTelemetry;
 using Xunit.Abstractions;
 
@@ -12,8 +13,8 @@ public class LoggingTests(ITestOutputHelper output)
 	[Fact]
 	public async Task ObserveLogging()
 	{
-		var options = new AgentBuilderOptions { Logger = new TestLogger(output), SkipOtlpExporter = true };
 		var logger = new TestLogger(output);
+		var options = new AgentBuilderOptions { Logger = logger, SkipOtlpExporter = true };
 		const string activitySourceName = nameof(ObserveLogging);
 
 		var activitySource = new ActivitySource(activitySourceName, "1.0.0");
