@@ -17,7 +17,7 @@ internal sealed partial class LoggingEventListener : EventListener, IAsyncDispos
 	private readonly EventLevel _eventLevel = EventLevel.Informational;
 
 	private const string TraceParentRe = "^\\d{2}-[a-f0-9]{32}-[a-f0-9]{16}-\\d{2}$";
-#if NET6_0_OR_GREATER
+#if NET8_0_OR_GREATER
 	[GeneratedRegex(TraceParentRe)]
 	private static partial Regex TraceParentRegex();
 #else
