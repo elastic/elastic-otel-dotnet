@@ -11,15 +11,27 @@ internal sealed class AgentCompositeLogger(ILogger? additionalLogger) : IDisposa
 {
 	public FileLogger FileLogger { get; } = new();
 
-	/// <summary> TODO </summary>
-	public void Dispose() => FileLogger.Dispose();
+	private bool _isDisposed;
 
 	/// <summary> TODO </summary>
-	public ValueTask DisposeAsync() => FileLogger.DisposeAsync();
+	public void Dispose()
+	{
+		_isDisposed = true;
+		FileLogger.Dispose();
+	}
+
+	/// <summary> TODO </summary>
+	public ValueTask DisposeAsync()
+	{
+		_isDisposed = true;
+		return FileLogger.DisposeAsync();
+	}
 
 	/// <summary> TODO </summary>
 	public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
 	{
+		if (_isDisposed) return;
+
 		if (FileLogger.IsEnabled(logLevel))
 			FileLogger.Log(logLevel, eventId, state, exception, formatter);
 
