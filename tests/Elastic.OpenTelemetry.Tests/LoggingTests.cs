@@ -5,6 +5,7 @@
 using System.Collections.ObjectModel;
 using Elastic.OpenTelemetry.Diagnostics.Logging;
 using Microsoft.Extensions.Logging;
+using OpenTelemetry;
 using Xunit.Abstractions;
 
 namespace Elastic.OpenTelemetry.Tests;
@@ -48,10 +49,11 @@ public class LoggingTests(ITestOutputHelper output)
 
 		await using (new AgentBuilder(logger)
 						 .SkipOtlpExporter()
-						 .ConfigureTracer(tpb => tpb
+						 .WithTracing(tpb => tpb
 							 .ConfigureResource(rb => rb.AddService("Test", "1.0.0"))
 							 .AddSource(activitySourceName)
-							 .AddInMemoryExporter(new List<Activity>()))
+							 .AddInMemoryExporter(new List<Activity>())
+						 )
 						 .Build())
 		{
 			using (var activity = activitySource.StartActivity("DoingStuff", ActivityKind.Internal))

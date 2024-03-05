@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information
 using Elastic.OpenTelemetry;
 using Elastic.OpenTelemetry.AspNetCore;
+using OpenTelemetry;
 using OpenTelemetry.Trace;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -17,8 +18,8 @@ public static class ServiceCollectionExtensions
 	/// </summary>
 	/// <param name="serviceCollection">TODO</param>
 	/// <returns>TODO</returns>
-	public static IServiceCollection AddElasticOpenTelemetryForAspNetCore(this IServiceCollection serviceCollection) =>
-		new AgentBuilder().AddAspNetCore().Register(serviceCollection);
+	public static IOpenTelemetryBuilder AddElasticOpenTelemetryForAspNetCore(this IServiceCollection serviceCollection) =>
+		new AgentBuilder(services: serviceCollection).AddAspNetCore();
 
 	/// <summary>
 	/// TODO
@@ -26,15 +27,6 @@ public static class ServiceCollectionExtensions
 	/// <param name="serviceCollection"></param>
 	/// <param name="activitySourceNames"></param>
 	/// <returns></returns>
-	public static IServiceCollection AddElasticOpenTelemetryForAspNetCore(this IServiceCollection serviceCollection, params string[] activitySourceNames) =>
-		new AgentBuilder(activitySourceNames).AddAspNetCore().Register(serviceCollection);
-
-	/// <summary>
-	/// TODO
-	/// </summary>
-	/// <param name="serviceCollection"></param>
-	/// <param name="configureTracerProvider"></param>
-	/// <returns></returns>
-	public static IServiceCollection AddElasticOpenTelemetryForAspNetCore(this IServiceCollection serviceCollection, Action<TracerProviderBuilder> configureTracerProvider) =>
-		new AgentBuilder().AddAspNetCore().ConfigureTracer(configureTracerProvider).Register(serviceCollection);
+	public static IOpenTelemetryBuilder AddElasticOpenTelemetryForAspNetCore(this IServiceCollection serviceCollection, params string[] activitySourceNames) =>
+		new AgentBuilder(null, serviceCollection, activitySourceNames).AddAspNetCore();
 }

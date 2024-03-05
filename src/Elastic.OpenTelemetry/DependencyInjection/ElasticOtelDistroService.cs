@@ -16,7 +16,7 @@ namespace Elastic.OpenTelemetry
 			var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
 			var logger = loggerFactory?.CreateLogger($"{nameof(Elastic)}.{nameof(OpenTelemetry)}");
 
-			_agent = serviceProvider.GetRequiredService<AgentBuilder>().Build(logger);
+			_agent = serviceProvider.GetRequiredService<AgentBuilder>().Build(logger, serviceProvider);
 
 			//logger.LogInformation("Initialising Agent.Current.");
 			//Agent.SetAgent(_agent, logger);

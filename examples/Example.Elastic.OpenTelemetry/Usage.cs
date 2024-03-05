@@ -23,34 +23,36 @@ internal static class Usage
 		// Build an agent by creating and using an agent builder, adding a single source (for traces and metrics) defined in this sample application.
 		await using var agent = new AgentBuilder(ActivitySourceName).Build();
 
-		// Build an agent by creating and using an agent builder, adding a single source for the app just to the tracer.
-		//using var agent = new AgentBuilder().AddTracerSource(ActivitySourceName).Build();
-
 		// This example adds the application activity source and fully customises the resource
-		//using var agent = new AgentBuilder(ActivitySourceName)
-		//	.ConfigureTracer(b => b.Clear().AddService("CustomServiceName", serviceVersion: "2.2.2"))
-		//	.Build();
+		await using var agent3 = new AgentBuilder(ActivitySourceName)
+			.WithTracing(b => b.ConfigureResource(r => r.Clear().AddService("CustomServiceName", serviceVersion: "2.2.2")))
+			.Build();
 
-		//using var agent = new AgentBuilder()
-		//	.AddTracerSource(ActivitySourceName) // Intentionally duplicating to test the effect
-		//	.ConfigureTracer(tpb => tpb
-		//		.ConfigureResource(rb => rb.AddService("TracerProviderBuilder", "3.3.3"))
-		//		.AddRedisInstrumentation() // This can currently only be achieved using this overload or adding Elastic processors to the TPB (as below)
-		//		.AddSource(ActivitySourceName)
-		//		.AddConsoleExporter())
-		//	.Build();
+		await using var agent4 = new AgentBuilder()
+			.WithTracing(t => t
+				.ConfigureResource(rb => rb.AddService("TracerProviderBuilder", "3.3.3"))
+				.AddRedisInstrumentation() // This can currently only be achieved using this overload or adding Elastic processors to the TPB (as below)
+				.AddSource(ActivitySourceName)
+				.AddConsoleExporter()
+			)
+			.WithTracing(tpb => tpb
+				.ConfigureResource(rb => rb.AddService("TracerProviderBuilder", "3.3.3"))
+				.AddRedisInstrumentation() // This can currently only be achieved using this overload or adding Elastic processors to the TPB (as below)
+				.AddSource(ActivitySourceName)
+				.AddConsoleExporter())
+			.Build();
 
 		//This is the most flexible approach for a consumer as they can include our processor(s) and exporter(s)
-		//using var tracerProvider = Sdk.CreateTracerProviderBuilder()
-		//	.AddSource(ActivitySourceName)
-		//	.ConfigureResource(resource =>
-		//		resource.AddService(
-		//		  serviceName: "OtelSdkApp",
-		//		  serviceVersion: "1.0.0"))
-		//	.AddConsoleExporter()
-		//	.AddElasticProcessors()
-		//	.AddElasticOtlpExporter()
-		//	.Build();
+		using var tracerProvider = Sdk.CreateTracerProviderBuilder()
+			.AddSource(ActivitySourceName)
+			.ConfigureResource(resource =>
+				resource.AddService(
+				  serviceName: "OtelSdkApp",
+				  serviceVersion: "1.0.0"))
+			.AddConsoleExporter()
+			.AddElasticProcessors()
+			//.AddElasticOtlpExporter()
+			.Build();
 
 		await DoStuffAsync();
 
