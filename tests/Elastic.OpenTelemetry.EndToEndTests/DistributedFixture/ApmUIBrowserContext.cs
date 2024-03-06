@@ -29,6 +29,7 @@ public class ApmUIBrowserContext : IAsyncLifetime
 	public IBrowser Browser { get; private set; } = null!;
 	public IPlaywright HeadlessTester { get; private set; } = null!;
 
+	private static string _bootstrapTraceName = "test_bootstrap";
 	public async Task InitializeAsync()
 	{
 		var username = _configuration["E2E:BrowserEmail"]?.Trim() ?? string.Empty;
@@ -36,7 +37,7 @@ public class ApmUIBrowserContext : IAsyncLifetime
 		Program.Main(["install", "chromium"]);
 		HeadlessTester = await Playwright.CreateAsync();
 		Browser = await HeadlessTester.Chromium.LaunchAsync();
-		var page = await OpenApmLandingPage("test_bootstrap");
+		var page = await OpenApmLandingPage(_bootstrapTraceName);
 		try
 		{
 			await page.GetByRole(AriaRole.Textbox, new() { Name = "email" }).FillAsync(username);
@@ -51,7 +52,7 @@ public class ApmUIBrowserContext : IAsyncLifetime
 		}
 		catch (Exception e)
 		{
-			await StopTrace(page, "test_bootstrap");
+			await StopTrace(page, _bootstrapTraceName);
 			Console.WriteLine(e);
 			throw;
 		}
@@ -68,7 +69,7 @@ public class ApmUIBrowserContext : IAsyncLifetime
 			Title = testName,
 			Screenshots = true,
 			Snapshots = true,
-			Sources = true
+			Sources = false
 		});
 
 		return page;
@@ -118,8 +119,11 @@ public class ApmUIBrowserContext : IAsyncLifetime
 
 	public async Task StopTrace(IPage page, string? testName = null)
 	{
-
+		//only dump trace zip of test name is provided.
 		if (string.IsNullOrWhiteSpace(testName))
+			await page.Context.Tracing.StopAsync(new());
+		//never dump bootstrap failures on CI since these might leak credentials
+		else if (testName == _bootstrapTraceName && !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("CI")))
 			await page.Context.Tracing.StopAsync(new());
 		else
 		{
