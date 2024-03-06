@@ -34,7 +34,8 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 		_scopeProvider = new LoggerExternalScopeProvider();
 		var process = Process.GetCurrentProcess();
 
-		if (!FileLoggingEnabled) return;
+		if (!FileLoggingEnabled)
+			return;
 
 		var configuredPath = Environment.GetEnvironmentVariable(EnvironmentVariables.ElasticOtelLogDirectoryEnvironmentVariable);
 
@@ -56,8 +57,8 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 		WritingTask = Task.Run(async () =>
 		{
 			while (await _channel.Reader.WaitToReadAsync().ConfigureAwait(false) && !_disposing)
-			while (_channel.Reader.TryRead(out var logLine) && !_disposing)
-				await _streamWriter.WriteLineAsync(logLine).ConfigureAwait(false);
+				while (_channel.Reader.TryRead(out var logLine) && !_disposing)
+					await _streamWriter.WriteLineAsync(logLine).ConfigureAwait(false);
 
 			_syncDisposeWaitHandle.Set();
 		});
@@ -114,14 +115,7 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 		if (WritingTask != null)
 			await WritingTask.ConfigureAwait(false);
 
-		if (_streamWriter != null)
-		{
-#if NETSTANDARD2_0 || NETFRAMEWORK
-			_streamWriter.Dispose();
-#else
-			await _streamWriter.DisposeAsync().ConfigureAwait(false);
-#endif
-		}
+		_streamWriter?.Dispose();
 	}
 
 }

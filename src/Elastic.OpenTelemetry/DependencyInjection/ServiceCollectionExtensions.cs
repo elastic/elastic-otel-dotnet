@@ -40,8 +40,8 @@ public static class ServiceCollectionExtensions
 	/// <returns></returns>
 	public static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection serviceCollection, AgentBuilderOptions options)
 	{
-        if (serviceCollection.Any(d => d.ServiceType == typeof(IHostedService) && d.ImplementationType == typeof(ElasticOtelDistroService)))
-        {
+		if (serviceCollection.Any(d => d.ServiceType == typeof(IHostedService) && d.ImplementationType == typeof(ElasticOtelDistroService)))
+		{
 			var sp = serviceCollection.BuildServiceProvider();
 			return sp.GetService<AgentBuilder>()!; //already registered as singleton
 		}

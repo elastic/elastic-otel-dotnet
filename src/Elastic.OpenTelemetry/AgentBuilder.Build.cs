@@ -18,7 +18,8 @@ public static class OpenTelemetryBuilderExtensions
 	/// <summary> TODO </summary>
 	public static IOpenTelemetryBuilder WithLogger(this IOpenTelemetryBuilder builder, ILogger logger)
 	{
-		if (builder is not AgentBuilder agentBuilder) return builder;
+		if (builder is not AgentBuilder agentBuilder)
+			return builder;
 
 		agentBuilder.Logger.SetAdditionalLogger(logger);
 		return agentBuilder;

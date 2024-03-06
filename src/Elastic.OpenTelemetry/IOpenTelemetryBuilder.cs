@@ -36,64 +36,64 @@ public interface IOpenTelemetryBuilder
 /// </summary>
 public static class OpenTelemetryBuilderSdkExtensions
 {
-    /// <summary>
-    /// Registers an action to configure the <see cref="ResourceBuilder"/>s used
-    /// by tracing, metrics, and logging.
-    /// </summary>
-    /// <param name="builder"><see cref="IOpenTelemetryBuilder"/>.</param>
-    /// <remarks>
-    /// Note: This is safe to be called multiple times and by library authors.
-    /// Each registered configuration action will be applied sequentially.
-    /// </remarks>
-    /// <param name="configure"><see cref="ResourceBuilder"/> configuration
-    /// action.</param>
-    /// <returns>The supplied <see cref="IOpenTelemetryBuilder"/> for chaining
-    /// calls.</returns>
-    public static IOpenTelemetryBuilder ConfigureResource(
-        this IOpenTelemetryBuilder builder,
-        Action<ResourceBuilder> configure)
-    {
-        builder.Services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.ConfigureResource(configure));
+	/// <summary>
+	/// Registers an action to configure the <see cref="ResourceBuilder"/>s used
+	/// by tracing, metrics, and logging.
+	/// </summary>
+	/// <param name="builder"><see cref="IOpenTelemetryBuilder"/>.</param>
+	/// <remarks>
+	/// Note: This is safe to be called multiple times and by library authors.
+	/// Each registered configuration action will be applied sequentially.
+	/// </remarks>
+	/// <param name="configure"><see cref="ResourceBuilder"/> configuration
+	/// action.</param>
+	/// <returns>The supplied <see cref="IOpenTelemetryBuilder"/> for chaining
+	/// calls.</returns>
+	public static IOpenTelemetryBuilder ConfigureResource(
+		this IOpenTelemetryBuilder builder,
+		Action<ResourceBuilder> configure)
+	{
+		builder.Services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.ConfigureResource(configure));
 
-        builder.Services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.ConfigureResource(configure));
+		builder.Services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.ConfigureResource(configure));
 
-        //builder.Services.ConfigureOpenTelemetryLoggerProvider(builder => builder.ConfigureResource(configure));
+		//builder.Services.ConfigureOpenTelemetryLoggerProvider(builder => builder.ConfigureResource(configure));
 
-        return builder;
-    }
+		return builder;
+	}
 
-    /// <summary>
-    /// Adds metric services into the builder.
-    /// </summary>
-    /// <param name="builder"><see cref="IOpenTelemetryBuilder"/>.</param>
-    /// <remarks>
-    /// Notes:
-    /// <list type="bullet">
-    /// <item>This is safe to be called multiple times and by library authors.
-    /// Only a single <see cref="MeterProvider"/> will be created for a given
-    /// <see cref="IServiceCollection"/>.</item>
-    /// <item>This method automatically registers an <see
-    /// cref="IMetricsListener"/> named 'OpenTelemetry' into the <see
-    /// cref="IServiceCollection"/>.</item>
-    /// </list>
-    /// </remarks>
-    /// <returns>The supplied <see cref="IOpenTelemetryBuilder"/> for chaining
-    /// calls.</returns>
-    public static IOpenTelemetryBuilder WithMetrics(this IOpenTelemetryBuilder builder)
-        => WithMetrics(builder, _ => { });
+	/// <summary>
+	/// Adds metric services into the builder.
+	/// </summary>
+	/// <param name="builder"><see cref="IOpenTelemetryBuilder"/>.</param>
+	/// <remarks>
+	/// Notes:
+	/// <list type="bullet">
+	/// <item>This is safe to be called multiple times and by library authors.
+	/// Only a single <see cref="MeterProvider"/> will be created for a given
+	/// <see cref="IServiceCollection"/>.</item>
+	/// <item>This method automatically registers an <see
+	/// cref="IMetricsListener"/> named 'OpenTelemetry' into the <see
+	/// cref="IServiceCollection"/>.</item>
+	/// </list>
+	/// </remarks>
+	/// <returns>The supplied <see cref="IOpenTelemetryBuilder"/> for chaining
+	/// calls.</returns>
+	public static IOpenTelemetryBuilder WithMetrics(this IOpenTelemetryBuilder builder)
+		=> WithMetrics(builder, _ => { });
 
-    /// <summary>
-    /// Adds metric services into the builder.
-    /// </summary>
-    /// <remarks><inheritdoc cref="WithMetrics(IOpenTelemetryBuilder)" path="/remarks"/></remarks>
-    /// <param name="builder"><see cref="IOpenTelemetryBuilder"/>.</param>
-    /// <param name="configure"><see cref="MeterProviderBuilder"/>
-    /// configuration callback.</param>
-    /// <returns>The supplied <see cref="IOpenTelemetryBuilder"/> for chaining
-    /// calls.</returns>
-    public static IOpenTelemetryBuilder WithMetrics(
-        this IOpenTelemetryBuilder builder,
-        Action<MeterProviderBuilder> configure)
+	/// <summary>
+	/// Adds metric services into the builder.
+	/// </summary>
+	/// <remarks><inheritdoc cref="WithMetrics(IOpenTelemetryBuilder)" path="/remarks"/></remarks>
+	/// <param name="builder"><see cref="IOpenTelemetryBuilder"/>.</param>
+	/// <param name="configure"><see cref="MeterProviderBuilder"/>
+	/// configuration callback.</param>
+	/// <returns>The supplied <see cref="IOpenTelemetryBuilder"/> for chaining
+	/// calls.</returns>
+	public static IOpenTelemetryBuilder WithMetrics(
+		this IOpenTelemetryBuilder builder,
+		Action<MeterProviderBuilder> configure)
 	{
 		//internal temporary hack while we wait for IOpenTelemetryBuilder to ship
 		//TODO cache
@@ -110,34 +110,34 @@ public static class OpenTelemetryBuilderSdkExtensions
 
         return builder;
         */
-    }
+	}
 
-    /// <summary>
-    /// Adds tracing services into the builder.
-    /// </summary>
-    /// <param name="builder"><see cref="IOpenTelemetryBuilder"/>.</param>
-    /// <remarks>
-    /// Note: This is safe to be called multiple times and by library authors.
-    /// Only a single <see cref="TracerProvider"/> will be created for a given
-    /// <see cref="IServiceCollection"/>.
-    /// </remarks>
-    /// <returns>The supplied <see cref="IOpenTelemetryBuilder"/> for chaining
-    /// calls.</returns>
-    public static IOpenTelemetryBuilder WithTracing(this IOpenTelemetryBuilder builder)
-        => WithTracing(builder, _ => { });
+	/// <summary>
+	/// Adds tracing services into the builder.
+	/// </summary>
+	/// <param name="builder"><see cref="IOpenTelemetryBuilder"/>.</param>
+	/// <remarks>
+	/// Note: This is safe to be called multiple times and by library authors.
+	/// Only a single <see cref="TracerProvider"/> will be created for a given
+	/// <see cref="IServiceCollection"/>.
+	/// </remarks>
+	/// <returns>The supplied <see cref="IOpenTelemetryBuilder"/> for chaining
+	/// calls.</returns>
+	public static IOpenTelemetryBuilder WithTracing(this IOpenTelemetryBuilder builder)
+		=> WithTracing(builder, _ => { });
 
-    /// <summary>
-    /// Adds tracing services into the builder.
-    /// </summary>
-    /// <remarks><inheritdoc cref="WithTracing(IOpenTelemetryBuilder)" path="/remarks"/></remarks>
-    /// <param name="builder"><see cref="IOpenTelemetryBuilder"/>.</param>
-    /// <param name="configure"><see cref="TracerProviderBuilder"/>
-    /// configuration callback.</param>
-    /// <returns>The supplied <see cref="IOpenTelemetryBuilder"/> for chaining
-    /// calls.</returns>
-    public static IOpenTelemetryBuilder WithTracing(
-        this IOpenTelemetryBuilder builder,
-        Action<TracerProviderBuilder> configure)
+	/// <summary>
+	/// Adds tracing services into the builder.
+	/// </summary>
+	/// <remarks><inheritdoc cref="WithTracing(IOpenTelemetryBuilder)" path="/remarks"/></remarks>
+	/// <param name="builder"><see cref="IOpenTelemetryBuilder"/>.</param>
+	/// <param name="configure"><see cref="TracerProviderBuilder"/>
+	/// configuration callback.</param>
+	/// <returns>The supplied <see cref="IOpenTelemetryBuilder"/> for chaining
+	/// calls.</returns>
+	public static IOpenTelemetryBuilder WithTracing(
+		this IOpenTelemetryBuilder builder,
+		Action<TracerProviderBuilder> configure)
 	{
 
 		//internal temporary hack while we wait for IOpenTelemetryBuilder to ship
@@ -149,11 +149,11 @@ public static class OpenTelemetryBuilderSdkExtensions
 		var lambda = Expression.Lambda<Func<IServiceCollection, TracerProviderBuilder>>(body, value);
 		var tracerProviderBuilder = lambda.Compile()(builder.Services);
 
-        //var tracerProviderBuilder = new TracerProviderBuilderBase(builder.Services);
+		//var tracerProviderBuilder = new TracerProviderBuilderBase(builder.Services);
 
-        configure(tracerProviderBuilder);
+		configure(tracerProviderBuilder);
 
-        return builder;
-    }
+		return builder;
+	}
 
 }

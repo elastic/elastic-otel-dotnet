@@ -48,7 +48,7 @@ public record AgentBuilderOptions
 	public bool SkipOtlpExporter { get; init; }
 
 	/// <summary>
-    /// Optional name which is used when retrieving OTLP options.
+	/// Optional name which is used when retrieving OTLP options.
 	/// </summary>
 	public string? OtlpExporterName { get; init; }
 }
@@ -68,7 +68,8 @@ public class AgentBuilder : IOpenTelemetryBuilder
 	public AgentBuilder(params string[] activitySourceNames) : this(new AgentBuilderOptions
 	{
 		ActivitySources = activitySourceNames
-	}) { }
+	})
+	{ }
 
 	/// <summary> TODO </summary>
 	public AgentBuilder(AgentBuilderOptions options)

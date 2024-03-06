@@ -1,70 +1,69 @@
 // Licensed to Elasticsearch B.V under one or more agreements.
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
-using Elastic.OpenTelemetry.Extensions;
-
-using OpenTelemetry;
-
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Elastic.OpenTelemetry.Extensions;
+using OpenTelemetry;
 
 namespace Elastic.OpenTelemetry.Processors;
 
 /// <summary> A processor that can mark spans as compressed/composite </summary>
 public class SpanCompressionProcessor : BaseProcessor<Activity>
 {
-    private readonly ConditionalWeakTable<Activity, Activity> _compressionBuffer = new();
+	private readonly ConditionalWeakTable<Activity, Activity> _compressionBuffer = new();
 
 	/// <inheritdoc cref="OnStart"/>
-    public override void OnStart(Activity data)
-    {
-        if (data.DisplayName == "ChildSpanCompression")
-            data.SetCustomProperty("IsExitSpan", true); // Later, we'll have to infer this from the Activity Source and Name (if practical)
+	public override void OnStart(Activity data)
+	{
+		if (data.DisplayName == "ChildSpanCompression")
+			data.SetCustomProperty("IsExitSpan", true); // Later, we'll have to infer this from the Activity Source and Name (if practical)
 
-        base.OnStart(data);
-    }
+		base.OnStart(data);
+	}
 
 	/// <inheritdoc cref="OnStart"/>
-    public override void OnEnd(Activity data)
-    {
-        if (data.Parent is null)
-        {
-            base.OnEnd(data);
-            return;
-        }
+	public override void OnEnd(Activity data)
+	{
+		if (data.Parent is null)
+		{
+			base.OnEnd(data);
+			return;
+		}
 
-        var property = data.GetCustomProperty("IsExitSpan");
+		var property = data.GetCustomProperty("IsExitSpan");
 
-        if (!IsCompressionEligible(data, property) || data.Parent!.IsStopped)
-        {
-            FlushBuffer(data.Parent!);
-            base.OnEnd(data);
-            return;
-        }
+		if (!IsCompressionEligible(data, property) || data.Parent!.IsStopped)
+		{
+			FlushBuffer(data.Parent!);
+			base.OnEnd(data);
+			return;
+		}
 
-        if (_compressionBuffer.TryGetValue(data.Parent!, out var compressionBuffer))
-        {
-            if (!compressionBuffer.TryCompress(data))
-            {
-                FlushBuffer(data.Parent!);
-                _compressionBuffer.Add(data.Parent!, data);
-            }
-        }
-        else
-        {
-            _compressionBuffer.Add(data.Parent!, data);
-            data.ActivityTraceFlags &= ~ActivityTraceFlags.Recorded;
-        }
+		if (_compressionBuffer.TryGetValue(data.Parent!, out var compressionBuffer))
+		{
+			if (!compressionBuffer.TryCompress(data))
+			{
+				FlushBuffer(data.Parent!);
+				_compressionBuffer.Add(data.Parent!, data);
+			}
+		}
+		else
+		{
+			_compressionBuffer.Add(data.Parent!, data);
+			data.ActivityTraceFlags &= ~ActivityTraceFlags.Recorded;
+		}
 
-        base.OnEnd(data);
+		base.OnEnd(data);
 
-        static bool IsCompressionEligible(Activity data, object? property) =>
-            property is true && data.Status is ActivityStatusCode.Ok or ActivityStatusCode.Unset;
+		static bool IsCompressionEligible(Activity data, object? property) =>
+			property is true && data.Status is ActivityStatusCode.Ok or ActivityStatusCode.Unset;
 	}
 
 	private void FlushBuffer(Activity data)
 	{
-		if (!_compressionBuffer.TryGetValue(data, out var compressionBuffer)) return;
+		if (!_compressionBuffer.TryGetValue(data, out var compressionBuffer))
+			return;
 
 		// This recreates the initial activity now we know it's final end time and can record it.
 		using var activity = compressionBuffer.Source.StartActivity(compressionBuffer.DisplayName, compressionBuffer.Kind, compressionBuffer.Parent!.Context,

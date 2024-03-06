@@ -30,12 +30,14 @@ internal sealed class AgentCompositeLogger(ILogger? additionalLogger) : IDisposa
 	/// <summary> TODO </summary>
 	public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
 	{
-		if (_isDisposed) return;
+		if (_isDisposed)
+			return;
 
 		if (FileLogger.IsEnabled(logLevel))
 			FileLogger.Log(logLevel, eventId, state, exception, formatter);
 
-		if (additionalLogger == null) return;
+		if (additionalLogger == null)
+			return;
 
 		if (additionalLogger.IsEnabled(logLevel))
 			additionalLogger.Log(logLevel, eventId, state, exception, formatter);
@@ -58,7 +60,7 @@ internal sealed class AgentCompositeLogger(ILogger? additionalLogger) : IDisposa
 	{
 		public void Dispose()
 		{
-			foreach(var disposable in disposables)
+			foreach (var disposable in disposables)
 				disposable?.Dispose();
 		}
 	}
