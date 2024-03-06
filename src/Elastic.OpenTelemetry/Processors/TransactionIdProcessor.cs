@@ -26,7 +26,8 @@ public class TransactionIdProcessor(ILogger logger) : BaseProcessor<Activity>
 		if (activity.Parent == null)
 			_currentTransactionId.Value = activity.SpanId;
 
-		if (!_currentTransactionId.Value.HasValue) return;
+		if (!_currentTransactionId.Value.HasValue)
+			return;
 
 		activity.SetTag(TransactionIdTagName, _currentTransactionId.Value.Value.ToString());
 		logger.TransactionIdProcessorTagAdded();

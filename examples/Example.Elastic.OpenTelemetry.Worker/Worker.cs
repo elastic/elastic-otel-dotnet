@@ -24,7 +24,7 @@ public class Worker(ILogger<Worker> logger) : BackgroundService
 		using (var activity = ActivitySource.StartActivity("DoingStuff", ActivityKind.Internal))
 		{
 			activity?.SetTag("CustomTag", "TagValue");
-			
+
 			if (Counter.Enabled)
 				Counter.Add(1);
 

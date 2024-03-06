@@ -11,7 +11,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services
 	.AddHttpClient()
 	.AddOpenTelemetry()
-		.WithTracing(t=>t.AddAspNetCoreInstrumentation());
+		.WithTracing(t => t.AddAspNetCoreInstrumentation());
 
 builder.Services
 	.AddControllersWithViews();

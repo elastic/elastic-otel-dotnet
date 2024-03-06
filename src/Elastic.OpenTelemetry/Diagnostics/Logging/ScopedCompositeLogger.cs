@@ -28,7 +28,8 @@ public sealed class ScopedCompositeLogger<T>(ILogger? additionalLogger, ILogger 
 		if (fileLogger.IsEnabled(logLevel))
 			fileLogger.Log(logLevel, eventId, state, exception, formatter);
 
-		if (additionalLogger == null) return;
+		if (additionalLogger == null)
+			return;
 
 		if (additionalLogger.IsEnabled(logLevel))
 			additionalLogger.Log(logLevel, eventId, state, exception, formatter);
@@ -45,7 +46,7 @@ public sealed class ScopedCompositeLogger<T>(ILogger? additionalLogger, ILogger 
 	{
 		public void Dispose()
 		{
-			foreach(var disposable in disposables)
+			foreach (var disposable in disposables)
 				disposable?.Dispose();
 		}
 	}

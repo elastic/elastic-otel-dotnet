@@ -54,7 +54,7 @@ public abstract class DotNetRunApplication
 		var arguments = new[] { "run", "--project", project };
 		var applicationArguments = GetArguments();
 		if (applicationArguments.Length > 0)
-			arguments = [..arguments, "--", ..applicationArguments];
+			arguments = [.. arguments, "--", .. applicationArguments];
 
 		return new("dotnet", arguments)
 		{
@@ -71,7 +71,8 @@ public abstract class DotNetRunApplication
 			StartedConfirmationHandler = l =>
 			{
 				//Grab actual process id to send SIGINT to.
-				if (l.Line == null) return false;
+				if (l.Line == null)
+					return false;
 				var processIdMatch = ProcessIdMatch.Match(l.Line);
 				if (processIdMatch.Success)
 					ProcessId = int.Parse(processIdMatch.Groups["processid"].Value);

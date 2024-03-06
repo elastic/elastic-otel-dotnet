@@ -10,15 +10,15 @@ namespace Elastic.OpenTelemetry.Tests;
 
 public class ServiceCollectionTests(ITestOutputHelper output)
 {
-    [Fact]
-    public async Task ServiceCollectionAddIsSafeToCallMultipleTimes()
+	[Fact]
+	public async Task ServiceCollectionAddIsSafeToCallMultipleTimes()
 	{
 		var options = new AgentBuilderOptions { Logger = new TestLogger(output), SkipOtlpExporter = true };
 
-        const string activitySourceName = nameof(ServiceCollectionAddIsSafeToCallMultipleTimes);
-        var activitySource = new ActivitySource(activitySourceName, "1.0.0");
+		const string activitySourceName = nameof(ServiceCollectionAddIsSafeToCallMultipleTimes);
+		var activitySource = new ActivitySource(activitySourceName, "1.0.0");
 
-        var exportedItems = new List<Activity>();
+		var exportedItems = new List<Activity>();
 
 		var host = Host.CreateDefaultBuilder();
 		host.ConfigureServices(s =>
@@ -44,6 +44,6 @@ public class ServiceCollectionTests(ITestOutputHelper output)
 		}
 
 
-        exportedItems.Should().HaveCount(1);
-    }
+		exportedItems.Should().HaveCount(1);
+	}
 }

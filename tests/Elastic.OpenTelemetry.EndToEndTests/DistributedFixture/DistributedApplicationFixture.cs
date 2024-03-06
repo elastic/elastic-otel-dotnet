@@ -12,7 +12,7 @@ namespace Elastic.OpenTelemetry.EndToEndTests.DistributedFixture;
 
 public class DistributedApplicationFixture : IPartitionLifetime
 {
-	private readonly ITrafficSimulator[] _trafficSimulators = [ new DefaultTrafficSimulator() ];
+	private readonly ITrafficSimulator[] _trafficSimulators = [new DefaultTrafficSimulator()];
 
 	public string ServiceName { get; } = $"dotnet-e2e-{ShaForCurrentTicks()}";
 

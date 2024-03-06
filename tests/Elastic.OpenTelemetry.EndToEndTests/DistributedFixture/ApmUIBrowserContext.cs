@@ -39,8 +39,8 @@ public class ApmUIBrowserContext : IAsyncLifetime
 		var page = await OpenApmLandingPage("test_bootstrap");
 		try
 		{
-			await page.GetByRole(AriaRole.Textbox, new () { Name = "email" }).FillAsync(username);
-			await page.GetByRole(AriaRole.Textbox, new () { Name = "password" }).FillAsync(password);
+			await page.GetByRole(AriaRole.Textbox, new() { Name = "email" }).FillAsync(username);
+			await page.GetByRole(AriaRole.Textbox, new() { Name = "password" }).FillAsync(password);
 			await page.GetByRole(AriaRole.Button, new() { Name = "Log in" }).ClickAsync();
 
 			await WaitForServiceOnOverview(page);
@@ -62,7 +62,7 @@ public class ApmUIBrowserContext : IAsyncLifetime
 
 	public async Task<IPage> NewProfiledPage(string testName)
 	{
-		var page = await Browser.NewPageAsync(new () { StorageState = StorageState });
+		var page = await Browser.NewPageAsync(new() { StorageState = StorageState });
 		await page.Context.Tracing.StartAsync(new()
 		{
 			Title = testName,
@@ -87,12 +87,12 @@ public class ApmUIBrowserContext : IAsyncLifetime
 		page.SetDefaultTimeout((float)TimeSpan.FromSeconds(30).TotalMilliseconds);
 
 		var servicesHeader = page.GetByRole(AriaRole.Heading, new() { Name = "Services" });
-		await servicesHeader.WaitForAsync(new () { State = WaitForSelectorState.Visible });
+		await servicesHeader.WaitForAsync(new() { State = WaitForSelectorState.Visible });
 
 		page.SetDefaultTimeout((float)TimeSpan.FromSeconds(10).TotalMilliseconds);
 
 		Exception? observed = null;
-		for (var i = 0; i < 10;i++)
+		for (var i = 0; i < 10; i++)
 		{
 			try
 			{
@@ -120,7 +120,7 @@ public class ApmUIBrowserContext : IAsyncLifetime
 	{
 
 		if (string.IsNullOrWhiteSpace(testName))
-			await page.Context.Tracing.StopAsync(new ());
+			await page.Context.Tracing.StopAsync(new());
 		else
 		{
 			var root = DotNetRunApplication.GetSolutionRoot();

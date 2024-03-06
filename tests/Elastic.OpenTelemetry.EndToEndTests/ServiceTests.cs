@@ -16,7 +16,7 @@ public class EndToEndTests(ITestOutputHelper output, DistributedApplicationFixtu
 	: IPartitionFixture<DistributedApplicationFixture>, IAsyncLifetime
 {
 	public ITestOutputHelper Output { get; } = output;
-	private string _testName = string.Empty;
+	private readonly string _testName = string.Empty;
 	private IPage _page = null!;
 
 	[Fact]

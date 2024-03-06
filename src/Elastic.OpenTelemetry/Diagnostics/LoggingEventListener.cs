@@ -26,7 +26,7 @@ internal sealed
 	private static partial Regex TraceParentRegex();
 #else
 
-	private static Regex _traceParentRegex = new Regex(TraceParentRegularExpressionString);
+	private static readonly Regex _traceParentRegex = new Regex(TraceParentRegularExpressionString);
 	private static Regex TraceParentRegex() => _traceParentRegex;
 #endif
 
