@@ -191,6 +191,7 @@ resharper_csharp_accessor_owner_body=expression_body
 
 resharper_redundant_case_label_highlighting=do_not_show
 resharper_redundant_argument_default_value_highlighting=do_not_show
+resharper_explicit_caller_info_argument_highlighting=hint
 
 dotnet_diagnostic.IDE0057.severity = none
 

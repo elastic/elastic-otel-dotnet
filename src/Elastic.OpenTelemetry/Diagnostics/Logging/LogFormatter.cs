@@ -49,9 +49,6 @@ internal static class LogFormatter
 		return fullLogLine;
 	}
 
-	private static void WriteLogPrefix(LogLevel logLevel, StringBuilder builder) =>
-		WriteLogPrefix(Environment.CurrentManagedThreadId, DateTime.UtcNow, logLevel, builder);
-
 	private const string EmptySpanId = "------";
 
 	private static void WriteLogPrefix(int managedThreadId, DateTime dateTime, LogLevel level, StringBuilder builder, string spanId = "")

@@ -53,9 +53,9 @@ public static class OpenTelemetryBuilderSdkExtensions
         this IOpenTelemetryBuilder builder,
         Action<ResourceBuilder> configure)
     {
-        builder.Services.ConfigureOpenTelemetryMeterProvider(builder => builder.ConfigureResource(configure));
+        builder.Services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.ConfigureResource(configure));
 
-        builder.Services.ConfigureOpenTelemetryTracerProvider(builder => builder.ConfigureResource(configure));
+        builder.Services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.ConfigureResource(configure));
 
         //builder.Services.ConfigureOpenTelemetryLoggerProvider(builder => builder.ConfigureResource(configure));
 
@@ -80,7 +80,7 @@ public static class OpenTelemetryBuilderSdkExtensions
     /// <returns>The supplied <see cref="IOpenTelemetryBuilder"/> for chaining
     /// calls.</returns>
     public static IOpenTelemetryBuilder WithMetrics(this IOpenTelemetryBuilder builder)
-        => WithMetrics(builder, b => { });
+        => WithMetrics(builder, _ => { });
 
     /// <summary>
     /// Adds metric services into the builder.
@@ -124,7 +124,7 @@ public static class OpenTelemetryBuilderSdkExtensions
     /// <returns>The supplied <see cref="IOpenTelemetryBuilder"/> for chaining
     /// calls.</returns>
     public static IOpenTelemetryBuilder WithTracing(this IOpenTelemetryBuilder builder)
-        => WithTracing(builder, b => { });
+        => WithTracing(builder, _ => { });
 
     /// <summary>
     /// Adds tracing services into the builder.

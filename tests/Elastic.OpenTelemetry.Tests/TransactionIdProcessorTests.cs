@@ -12,30 +12,27 @@ public class TransactionIdProcessorTests(ITestOutputHelper output)
     [Fact]
     public void TransactionId_IsAddedToTags()
     {
+		var options = new AgentBuilderOptions { Logger = new TestLogger(output), SkipOtlpExporter = true };
         const string activitySourceName = nameof(TransactionId_IsAddedToTags);
 
         var activitySource = new ActivitySource(activitySourceName, "1.0.0");
 
         var exportedItems = new List<Activity>();
 
-        using var agent = new AgentBuilder()
-			.SkipOtlpExporter()
+        using var agent = new AgentBuilder(options)
             .WithTracing(tpb =>
 			{
 				tpb
 					.ConfigureResource(rb => rb.AddService("Test", "1.0.0"))
 					.AddSource(activitySourceName)
 					.AddInMemoryExporter(exportedItems);
-				output.WriteLine("Added in memory exporter");
 			})
             .Build();
 
-        using (var activity = activitySource.StartActivity("DoingStuff", ActivityKind.Internal))
-        {
-            activity?.SetStatus(ActivityStatusCode.Ok);
-        }
+        using (var activity = activitySource.StartActivity(ActivityKind.Internal))
+			activity?.SetStatus(ActivityStatusCode.Ok);
 
-        exportedItems.Should().HaveCount(1);
+		exportedItems.Should().HaveCount(1);
 
         var exportedActivity = exportedItems[0];
 

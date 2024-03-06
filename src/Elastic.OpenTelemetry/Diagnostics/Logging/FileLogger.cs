@@ -84,7 +84,7 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 
 	public bool IsEnabled(LogLevel logLevel) => FileLoggingEnabled && ConfiguredLogLevel <= logLevel;
 
-	public IDisposable? BeginScope<TState>(TState state) where TState : notnull => _scopeProvider.Push(state);
+	public IDisposable BeginScope<TState>(TState state) where TState : notnull => _scopeProvider.Push(state);
 
 	public string? LogFilePath { get; }
 

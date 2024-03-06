@@ -2,8 +2,8 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 using System.Diagnostics;
+using System.Net;
 using Example.Elastic.OpenTelemetry.AspNetCore.Models;
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Example.Elastic.OpenTelemetry.AspNetCore.Controllers;
@@ -17,8 +17,7 @@ public class HomeController(IHttpClientFactory httpClientFactory) : Controller
 	{
 		using var client = httpClientFactory.CreateClient();
 
-		var activityFeature = HttpContext.Features.Get<IHttpActivityFeature>();
-
+		// ReSharper disable once ExplicitCallerInfoArgument
 		using var activity = ActivitySource.StartActivity("DoingStuff", ActivityKind.Internal);
 		activity?.SetTag("CustomTag", "TagValue");
 
@@ -26,10 +25,7 @@ public class HomeController(IHttpClientFactory httpClientFactory) : Controller
 		var response = await client.GetAsync("http://elastic.co");
 		await Task.Delay(50);
 
-		if (response.StatusCode == System.Net.HttpStatusCode.OK)
-			activity?.SetStatus(ActivityStatusCode.Ok);
-		else
-			activity?.SetStatus(ActivityStatusCode.Error);
+		activity?.SetStatus(response.StatusCode == HttpStatusCode.OK ? ActivityStatusCode.Ok : ActivityStatusCode.Error);
 
 		return View();
 	}

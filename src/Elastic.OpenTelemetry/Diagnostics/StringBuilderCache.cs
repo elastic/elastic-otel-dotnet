@@ -46,9 +46,7 @@ internal static class StringBuilderCache
 	public static void Release(StringBuilder sb)
 	{
 		if (sb.Capacity <= MaxBuilderSize)
-		{
 			CachedInstance = sb;
-		}
 	}
 
 	/// <summary>ToString() the StringBuilder, Release it to the cache, and return the resulting string.</summary>

@@ -16,9 +16,7 @@ internal static class ActivityExtensions
         var property = buffered.GetCustomProperty("Composite");
 
         if (property is Composite c)
-        {
             composite = c;
-        }
 
         var isAlreadyComposite = composite is not null;
 

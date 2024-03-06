@@ -59,30 +59,29 @@ public class SpanCompressionProcessor : BaseProcessor<Activity>
         base.OnEnd(data);
 
         static bool IsCompressionEligible(Activity data, object? property) =>
-            property is bool isExitSpan && isExitSpan && data.Status is ActivityStatusCode.Ok or ActivityStatusCode.Unset;
+            property is true && data.Status is ActivityStatusCode.Ok or ActivityStatusCode.Unset;
+	}
 
-        void FlushBuffer(Activity data)
-        {
-            if (_compressionBuffer.TryGetValue(data, out var compressionBuffer))
-            {
-                // This recreates the initial activity now we know it's final end time and can record it.
-                using var activity = compressionBuffer.Source.StartActivity(compressionBuffer.DisplayName, compressionBuffer.Kind, compressionBuffer.Parent!.Context,
-                compressionBuffer.TagObjects, compressionBuffer.Links, compressionBuffer.StartTimeUtc);
+	private void FlushBuffer(Activity data)
+	{
+		if (!_compressionBuffer.TryGetValue(data, out var compressionBuffer)) return;
 
-                var property = compressionBuffer.GetCustomProperty("Composite");
+		// This recreates the initial activity now we know it's final end time and can record it.
+		using var activity = compressionBuffer.Source.StartActivity(compressionBuffer.DisplayName, compressionBuffer.Kind, compressionBuffer.Parent!.Context,
+			compressionBuffer.TagObjects, compressionBuffer.Links, compressionBuffer.StartTimeUtc);
 
-                if (property is Composite composite)
-                {
-                    activity?.SetTag("span_compression.strategy", composite.CompressionStrategy);
-                    activity?.SetTag("span_compression.count", composite.Count);
-                    activity?.SetTag("span_compression.duration", composite.DurationSum);
-                }
+		var property = compressionBuffer.GetCustomProperty("Composite");
 
-                var endTime = compressionBuffer.StartTimeUtc.Add(compressionBuffer.Duration);
-                activity?.SetEndTime(endTime);
-                activity?.Stop();
-                _compressionBuffer.Remove(data);
-            }
-        }
-    }
+		if (property is Composite composite)
+		{
+			activity?.SetTag("span_compression.strategy", composite.CompressionStrategy);
+			activity?.SetTag("span_compression.count", composite.Count);
+			activity?.SetTag("span_compression.duration", composite.DurationSum);
+		}
+
+		var endTime = compressionBuffer.StartTimeUtc.Add(compressionBuffer.Duration);
+		activity?.SetEndTime(endTime);
+		activity?.Stop();
+		_compressionBuffer.Remove(data);
+	}
 }

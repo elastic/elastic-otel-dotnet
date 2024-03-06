@@ -6,26 +6,58 @@ using System.Diagnostics;
 using Elastic.OpenTelemetry.Diagnostics;
 using Elastic.OpenTelemetry.Diagnostics.Logging;
 using Elastic.OpenTelemetry.Extensions;
+using Elastic.OpenTelemetry.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
-using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
 namespace Elastic.OpenTelemetry;
+
+
+/// <summary>
+/// Expert options to provide to <see cref="AgentBuilder"/> to control its initial OpenTelemetry registration
+/// </summary>
+public record AgentBuilderOptions
+{
+	/// <summary>
+	/// Provide an additional logger to the internal file logger.
+	/// <para>
+	/// The agent will always log to file if a Path is provided using the <c>ELASTIC_OTEL_LOG_DIRECTORY</c>
+	/// environment variable.</para>
+	/// </summary>
+	public ILogger? Logger { get; init; }
+
+	/// <summary>
+	/// Provides an <see cref="IServiceCollection"/> to register the agent into.
+	/// If null a new local instance will be used.
+	/// </summary>
+	public IServiceCollection? Services { get; init; }
+
+	/// <summary>
+	/// The initial activity sources to listen to.
+	/// <para>>These can always later be amended with <see cref="TracerProviderBuilder.AddSource"/></para>
+	/// </summary>
+	public string[] ActivitySources { get; init; } = [];
+
+	/// <summary>
+	/// Stops <see cref="AgentBuilder"/> to register OLTP exporters, useful for testing scenarios
+	/// </summary>
+	public bool SkipOtlpExporter { get; init; }
+
+	/// <summary>
+    /// Optional name which is used when retrieving OTLP options.
+	/// </summary>
+	public string? OtlpExporterName { get; init; }
+}
 
 /// <summary>
 /// Supports building <see cref="IAgent"/> instances which include Elastic defaults, but can also be customised.
 /// </summary>
 public class AgentBuilder : IOpenTelemetryBuilder
 {
-	private bool _skipOtlpRegistration;
-
-	internal Action<OtlpExporterOptions>? OtlpExporterConfiguration { get; private set; }
-	internal string? OtlpExporterName { get; private set; }
-	internal bool SkipOtlpRegistration => _skipOtlpRegistration;
 	internal AgentCompositeLogger Logger { get; }
 	internal LoggingEventListener EventListener { get; }
 
@@ -33,21 +65,24 @@ public class AgentBuilder : IOpenTelemetryBuilder
 	public IServiceCollection Services { get; }
 
 	/// <summary> TODO </summary>
-	public AgentBuilder(params string[] activitySourceNames) : this(null, null, activitySourceNames) { }
+	public AgentBuilder(params string[] activitySourceNames) : this(new AgentBuilderOptions
+	{
+		ActivitySources = activitySourceNames
+	}) { }
 
 	/// <summary> TODO </summary>
-	public AgentBuilder(ILogger? logger = null, IServiceCollection? services = null, params string[] activitySourceNames)
+	public AgentBuilder(AgentBuilderOptions options)
 	{
-		Logger = new AgentCompositeLogger(logger);
+		Logger = new AgentCompositeLogger(options.Logger);
 
 		// Enables logging of OpenTelemetry-SDK event source events
 		EventListener = new LoggingEventListener(Logger);
 
 		Logger.LogAgentPreamble();
 		Logger.LogAgentBuilderInitialized(Environment.NewLine, new StackTrace(true));
-		Services = services ?? new ServiceCollection();
+		Services = options.Services ?? new ServiceCollection();
 
-		if (services != null)
+		if (options.Services != null)
 			Services.AddHostedService<ElasticOtelDistroService>();
 
 		Services.AddSingleton(this);
@@ -60,7 +95,7 @@ public class AgentBuilder : IOpenTelemetryBuilder
 			{
 				tracing.ConfigureResource(r => r.AddDistroAttributes());
 
-				foreach (var source in activitySourceNames)
+				foreach (var source in options.ActivitySources)
 					tracing.LogAndAddSource(source, Logger);
 
 				tracing
@@ -74,7 +109,7 @@ public class AgentBuilder : IOpenTelemetryBuilder
 			{
 				metrics.ConfigureResource(r => r.AddDistroAttributes());
 
-				foreach (var source in activitySourceNames)
+				foreach (var source in options.ActivitySources)
 				{
 					Logger.LogMeterAdded(source, metrics.GetType().Name);
 					metrics.AddMeter(source);
@@ -86,24 +121,28 @@ public class AgentBuilder : IOpenTelemetryBuilder
 					.AddRuntimeInstrumentation()
 					.AddHttpClientInstrumentation();
 			});
+
+		openTelemetry
+			.WithTracing(tracing =>
+			{
+				if (!options.SkipOtlpExporter)
+					tracing.AddOtlpExporter(options.OtlpExporterName, _ => { });
+				Logger.LogAgentBuilderBuiltTracerProvider();
+			})
+			.WithMetrics(metrics =>
+			{
+				if (!options.SkipOtlpExporter)
+				{
+					metrics.AddOtlpExporter(options.OtlpExporterName, o =>
+					{
+						o.ExportProcessorType = ExportProcessorType.Simple;
+						o.Protocol = OtlpExportProtocol.HttpProtobuf;
+					});
+				}
+				Logger.LogAgentBuilderBuiltMeterProvider();
+			});
+
 		Logger.LogAgentBuilderRegisteredServices();
-	}
-
-	/// <summary> TODO </summary>
-	public AgentBuilder SkipOtlpExporter()
-	{
-		_skipOtlpRegistration = true;
-		return this;
-	}
-
-
-	/// <summary>
-	/// TODO
-	/// </summary>
-	public void ConfigureOtlpExporter(Action<OtlpExporterOptions> configure, string? name = null)
-	{
-		OtlpExporterConfiguration = configure ?? throw new ArgumentNullException(nameof(configure));
-		OtlpExporterName = name;
 	}
 }
 

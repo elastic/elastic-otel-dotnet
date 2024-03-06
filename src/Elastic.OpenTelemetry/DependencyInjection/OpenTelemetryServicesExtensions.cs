@@ -2,12 +2,15 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using Elastic.OpenTelemetry;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 /// <summary> TODO </summary>
+// ReSharper disable once CheckNamespace
 public static class OpenTelemetryServicesExtensions
 {
+	// ReSharper disable RedundantNameQualifier
+
 	/// <summary>
 	/// <inheritdoc cref="Microsoft.Extensions.DependencyInjection.OpenTelemetryServicesExtensions.AddOpenTelemetry" path="summary"/>
 	/// <para>Uses defaults particularly well suited for Elastic's Observability offering because Elastic.OpenTelemetry is referenced</para>
@@ -19,7 +22,6 @@ public static class OpenTelemetryServicesExtensions
 	/// <returns>
 	/// <inheritdoc cref="Microsoft.Extensions.DependencyInjection.OpenTelemetryServicesExtensions.AddOpenTelemetry" path="returns"/>
 	/// </returns>
-	// ReSharper disable RedundantNameQualifier
 	public static global::OpenTelemetry.IOpenTelemetryBuilder AddOpenTelemetry(
 		this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services
 	) => services.AddElasticOpenTelemetry();
@@ -36,12 +38,10 @@ public static class OpenTelemetryServicesExtensions
 	/// <returns>
 	/// <inheritdoc cref="Microsoft.Extensions.DependencyInjection.OpenTelemetryServicesExtensions.AddOpenTelemetry" path="returns"/>
 	/// </returns>
-	// ReSharper disable RedundantNameQualifier
 	public static global::OpenTelemetry.IOpenTelemetryBuilder AddOpenTelemetry(
 		this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services
 		, params string[]? activitySourceNames
 	) => services.AddElasticOpenTelemetry(activitySourceNames);
-	// ReSharper enable RedundantNameQualifier
 
 	/// <summary>
 	/// <inheritdoc cref="Microsoft.Extensions.DependencyInjection.OpenTelemetryServicesExtensions.AddOpenTelemetry" path="summary"/>
@@ -51,16 +51,19 @@ public static class OpenTelemetryServicesExtensions
 	/// <inheritdoc cref="Microsoft.Extensions.DependencyInjection.OpenTelemetryServicesExtensions.AddOpenTelemetry" path="remarks"/>
 	/// </remarks>
 	/// <param name="services"><see cref="IServiceCollection"/></param>
-	/// <param name="logger">Provide an additional ILogger to listen in on the bootstrapping</param>
-	/// <param name="activitySourceNames">Activity source names to subscribe too</param>
+	/// <param name="options">Expert level options to control the bootstrapping of the Elastic Agent</param>
 	/// <returns>
 	/// <inheritdoc cref="Microsoft.Extensions.DependencyInjection.OpenTelemetryServicesExtensions.AddOpenTelemetry" path="returns"/>
 	/// </returns>
-	// ReSharper disable RedundantNameQualifier
 	public static global::OpenTelemetry.IOpenTelemetryBuilder AddOpenTelemetry(
 		this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services
-		, ILogger? logger
-		, params string[]? activitySourceNames
-	) => services.AddElasticOpenTelemetry(logger, activitySourceNames);
+		, AgentBuilderOptions options
+	)
+	{
+		if (options.Services == null)
+			options = options with { Services = services };
+		return services.AddElasticOpenTelemetry(options);
+	}
+
 	// ReSharper enable RedundantNameQualifier
 }

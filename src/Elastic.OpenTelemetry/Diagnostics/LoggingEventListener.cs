@@ -9,12 +9,16 @@ using Microsoft.Extensions.Logging;
 
 namespace Elastic.OpenTelemetry.Diagnostics;
 
-internal sealed partial class LoggingEventListener : EventListener, IAsyncDisposable
+internal sealed
+#if NET8_0_OR_GREATER
+	partial
+#endif
+	class LoggingEventListener : EventListener, IAsyncDisposable
 {
 	public const string OpenTelemetrySdkEventSourceNamePrefix = "OpenTelemetry-";
 
 	private readonly ILogger _logger;
-	private readonly EventLevel _eventLevel = EventLevel.Informational;
+	private readonly EventLevel _eventLevel;
 
 	private const string TraceParentRegularExpressionString = "^\\d{2}-[a-f0-9]{32}-[a-f0-9]{16}-\\d{2}$";
 #if NET8_0_OR_GREATER
@@ -77,7 +81,7 @@ internal sealed partial class LoggingEventListener : EventListener, IAsyncDispos
 		var builder = StringBuilderCache.Acquire();
 
 #if NETSTANDARD2_0 || NETFRAMEWORK
-		var timestamp = DateTime.UtcNow; //best effort in absense of real event timestamp
+		var timestamp = DateTime.UtcNow; //best effort in absence of real event timestamp
 		var osThreadId = 0L;
 #else
 		var timestamp = eventData.TimeStamp;
@@ -137,13 +141,12 @@ internal sealed partial class LoggingEventListener : EventListener, IAsyncDispos
 						var payload = eventData.Payload[i];
 
 						if (payload is not null)
-						{
+#if NETFRAMEWORK
+							// ReSharper disable once NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
+#endif
 							builder.Append(payload.ToString() ?? "null");
-						}
 						else
-						{
 							builder.Append("null");
-						}
 					}
 				}
 			}
