@@ -36,9 +36,14 @@ let private generatePackages _ = exec { run "dotnet" "pack" }
 let private pristineCheck (arguments:ParseResults<Build>) =
     let skipCheck = arguments.TryGetResult Skip_Dirty_Check |> Option.isSome
     match skipCheck, Information.isCleanWorkingCopy "." with
-    | true, _ -> printfn "Checkout is dirty but -c was specified to ignore this"
+    | true, _ -> printfn "Skip checking for clean working copy since -c is specified"
     | _, true  -> printfn "The checkout folder does not have pending changes, proceeding"
     | _ -> failwithf "The checkout folder has pending changes, aborting. Specify -c to ./build.sh to skip this check"
+    
+    match skipCheck, (exec { exit_code_of "dotnet" "format" }) with
+    | true, _ -> printfn "Skip formatting checks since -c is specified"
+    | _, 0  -> printfn "There are no dotnet formatting violations, continuing the build."
+    | _ -> failwithf "There are dotnet formatting violations. Call `dotnet format` to fix or specify -c to ./build.sh to skip this check"
 
 let private runTests suite _ =
     let logger =
