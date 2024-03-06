@@ -16,7 +16,7 @@ namespace Elastic.OpenTelemetry.EndToEndTests;
 
 public class EndToEndOptions : PartitionOptions
 {
-public override void OnBeforeTestsRun()
+	public override void OnBeforeTestsRun()
 	{
 		var configuration = new ConfigurationBuilder()
 			.AddEnvironmentVariables()
