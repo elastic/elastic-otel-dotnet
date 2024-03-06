@@ -70,3 +70,13 @@ jobs:
         env: 
           E2E__ENDPOINT: "${{env.ELASTIC_APM_SERVER_URL}}"
           E2E__AUTHORIZATION: "Authorization=ApiKey ${{env.ELASTIC_APM_API_KEY}}"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-traces
+          #everything but test_bootstrap which should never be generated on CI but is included here for ease of mind
+          path: |
+            .artifacts/playwright-traces/*.zip
+            !.artifacts/playwright-traces/test_bootstrap.zip
+          retention-days: 1
