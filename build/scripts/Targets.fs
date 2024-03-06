@@ -40,7 +40,7 @@ let private pristineCheck (arguments:ParseResults<Build>) =
     | _, true  -> printfn "The checkout folder does not have pending changes, proceeding"
     | _ -> failwithf "The checkout folder has pending changes, aborting. Specify -c to ./build.sh to skip this check"
     
-    match skipCheck, (exec { exit_code_of "dotnet" "format" }) with
+    match skipCheck, (exec { exit_code_of "dotnet" "format" "--verify-no-changes" }) with
     | true, _ -> printfn "Skip formatting checks since -c is specified"
     | _, 0  -> printfn "There are no dotnet formatting violations, continuing the build."
     | _ -> failwithf "There are dotnet formatting violations. Call `dotnet format` to fix or specify -c to ./build.sh to skip this check"
