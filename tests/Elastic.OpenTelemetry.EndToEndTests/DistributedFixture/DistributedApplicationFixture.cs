@@ -20,7 +20,7 @@ public class DistributedApplicationFixture : IPartitionLifetime
 
 	public bool Started => AspNetApplication?.ProcessId.HasValue ?? false;
 
-	private List<string> _output = new();
+	private readonly List<string> _output = new();
 
 	public int? MaxConcurrency => null;
 

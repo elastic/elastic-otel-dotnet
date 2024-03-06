@@ -93,22 +93,22 @@ public abstract class DotNetRunApplication
 
 	public void IterateOverLog(Action<string> write)
 	{
-		 var logFile = DotNetRunApplication.LogDirectory
-				 //TODO get last of this app specifically
-			  //.GetFiles($"{_app.Process.Binary}_*.log")
-			  .GetFiles($"*.log")
-			  .MaxBy(f => f.CreationTimeUtc);
+		var logFile = DotNetRunApplication.LogDirectory
+			 //TODO get last of this app specifically
+			 //.GetFiles($"{_app.Process.Binary}_*.log")
+			 .GetFiles($"*.log")
+			 .MaxBy(f => f.CreationTimeUtc);
 
-		 if (logFile == null)
-			  write($"Could not locate log files in {DotNetRunApplication.LogDirectory}");
-		 else
-		 {
-			  write($"Contents of: {logFile.FullName}");
-			  using var sr = logFile.OpenText();
-			  var s = string.Empty;
-			  while ((s = sr.ReadLine()) != null)
-				  write(s);
-		 }
+		if (logFile == null)
+			write($"Could not locate log files in {DotNetRunApplication.LogDirectory}");
+		else
+		{
+			write($"Contents of: {logFile.FullName}");
+			using var sr = logFile.OpenText();
+			var s = string.Empty;
+			while ((s = sr.ReadLine()) != null)
+				write(s);
+		}
 	}
 
 	public virtual void Dispose()
