@@ -29,9 +29,9 @@ public class EndToEndTests(ITestOutputHelper output, DistributedApplicationFixtu
 
 		// click on service in service overview page.
 		var uri = new Uri(fixture.ApmUI.KibanaAppUri, $"/app/apm/services/{fixture.ServiceName}/overview").ToString();
-		await _page.GotoAsync(uri, new () { Timeout = timeout });
+		await _page.GotoAsync(uri, new() { Timeout = timeout });
 		await Expect(_page.GetByRole(AriaRole.Heading, new() { Name = "Latency", Exact = true }))
-			.ToBeVisibleAsync(new () { Timeout = timeout });
+			.ToBeVisibleAsync(new() { Timeout = timeout });
 	}
 
 

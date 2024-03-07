@@ -92,7 +92,7 @@ public class ApmUIBrowserContext : IAsyncLifetime
 		var timeout = (float)TimeSpan.FromSeconds(30).TotalMilliseconds;
 
 		var servicesHeader = page.GetByRole(AriaRole.Heading, new() { Name = "Services" });
-		await servicesHeader.WaitForAsync(new() { State = WaitForSelectorState.Visible , Timeout = timeout });
+		await servicesHeader.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = timeout });
 
 		Exception? observed = null;
 
@@ -102,7 +102,7 @@ public class ApmUIBrowserContext : IAsyncLifetime
 			try
 			{
 				var serviceLink = page.GetByRole(AriaRole.Link, new() { Name = _serviceName });
-				await serviceLink.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = refreshTimeout});
+				await serviceLink.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = refreshTimeout });
 				observed = null;
 				break;
 			}
@@ -122,7 +122,7 @@ public class ApmUIBrowserContext : IAsyncLifetime
 	}
 
 	private int _unnamedTests;
-	public async Task StopTrace(IPage page, bool success, [CallerMemberName]string? testName = null)
+	public async Task StopTrace(IPage page, bool success, [CallerMemberName] string? testName = null)
 	{
 		testName ??= $"unknown_test_{_unnamedTests++}";
 		//only dump trace zip of test name is provided.
