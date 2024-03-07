@@ -31,7 +31,7 @@ public abstract class DotNetRunApplication
 		_authorization = configuration["E2E:Authorization"]?.Trim() ?? string.Empty;
 
 		var args = CreateStartArgs();
-		_app = Proc.StartLongRunning(args, TimeSpan.FromSeconds(10));
+		_app = Proc.StartLongRunning(args, TimeSpan.FromSeconds(30));
 	}
 
 	public int? ProcessId { get; private set; }
@@ -61,6 +61,7 @@ public abstract class DotNetRunApplication
 
 		return new("dotnet", arguments)
 		{
+
 			Environment = new Dictionary<string, string>
 			{
 				{ "OTEL_EXPORTER_OTLP_ENDPOINT", _endpoint },
