@@ -13,13 +13,17 @@ public abstract class DotNetRunApplication
 {
 	private static readonly DirectoryInfo CurrentDirectory = new FileInfo(Assembly.GetExecutingAssembly().Location).Directory!;
 	private static readonly Regex ProcessIdMatch = new(@"^\s*Process Id (?<processid>\d+)");
+
+	public static readonly DirectoryInfo Root = GetSolutionRoot();
+	public static readonly DirectoryInfo LogDirectory = new(Path.Combine(Root.FullName, ".artifacts", "tests"));
+
 	private readonly LongRunningApplicationSubscription _app;
 	private readonly string _applicationName;
 	private readonly string _authorization;
 	private readonly string _endpoint;
 	private readonly string _serviceName;
 
-	public DotNetRunApplication(string serviceName, IConfiguration configuration, string applicationName)
+	protected DotNetRunApplication(string serviceName, IConfiguration configuration, string applicationName)
 	{
 		_serviceName = serviceName;
 		_applicationName = applicationName;
@@ -27,7 +31,7 @@ public abstract class DotNetRunApplication
 		_authorization = configuration["E2E:Authorization"]?.Trim() ?? string.Empty;
 
 		var args = CreateStartArgs();
-		_app = Proc.StartLongRunning(args, TimeSpan.FromSeconds(10));
+		_app = Proc.StartLongRunning(args, TimeSpan.FromSeconds(30));
 	}
 
 	public int? ProcessId { get; private set; }
@@ -48,8 +52,7 @@ public abstract class DotNetRunApplication
 
 	private LongRunningArguments CreateStartArgs()
 	{
-		var root = GetSolutionRoot();
-		var project = Path.Combine(root.FullName, "examples", _applicationName);
+		var project = Path.Combine(Root.FullName, "examples", _applicationName);
 
 		var arguments = new[] { "run", "--project", project };
 		var applicationArguments = GetArguments();
@@ -58,6 +61,7 @@ public abstract class DotNetRunApplication
 
 		return new("dotnet", arguments)
 		{
+
 			Environment = new Dictionary<string, string>
 			{
 				{ "OTEL_EXPORTER_OTLP_ENDPOINT", _endpoint },
@@ -67,6 +71,10 @@ public abstract class DotNetRunApplication
 				{ "OTEL_BSP_SCHEDULE_DELAY", "1000" },
 				{ "OTEL_BSP_MAX_EXPORT_BATCH_SIZE", "5" },
 				{ "OTEL_RESOURCE_ATTRIBUTES", $"service.name={_serviceName},service.version=1.0,1,deployment.environment=e2e" },
+
+				{ "ELASTIC_OTEL_ENABLE_FILE_LOGGING", "1" },
+				{ "ELASTIC_OTEL_LOG_DIRECTORY", LogDirectory.FullName },
+				{ "ELASTIC_OTEL_LOG_LEVEL", "INFO" },
 			},
 			StartedConfirmationHandler = l =>
 			{
@@ -80,6 +88,28 @@ public abstract class DotNetRunApplication
 				return l.Line.StartsWith("      Application started.");
 			}
 		};
+
+
+	}
+
+	public void IterateOverLog(Action<string> write)
+	{
+		var logFile = DotNetRunApplication.LogDirectory
+			 //TODO get last of this app specifically
+			 //.GetFiles($"{_app.Process.Binary}_*.log")
+			 .GetFiles($"*.log")
+			 .MaxBy(f => f.CreationTimeUtc);
+
+		if (logFile == null)
+			write($"Could not locate log files in {DotNetRunApplication.LogDirectory}");
+		else
+		{
+			write($"Contents of: {logFile.FullName}");
+			using var sr = logFile.OpenText();
+			var s = string.Empty;
+			while ((s = sr.ReadLine()) != null)
+				write(s);
+		}
 	}
 
 	public virtual void Dispose()

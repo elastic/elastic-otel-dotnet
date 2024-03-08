@@ -25,15 +25,26 @@ public class EndToEndTests(ITestOutputHelper output, DistributedApplicationFixtu
 	[Fact]
 	public async Task LatencyShowsAGraph()
 	{
+		var timeout = (float)TimeSpan.FromSeconds(30).TotalMilliseconds;
+
 		// click on service in service overview page.
-		_page.SetDefaultTimeout((float)TimeSpan.FromSeconds(30).TotalMilliseconds);
 		var uri = new Uri(fixture.ApmUI.KibanaAppUri, $"/app/apm/services/{fixture.ServiceName}/overview").ToString();
-		await _page.GotoAsync(uri);
-		await Expect(_page.GetByRole(AriaRole.Heading, new() { Name = "Latency", Exact = true })).ToBeVisibleAsync();
+		await _page.GotoAsync(uri, new() { Timeout = timeout });
+		await Expect(_page.GetByRole(AriaRole.Heading, new() { Name = "Latency", Exact = true }))
+			.ToBeVisibleAsync(new() { Timeout = timeout });
 	}
 
 
 	public async Task InitializeAsync() => _page = await fixture.ApmUI.NewProfiledPage(_testName);
 
-	public async Task DisposeAsync() => await fixture.ApmUI.StopTrace(_page, PartitionContext.TestException == null ? null : _testName);
+	public async Task DisposeAsync()
+	{
+		var success = PartitionContext.TestException == null;
+		await fixture.ApmUI.StopTrace(_page, success, _testName);
+
+		if (!success)
+			return;
+
+		fixture.AspNetApplication.IterateOverLog(Output.WriteLine);
+	}
 }

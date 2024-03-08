@@ -2,6 +2,8 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using System.IO.Compression;
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Playwright;
 using Xunit;
@@ -29,6 +31,8 @@ public class ApmUIBrowserContext : IAsyncLifetime
 	public IBrowser Browser { get; private set; } = null!;
 	public IPlaywright HeadlessTester { get; private set; } = null!;
 
+	private const string BootstrapTraceName = "test_bootstrap";
+
 	public async Task InitializeAsync()
 	{
 		var username = _configuration["E2E:BrowserEmail"]?.Trim() ?? string.Empty;
@@ -36,7 +40,7 @@ public class ApmUIBrowserContext : IAsyncLifetime
 		Program.Main(["install", "chromium"]);
 		HeadlessTester = await Playwright.CreateAsync();
 		Browser = await HeadlessTester.Chromium.LaunchAsync();
-		var page = await OpenApmLandingPage("test_bootstrap");
+		var page = await OpenApmLandingPage(BootstrapTraceName);
 		try
 		{
 			await page.GetByRole(AriaRole.Textbox, new() { Name = "email" }).FillAsync(username);
@@ -47,11 +51,11 @@ public class ApmUIBrowserContext : IAsyncLifetime
 
 			StorageState = await page.Context.StorageStateAsync();
 
-			await StopTrace(page);
+			await StopTrace(page, success: true);
 		}
 		catch (Exception e)
 		{
-			await StopTrace(page, "test_bootstrap");
+			await StopTrace(page, success: false);
 			Console.WriteLine(e);
 			throw;
 		}
@@ -68,7 +72,7 @@ public class ApmUIBrowserContext : IAsyncLifetime
 			Title = testName,
 			Screenshots = true,
 			Snapshots = true,
-			Sources = true
+			Sources = false
 		});
 
 		return page;
@@ -84,20 +88,21 @@ public class ApmUIBrowserContext : IAsyncLifetime
 
 	public async Task WaitForServiceOnOverview(IPage page)
 	{
-		page.SetDefaultTimeout((float)TimeSpan.FromSeconds(30).TotalMilliseconds);
+
+		var timeout = (float)TimeSpan.FromSeconds(30).TotalMilliseconds;
 
 		var servicesHeader = page.GetByRole(AriaRole.Heading, new() { Name = "Services" });
-		await servicesHeader.WaitForAsync(new() { State = WaitForSelectorState.Visible });
-
-		page.SetDefaultTimeout((float)TimeSpan.FromSeconds(10).TotalMilliseconds);
+		await servicesHeader.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = timeout });
 
 		Exception? observed = null;
+
+		var refreshTimeout = (float)TimeSpan.FromSeconds(5).TotalMilliseconds;
 		for (var i = 0; i < 10; i++)
 		{
 			try
 			{
 				var serviceLink = page.GetByRole(AriaRole.Link, new() { Name = _serviceName });
-				await serviceLink.WaitForAsync(new() { State = WaitForSelectorState.Visible });
+				await serviceLink.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = refreshTimeout });
 				observed = null;
 				break;
 			}
@@ -108,7 +113,7 @@ public class ApmUIBrowserContext : IAsyncLifetime
 			}
 			finally
 			{
-				page.SetDefaultTimeout((float)TimeSpan.FromSeconds(5).TotalMilliseconds);
+				page.SetDefaultTimeout(refreshTimeout);
 			}
 		}
 		if (observed != null)
@@ -116,22 +121,23 @@ public class ApmUIBrowserContext : IAsyncLifetime
 
 	}
 
-	public async Task StopTrace(IPage page, string? testName = null)
+	private int _unnamedTests;
+	public async Task StopTrace(IPage page, bool success, [CallerMemberName] string? testName = null)
 	{
-
-		if (string.IsNullOrWhiteSpace(testName))
+		testName ??= $"unknown_test_{_unnamedTests++}";
+		//only dump trace zip of test name is provided.
+		if (success)
 			await page.Context.Tracing.StopAsync(new());
 		else
 		{
 			var root = DotNetRunApplication.GetSolutionRoot();
-			await page.Context.Tracing.StopAsync(new()
-			{
-				Path = Path.Combine(
-					Path.Combine(root.FullName, ".artifacts"),
-					"playwright-traces",
-					$"{testName}.zip"
-				)
-			});
+			var zip = Path.Combine(root.FullName, ".artifacts", "playwright-traces", $"{testName}.zip");
+			await page.Context.Tracing.StopAsync(new() { Path = zip });
+
+			using var archive = ZipFile.OpenRead(zip);
+			var entries = archive.Entries.Where(e => e.FullName.StartsWith("resources") && e.FullName.EndsWith(".jpeg")).ToList();
+			var lastScreenshot = entries.MaxBy(e => e.LastWriteTime);
+			lastScreenshot?.ExtractToFile(Path.Combine(root.FullName, ".artifacts", "playwright-traces", $"{testName}-screenshot.jpeg"));
 		}
 		await page.CloseAsync();
 	}
