@@ -1,0 +1,20 @@
+[[introduction]]
+== Introduction
+
+The `Elastic.OpenTelemetry` package contains an Elastic distribution of the 
+https://opentelemetry.io/docs/languages/net[OpenTelemetry SDK for .NET]. A distribution 
+is a wrapper around an upstream OpenTelemetry repository with some customizations. For 
+more details about distributions in general, visit the 
+https://opentelemetry.io/docs/concepts/distributions[OpenTelemetry documentation].
+
+The Elastic distribution includes some Elastic-specific processors to ensure the best 
+compatibility when exporting OpenTelemetry signal data to an Elastic backend such 
+as Elastic APM server. The distribution also preconfigures the collection of tracing 
+and metrics signals, applying some opinionated defaults, such as which sources are 
+collected by default. The distribution also ensures that the OTLP exporter is enabled 
+by default.
+
+The distribution includes extension methods to fully control the creation of the 
+underlying tracer and metric providers, providing a helpful set of defaults 
+to get developers up and running quickly with collecting and exporting OpenTelemetry 
+signals.
