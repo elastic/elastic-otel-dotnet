@@ -6,9 +6,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Configuration;
-using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Nullean.Xunit.Partitions.Sdk;
-using Xunit.Sdk;
 
 namespace Elastic.OpenTelemetry.EndToEndTests.DistributedFixture;
 
@@ -20,7 +18,7 @@ public class DistributedApplicationFixture : IPartitionLifetime
 
 	public bool Started => AspNetApplication?.ProcessId.HasValue ?? false;
 
-	private readonly List<string> _output = new();
+	private readonly List<string> _output = [];
 
 	public int? MaxConcurrency => null;
 
@@ -55,7 +53,7 @@ public class DistributedApplicationFixture : IPartitionLifetime
 	{
 		var logLines = new List<string>();
 		if (_aspNetApplication?.ProcessId.HasValue ?? false)
-			AspNetApplication.IterateOverLog(s =>
+			DotNetRunApplication.IterateOverLog(s =>
 			{
 				Console.WriteLine(s);
 				logLines.Add(s);
@@ -113,13 +111,12 @@ public class DistributedApplicationFixture : IPartitionLifetime
 
 		await ApmUI.InitializeAsync();
 	}
-
 }
 
 public class AspNetCoreExampleApplication : DotNetRunApplication
 {
 	public AspNetCoreExampleApplication(string serviceName, IConfiguration configuration)
-		: base(serviceName, configuration, "Example.Elastic.OpenTelemetry.AspNetCore") =>
+		: base(serviceName, configuration, "Example.AspNetCore.Mvc") =>
 		HttpClient = new HttpClient { BaseAddress = new Uri("http://localhost:5247") };
 
 	public HttpClient HttpClient { get; }

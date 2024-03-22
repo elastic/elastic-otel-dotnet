@@ -42,11 +42,10 @@ public static class ServiceCollectionExtensions
 	{
 		if (serviceCollection.Any(d => d.ServiceType == typeof(IHostedService) && d.ImplementationType == typeof(ElasticOtelDistroService)))
 		{
+			// TODO - Can we avoid this by storing the instance on the builder (internal access)
 			var sp = serviceCollection.BuildServiceProvider();
 			return sp.GetService<AgentBuilder>()!; //already registered as singleton
 		}
 		return new AgentBuilder(options);
 	}
-
-
 }
