@@ -3,8 +3,8 @@
 // See the LICENSE file in the project root for more information
 
 using OpenTelemetry;
-using OpenTelemetry.Trace;
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 
