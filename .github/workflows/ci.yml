@@ -35,6 +35,9 @@ jobs:
         id: bootstrap
         uses: ./.github/workflows/bootstrap
 
+      - name: Install Aspire workload
+        run: dotnet workload install aspire
+
       - run: build.bat test --test-suite=skip-e2e
         shell: cmd
         name: Test
@@ -46,6 +49,9 @@ jobs:
       - name: Bootstrap Action Workspace
         id: bootstrap
         uses: ./.github/workflows/bootstrap
+
+      - name: Install Aspire workload
+        run: dotnet workload install aspire
 
       # We still run the full release build on pull-requests this ensures packages are validated ahead of time
       - run: ./build.sh release --test-suite=skip-e2e
