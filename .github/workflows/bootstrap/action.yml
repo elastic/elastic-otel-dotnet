@@ -32,6 +32,7 @@ runs:
         global-json-file: ./global.json
 
     - name: Install Aspire workload
+      shell: bash
       run: dotnet workload install aspire
 
     - id: dotnet
