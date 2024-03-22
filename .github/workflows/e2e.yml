@@ -42,9 +42,6 @@ jobs:
         id: bootstrap
         uses: ./.github/workflows/bootstrap
 
-      - name: Setup Git
-        uses: elastic/apm-pipeline-library/.github/actions/setup-git@current
-
       - uses: elastic/apm-pipeline-library/.github/actions/github-token@current
         with:
           url: ${{ secrets.VAULT_ADDR }}
