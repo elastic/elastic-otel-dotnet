@@ -1,3 +1,7 @@
+// Licensed to Elasticsearch B.V under one or more agreements.
+// Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information
+
 using System.Diagnostics;
 using Example.Api;
 using OpenTelemetry;
@@ -8,7 +12,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services
 	.AddHttpClient() // Adds IHttpClientFactory
 	.AddOpenTelemetry() // Adds the OpenTelemetry SDK
-		.WithTracing(t => {
+		.WithTracing(t =>
+		{
 			t.AddAspNetCoreInstrumentation(); // Configure tracing to instrument ASP.NET Core
 			t.AddSource(Api.ActivitySourceName);
 		});

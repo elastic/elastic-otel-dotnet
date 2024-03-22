@@ -36,7 +36,7 @@ public abstract class DotNetRunApplication
 
 	public int? ProcessId { get; private set; }
 
-	protected virtual string[] GetArguments() => Array.Empty<string>();
+	protected virtual string[] GetArguments() => [];
 
 	public static DirectoryInfo GetSolutionRoot()
 	{
@@ -61,7 +61,6 @@ public abstract class DotNetRunApplication
 
 		return new("dotnet", arguments)
 		{
-
 			Environment = new Dictionary<string, string>
 			{
 				{ "OTEL_EXPORTER_OTLP_ENDPOINT", _endpoint },
@@ -88,20 +87,18 @@ public abstract class DotNetRunApplication
 				return l.Line.StartsWith("      Application started.");
 			}
 		};
-
-
 	}
 
-	public void IterateOverLog(Action<string> write)
+	public static void IterateOverLog(Action<string> write)
 	{
-		var logFile = DotNetRunApplication.LogDirectory
+		var logFile = LogDirectory
 			 //TODO get last of this app specifically
 			 //.GetFiles($"{_app.Process.Binary}_*.log")
 			 .GetFiles($"*.log")
 			 .MaxBy(f => f.CreationTimeUtc);
 
 		if (logFile == null)
-			write($"Could not locate log files in {DotNetRunApplication.LogDirectory}");
+			write($"Could not locate log files in {LogDirectory}");
 		else
 		{
 			write($"Contents of: {logFile.FullName}");

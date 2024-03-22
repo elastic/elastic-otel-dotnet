@@ -6,7 +6,7 @@ using System.Diagnostics;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Example.Elastic.OpenTelemetry.AspNetCore.Controllers;
+namespace Example.AspNetCore.Mvc.Controllers;
 
 public class E2EController : Controller
 {

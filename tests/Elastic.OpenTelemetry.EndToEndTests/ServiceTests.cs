@@ -45,6 +45,6 @@ public class EndToEndTests(ITestOutputHelper output, DistributedApplicationFixtu
 		if (!success)
 			return;
 
-		fixture.AspNetApplication.IterateOverLog(Output.WriteLine);
+		DotNetRunApplication.IterateOverLog(Output.WriteLine);
 	}
 }

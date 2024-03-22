@@ -1,12 +1,13 @@
 // Licensed to Elasticsearch B.V under one or more agreements.
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
+
 using System.Diagnostics;
 using System.Net;
-using Example.Elastic.OpenTelemetry.AspNetCore.Models;
+using Example.AspNetCore.Mvc.Models;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Example.Elastic.OpenTelemetry.AspNetCore.Controllers;
+namespace Example.AspNetCore.Mvc.Controllers;
 
 public class HomeController(IHttpClientFactory httpClientFactory) : Controller
 {
