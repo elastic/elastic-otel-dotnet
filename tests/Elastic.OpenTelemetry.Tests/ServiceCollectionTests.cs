@@ -13,7 +13,7 @@ public class ServiceCollectionTests(ITestOutputHelper output)
 	[Fact]
 	public async Task ServiceCollectionAddIsSafeToCallMultipleTimes()
 	{
-		var options = new AgentBuilderOptions { Logger = new TestLogger(output), SkipOtlpExporter = true };
+		var options = new ElasticOpenTelemetryOptions { Logger = new TestLogger(output), SkipOtlpExporter = true };
 
 		const string activitySourceName = nameof(ServiceCollectionAddIsSafeToCallMultipleTimes);
 		var activitySource = new ActivitySource(activitySourceName, "1.0.0");

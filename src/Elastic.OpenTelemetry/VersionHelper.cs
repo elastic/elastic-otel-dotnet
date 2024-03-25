@@ -5,14 +5,11 @@ using System.Reflection;
 
 namespace Elastic.OpenTelemetry;
 
-/// <summary>
-/// Supports building and accessing an <see cref="IAgent"/> which collects and ships observability signals.
-/// </summary>
-public static class Agent
+internal static class VersionHelper
 {
-	static Agent()
+	static VersionHelper()
 	{
-		var assemblyInformationalVersion = typeof(Agent).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+		var assemblyInformationalVersion = typeof(VersionHelper).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
 		InformationalVersion = ParseAssemblyInformationalVersion(assemblyInformationalVersion);
 	}
 
