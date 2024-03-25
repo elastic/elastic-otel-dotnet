@@ -57,7 +57,7 @@ public static class OpenTelemetryServicesExtensions
 	/// </returns>
 	public static global::OpenTelemetry.IOpenTelemetryBuilder AddOpenTelemetry(
 		this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services
-		, AgentBuilderOptions options
+		, ElasticOpenTelemetryOptions options
 	)
 	{
 		if (options.Services == null)

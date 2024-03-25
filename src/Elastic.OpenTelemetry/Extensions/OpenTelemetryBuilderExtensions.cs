@@ -10,7 +10,7 @@ using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
-namespace Elastic.OpenTelemetry;
+namespace Elastic.OpenTelemetry.Extensions;
 
 /// <summary> TODO </summary>
 public static class OpenTelemetryBuilderExtensions
@@ -18,25 +18,24 @@ public static class OpenTelemetryBuilderExtensions
 	/// <summary> TODO </summary>
 	public static IOpenTelemetryBuilder WithLogger(this IOpenTelemetryBuilder builder, ILogger logger)
 	{
-		if (builder is not AgentBuilder agentBuilder)
+		if (builder is not ElasticOpenTelemetryBuilder agentBuilder)
 			return builder;
 
 		agentBuilder.Logger.SetAdditionalLogger(logger);
 		return agentBuilder;
 	}
 
-
 	/// <summary>
-	/// Build an instance of <see cref="IAgent"/>.
+	/// Build an instance of <see cref="IInstrumentationLifetime"/>.
 	/// </summary>
-	/// <returns>A new instance of <see cref="IAgent"/>.</returns>
-	public static IAgent Build(this IOpenTelemetryBuilder builder, ILogger? logger = null, IServiceProvider? serviceProvider = null)
+	/// <returns>A new instance of <see cref="IInstrumentationLifetime"/>.</returns>
+	public static IInstrumentationLifetime Build(this IOpenTelemetryBuilder builder, ILogger? logger = null, IServiceProvider? serviceProvider = null)
 	{
 		// this happens if someone calls Build() while using IServiceCollection and AddOpenTelemetry() and NOT Add*Elastic*OpenTelemetry()
 		// we treat this a NOOP
 		// NOTE for AddElasticOpenTelemetry(this IServiceCollection services) calling Build() manually is NOT required.
-		if (builder is not AgentBuilder agentBuilder)
-			return new EmptyAgent();
+		if (builder is not ElasticOpenTelemetryBuilder agentBuilder)
+			return new EmptyInstrumentationLifetime();
 
 		var log = agentBuilder.Logger;
 
@@ -46,40 +45,9 @@ public static class OpenTelemetryBuilderExtensions
 		var tracerProvider = sp.GetService<TracerProvider>()!;
 		var meterProvider = sp.GetService<MeterProvider>()!;
 
-		var agent = new ElasticAgent(log, agentBuilder.EventListener, tracerProvider, meterProvider);
+		var agent = new InstrumentationLifetime(log, agentBuilder.EventListener, tracerProvider, meterProvider);
 		log.LogAgentBuilderBuiltAgent();
 		return agent;
-	}
-}
-
-internal class EmptyAgent : IAgent
-{
-	public void Dispose() { }
-
-	public ValueTask DisposeAsync() => default;
-}
-
-internal class ElasticAgent(
-	AgentCompositeLogger logger,
-	LoggingEventListener loggingEventListener,
-	TracerProvider tracerProvider,
-	MeterProvider meterProvider
-) : IAgent
-{
-	public void Dispose()
-	{
-		tracerProvider.Dispose();
-		meterProvider.Dispose();
-		loggingEventListener.Dispose();
-		logger.Dispose();
-	}
-
-	public async ValueTask DisposeAsync()
-	{
-		tracerProvider.Dispose();
-		meterProvider.Dispose();
-		await loggingEventListener.DisposeAsync().ConfigureAwait(false);
-		await logger.DisposeAsync().ConfigureAwait(false);
 	}
 }
 
