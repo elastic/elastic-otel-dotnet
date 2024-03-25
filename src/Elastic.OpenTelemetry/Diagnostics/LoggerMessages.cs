@@ -11,16 +11,13 @@ namespace Elastic.OpenTelemetry.Diagnostics;
 
 internal static partial class LoggerMessages
 {
-	[LoggerMessage(EventId = 1, Level = LogLevel.Trace, Message = $"{nameof(TransactionIdProcessor)} added 'transaction.id' tag to Activity.")]
+	[LoggerMessage(EventId = 100, Level = LogLevel.Trace, Message = $"{nameof(TransactionIdProcessor)} added 'transaction.id' tag to Activity.")]
 	internal static partial void TransactionIdProcessorTagAdded(this ILogger logger);
 
-	[LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "Added '{ActivitySourceName}' ActivitySource to '{BuilderTypeName}'.")]
-	public static partial void LogSourceAdded(this ILogger logger, string activitySourceName, string builderTypeName);
-
-	[LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "Added '{ProcessorTypeName}' processor to '{BuilderTypeName}'.")]
+	[LoggerMessage(EventId = 20, Level = LogLevel.Trace, Message = "Added '{ProcessorTypeName}' processor to '{BuilderTypeName}'.")]
 	public static partial void LogProcessorAdded(this ILogger logger, string processorTypeName, string builderTypeName);
 
-	[LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "Added '{MeterName}' meter to '{BuilderTypeName}'.")]
+	[LoggerMessage(EventId = 21, Level = LogLevel.Trace, Message = "Added '{MeterName}' meter to '{BuilderTypeName}'.")]
 	public static partial void LogMeterAdded(this ILogger logger, string meterName, string builderTypeName);
 
 	public static void LogAgentPreamble(this ILogger logger)
@@ -70,5 +67,4 @@ internal static partial class LoggerMessages
 				logger.LogDebug("Environment variable '{EnvironmentVariable}' = '{EnvironmentVariableValue}'.", variable, envVarValue);
 		}
 	}
-
 }

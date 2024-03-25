@@ -5,7 +5,9 @@
 using Elastic.OpenTelemetry;
 using Microsoft.Extensions.DependencyInjection;
 
-/// <summary> TODO </summary>
+/// <summary>
+/// Extensions for <see cref="IServiceCollection"/> to add OpenTelemetry services using Elastic defaults.
+/// </summary>
 // ReSharper disable once CheckNamespace
 public static class OpenTelemetryServicesExtensions
 {
@@ -25,23 +27,6 @@ public static class OpenTelemetryServicesExtensions
 	public static global::OpenTelemetry.IOpenTelemetryBuilder AddOpenTelemetry(
 		this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services
 	) => services.AddElasticOpenTelemetry();
-
-	/// <summary>
-	/// <inheritdoc cref="Microsoft.Extensions.DependencyInjection.OpenTelemetryServicesExtensions.AddOpenTelemetry" path="summary"/>
-	/// <para>Uses defaults particularly well suited for Elastic's Observability offering because Elastic.OpenTelemetry is referenced</para>
-	/// </summary>
-	/// <remarks>
-	/// <inheritdoc cref="Microsoft.Extensions.DependencyInjection.OpenTelemetryServicesExtensions.AddOpenTelemetry" path="remarks"/>
-	/// </remarks>
-	/// <param name="services"><see cref="IServiceCollection"/></param>
-	/// <param name="activitySourceNames">Activity source names to subscribe too</param>
-	/// <returns>
-	/// <inheritdoc cref="Microsoft.Extensions.DependencyInjection.OpenTelemetryServicesExtensions.AddOpenTelemetry" path="returns"/>
-	/// </returns>
-	public static global::OpenTelemetry.IOpenTelemetryBuilder AddOpenTelemetry(
-		this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services
-		, params string[]? activitySourceNames
-	) => services.AddElasticOpenTelemetry(activitySourceNames);
 
 	/// <summary>
 	/// <inheritdoc cref="Microsoft.Extensions.DependencyInjection.OpenTelemetryServicesExtensions.AddOpenTelemetry" path="summary"/>

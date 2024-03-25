@@ -16,8 +16,26 @@ using OpenTelemetry.Trace;
 namespace Elastic.OpenTelemetry;
 
 /// <summary>
-/// Supports building <see cref="IInstrumentationLifetime"/> instances which include Elastic defaults, but can also be customised.
+/// An implementation of <see cref="IOpenTelemetryBuilder" /> which configures Elastic defaults, but can also be customised.
 /// </summary>
+/// <remarks>
+/// Currently this builder enables both tracing and metrics, and configures the following:
+/// <list type="bullet">
+///   <item>
+///     <term>Instrumentation</term>
+///     <description>Enables commonly used instrumentation such as HTTP, gRPC and EntityFramework.</description>
+///   </item>
+///   <item>
+///     <term>Processors</term>
+///     <description>Enables Elastic processors to add additional features and to
+///     ensure data is compatible with Elastic backends.</description>
+///   </item>
+///   <item>
+///     <term>OTLP Exporter</term>
+///     <description>Enables exporting of signals over OTLP to a configured endpoint(s).</description>
+///   </item>
+/// </list>
+/// </remarks>
 public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 {
 	internal CompositeLogger Logger { get; }
@@ -26,14 +44,17 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 	/// <inheritdoc cref="IOpenTelemetryBuilder.Services"/>
 	public IServiceCollection Services { get; }
 
-	/// <summary> TODO </summary>
-	public ElasticOpenTelemetryBuilder(params string[] activitySourceNames) : this(new ElasticOpenTelemetryOptions
-	{
-		ActivitySources = activitySourceNames
-	})
+	/// <summary>
+	/// Creates an instance of the <see cref="ElasticOpenTelemetryBuilder" /> configured with default options.
+	/// </summary>
+	public ElasticOpenTelemetryBuilder()
+		: this(new ElasticOpenTelemetryOptions())
 	{ }
 
-	/// <summary> TODO </summary>
+	/// <summary>
+	/// Creates an instance of the <see cref="ElasticOpenTelemetryBuilder" /> configured with the provided
+	/// <see cref="ElasticOpenTelemetryOptions"/>.
+	/// </summary>
 	public ElasticOpenTelemetryBuilder(ElasticOpenTelemetryOptions options)
 	{
 		Logger = new CompositeLogger(options.Logger);
@@ -42,11 +63,11 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 		EventListener = new LoggingEventListener(Logger);
 
 		Logger.LogAgentPreamble();
-		Logger.LogAgentBuilderInitialized(Environment.NewLine, new StackTrace(true));
+		Logger.LogElasticOpenTelemetryBuilderInitialized(Environment.NewLine, new StackTrace(true));
 		Services = options.Services ?? new ServiceCollection();
 
 		if (options.Services != null)
-			Services.AddHostedService<ElasticOtelDistroService>();
+			Services.AddHostedService<ElasticOpenTelemetryService>();
 
 		Services.AddSingleton(this);
 
@@ -62,52 +83,37 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 			{
 				tracing.ConfigureResource(r => r.AddDistroAttributes());
 
-				foreach (var source in options.ActivitySources)
-					tracing.LogAndAddSource(source, Logger);
-
 				tracing
 					.AddHttpClientInstrumentation()
 					.AddGrpcClientInstrumentation()
 					.AddEntityFrameworkCoreInstrumentation(); // TODO - Should we add this by default?
 
 				tracing.AddElasticProcessors(Logger);
-				Logger.LogAgentBuilderBuiltTracerProvider();
+
+				Logger.LogConfiguredTracerProvider();
 			})
 			.WithMetrics(metrics =>
 			{
 				metrics.ConfigureResource(r => r.AddDistroAttributes());
 
-				foreach (var source in options.ActivitySources)
-				{
-					Logger.LogMeterAdded(source, metrics.GetType().Name);
-					metrics.AddMeter(source);
-				}
-
 				metrics
 					.AddProcessInstrumentation()
 					.AddRuntimeInstrumentation()
 					.AddHttpClientInstrumentation();
-				Logger.LogAgentBuilderBuiltMeterProvider();
-			});
 
-		Logger.LogAgentBuilderRegisteredServices();
+				Logger.LogConfiguredMeterProvider();
+			});
 	}
 }
 
 internal static partial class LoggerMessages
 {
-	[LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = $"AgentBuilder initialized{{newline}}{{StackTrace}}.")]
-	public static partial void LogAgentBuilderInitialized(this ILogger logger, string newline, StackTrace stackTrace);
+	[LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "ElasticOpenTelemetryBuilder initialized{newline}{StackTrace}.")]
+	public static partial void LogElasticOpenTelemetryBuilderInitialized(this ILogger logger, string newline, StackTrace stackTrace);
 
-	[LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "AgentBuilder built TracerProvider.")]
-	public static partial void LogAgentBuilderBuiltTracerProvider(this ILogger logger);
+	[LoggerMessage(EventId = 1, Level = LogLevel.Trace, Message = "ElasticOpenTelemetryBuilder configured tracing services via the TracerProvider.")]
+	public static partial void LogConfiguredTracerProvider(this ILogger logger);
 
-	[LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "AgentBuilder built MeterProvider.")]
-	public static partial void LogAgentBuilderBuiltMeterProvider(this ILogger logger);
-
-	[LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "AgentBuilder built Agent.")]
-	public static partial void LogAgentBuilderBuiltAgent(this ILogger logger);
-
-	[LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "AgentBuilder registered agent services into IServiceCollection.")]
-	public static partial void LogAgentBuilderRegisteredServices(this ILogger logger);
+	[LoggerMessage(EventId = 2, Level = LogLevel.Trace, Message = "ElasticOpenTelemetryBuilder configured metric services via the MeterProvider.")]
+	public static partial void LogConfiguredMeterProvider(this ILogger logger);
 }

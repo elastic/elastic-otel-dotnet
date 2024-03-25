@@ -21,12 +21,18 @@ internal static class Usage
 	{
 		// NOTE: This sample assumes ENV VARs have been set to configure the Endpoint and Authorization header.
 
-		// Build an agent by creating and using an agent builder, adding a single source (for traces and metrics) defined in this sample application.
-		await using var agent = new ElasticOpenTelemetryBuilder(ActivitySourceName).Build();
+		// Build an agent by creating and using an agent builder
+		await using var agent1 = new ElasticOpenTelemetryBuilder()
+			.WithTracing(b => b.AddSource(ActivitySourceName))
+			.Build();
+
+		await using var agent2 = new ElasticOpenTelemetryBuilder().Build();
 
 		// This example adds the application activity source and fully customises the resource
-		await using var agent3 = new ElasticOpenTelemetryBuilder(ActivitySourceName)
-			.WithTracing(b => b.ConfigureResource(r => r.Clear().AddService("CustomServiceName", serviceVersion: "2.2.2")))
+		await using var agent3 = new ElasticOpenTelemetryBuilder()
+			.WithTracing(b => b
+				.AddSource(ActivitySourceName)
+				.ConfigureResource(r => r.Clear().AddService("CustomServiceName", serviceVersion: "2.2.2")))
 			.Build();
 
 		await using var agent4 = new ElasticOpenTelemetryBuilder()

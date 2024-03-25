@@ -4,7 +4,7 @@
 
 namespace Elastic.OpenTelemetry;
 
-internal class EmptyInstrumentationLifetime : IInstrumentationLifetime
+internal sealed class EmptyInstrumentationLifetime : IInstrumentationLifetime
 {
 	public void Dispose() { }
 

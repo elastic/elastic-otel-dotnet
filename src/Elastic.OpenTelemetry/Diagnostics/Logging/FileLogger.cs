@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information
 
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging;
@@ -25,30 +24,26 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 
 	private static readonly LogLevel ConfiguredLogLevel = AgentLoggingHelpers.GetElasticOtelLogLevel();
 
-	public bool FileLoggingEnabled { get; } = AgentLoggingHelpers.IsFileLoggingEnabled();
+	public bool FileLoggingEnabled { get; }
 
 	private readonly LoggerExternalScopeProvider _scopeProvider;
 
 	public FileLogger()
 	{
 		_scopeProvider = new LoggerExternalScopeProvider();
-		var process = Process.GetCurrentProcess();
-
-		if (!FileLoggingEnabled)
-			return;
 
 		var configuredPath = Environment.GetEnvironmentVariable(EnvironmentVariables.ElasticOtelLogDirectoryEnvironmentVariable);
 
-		// Defaults to local application data (C:\Users\{username}\AppData\Local\Elastic on Windows; $HOME/.local/share/elastic on Linux)
-		var path = string.IsNullOrEmpty(configuredPath)
-			? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), GetElasticFolder)
-			: configuredPath;
+		if (string.IsNullOrEmpty(configuredPath))
+			return;
+
+		var process = Process.GetCurrentProcess();
 
 		// When ordered by filename, we get see logs from the same process grouped, then ordered by oldest to newest, then the PID for that instance
-		LogFilePath = Path.Combine(path, $"{process.ProcessName}_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{process.Id}.agent.log");
+		LogFilePath = Path.Combine(configuredPath, $"{process.ProcessName}_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{process.Id}.agent.log");
 
-		if (!Directory.Exists(path))
-			Directory.CreateDirectory(path);
+		if (!Directory.Exists(configuredPath))
+			Directory.CreateDirectory(configuredPath);
 
 		//StreamWriter.Dispose disposes underlying stream too
 		var stream = new FileStream(LogFilePath, FileMode.OpenOrCreate, FileAccess.Write);
@@ -64,6 +59,8 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 		});
 
 		_streamWriter.AutoFlush = true; // Ensure we don't lose logs by not flushing to the file.
+
+		FileLoggingEnabled = true;
 	}
 
 	public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
@@ -91,8 +88,6 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 
 	public Task? WritingTask { get; }
 
-	private static string GetElasticFolder => RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Elastic" : "elastic";
-
 	public void Dispose()
 	{
 		//tag that we are running a dispose this allows running tasks and spin waits to short circuit
@@ -117,5 +112,4 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 
 		_streamWriter?.Dispose();
 	}
-
 }

@@ -11,7 +11,7 @@ namespace Elastic.OpenTelemetry.Processors;
 /// <summary>
 ///
 /// </summary>
-public class TransactionIdProcessor(ILogger logger) : BaseProcessor<Activity>
+public sealed class TransactionIdProcessor(ILogger logger) : BaseProcessor<Activity>
 {
 	private readonly AsyncLocal<ActivitySpanId?> _currentTransactionId = new();
 
