@@ -13,6 +13,6 @@ internal static class ResourceBuilderExtensions
 		builder.AddAttributes(new Dictionary<string, object>
 		{
 			{ ResourceSemanticConventions.AttributeTelemetryDistroName, "elastic-dotnet" },
-			{ ResourceSemanticConventions.AttributeTelemetryDistroVersion, Agent.InformationalVersion }
+			{ ResourceSemanticConventions.AttributeTelemetryDistroVersion, VersionHelper.InformationalVersion }
 		});
 }

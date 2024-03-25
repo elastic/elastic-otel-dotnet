@@ -22,14 +22,14 @@ internal static class Usage
 		// NOTE: This sample assumes ENV VARs have been set to configure the Endpoint and Authorization header.
 
 		// Build an agent by creating and using an agent builder, adding a single source (for traces and metrics) defined in this sample application.
-		await using var agent = new AgentBuilder(ActivitySourceName).Build();
+		await using var agent = new ElasticOpenTelemetryBuilder(ActivitySourceName).Build();
 
 		// This example adds the application activity source and fully customises the resource
-		await using var agent3 = new AgentBuilder(ActivitySourceName)
+		await using var agent3 = new ElasticOpenTelemetryBuilder(ActivitySourceName)
 			.WithTracing(b => b.ConfigureResource(r => r.Clear().AddService("CustomServiceName", serviceVersion: "2.2.2")))
 			.Build();
 
-		await using var agent4 = new AgentBuilder()
+		await using var agent4 = new ElasticOpenTelemetryBuilder()
 			.WithTracing(t => t
 				.ConfigureResource(rb => rb.AddService("TracerProviderBuilder", "3.3.3"))
 				.AddRedisInstrumentation() // This can currently only be achieved using this overload or adding Elastic processors to the TPB (as below)

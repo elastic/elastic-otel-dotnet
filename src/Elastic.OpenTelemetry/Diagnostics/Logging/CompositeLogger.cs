@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 namespace Elastic.OpenTelemetry.Diagnostics.Logging;
 
 /// <summary> A composite logger for use inside the agent, will dispose <see cref="Logging.FileLogger"/> </summary>
-internal sealed class AgentCompositeLogger(ILogger? additionalLogger) : IDisposable, IAsyncDisposable, ILogger
+internal sealed class CompositeLogger(ILogger? additionalLogger) : IDisposable, IAsyncDisposable, ILogger
 {
 	public FileLogger FileLogger { get; } = new();
 

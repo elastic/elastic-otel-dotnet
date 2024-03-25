@@ -9,9 +9,9 @@ using OpenTelemetry.Trace;
 namespace Elastic.OpenTelemetry;
 
 /// <summary>
-/// Expert options to provide to <see cref="AgentBuilder"/> to control its initial OpenTelemetry registration
+/// Expert options to provide to <see cref="ElasticOpenTelemetryBuilder"/> to control its initial OpenTelemetry registration
 /// </summary>
-public record AgentBuilderOptions
+public record ElasticOpenTelemetryOptions
 {
 	/// <summary>
 	/// Provide an additional logger to the internal file logger.
@@ -34,7 +34,7 @@ public record AgentBuilderOptions
 	public string[] ActivitySources { get; init; } = [];
 
 	/// <summary>
-	/// Stops <see cref="AgentBuilder"/> to register OLTP exporters, useful for testing scenarios
+	/// Stops <see cref="ElasticOpenTelemetryBuilder"/> to register OLTP exporters, useful for testing scenarios
 	/// </summary>
 	public bool SkipOtlpExporter { get; init; }
 

@@ -21,7 +21,7 @@ public static class ServiceCollectionExtensions
 	/// <param name="serviceCollection"></param>
 	/// <returns></returns>
 	public static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection serviceCollection) =>
-		serviceCollection.AddElasticOpenTelemetry(new AgentBuilderOptions { Services = serviceCollection });
+		serviceCollection.AddElasticOpenTelemetry(new ElasticOpenTelemetryOptions { Services = serviceCollection });
 
 	/// <summary>
 	/// TODO
@@ -30,22 +30,22 @@ public static class ServiceCollectionExtensions
 	/// <param name="activitySourceNames"></param>
 	/// <returns></returns>
 	public static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection serviceCollection, params string[]? activitySourceNames) =>
-		serviceCollection.AddElasticOpenTelemetry(new AgentBuilderOptions { Services = serviceCollection, ActivitySources = activitySourceNames ?? [] });
+		serviceCollection.AddElasticOpenTelemetry(new ElasticOpenTelemetryOptions { Services = serviceCollection, ActivitySources = activitySourceNames ?? [] });
 
 	/// <summary>
 	/// TODO
 	/// </summary>
 	/// <param name="serviceCollection"></param>
-	/// <param name="options"><see cref="AgentBuilderOptions"/></param>
+	/// <param name="options"><see cref="ElasticOpenTelemetryOptions"/></param>
 	/// <returns></returns>
-	public static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection serviceCollection, AgentBuilderOptions options)
+	public static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection serviceCollection, ElasticOpenTelemetryOptions options)
 	{
 		if (serviceCollection.Any(d => d.ServiceType == typeof(IHostedService) && d.ImplementationType == typeof(ElasticOtelDistroService)))
 		{
 			// TODO - Can we avoid this by storing the instance on the builder (internal access)
 			var sp = serviceCollection.BuildServiceProvider();
-			return sp.GetService<AgentBuilder>()!; //already registered as singleton
+			return sp.GetService<ElasticOpenTelemetryBuilder>()!; //already registered as singleton
 		}
-		return new AgentBuilder(options);
+		return new ElasticOpenTelemetryBuilder(options);
 	}
 }

@@ -26,8 +26,8 @@ internal static partial class LoggerMessages
 	public static void LogAgentPreamble(this ILogger logger)
 	{
 		var process = Process.GetCurrentProcess();
-		logger.LogInformation("Elastic OpenTelemetry Distribution: {AgentInformationalVersion}", Agent.InformationalVersion);
-		if (logger is AgentCompositeLogger agentLogger)
+		logger.LogInformation("Elastic OpenTelemetry Distribution: {AgentInformationalVersion}", VersionHelper.InformationalVersion);
+		if (logger is CompositeLogger agentLogger)
 		{
 			if (agentLogger.LogFileEnabled)
 				logger.LogInformation("Elastic OpenTelemetry Distribution, log file: {LogFilePath}", agentLogger.LogFilePath);

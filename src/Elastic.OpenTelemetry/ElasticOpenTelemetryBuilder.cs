@@ -16,27 +16,27 @@ using OpenTelemetry.Trace;
 namespace Elastic.OpenTelemetry;
 
 /// <summary>
-/// Supports building <see cref="IAgent"/> instances which include Elastic defaults, but can also be customised.
+/// Supports building <see cref="IInstrumentationLifetime"/> instances which include Elastic defaults, but can also be customised.
 /// </summary>
-public class AgentBuilder : IOpenTelemetryBuilder
+public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 {
-	internal AgentCompositeLogger Logger { get; }
+	internal CompositeLogger Logger { get; }
 	internal LoggingEventListener EventListener { get; }
 
 	/// <inheritdoc cref="IOpenTelemetryBuilder.Services"/>
 	public IServiceCollection Services { get; }
 
 	/// <summary> TODO </summary>
-	public AgentBuilder(params string[] activitySourceNames) : this(new AgentBuilderOptions
+	public ElasticOpenTelemetryBuilder(params string[] activitySourceNames) : this(new ElasticOpenTelemetryOptions
 	{
 		ActivitySources = activitySourceNames
 	})
 	{ }
 
 	/// <summary> TODO </summary>
-	public AgentBuilder(AgentBuilderOptions options)
+	public ElasticOpenTelemetryBuilder(ElasticOpenTelemetryOptions options)
 	{
-		Logger = new AgentCompositeLogger(options.Logger);
+		Logger = new CompositeLogger(options.Logger);
 
 		// Enables logging of OpenTelemetry-SDK event source events
 		EventListener = new LoggingEventListener(Logger);
