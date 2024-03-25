@@ -9,14 +9,12 @@ using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.AddServiceDefaults();
+
 builder.Services
 	.AddHttpClient() // Adds IHttpClientFactory
 	.AddOpenTelemetry() // Adds the OpenTelemetry SDK
-		.WithTracing(t =>
-		{
-			t.AddAspNetCoreInstrumentation(); // Configure tracing to instrument ASP.NET Core
-			t.AddSource(Api.ActivitySourceName);
-		});
+		.WithTracing(t => t.AddSource(Api.ActivitySourceName));
 
 var app = builder.Build();
 

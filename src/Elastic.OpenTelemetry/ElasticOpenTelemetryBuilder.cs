@@ -10,6 +10,7 @@ using Elastic.OpenTelemetry.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
+using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
@@ -78,7 +79,19 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 		if (!options.SkipOtlpExporter)
 			openTelemetry.UseOtlpExporter();
 
+		//TODO Move to WithLogging once it gets stable
+		Services.Configure<OpenTelemetryLoggerOptions>(logging =>
+		{
+			logging.IncludeFormattedMessage = true;
+			logging.IncludeScopes = true;
+			//TODO add processor that adds service.id
+		});
 		openTelemetry
+			.WithLogging(logging =>
+			{
+				logging.ConfigureResource(r => r.AddDistroAttributes());
+			})
+
 			.WithTracing(tracing =>
 			{
 				tracing.ConfigureResource(r => r.AddDistroAttributes());

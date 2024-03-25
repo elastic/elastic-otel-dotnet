@@ -4,20 +4,16 @@
 
 using Example.AspNetCore.Mvc.Controllers;
 using OpenTelemetry;
-using OpenTelemetry.Metrics;
-using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.AddServiceDefaults();
 
 // Add services to the container.
 builder.Services
 	.AddHttpClient()
 	.AddOpenTelemetry()
-		.WithTracing(t => t
-			.AddSource(HomeController.ActivitySourceName)
-			.AddAspNetCoreInstrumentation())
-		.WithMetrics(t => t
-			.AddAspNetCoreInstrumentation());
+		.WithTracing(t => t.AddSource(HomeController.ActivitySourceName));
 
 builder.Services
 	.AddControllersWithViews();
