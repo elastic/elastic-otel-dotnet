@@ -53,6 +53,10 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 		var openTelemetry =
 			Microsoft.Extensions.DependencyInjection.OpenTelemetryServicesExtensions.AddOpenTelemetry(Services);
 
+		//https://github.com/open-telemetry/opentelemetry-dotnet/pull/5400
+		if (!options.SkipOtlpExporter)
+			openTelemetry.UseOtlpExporter();
+
 		openTelemetry
 			.WithTracing(tracing =>
 			{
@@ -67,6 +71,7 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 					.AddEntityFrameworkCoreInstrumentation(); // TODO - Should we add this by default?
 
 				tracing.AddElasticProcessors(Logger);
+				Logger.LogAgentBuilderBuiltTracerProvider();
 			})
 			.WithMetrics(metrics =>
 			{
@@ -82,21 +87,6 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 					.AddProcessInstrumentation()
 					.AddRuntimeInstrumentation()
 					.AddHttpClientInstrumentation();
-			});
-
-		openTelemetry
-			.WithTracing(tracing =>
-			{
-				if (!options.SkipOtlpExporter)
-					tracing.AddOtlpExporter(options.OtlpExporterName, _ => { });
-				Logger.LogAgentBuilderBuiltTracerProvider();
-			})
-			.WithMetrics(metrics =>
-			{
-				if (!options.SkipOtlpExporter)
-				{
-					metrics.AddOtlpExporter(options.OtlpExporterName, _ => { });
-				}
 				Logger.LogAgentBuilderBuiltMeterProvider();
 			});
 
