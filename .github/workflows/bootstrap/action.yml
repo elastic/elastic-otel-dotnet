@@ -26,12 +26,15 @@ runs:
         restore-keys: |
           ${{ runner.os }}-nuget
           
-    -   name: Setup dotnet
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: |
-            6.0.x
-            8.0.x
+    - name: Setup dotnet
+      uses: actions/setup-dotnet@v4
+      with:
+        global-json-file: ./global.json
+
+    - name: Install Aspire workload
+      shell: bash
+      run: dotnet workload install aspire
+
     - id: dotnet
       shell: bash
       run: |
@@ -42,7 +45,6 @@ runs:
         echo "AGENT_VERSION=${AGENT_VERSION}" >> $GITHUB_ENV
         echo "agent-version=${AGENT_VERSION}" >> $GITHUB_OUTPUT
         echo "major-version=$(echo ${AGENT_VERSION} | cut -d"." -f1)" >> $GITHUB_OUTPUT
-  
-      
+
     # Setup git config
     - uses: elastic/apm-pipeline-library/.github/actions/setup-git@current

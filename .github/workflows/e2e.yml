@@ -38,8 +38,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Git
-        uses: elastic/apm-pipeline-library/.github/actions/setup-git@current
+      - name: Bootstrap Action Workspace
+        id: bootstrap
+        uses: ./.github/workflows/bootstrap
 
       - uses: elastic/apm-pipeline-library/.github/actions/github-token@current
         with:
@@ -66,12 +67,14 @@ jobs:
             secret/observability-team/ci/elastic-cloud/observability-team-${{ env.VAULT_SECRET_SUFFIX }} username | E2E__BROWSEREMAIL ;
             secret/observability-team/ci/elastic-cloud/observability-team-${{ env.VAULT_SECRET_SUFFIX }} password | E2E__BROWSERPASSWORD
         
-      - run: ./build.sh test --test-suite=e2e
+      - name: End-to-end tests
+        run: ./build.sh test --test-suite=e2e
         env: 
           E2E__ENDPOINT: "${{env.ELASTIC_APM_SERVER_URL}}"
           E2E__AUTHORIZATION: "Authorization=ApiKey ${{env.ELASTIC_APM_API_KEY}}"
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload Playwright traces
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: playwright-traces

@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information
 
 using OpenTelemetry;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,7 +12,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services
 	.AddHttpClient()
 	.AddOpenTelemetry()
-		.WithTracing(t => t.AddAspNetCoreInstrumentation());
+		.WithTracing(t => t
+			.AddAspNetCoreInstrumentation())
+		.WithMetrics(t => t
+			.AddAspNetCoreInstrumentation());
 
 builder.Services
 	.AddControllersWithViews();
