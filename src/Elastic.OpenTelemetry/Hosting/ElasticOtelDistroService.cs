@@ -11,7 +11,7 @@ namespace Elastic.OpenTelemetry.Hosting;
 
 internal sealed class ElasticOtelDistroService(IServiceProvider serviceProvider) : IHostedLifecycleService
 {
-	private IElasticOpenTelemetry? _agent;
+	private IInstrumentationLifetime? _agent;
 
 	public Task StartingAsync(CancellationToken cancellationToken)
 	{

@@ -26,16 +26,16 @@ public static class OpenTelemetryBuilderExtensions
 	}
 
 	/// <summary>
-	/// Build an instance of <see cref="IElasticOpenTelemetry"/>.
+	/// Build an instance of <see cref="IInstrumentationLifetime"/>.
 	/// </summary>
-	/// <returns>A new instance of <see cref="IElasticOpenTelemetry"/>.</returns>
-	public static IElasticOpenTelemetry Build(this IOpenTelemetryBuilder builder, ILogger? logger = null, IServiceProvider? serviceProvider = null)
+	/// <returns>A new instance of <see cref="IInstrumentationLifetime"/>.</returns>
+	public static IInstrumentationLifetime Build(this IOpenTelemetryBuilder builder, ILogger? logger = null, IServiceProvider? serviceProvider = null)
 	{
 		// this happens if someone calls Build() while using IServiceCollection and AddOpenTelemetry() and NOT Add*Elastic*OpenTelemetry()
 		// we treat this a NOOP
 		// NOTE for AddElasticOpenTelemetry(this IServiceCollection services) calling Build() manually is NOT required.
 		if (builder is not ElasticOpenTelemetryBuilder agentBuilder)
-			return new EmptyElasticOpenTelemetry();
+			return new EmptyInstrumentationLifetime();
 
 		var log = agentBuilder.Logger;
 
@@ -45,7 +45,7 @@ public static class OpenTelemetryBuilderExtensions
 		var tracerProvider = sp.GetService<TracerProvider>()!;
 		var meterProvider = sp.GetService<MeterProvider>()!;
 
-		var agent = new ElasticOpenTelemetry(log, agentBuilder.EventListener, tracerProvider, meterProvider);
+		var agent = new InstrumentationLifetime(log, agentBuilder.EventListener, tracerProvider, meterProvider);
 		log.LogAgentBuilderBuiltAgent();
 		return agent;
 	}

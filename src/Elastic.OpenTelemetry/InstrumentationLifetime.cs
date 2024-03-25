@@ -9,12 +9,12 @@ using OpenTelemetry.Trace;
 
 namespace Elastic.OpenTelemetry;
 
-internal class ElasticOpenTelemetry(
+internal class InstrumentationLifetime(
 	CompositeLogger logger,
 	LoggingEventListener loggingEventListener,
 	TracerProvider tracerProvider,
 	MeterProvider meterProvider
-) : IElasticOpenTelemetry
+) : IInstrumentationLifetime
 {
 	public void Dispose()
 	{

@@ -16,7 +16,7 @@ using OpenTelemetry.Trace;
 namespace Elastic.OpenTelemetry;
 
 /// <summary>
-/// Supports building <see cref="IElasticOpenTelemetry"/> instances which include Elastic defaults, but can also be customised.
+/// Supports building <see cref="IInstrumentationLifetime"/> instances which include Elastic defaults, but can also be customised.
 /// </summary>
 public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 {
