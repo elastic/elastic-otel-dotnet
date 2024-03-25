@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Elastic.OpenTelemetry.Hosting;
 
-internal sealed class ElasticOtelDistroService(IServiceProvider serviceProvider) : IHostedLifecycleService
+internal sealed class ElasticOpenTelemetryService(IServiceProvider serviceProvider) : IHostedLifecycleService
 {
 	private IInstrumentationLifetime? _agent;
 

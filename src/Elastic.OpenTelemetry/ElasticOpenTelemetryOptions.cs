@@ -4,37 +4,30 @@
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OpenTelemetry.Trace;
 
 namespace Elastic.OpenTelemetry;
 
 /// <summary>
-/// Expert options to provide to <see cref="ElasticOpenTelemetryBuilder"/> to control its initial OpenTelemetry registration
+/// Expert options to provide to <see cref="ElasticOpenTelemetryBuilder"/> to control its initial OpenTelemetry registration.
 /// </summary>
 public record ElasticOpenTelemetryOptions
 {
 	/// <summary>
 	/// Provide an additional logger to the internal file logger.
 	/// <para>
-	/// The agent will always log to file if a Path is provided using the <c>ELASTIC_OTEL_LOG_DIRECTORY</c>
+	/// The agent will always log to file if a path is provided using the <c>ELASTIC_OTEL_LOG_DIRECTORY</c>.
 	/// environment variable.</para>
 	/// </summary>
 	public ILogger? Logger { get; init; }
 
 	/// <summary>
 	/// Provides an <see cref="IServiceCollection"/> to register the agent into.
-	/// If null a new local instance will be used.
+	/// If null, a new local instance will be used.
 	/// </summary>
 	public IServiceCollection? Services { get; init; }
 
 	/// <summary>
-	/// The initial activity sources to listen to.
-	/// <para>>These can always later be amended with <see cref="TracerProviderBuilder.AddSource"/></para>
-	/// </summary>
-	public string[] ActivitySources { get; init; } = [];
-
-	/// <summary>
-	/// Stops <see cref="ElasticOpenTelemetryBuilder"/> to register OLTP exporters, useful for testing scenarios
+	/// Stops <see cref="ElasticOpenTelemetryBuilder"/> from registering OLTP exporters, useful for testing scenarios.
 	/// </summary>
 	public bool SkipOtlpExporter { get; init; }
 

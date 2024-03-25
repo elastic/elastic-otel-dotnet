@@ -7,22 +7,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Elastic.OpenTelemetry.Diagnostics.Logging;
 
-internal record LogState
-{
-	public Activity? Activity { get; init; }
-	public int ManagedThreadId { get; init; }
-	public DateTime DateTime { get; init; }
-	public string? SpanId { get; init; }
-}
-
 internal static class AgentLoggingHelpers
 {
-	public static bool IsFileLoggingEnabled()
-	{
-		var logDir = Environment.GetEnvironmentVariable(EnvironmentVariables.ElasticOtelLogDirectoryEnvironmentVariable);
-		return !string.IsNullOrWhiteSpace(logDir);
-	}
-
 	public static LogLevel GetElasticOtelLogLevel()
 	{
 		var logLevel = LogLevel.Information;
@@ -67,7 +53,4 @@ internal static class AgentLoggingHelpers
 		};
 		logger.Log(logLevel, 0, state, null, (_, _) => logLine);
 	}
-
-
-
 }

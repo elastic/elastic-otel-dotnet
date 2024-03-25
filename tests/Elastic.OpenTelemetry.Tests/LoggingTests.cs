@@ -23,22 +23,22 @@ public class LoggingTests(ITestOutputHelper output)
 						 .WithTracing(tpb => tpb
 							 .ConfigureResource(rb => rb.AddService("Test", "1.0.0"))
 							 .AddSource(activitySourceName)
-							 .AddInMemoryExporter(new List<Activity>())
+							 .AddInMemoryExporter([])
 						 )
 						 .Build())
 		{
-			using (var activity = activitySource.StartActivity(ActivityKind.Internal))
-				activity?.SetStatus(ActivityStatusCode.Ok);
+			using var activity = activitySource.StartActivity(ActivityKind.Internal);
+			activity?.SetStatus(ActivityStatusCode.Ok);
 		}
 
 		//assert preamble information gets logged
 		logger.Messages.Should().ContainMatch("*Elastic OpenTelemetry Distribution:*");
 
 		var preambles = logger.Messages.Where(l => l.Contains("[Info]      Elastic OpenTelemetry Distribution:")).ToList();
-		preambles.Should().HaveCount(1);
+		preambles.Should().NotBeNull().And.HaveCount(1);
 
 		// assert agent initialized confirmation and stack trace gets dumped.
-		logger.Messages.Should().ContainMatch("*AgentBuilder initialized*");
+		logger.Messages.Should().ContainMatch("*ElasticOpenTelemetryBuilder initialized*");
 
 		// very lenient format check
 		logger.Messages.Should().ContainMatch("[*][*][*][Info]*");

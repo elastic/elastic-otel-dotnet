@@ -2,6 +2,7 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using Example.AspNetCore.Mvc.Controllers;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
@@ -13,6 +14,7 @@ builder.Services
 	.AddHttpClient()
 	.AddOpenTelemetry()
 		.WithTracing(t => t
+			.AddSource(HomeController.ActivitySourceName)
 			.AddAspNetCoreInstrumentation())
 		.WithMetrics(t => t
 			.AddAspNetCoreInstrumentation());

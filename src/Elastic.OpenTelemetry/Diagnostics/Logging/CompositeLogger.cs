@@ -6,28 +6,31 @@ using Microsoft.Extensions.Logging;
 
 namespace Elastic.OpenTelemetry.Diagnostics.Logging;
 
-/// <summary> A composite logger for use inside the agent, will dispose <see cref="Logging.FileLogger"/> </summary>
+/// <summary>
+/// A composite logger for use inside the distribution which logs to the <see cref="Logging.FileLogger"/>
+/// and optionally an additional <see cref="ILogger"/>.
+/// </summary>
+/// <remarks>
+/// If disposed, triggers disposal of the <see cref="Logging.FileLogger"/>.
+/// </remarks>
 internal sealed class CompositeLogger(ILogger? additionalLogger) : IDisposable, IAsyncDisposable, ILogger
 {
 	public FileLogger FileLogger { get; } = new();
 
 	private bool _isDisposed;
 
-	/// <summary> TODO </summary>
 	public void Dispose()
 	{
 		_isDisposed = true;
 		FileLogger.Dispose();
 	}
 
-	/// <summary> TODO </summary>
 	public ValueTask DisposeAsync()
 	{
 		_isDisposed = true;
 		return FileLogger.DisposeAsync();
 	}
 
-	/// <summary> TODO </summary>
 	public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
 	{
 		if (_isDisposed)
@@ -46,13 +49,10 @@ internal sealed class CompositeLogger(ILogger? additionalLogger) : IDisposable, 
 	public bool LogFileEnabled => FileLogger.FileLoggingEnabled;
 	public string LogFilePath => FileLogger.LogFilePath ?? string.Empty;
 
-	/// <summary> TODO </summary>
 	public void SetAdditionalLogger(ILogger? logger) => additionalLogger ??= logger;
 
-	/// <summary> TODO </summary>
 	public bool IsEnabled(LogLevel logLevel) => FileLogger.IsEnabled(logLevel) || (additionalLogger?.IsEnabled(logLevel) ?? false);
 
-	/// <summary> TODO </summary>
 	public IDisposable BeginScope<TState>(TState state) where TState : notnull =>
 		new CompositeDisposable(FileLogger.BeginScope(state), additionalLogger?.BeginScope(state));
 
