@@ -14,7 +14,7 @@ public class Worker(ILogger<Worker> logger) : BackgroundService
 
 	private readonly ILogger<Worker> _logger = logger;
 	private static readonly HttpClient HttpClient = new();
-	
+
 	private static readonly ActivitySource ActivitySource = new(ActivitySourceName, "1.0.0");
 	private static readonly Meter Meter = new(MeterName);
 	private static readonly Counter<int> Counter = Meter.CreateCounter<int>("invocations",
