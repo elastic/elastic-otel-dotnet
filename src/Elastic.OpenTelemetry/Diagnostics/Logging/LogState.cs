@@ -44,7 +44,7 @@ internal class LogState : IReadOnlyList<KeyValuePair<string, object?>>
 		init => _spanId = value;
 	}
 
-	private readonly List<KeyValuePair<string, object?>> _values = new ();
+	private readonly List<KeyValuePair<string, object?>> _values = new();
 
 	public IEnumerator<KeyValuePair<string, object?>> GetEnumerator() => _values.GetEnumerator();
 
