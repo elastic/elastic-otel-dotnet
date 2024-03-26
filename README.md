@@ -1,6 +1,6 @@
 [![Pull Request Validation](https://github.com/elastic/elastic-otel-dotnet/actions/workflows/ci.yml/badge.svg)](https://github.com/elastic/elastic-otel-dotnet/actions/workflows/ci.yml)
 
-# Elastic OpenTelemetry Distribution
+# Elastic OpenTelemetry .NET Distribution
 
 The Elastic OpenTelemetry .NET Distribution provides a zero code change extension to [OpenTelemetry SDK for .NET](https://opentelemetry.io/docs/languages/net). These extensions ensure a smooth and rich out of the box experience with [Elastic Observability](https://www.elastic.co/observability) through strictly OpenTelemetry native means.
 
