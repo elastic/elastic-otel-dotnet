@@ -3,11 +3,14 @@ name: release
 on:
   release:
     types: [published]
+  push:
+    branches:
+      - main
+      - provenance
 
 permissions:
   contents: write
   issues: write
-  pull-requests: write
 
 env:
   NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
@@ -17,7 +20,8 @@ env:
 jobs:
   release:
     runs-on: ubuntu-latest
-
+    permissions:
+      id-token: write
     steps:
     - uses: actions/checkout@v4
     - name: Bootstrap Action Workspace
@@ -26,6 +30,11 @@ jobs:
 
     - run: ./build.sh release --test-suite=skip-all
       name: Release
+
+    - name: generate build provenance
+      uses: github-early-access/generate-build-provenance@main
+      with:
+        subject-path: "${{ github.workspace }}/.artifacts/package/release/*.nupkg"
 
     - name: Prepare Nuget
       uses: hashicorp/vault-action@v3.0.0
@@ -38,10 +47,11 @@ jobs:
           secret/apm-team/ci/elastic-observability-nuget apiKey | REPO_API_KEY ;
           secret/apm-team/ci/elastic-observability-nuget url | REPO_API_URL
 
-    - name: Release to Nuget
+    - name: Release to Nuget (only for release events)
+      if: ${{ github.event_name == 'release' }}
       run: dotnet nuget push '.artifacts/package/release/*.nupkg' -k ${REPO_API_KEY} -s  ${REPO_API_URL} --skip-duplicate --no-symbols
 
-    - if: ${{ success() }}
+    - if: ${{ success() && github.event_name == 'release' }}
       uses: elastic/apm-pipeline-library/.github/actions/slack-message@current
       with:
         url: ${{ secrets.VAULT_ADDR }}
@@ -53,7 +63,7 @@ jobs:
           Build: (<${{ env.JOB_URL }}|here>)
           Release URL: (<https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}|${{ github.ref_name }}>)
 
-    - if: ${{ failure() }}
+    - if: ${{ failure() && github.event_name == 'release' }}
       uses: elastic/apm-pipeline-library/.github/actions/slack-message@current
       with:
         url: ${{ secrets.VAULT_ADDR }}
@@ -72,7 +82,8 @@ jobs:
       GIT_TAG: v${{ needs.release.outputs.agent-version }}
       NEW_BRANCH: update/${{ needs.release.outputs.agent-version }}
       TARGET_BRANCH: ${{ needs.release.outputs.major-version }}.x
-
+    permissions:
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -81,7 +92,8 @@ jobs:
       - name: Setup git config
         uses: elastic/apm-pipeline-library/.github/actions/setup-git@current
 
-      - name: Create GitHub Pull Request if minor release.
+      - name: Create GitHub Pull Request if minor release (only for release events)
+        if: ${{ github.event_name == 'release' }}
         run: |
           echo "as long as there is a major.x branch"
           existed_in_local=$(git ls-remote --heads origin ${TARGET_BRANCH})
@@ -100,7 +112,8 @@ jobs:
             --base "$TARGET_BRANCH" \
             --repo "${{ github.repository }}"
 
-      - name: Create branch if major release
+      - name: Create branch if major release (only for release events)
+        if: ${{ github.event_name == 'release' }}
         run: |
           echo "as long as there is no a major.x branch"
           existed_in_local=$(git ls-remote --heads origin ${TARGET_BRANCH})
