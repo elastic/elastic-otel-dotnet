@@ -103,6 +103,7 @@ public abstract class DotNetRunApplication
 		{
 			write($"Contents of: {logFile.FullName}");
 			using var sr = logFile.OpenText();
+			// ReSharper disable once RedundantAssignment
 			var s = string.Empty;
 			while ((s = sr.ReadLine()) != null)
 				write(s);
