@@ -9,8 +9,7 @@ on:
       - provenance
 
 permissions:
-  contents: write
-  issues: write
+  contents: read
 
 env:
   NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
@@ -21,6 +20,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
+      contents: write
       id-token: write
     steps:
     - uses: actions/checkout@v4
@@ -83,6 +83,8 @@ jobs:
       NEW_BRANCH: update/${{ needs.release.outputs.agent-version }}
       TARGET_BRANCH: ${{ needs.release.outputs.major-version }}.x
     permissions:
+      contents: write
+      issues: write
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
