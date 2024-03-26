@@ -18,6 +18,7 @@
   
   <ItemGroup>
     <Content Include="README.md" Pack="true" PackagePath="README.md" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="$(SolutionRoot)\README.md" CopyToOutputDirectory="PreserveNewest" Pack="True" PackagePath="README.md" />
     <None Include="$(SolutionRoot)\NOTICE.txt" CopyToOutputDirectory="PreserveNewest" Pack="True" PackagePath="NOTICE.txt" />
     <None Include="$(SolutionRoot)\LICENSE.txt" CopyToOutputDirectory="PreserveNewest" Pack="True" PackagePath="LICENSE.txt" />
     <Content Include="$(SolutionRoot)\build\nuget-icon.png" CopyToOutputDirectory="PreserveNewest">

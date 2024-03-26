@@ -35,4 +35,8 @@
     <InternalsVisibleTo Include="Elastic.OpenTelemetry.Tests" Key="$(ExposedPublicKey)" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Remove="README.md" />
+  </ItemGroup>
+
 </Project>
