@@ -15,13 +15,13 @@ public record ElasticOpenTelemetryOptions
 	/// <summary>
 	/// Provide an additional logger to the internal file logger.
 	/// <para>
-	/// The agent will always log to file if a path is provided using the <c>ELASTIC_OTEL_LOG_DIRECTORY</c>.
+	/// The distribution will always log to file if a path is provided using the <c>ELASTIC_OTEL_LOG_DIRECTORY</c>.
 	/// environment variable.</para>
 	/// </summary>
 	public ILogger? Logger { get; init; }
 
 	/// <summary>
-	/// Provides an <see cref="IServiceCollection"/> to register the agent into.
+	/// Provides an <see cref="IServiceCollection"/> to register the <see cref="IInstrumentationLifetime"/> into.
 	/// If null, a new local instance will be used.
 	/// </summary>
 	public IServiceCollection? Services { get; init; }

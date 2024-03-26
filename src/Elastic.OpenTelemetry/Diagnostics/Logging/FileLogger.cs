@@ -40,7 +40,7 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 		var process = Process.GetCurrentProcess();
 
 		// When ordered by filename, we get see logs from the same process grouped, then ordered by oldest to newest, then the PID for that instance
-		LogFilePath = Path.Combine(configuredPath, $"{process.ProcessName}_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{process.Id}.agent.log");
+		LogFilePath = Path.Combine(configuredPath, $"{process.ProcessName}_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{process.Id}.instrumentation.log");
 
 		if (!Directory.Exists(configuredPath))
 			Directory.CreateDirectory(configuredPath);
