@@ -24,10 +24,10 @@ internal static partial class LoggerMessages
 	{
 		var process = Process.GetCurrentProcess();
 		logger.LogInformation("Elastic OpenTelemetry Distribution: {AgentInformationalVersion}", VersionHelper.InformationalVersion);
-		if (logger is CompositeLogger agentLogger)
+		if (logger is CompositeLogger distributionLogger)
 		{
-			if (agentLogger.LogFileEnabled)
-				logger.LogInformation("Elastic OpenTelemetry Distribution, log file: {LogFilePath}", agentLogger.LogFilePath);
+			if (distributionLogger.LogFileEnabled)
+				logger.LogInformation("Elastic OpenTelemetry Distribution, log file: {LogFilePath}", distributionLogger.LogFilePath);
 			else
 				logger.LogInformation("Elastic OpenTelemetry Distribution, log file: <disabled>");
 		}

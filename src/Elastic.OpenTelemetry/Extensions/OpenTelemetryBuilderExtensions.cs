@@ -21,11 +21,11 @@ public static class OpenTelemetryBuilderExtensions
 	/// </summary>
 	public static IOpenTelemetryBuilder WithLogger(this IOpenTelemetryBuilder builder, ILogger logger)
 	{
-		if (builder is not ElasticOpenTelemetryBuilder agentBuilder)
+		if (builder is not ElasticOpenTelemetryBuilder distributionBuilder)
 			return builder;
 
-		agentBuilder.Logger.SetAdditionalLogger(logger);
-		return agentBuilder;
+		distributionBuilder.Logger.SetAdditionalLogger(logger);
+		return distributionBuilder;
 	}
 
 	/// <summary>
@@ -48,9 +48,9 @@ public static class OpenTelemetryBuilderExtensions
 		var tracerProvider = sp.GetService<TracerProvider>()!;
 		var meterProvider = sp.GetService<MeterProvider>()!;
 
-		var agent = new InstrumentationLifetime(compositeLogger, elasticOtelBuilder.EventListener, tracerProvider, meterProvider);
+		var lifetime = new InstrumentationLifetime(compositeLogger, elasticOtelBuilder.EventListener, tracerProvider, meterProvider);
 		compositeLogger.LogElasticOpenTelemetryBuilderBuilt();
-		return agent;
+		return lifetime;
 	}
 }
 

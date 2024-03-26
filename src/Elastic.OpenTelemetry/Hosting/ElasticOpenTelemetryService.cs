@@ -11,17 +11,14 @@ namespace Elastic.OpenTelemetry.Hosting;
 
 internal sealed class ElasticOpenTelemetryService(IServiceProvider serviceProvider) : IHostedLifecycleService
 {
-	private IInstrumentationLifetime? _agent;
+	private IInstrumentationLifetime? _lifeTime;
 
 	public Task StartingAsync(CancellationToken cancellationToken)
 	{
 		var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
 		var logger = loggerFactory?.CreateLogger($"{nameof(Elastic)}.{nameof(OpenTelemetry)}");
 
-		_agent = serviceProvider.GetRequiredService<ElasticOpenTelemetryBuilder>().Build(logger, serviceProvider);
-
-		//logger.LogInformation("Initialising Agent.Current.");
-		//Agent.SetAgent(_agent, logger);
+		_lifeTime = serviceProvider.GetRequiredService<ElasticOpenTelemetryBuilder>().Build(logger, serviceProvider);
 
 		return Task.CompletedTask;
 	}
@@ -33,7 +30,7 @@ internal sealed class ElasticOpenTelemetryService(IServiceProvider serviceProvid
 
 	public async Task StoppedAsync(CancellationToken cancellationToken)
 	{
-		if (_agent != null)
-			await _agent.DisposeAsync().ConfigureAwait(false);
+		if (_lifeTime != null)
+			await _lifeTime.DisposeAsync().ConfigureAwait(false);
 	}
 }

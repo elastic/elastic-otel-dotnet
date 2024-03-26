@@ -20,7 +20,7 @@ public class TransactionIdProcessorTests(ITestOutputHelper output)
 
 		var exportedItems = new List<Activity>();
 
-		using var agent = new ElasticOpenTelemetryBuilder(options)
+		using var session = new ElasticOpenTelemetryBuilder(options)
 			.WithTracing(tpb =>
 			{
 				tpb

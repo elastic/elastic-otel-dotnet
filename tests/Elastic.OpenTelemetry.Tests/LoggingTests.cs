@@ -37,7 +37,7 @@ public class LoggingTests(ITestOutputHelper output)
 		var preambles = logger.Messages.Where(l => l.Contains("[Info]      Elastic OpenTelemetry Distribution:")).ToList();
 		preambles.Should().NotBeNull().And.HaveCount(1);
 
-		// assert agent initialized confirmation and stack trace gets dumped.
+		// assert instrumentation session logs initialized and stack trace gets dumped.
 		logger.Messages.Should().ContainMatch("*ElasticOpenTelemetryBuilder initialized*");
 
 		// very lenient format check
