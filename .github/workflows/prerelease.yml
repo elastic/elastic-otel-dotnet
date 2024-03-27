@@ -43,11 +43,13 @@ jobs:
           secrets: |
             secret/apm-team/ci/elastic-observability-feedz.io apiKey | REPO_API_KEY ;
             secret/apm-team/ci/elastic-observability-feedz.io url | REPO_API_URL
-      
+
+      # Push to feedz.io 
       - name: publish canary packages to feedz.io
         run: dotnet nuget push 'build/output/_packages/*.nupkg' -k ${REPO_API_KEY} -s ${REPO_API_URL} --skip-duplicate --no-symbols
           
-      # Github packages requires authentication, this is likely going away in the future so for now we publish to feedz.io
+      # Push to GHPR for advertising purposes on the github landing page.
+      # Sadly this still requires authentication to use as a nuget package repository
       - name: Publish canary packages github package repository
         shell: bash
         # this is a best effort to push to GHPR, we've observed it being unavailable intermittently
