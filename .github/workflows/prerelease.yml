@@ -40,7 +40,7 @@ jobs:
         run: |
           dotnet nuget add source --username USERNAME --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/elastic/index.json"
           dotnet nuget push '${{ env.RELEASE_PACKAGES }}' -k ${{ secrets.GITHUB_TOKEN }} --skip-duplicate --no-symbols --source "github"
-          dotnet nuget add source github
+          dotnet nuget remove source github
       
       # Github packages requires authentication, this is likely going away in the future so for now we publish to feedz.io
       - name: Publish canary packages to feedz.io
