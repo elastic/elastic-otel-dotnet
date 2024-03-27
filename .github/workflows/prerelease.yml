@@ -33,13 +33,25 @@ jobs:
         with:
           subject-path: "${{ github.workspace }}/${{ env.RELEASE_PACKAGES }}"
 
+      - name: Prepare feedz.io
+        uses: hashicorp/vault-action@v2.7.4
+        with:
+          url: ${{ secrets.VAULT_ADDR }}
+          method: approle
+          roleId: ${{ secrets.VAULT_ROLE_ID }}
+          secretId: ${{ secrets.VAULT_SECRET_ID }}
+          secrets: |
+            secret/apm-team/ci/elastic-observability-feedz.io apiKey | REPO_API_KEY ;
+            secret/apm-team/ci/elastic-observability-feedz.io url | REPO_API_URL
+
+      # Push to feedz.io 
+      - name: publish canary packages to feedz.io
+        run: dotnet nuget push 'build/output/_packages/*.nupkg' -k ${REPO_API_KEY} -s ${REPO_API_URL} --skip-duplicate --no-symbols
+          
+      # Push to GHPR for advertising purposes on the github landing page.
+      # Sadly this still requires authentication to use as a nuget package repository
       - name: Publish canary packages github package repository
         shell: bash
         # this is a best effort to push to GHPR, we've observed it being unavailable intermittently
         continue-on-error: true
         run: dotnet nuget push '${{ env.RELEASE_PACKAGES }}' -k ${{ secrets.GITHUB_TOKEN }} --source "https://nuget.pkg.github.com/elastic/index.json" --skip-duplicate --no-symbols 
-      
-      # Github packages requires authentication, this is likely going away in the future so for now we publish to feedz.io
-      - name: Publish canary packages to feedz.io
-        run: dotnet nuget push '${{ env.RELEASE_PACKAGES }}' -k ${{ secrets.FEEDZ_IO_API_KEY }} --source https://f.feedz.io/elastic/all/nuget/index.json --skip-duplicate --no-symbols
-        if: github.event_name == 'push' && startswith(github.ref, 'refs/heads')
