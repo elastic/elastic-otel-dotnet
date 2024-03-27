@@ -14,6 +14,7 @@ env:
   NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
   JOB_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
   SLACK_CHANNEL: "#apm-agent-dotnet"
+  RELEASE_PACKAGES: ".artifacts/package/release/*.nupkg"
 
 jobs:
   release:
@@ -33,7 +34,7 @@ jobs:
     - name: generate build provenance
       uses: github-early-access/generate-build-provenance@main
       with:
-        subject-path: "${{ github.workspace }}/.artifacts/package/release/*.nupkg"
+        subject-path: "${{ github.workspace }}/${{ env.RELEASE_PACKAGES }}"
 
     - name: Prepare Nuget
       uses: hashicorp/vault-action@v3.0.0
@@ -48,7 +49,7 @@ jobs:
 
     - name: Release to Nuget (only for release events)
       if: ${{ github.event_name == 'release' }}
-      run: dotnet nuget push '.artifacts/package/release/*.nupkg' -k ${REPO_API_KEY} -s  ${REPO_API_URL} --skip-duplicate --no-symbols
+      run: dotnet nuget push '${{ env.RELEASE_PACKAGES }}' -k ${REPO_API_KEY} -s  ${REPO_API_URL} --skip-duplicate --no-symbols
 
     - if: ${{ success() && github.event_name == 'release' }}
       uses: elastic/apm-pipeline-library/.github/actions/slack-message@current
