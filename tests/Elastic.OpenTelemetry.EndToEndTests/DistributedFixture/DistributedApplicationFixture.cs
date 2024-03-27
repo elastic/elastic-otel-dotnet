@@ -16,7 +16,7 @@ public class DistributedApplicationFixture : IPartitionLifetime
 
 	public string ServiceName { get; } = $"dotnet-e2e-{ShaForCurrentTicks()}";
 
-	public bool Started => AspNetApplication?.ProcessId.HasValue ?? false;
+	public bool Started => AspNetApplication.ProcessId.HasValue;
 
 	private readonly List<string> _output = [];
 
@@ -53,11 +53,13 @@ public class DistributedApplicationFixture : IPartitionLifetime
 	{
 		var logLines = new List<string>();
 		if (_aspNetApplication?.ProcessId.HasValue ?? false)
+		{
 			DotNetRunApplication.IterateOverLog(s =>
 			{
 				Console.WriteLine(s);
 				logLines.Add(s);
 			});
+		}
 
 		var messages = string.Join(Environment.NewLine, _output.Concat(logLines));
 		return messages;

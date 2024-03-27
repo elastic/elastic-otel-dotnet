@@ -5,7 +5,6 @@
 using System.Diagnostics;
 using Example.Api;
 using OpenTelemetry;
-using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 

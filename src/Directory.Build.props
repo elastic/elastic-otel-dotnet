@@ -13,7 +13,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <DebugSymbols>true</DebugSymbols>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    
+    <WarningsAsErrors>True</WarningsAsErrors>
   </PropertyGroup>
   
   <ItemGroup>

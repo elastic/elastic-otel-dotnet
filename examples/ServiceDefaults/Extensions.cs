@@ -8,10 +8,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
-using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
+// ReSharper disable once CheckNamespace
 namespace Microsoft.Extensions.Hosting;
 
 public static class Extensions
@@ -70,6 +70,8 @@ public static class Extensions
 		return builder;
 	}
 
+	// Leaving this in for documentation purposes
+	// ReSharper disable once UnusedMethodReturnValue.Local
 	private static IHostApplicationBuilder AddOpenTelemetryExporters(this IHostApplicationBuilder builder) =>
 		//var useOtlpExporter = !string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]);
 		//if (useOtlpExporter)
