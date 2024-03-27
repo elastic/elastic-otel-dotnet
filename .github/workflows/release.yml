@@ -31,7 +31,7 @@ jobs:
     - run: ./build.sh release --test-suite=skip-all
       name: Release
 
-    - name: generate build provenance
+    - name: Generate build provenance
       uses: github-early-access/generate-build-provenance@main
       with:
         subject-path: "${{ github.workspace }}/${{ env.RELEASE_PACKAGES }}"
@@ -49,7 +49,7 @@ jobs:
 
     - name: Release to Nuget (only for release events)
       if: ${{ github.event_name == 'release' }}
-      run: dotnet nuget push '${{ env.RELEASE_PACKAGES }}' -k ${REPO_API_KEY} -s  ${REPO_API_URL} --skip-duplicate --no-symbols
+      run: dotnet nuget push '${{ env.RELEASE_PACKAGES }}' -k ${REPO_API_KEY} --source ${REPO_API_URL} --skip-duplicate --no-symbols
 
     - if: ${{ success() && github.event_name == 'release' }}
       uses: elastic/apm-pipeline-library/.github/actions/slack-message@current
