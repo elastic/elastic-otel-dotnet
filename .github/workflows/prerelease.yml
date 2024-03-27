@@ -42,4 +42,4 @@ jobs:
       # Github packages requires authentication, this is likely going away in the future so for now we publish to feedz.io
       - name: Publish canary packages to feedz.io
         run: dotnet nuget push '${{ env.RELEASE_PACKAGES }}' -k ${{ secrets.FEEDZ_IO_API_KEY }} --source https://f.feedz.io/elastic/all/nuget/index.json --skip-duplicate --no-symbols
-        if: github.event_name == 'push' && startswith(github.ref, 'refs/heads')
+        if: false && github.event_name == 'push' && startswith(github.ref, 'refs/heads')
