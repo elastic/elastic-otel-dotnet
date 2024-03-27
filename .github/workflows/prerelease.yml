@@ -46,7 +46,7 @@ jobs:
 
       # Push to feedz.io 
       - name: publish canary packages to feedz.io
-        run: dotnet nuget push 'build/output/_packages/*.nupkg' -k ${REPO_API_KEY} -s ${REPO_API_URL} --skip-duplicate --no-symbols
+        run: dotnet nuget push '${{ env.RELEASE_PACKAGES }}' -k ${REPO_API_KEY} -s ${REPO_API_URL} --skip-duplicate --no-symbols
           
       # Push to GHPR for advertising purposes on the github landing page.
       # Sadly this still requires authentication to use as a nuget package repository
