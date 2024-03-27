@@ -5,18 +5,22 @@ on:
     branches: [ "main" ]
 
 permissions:
-  contents: write
-  issues: write
-  packages: write
+  contents: read
 
 env:
   NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+  RELEASE_PACKAGES: ".artifacts/package/release/*.nupkg"
 
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      packages: write
     steps:
       - uses: actions/checkout@v4
+
       - name: Bootstrap Action Workspace
         id: bootstrap
         uses: ./.github/workflows/bootstrap
@@ -24,14 +28,19 @@ jobs:
       - run: ./build.sh release --test-suite=skip-e2e
         name: Release
 
+      - name: generate build provenance
+        uses: github-early-access/generate-build-provenance@main
+        with:
+          subject-path: "${{ github.workspace }}/${{ env.RELEASE_PACKAGES }}"
+
       - name: publish canary packages github package repository
         shell: bash
         # this is a best effort to push to GHPR, we've observed it being unavailable intermittently
         continue-on-error: true
-        run: dotnet nuget push '.artifacts/package/release/*.nupkg' -k ${{secrets.GITHUB_TOKEN}} --skip-duplicate --no-symbols
+        run: dotnet nuget push '${{ env.RELEASE_PACKAGES }}' -k ${{secrets.GITHUB_TOKEN}} --skip-duplicate --no-symbols
       
       # Github packages requires authentication, this is likely going away in the future so for now we publish to feedz.io
-      - run: dotnet nuget push '.artifacts/package/release/*.nupkg' -k ${{secrets.FEEDZ_IO_API_KEY}} -s https://f.feedz.io/elastic/all/nuget/index.json --skip-duplicate --no-symbols
+      - run: dotnet nuget push '${{ env.RELEASE_PACKAGES }}' -k ${{secrets.FEEDZ_IO_API_KEY}} -s https://f.feedz.io/elastic/all/nuget/index.json --skip-duplicate --no-symbols
         name: publish canary packages to feedz.io
         if: false && github.event_name == 'push' && startswith(github.ref, 'refs/heads')
 
