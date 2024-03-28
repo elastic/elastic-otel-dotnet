@@ -152,7 +152,7 @@ This demo uses an Elastic Cloud deployment as the destination for our observabil
 running in Elastic Cloud, navigate to the observability set up guides. Select the OpenTelemetry option 
 to view the configuration details that should be supplied to the application.
 
-![Elastic Cloud OpenTelemetry configuration](docs/images/elastic-cloud-opentelemetry-configuration.png)
+![Elastic Cloud OpenTelemetry configuration](https://raw.githubusercontent.com/elastic/elastic-otel-dotnet/main/docs/images/elastic-cloud-opentelemetry-configuration.png)
 
 Configure environment variables for the application either in `launchSettings.json` or in the environment 
 where the application is running. 
@@ -162,7 +162,7 @@ and exported to the OTLP endpoint.
 
 To view the traces, you can use the Elastic APM UI.
 
-![Minimal API request trace sample in the Elastic APM UI](docs/images/trace-sample-minimal-api.png)
+![Minimal API request trace sample in the Elastic APM UI](https://raw.githubusercontent.com/elastic/elastic-otel-dotnet/main/docs/images/trace-sample-minimal-api.png)
 
 ### Microsoft.Extensions.Hosting usage
 
