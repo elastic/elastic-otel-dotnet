@@ -2,13 +2,19 @@
 
 # Elastic OpenTelemetry .NET Distribution
 
-The Elastic OpenTelemetry .NET Distribution provides a zero code change extension to [OpenTelemetry SDK for .NET](https://opentelemetry.io/docs/languages/net). These extensions ensure a smooth and rich out of the box experience with [Elastic Observability](https://www.elastic.co/observability) through strictly OpenTelemetry native means.
+The Elastic OpenTelemetry .NET Distribution provides a zero code change extension 
+to [OpenTelemetry SDK for .NET](https://opentelemetry.io/docs/languages/net). These extensions ensure 
+a smooth and rich out of the box experience with [Elastic Observability](https://www.elastic.co/observability) 
+through strictly OpenTelemetry native means.
 
-This ensures there are no new concepts to learn with the full OpenTelemetry ecosystem remains at ones fingertips. Read more about the concept of [OpenTelemetry Distributions](https://opentelemetry.io/docs/concepts/distributions).
+This ensures there are no new concepts to learn with the full OpenTelemetry ecosystem remains at ones 
+fingertips. Read more about the concept of [OpenTelemetry Distributions](https://opentelemetry.io/docs/concepts/distributions).
 
 The Elastic distribution includes some Elastic-specific processors to ensure the best 
-compatibility when exporting OpenTelemetry signal data [Elastic Observability](https://www.elastic.co/observability). The distribution also preconfigures the collection of tracing, metrics and logs signals, applying some opinionated defaults, such as which sources are collected by default. The distribution also ensures that the OTLP exporter is enabled 
-by default.
+compatibility when exporting OpenTelemetry signal data [Elastic Observability](https://www.elastic.co/observability). 
+The distribution also preconfigures the collection of tracing, metrics and logs signals, applying 
+some opinionated defaults, such as which sources are collected by default. The distribution also 
+ensures that the OTLP exporter is enabled by default.
 
 > **_IMPORTANT:_**  The Elastic distribution is currently in early alpha release status. It is not yet feature
 complete and may contain bugs. We are actively working on improving the distribution and
@@ -34,12 +40,15 @@ Before continuing, ensure that you have a supported
 
 ### Installation
 
-To get started with the Elastic OpenTelemetry .NET Distribution, you must add the [`Elastic.OpenTelemetry`](https://www.nuget.org/packages/Elastic.OpenTelemetry)
+To get started with the Elastic OpenTelemetry .NET Distribution, you must add the 
+[`Elastic.OpenTelemetry`](https://www.nuget.org/packages/Elastic.OpenTelemetry)
 NuGet package to your project. This can be achieved by adding the package reference to your project file.
 
 ```xml
-<PackageReference Include="Elastic.OpenTelemetry" Version="0.1.0-alpha.1" />
+<PackageReference Include="Elastic.OpenTelemetry" Version="<LATEST>" />
 ```
+> **_NOTE:_** Replace the `<LATEST>` placeholder with the latest available package from 
+[NuGet.org](https://www.nuget.org/packages/Elastic.OpenTelemetry).
 
 After adding the package reference, you can start using the Elastic OpenTelemetry distribution 
 in your application. The distribution includes a transitive dependency on the OpenTelemetry SDK, 
@@ -50,8 +59,9 @@ references them.
 The Elastic OpenTelemetry distribution is designed to be easy to use and integrate into your 
 applications. This includes applications which have previously used the OpenTelemetry SDK directly. 
 In situations where the OpenTelemetry SDK is already used, the only required change is  
-to add the [`Elastic.OpenTelemetry`](https://www.nuget.org/packages/Elastic.OpenTelemetry) NuGet package to the project. Doing so will automatically 
-switch to the opinionated configuration provided by the Elastic distribution.
+to add the [`Elastic.OpenTelemetry`](https://www.nuget.org/packages/Elastic.OpenTelemetry) NuGet 
+package to the project. Doing so will automatically switch to the opinionated configuration provided 
+by the Elastic distribution.
 
 ### ASP.NET Core usage
 
@@ -72,8 +82,9 @@ To take advantage of the OpenTelemetry SDK instrumentation for ASP.NET Core, add
 NuGet package to your project:
 
 ```
-<PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.7.0" />
+<PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="<LATEST>" />
 ```
+> **_NOTE:_** Replace the `<LATEST>` placeholder with the latest available package from [NuGet.org](https://www.nuget.org/packages/OpenTelemetry.Instrumentation.AspNetCore).
 
 This package includes instrumentation to collect traces for requests handled by ASP.NET Core endpoints.
 
@@ -141,7 +152,7 @@ This demo uses an Elastic Cloud deployment as the destination for our observabil
 running in Elastic Cloud, navigate to the observability set up guides. Select the OpenTelemetry option 
 to view the configuration details that should be supplied to the application.
 
-![Elastic Cloud OpenTelemetry configuration](docs/images/elastic-cloud-opentelemetry-configuration.png)
+![Elastic Cloud OpenTelemetry configuration](https://raw.githubusercontent.com/elastic/elastic-otel-dotnet/main/docs/images/elastic-cloud-opentelemetry-configuration.png)
 
 Configure environment variables for the application either in `launchSettings.json` or in the environment 
 where the application is running. 
@@ -151,7 +162,7 @@ and exported to the OTLP endpoint.
 
 To view the traces, you can use the Elastic APM UI.
 
-![Minimal API request trace sample in the Elastic APM UI](docs/images/trace-sample-minimal-api.png)
+![Minimal API request trace sample in the Elastic APM UI](https://raw.githubusercontent.com/elastic/elastic-otel-dotnet/main/docs/images/trace-sample-minimal-api.png)
 
 ### Microsoft.Extensions.Hosting usage
 
@@ -159,11 +170,15 @@ For console applications, services, etc that are written against a builder that 
 you can install this package:
 
 ```xml
-<PackageReference Include="Elastic.OpenTelemetry" Version="0.1.0-alpha.1" />
+<PackageReference Include="Elastic.OpenTelemetry" Version="<LATEST>" />
 ```
-and ensure you call `AddOpenTelemetry` to enable OpenTelemetry just like you would when using OpenTelemetry directly. Our package intercepts this call to set up our defaults but can be further build upon as per usual:
+> **_NOTE:_** Replace the `<LATEST>` placeholder with the latest available package from 
+[NuGet.org](https://www.nuget.org/packages/Elastic.OpenTelemetry).
 
-```
+Ensure you call `AddOpenTelemetry` to enable OpenTelemetry just as you would when using OpenTelemetry directly. 
+Our package intercepts this call to set up our defaults, but can be further build upon as per usual:
+
+```csharp
 var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services.AddOpenTelemetry()
@@ -174,7 +189,8 @@ builder.Services.AddOpenTelemetry()
 
 ### Manual Instrumentation usage
 
-In environments where no `IServiceCollection` is naturally available you may manually start instrumenting by creating an instance of `ElasticOpenTelemetryBuilder`. 
+In environments where an `IServiceCollection` is unavailable you may manually start instrumenting by creating 
+an instance of `ElasticOpenTelemetryBuilder`. 
 
 ```csharp
 await using var session = new ElasticOpenTelemetryBuilder()
@@ -182,12 +198,11 @@ await using var session = new ElasticOpenTelemetryBuilder()
     .Build();
 ```
 
-This will setup instrumentation for as long as `session` is not disposed.
-
+This will setup instrumentation for as long as `session` is not disposed. We would generally expect the `session` 
+to live for the life of the application.
 
 `ElasticOpenTelemetryBuilder` is an implementation of [`IOpenTelemetryBuilder`](https://github.com/open-telemetry/opentelemetry-dotnet/blob/70657395b82ba00b8a1e848e8832b77dff94b6d2/src/OpenTelemetry.Api.ProviderBuilderExtensions/IOpenTelemetryBuilder.cs#L12). 
 
-This is important to know because any instrumentation configuration is automatically exposed by the base OpenTelemetry package as extension methods on `IOpenTelemetryBuilder`. You will not lose functionality
-by using our builder.
-
-
+This is important to know because any instrumentation configuration is automatically exposed by the base 
+OpenTelemetry package as extension methods on `IOpenTelemetryBuilder`. You will not lose functionality by 
+using our builder.
