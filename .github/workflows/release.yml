@@ -49,7 +49,7 @@ jobs:
 
     - name: Release to Nuget (only for release events)
       if: ${{ github.event_name == 'release' }}
-      run: dotnet nuget push '${{ env.RELEASE_PACKAGES }}' -k ${REPO_API_KEY} --source ${REPO_API_URL} --skip-duplicate --no-symbols
+      run: dotnet nuget push '${{ env.RELEASE_PACKAGES }}' -k ${{secrets.NUGET_REPO_API_KEY}} -s https://api.nuget.org/v3/index.json --skip-duplicate --no-symbols
 
     - if: ${{ success() && github.event_name == 'release' }}
       uses: elastic/apm-pipeline-library/.github/actions/slack-message@current
