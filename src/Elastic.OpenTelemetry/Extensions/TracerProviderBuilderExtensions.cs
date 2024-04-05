@@ -20,8 +20,14 @@ public static class TracerProviderBuilderExtensions
 	/// <summary>
 	/// Include Elastic trace processors to ensure data is enriched and extended.
 	/// </summary>
-	public static TracerProviderBuilder AddElasticProcessors(this TracerProviderBuilder builder, ILogger? logger = null) =>
-		builder.LogAndAddProcessor(new TransactionIdProcessor(logger ?? NullLogger.Instance), logger ?? NullLogger.Instance);
+	public static TracerProviderBuilder AddElasticProcessors(this TracerProviderBuilder builder, ILogger? logger = null)
+	{
+		logger ??= NullLogger.Instance;
+
+		return builder
+			.LogAndAddProcessor(new TransactionIdProcessor(logger), logger)
+			.LogAndAddProcessor(new ElasticCompatibilityProcessor(logger), logger);
+	}
 
 	private static TracerProviderBuilder LogAndAddProcessor(this TracerProviderBuilder builder, BaseProcessor<Activity> processor, ILogger logger)
 	{
