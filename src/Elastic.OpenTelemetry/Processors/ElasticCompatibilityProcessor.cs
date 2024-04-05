@@ -28,15 +28,23 @@ public class ElasticCompatibilityProcessor(ILogger logger) : BaseProcessor<Activ
 	{
 		if (activity.Kind == ActivityKind.Server)
 		{
+			// For inbound HTTP requests (server), ASP.NET Core sets the newer semantic conventions in
+			// the latest versions. For now, we need to ensure the older semantic conventions are also
+			// included on the spans sent to the Elastic backend as the intake system is currently
+			// unaware of the newer semantic conventions. We send the older attributes to ensure that
+			// the UI functions as expected. The http and net host conventions are required to build
+			// up the URL displayed in the trace sample UI within Kibana. This will be fixed in future
+			// version of apm-data.
+
 			string? httpScheme = null;
 			string? httpTarget = null;
 			string? urlScheme = null;
 			string? urlPath = null;
 			string? urlQuery = null;
 			string? netHostName = null;
-			string? netHostPort = null;
+			int? netHostPort = null;
 			string? serverAddress = null;
-			string? serverPort = null;
+			int? serverPort = null;
 
 			// We loop once, collecting all the attributes we need for the older and newer
 			// semantic conventions. This is a bit more verbose but ensures we don't iterate
@@ -65,15 +73,15 @@ public class ElasticCompatibilityProcessor(ILogger logger) : BaseProcessor<Activ
 					serverAddress = ProcessStringAttribute(tag);
 
 				if (tag.Key == NetHostPort)
-					netHostPort = ProcessStringAttribute(tag);
+					netHostPort = ProcessIntAttribute(tag);
 
 				if (tag.Key == ServerPort)
-					serverPort = ProcessStringAttribute(tag);
+					serverPort = ProcessIntAttribute(tag);
 			}
 
 			// Set the older semantic convention attributes
 			if (httpScheme is null && urlScheme is not null)
-				SetAttribute(HttpScheme, urlScheme);
+				SetStringAttribute(HttpScheme, urlScheme);
 
 			if (httpTarget is null && urlPath is not null)
 			{
@@ -82,14 +90,14 @@ public class ElasticCompatibilityProcessor(ILogger logger) : BaseProcessor<Activ
 				if (urlQuery is not null)
 					target += $"?{urlQuery}";
 
-				SetAttribute(HttpTarget, target);
+				SetStringAttribute(HttpTarget, target);
 			}
 
 			if (netHostName is null && serverAddress is not null)
-				SetAttribute(NetHostName, serverAddress);
+				SetStringAttribute(NetHostName, serverAddress);
 
 			if (netHostPort is null && serverPort is not null)
-				SetAttribute(NetHostPort, serverPort);
+				SetIntAttribute(NetHostPort, serverPort.Value);
 		}
 
 		string? ProcessStringAttribute(KeyValuePair<string, object?> tag)
@@ -103,7 +111,24 @@ public class ElasticCompatibilityProcessor(ILogger logger) : BaseProcessor<Activ
 			return null;
 		}
 
-		void SetAttribute(string attributeName, string value)
+		int? ProcessIntAttribute(KeyValuePair<string, object?> tag)
+		{
+			if (tag.Value is int value)
+			{
+				_logger.FoundTag(nameof(ElasticCompatibilityProcessor), tag.Key, value);
+				return value;
+			}
+
+			return null;
+		}
+
+		void SetStringAttribute(string attributeName, string value)
+		{
+			_logger.SetTag(nameof(ElasticCompatibilityProcessor), attributeName, value);
+			activity.SetTag(attributeName, value);
+		}
+
+		void SetIntAttribute(string attributeName, int value)
 		{
 			_logger.SetTag(nameof(ElasticCompatibilityProcessor), attributeName, value);
 			activity.SetTag(attributeName, value);
