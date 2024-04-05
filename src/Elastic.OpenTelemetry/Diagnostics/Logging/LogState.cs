@@ -10,6 +10,7 @@ namespace Elastic.OpenTelemetry.Diagnostics.Logging;
 internal class LogState : IReadOnlyList<KeyValuePair<string, object?>>
 {
 	private readonly Activity? _activity;
+
 	public Activity? Activity
 	{
 		get => _activity;
@@ -44,7 +45,7 @@ internal class LogState : IReadOnlyList<KeyValuePair<string, object?>>
 		init => _spanId = value;
 	}
 
-	private readonly List<KeyValuePair<string, object?>> _values = new();
+	private readonly List<KeyValuePair<string, object?>> _values = [];
 
 	public IEnumerator<KeyValuePair<string, object?>> GetEnumerator() => _values.GetEnumerator();
 
