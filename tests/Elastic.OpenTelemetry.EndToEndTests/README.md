@@ -8,8 +8,8 @@ Requires an already running serverless observability project on cloud.
 The configuration can be provided either as asp.net secrets or environment variables.
 
 ```bash
-dotnet user-secrets set "E2E:Endpoint" "<url>" --project tests/Elastic.OpenTelemetry.IntegrationTests
-dotnet user-secrets set "E2E:Authorization" "<header>" --project tests/Elastic.OpenTelemetry.IntegrationTests
+dotnet user-secrets set "E2E:Endpoint" "<url>" --project tests/Elastic.OpenTelemetry.EndToEndTests
+dotnet user-secrets set "E2E:Authorization" "<header>" --project tests/Elastic.OpenTelemetry.EndToEndTests
 ```
 
 The equivalent environment variables are `E2E__ENDPOINT` and `E2E__AUTHORIZATION`. For local development setting 
@@ -38,8 +38,8 @@ Once invited and accepted the invited email can be used to login during the auto
 These can be provided again as user secrets:
 
 ```bash
-dotnet user-secrets set "E2E:BrowserEmail" "<email>" --project tests/Elastic.OpenTelemetry.IntegrationTests
-dotnet user-secrets set "E2E:BrowserPassword" "<password>" --project tests/Elastic.OpenTelemetry.IntegrationTests
+dotnet user-secrets set "E2E:BrowserEmail" "<email>" --project tests/Elastic.OpenTelemetry.EndToEndTests
+dotnet user-secrets set "E2E:BrowserPassword" "<password>" --project tests/Elastic.OpenTelemetry.EndToEndTests
 ```
 
 or environment variables (`E2E__BROWSEREMAIL` and `E2E__BROWSERPASSWORD`).
