@@ -17,6 +17,7 @@ internal sealed class CompositeLogger(ILogger? additionalLogger) : IDisposable, 
 {
 	public FileLogger FileLogger { get; } = new();
 
+	private ILogger? _additionalLogger = additionalLogger;
 	private bool _isDisposed;
 
 	public void Dispose()
@@ -39,22 +40,22 @@ internal sealed class CompositeLogger(ILogger? additionalLogger) : IDisposable, 
 		if (FileLogger.IsEnabled(logLevel))
 			FileLogger.Log(logLevel, eventId, state, exception, formatter);
 
-		if (additionalLogger == null)
+		if (_additionalLogger == null)
 			return;
 
-		if (additionalLogger.IsEnabled(logLevel))
-			additionalLogger.Log(logLevel, eventId, state, exception, formatter);
+		if (_additionalLogger.IsEnabled(logLevel))
+			_additionalLogger.Log(logLevel, eventId, state, exception, formatter);
 	}
 
 	public bool LogFileEnabled => FileLogger.FileLoggingEnabled;
 	public string LogFilePath => FileLogger.LogFilePath ?? string.Empty;
 
-	public void SetAdditionalLogger(ILogger? logger) => additionalLogger ??= logger;
+	public void SetAdditionalLogger(ILogger? logger) => _additionalLogger ??= logger;
 
-	public bool IsEnabled(LogLevel logLevel) => FileLogger.IsEnabled(logLevel) || (additionalLogger?.IsEnabled(logLevel) ?? false);
+	public bool IsEnabled(LogLevel logLevel) => FileLogger.IsEnabled(logLevel) || (_additionalLogger?.IsEnabled(logLevel) ?? false);
 
 	public IDisposable BeginScope<TState>(TState state) where TState : notnull =>
-		new CompositeDisposable(FileLogger.BeginScope(state), additionalLogger?.BeginScope(state));
+		new CompositeDisposable(FileLogger.BeginScope(state), _additionalLogger?.BeginScope(state));
 
 	private class CompositeDisposable(params IDisposable?[] disposables) : IDisposable
 	{

@@ -86,6 +86,7 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 			logging.IncludeScopes = true;
 			//TODO add processor that adds service.id
 		});
+
 		openTelemetry
 			.WithLogging(logging =>
 			{
