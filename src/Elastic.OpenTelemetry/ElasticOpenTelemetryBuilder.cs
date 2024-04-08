@@ -3,6 +3,9 @@
 // See the LICENSE file in the project root for more information
 
 using System.Diagnostics;
+using System.Linq.Expressions;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using Elastic.OpenTelemetry.Diagnostics;
 using Elastic.OpenTelemetry.Diagnostics.Logging;
 using Elastic.OpenTelemetry.Extensions;
@@ -88,15 +91,9 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 		});
 
 		openTelemetry
-			.WithLogging(logging =>
-			{
-				logging.ConfigureResource(r => r.AddDistroAttributes());
-			})
-
+			.ConfigureResource(r => r.AddDistroAttributes())
 			.WithTracing(tracing =>
 			{
-				tracing.ConfigureResource(r => r.AddDistroAttributes());
-
 				tracing
 					.AddHttpClientInstrumentation()
 					.AddGrpcClientInstrumentation()
@@ -108,8 +105,6 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 			})
 			.WithMetrics(metrics =>
 			{
-				metrics.ConfigureResource(r => r.AddDistroAttributes());
-
 				metrics
 					.AddProcessInstrumentation()
 					.AddRuntimeInstrumentation()

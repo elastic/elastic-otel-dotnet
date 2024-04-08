@@ -19,7 +19,8 @@ var app = builder.Build();
 
 app.UseHttpsRedirection();
 
-app.MapGet("/", (IHttpClientFactory httpClientFactory) => Api.HandleRoot(httpClientFactory));
+app.MapGet("/", (IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory) =>
+	Api.HandleRoot(httpClientFactory, loggerFactory));
 
 app.Run();
 
@@ -30,8 +31,12 @@ namespace Example.Api
 		public static string ActivitySourceName = "CustomActivitySource";
 		private static readonly ActivitySource ActivitySource = new(ActivitySourceName);
 
-		public static async Task<IResult> HandleRoot(IHttpClientFactory httpClientFactory)
+		public static async Task<IResult> HandleRoot(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory)
 		{
+			var logger = loggerFactory.CreateLogger("Example.Api");
+
+			logger.LogInformation("Doing stuff");
+
 			using var client = httpClientFactory.CreateClient();
 
 			using var activity = ActivitySource.StartActivity("DoingStuff", ActivityKind.Internal);
