@@ -26,7 +26,6 @@ internal sealed
 	[GeneratedRegex(TraceParentRegularExpressionString)]
 	private static partial Regex TraceParentRegex();
 #else
-
 	private static readonly Regex _traceParentRegex = new Regex(TraceParentRegularExpressionString);
 	private static Regex TraceParentRegex() => _traceParentRegex;
 #endif
@@ -77,6 +76,11 @@ internal sealed
 			return;
 		}
 
+		var logLevel = GetLogLevel(eventData);
+
+		if (!_logger.IsEnabled(logLevel))
+			return;
+
 		// This should generally be reasonably efficient but we can consider switching
 		// to a rented array and Span<char> if required.
 		var builder = StringBuilderCache.Acquire();
@@ -94,7 +98,7 @@ internal sealed
 		// TODO - We can only get the OS thread ID from the args - Do we send that instead??
 		// As per this issue - https://github.com/dotnet/runtime/issues/13125 - OnEventWritten may be on a different thread
 		// so we can't use the Environment.CurrentManagedThreadId value here.
-		_logger.WriteLogLine(null, -1, timestamp, GetLogLevel(eventData), StringBuilderCache.GetStringAndRelease(builder), spanId);
+		_logger.WriteLogLine(null, -1, timestamp, logLevel, StringBuilderCache.GetStringAndRelease(builder), spanId);
 
 		static LogLevel GetLogLevel(EventWrittenEventArgs eventData) =>
 			eventData.Level switch
