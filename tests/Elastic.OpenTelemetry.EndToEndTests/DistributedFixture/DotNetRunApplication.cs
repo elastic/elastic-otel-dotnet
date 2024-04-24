@@ -71,7 +71,6 @@ public abstract class DotNetRunApplication
 				{ "OTEL_BSP_MAX_EXPORT_BATCH_SIZE", "5" },
 				{ "OTEL_RESOURCE_ATTRIBUTES", $"service.name={_serviceName},service.version=1.0,1,deployment.environment=e2e" },
 
-				{ "ELASTIC_OTEL_ENABLE_FILE_LOGGING", "1" },
 				{ "ELASTIC_OTEL_LOG_DIRECTORY", LogDirectory.FullName },
 				{ "ELASTIC_OTEL_LOG_LEVEL", "INFO" },
 			},
