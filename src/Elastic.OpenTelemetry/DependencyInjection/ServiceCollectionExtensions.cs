@@ -38,9 +38,8 @@ public static class ServiceCollectionExtensions
 	{
 		var descriptor = serviceCollection.SingleOrDefault(s => s.ServiceType == typeof(ElasticOpenTelemetryBuilder));
 
-		if (descriptor?.ImplementationInstance is not null)
+		if (descriptor?.ImplementationInstance is ElasticOpenTelemetryBuilder builder)
 		{
-			var builder = (ElasticOpenTelemetryBuilder)descriptor.ImplementationInstance;
 			builder.Logger.LogWarning($$"""{{nameof(AddElasticOpenTelemetry)}} was called more than once {StackTrace}""", Environment.StackTrace.TrimStart());
 			return builder;
 		}
