@@ -3,8 +3,7 @@
 // See the LICENSE file in the project root for more information
 
 using Elastic.OpenTelemetry;
-using Elastic.OpenTelemetry.Hosting;
-using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 
 // ReSharper disable once CheckNamespace
@@ -37,12 +36,15 @@ public static class ServiceCollectionExtensions
 	/// </returns>
 	public static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection serviceCollection, ElasticOpenTelemetryOptions options)
 	{
-		if (serviceCollection.Any(d => d.ServiceType == typeof(IHostedService) && d.ImplementationType == typeof(ElasticOpenTelemetryService)))
+		var descriptor = serviceCollection.SingleOrDefault(s => s.ServiceType == typeof(ElasticOpenTelemetryBuilder));
+
+		if (descriptor?.ImplementationInstance is not null)
 		{
-			// TODO - Can we avoid this by storing the instance on the builder (internal access)
-			var sp = serviceCollection.BuildServiceProvider();
-			return sp.GetService<ElasticOpenTelemetryBuilder>()!; //already registered as singleton
+			var builder = (ElasticOpenTelemetryBuilder)descriptor.ImplementationInstance;
+			builder.Logger.LogWarning($$"""{{nameof(AddElasticOpenTelemetry)}} was called more than once {StackTrace}""", Environment.StackTrace.TrimStart());
+			return builder;
 		}
+
 		return new ElasticOpenTelemetryBuilder(options);
 	}
 }

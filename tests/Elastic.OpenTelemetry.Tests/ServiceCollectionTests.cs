@@ -2,6 +2,7 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenTelemetry;
 using Xunit.Abstractions;
@@ -34,6 +35,7 @@ public class ServiceCollectionTests(ITestOutputHelper output)
 			s.AddOpenTelemetry();
 			s.AddOpenTelemetry();
 		});
+
 		var ctx = new CancellationTokenRegistration();
 		using (var app = host.Build())
 		{
@@ -43,7 +45,19 @@ public class ServiceCollectionTests(ITestOutputHelper output)
 			await ctx.DisposeAsync();
 		}
 
+		exportedItems.Should().ContainSingle();
+	}
 
-		exportedItems.Should().HaveCount(1);
+	[Fact]
+	public void ServiceCollectionAddElasticOpenTelemetry_ReturnsSameBuilder_WhenCalledMultipleTimes()
+	{
+		var serviceCollection = new ServiceCollection();
+
+		var builder1 = serviceCollection.AddElasticOpenTelemetry();
+		builder1.ConfigureResource(r => r.AddService("test-service"));
+
+		var builder2 = serviceCollection.AddElasticOpenTelemetry();
+
+		builder1.Should().Be(builder2);
 	}
 }
