@@ -34,7 +34,7 @@ internal sealed
 	{
 		_logger = logger;
 
-		var eventLevel = AgentLoggingHelpers.GetElasticOtelLogLevel();
+		var eventLevel = AgentLoggingHelpers.GetElasticOtelLogLevelFromEnvironmentVariables();
 
 		_eventLevel = eventLevel switch
 		{

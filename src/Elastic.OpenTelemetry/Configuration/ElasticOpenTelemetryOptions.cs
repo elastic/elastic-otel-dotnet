@@ -1,0 +1,257 @@
+// Licensed to Elasticsearch B.V under one or more agreements.
+// Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
+// See the LICENSE file in the project root for more information
+
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+
+namespace Elastic.OpenTelemetry.Configuration;
+
+/// <summary>
+/// Defines advanced options which can be used to finely-tune the behaviour of the Elastic
+/// distribution of OpenTelemetry.
+/// </summary>
+/// <remarks>
+/// Options are bound from the following sources:
+/// <list type="bullet">
+/// <item><description>Environment variables</description></item>
+/// <item><description>An <see cref="IConfiguration"/> instance</description></item>
+/// </list>
+/// Options initialised via property initializers take precedence over bound values.
+/// Environment variables take precedence over <see cref="IConfiguration"/> values.
+/// </remarks>
+public class ElasticOpenTelemetryOptions
+{
+	private static readonly string ConfigurationSection = "Elastic:OpenTelemetry";
+	private static readonly string FileLogDirectoryConfigPropertyName = "FileLogDirectory";
+	private static readonly string FileLogLevelConfigPropertyName = "FileLogLevel";
+	private static readonly string SkipOtlpExporterConfigPropertyName = "SkipOtlpExporter";
+	private static readonly string EnabledElasticDefaultsConfigPropertyName = "EnabledElasticDefaults";
+
+	// For a relatively limited number of properties, this is okay. If this grows significantly, consider a
+	// more flexible approach similar to the layered configuration used in the Elastic APM Agent.
+	private EnabledElasticDefaults? _elasticDefaults;
+	private string? _fileLogDirectory;
+	private ConfigSource _fileLogDirectorySource = ConfigSource.Default;
+	private string? _fileLogLevel;
+	private ConfigSource _fileLogLevelSource = ConfigSource.Default;
+	private bool? _skipOtlpExporter;
+	private ConfigSource _skipOtlpExporterSource = ConfigSource.Default;
+	private string? _enabledElasticDefaults;
+	private ConfigSource _enabledElasticDefaultsSource = ConfigSource.Default;
+
+	/// <summary>
+	/// Creates a new instance of <see cref="ElasticOpenTelemetryOptions"/> with properties
+	/// bound from environment variables.
+	/// </summary>
+	public ElasticOpenTelemetryOptions()
+	{
+		SetFromEnvironment(EnvironmentVariables.ElasticOtelFileLogDirectoryEnvironmentVariable, ref _fileLogDirectory,
+			ref _fileLogDirectorySource, StringParser);
+		SetFromEnvironment(EnvironmentVariables.ElasticOtelFileLogLevelEnvironmentVariable, ref _fileLogLevel,
+			ref _fileLogLevelSource, StringParser);
+		SetFromEnvironment(EnvironmentVariables.ElasticOtelSkipOtlpExporter, ref _skipOtlpExporter,
+			ref _skipOtlpExporterSource, BoolParser);
+		SetFromEnvironment(EnvironmentVariables.ElasticOtelEnableElasticDefaults, ref _enabledElasticDefaults,
+			ref _enabledElasticDefaultsSource, StringParser);
+	}
+
+	/// <summary>
+	/// Creates a new instance of <see cref="ElasticOpenTelemetryOptions"/> with properties
+	/// bound from environment variables and an <see cref="IConfiguration"/> instance.
+	/// </summary>
+	internal ElasticOpenTelemetryOptions(IConfiguration configuration) : this()
+	{
+		SetFromConfiguration(configuration, FileLogDirectoryConfigPropertyName, ref _fileLogDirectory,
+			ref _fileLogDirectorySource, StringParser);
+		SetFromConfiguration(configuration, FileLogLevelConfigPropertyName, ref _fileLogLevel,
+			ref _fileLogLevelSource, StringParser);
+		SetFromConfiguration(configuration, SkipOtlpExporterConfigPropertyName, ref _skipOtlpExporter,
+			ref _skipOtlpExporterSource, BoolParser);
+		SetFromConfiguration(configuration, EnabledElasticDefaultsConfigPropertyName, ref _enabledElasticDefaults,
+			ref _enabledElasticDefaultsSource, StringParser);
+	}
+
+	/// <summary>
+	/// The output directory where the Elastic distribution of OpenTelemetry will write log files.
+	/// </summary>
+	/// <remarks>
+	/// When configured, a file log will be created in this directory with the name
+	/// <c>{ProcessName}_{UtcUnixTimeMilliseconds}_{ProcessId}.instrumentation.log</c>.
+	/// This log file includes log messages from the OpenTelemetry SDK and the Elastic distribution.
+	/// </remarks>
+	public string FileLogDirectory
+	{
+		get => _fileLogDirectory ?? string.Empty;
+		init
+		{
+			_fileLogDirectory = value;
+			_fileLogDirectorySource = ConfigSource.Property;
+		}
+	}
+
+	/// <summary>
+	/// The log level to use when writing log files.
+	/// </summary>
+	/// <remarks>
+	/// Valid values are:
+	/// <list type="bullet">
+	/// <item><term>None</term><description>Disables logging.</description></item>
+	/// <item><term>Critical</term><description>Failures that require immediate attention.</description></item>
+	/// <item><term>Error</term><description>Errors and exceptions that cannot be handled.</description></item>
+	/// <item><term>Warning</term><description>Abnormal or unexpected events.</description></item>
+	/// <item><term>Information</term><description>General information about the distribution and OpenTelemetry SDK.</description></item>
+	/// <item><term>Debug</term><description>Rich debugging and development.</description></item>
+	/// <item><term>Trace</term><description>Contain the most detailed messages.</description></item>
+	/// </list>
+	/// </remarks>
+	public string FileLogLevel
+	{
+		get => _fileLogLevel ?? "Information";
+		init
+		{
+			_fileLogLevel = value;
+			_fileLogLevelSource = ConfigSource.Property;
+		}
+	}
+
+	/// <summary>
+	/// Stops <see cref="ElasticOpenTelemetryBuilder"/> from registering OLTP exporters, useful for testing scenarios.
+	/// </summary>
+	public bool SkipOtlpExporter
+	{
+		get => _skipOtlpExporter ?? false;
+		init
+		{
+			_skipOtlpExporter = value;
+			_skipOtlpExporterSource = ConfigSource.Property;
+		}
+	}
+
+	/// <summary>
+	/// A comma separated list of instrumentation signal Elastic defaults.
+	/// </summary>
+	/// <remarks>
+	/// Valid values are:
+	/// <list type="bullet">
+	/// <item><term>None</term><description>Disables all Elastic defaults resulting in the use of the "vanilla" SDK.</description></item>
+	/// <item><term>All</term><description>Enables all defaults (default if this option is not specified).</description></item>
+	/// <item><term>Tracing</term><description>Enables Elastic defaults for tracing.</description></item>
+	/// <item><term>Metrics</term><description>Enables Elastic defaults for metrics.</description></item>
+	/// <item><term>Logging</term><description>Enables Elastic defaults for logging.</description></item>
+	/// </list>
+	/// </remarks>
+	public string EnableElasticDefaults
+	{
+		get => _enabledElasticDefaults ?? string.Empty;
+		init
+		{
+			_enabledElasticDefaults = value;
+			_enabledElasticDefaultsSource = ConfigSource.Property;
+		}
+	}
+
+	internal EnabledElasticDefaults EnabledDefaults => _elasticDefaults ?? GetEnabledElasticDefaults();
+
+	private static (bool, string) StringParser(string? s) => !string.IsNullOrEmpty(s) ? (true, s) : (false, string.Empty);
+
+	private static (bool, bool?) BoolParser(string? s) => bool.TryParse(s, out var boolValue) ? (true, boolValue) : (false, null);
+
+	private static void SetFromEnvironment<T>(string key, ref T field, ref ConfigSource configSourceField, Func<string?, (bool, T)> parser)
+	{
+		var (success, value) = parser(Environment.GetEnvironmentVariable(key));
+
+		if (success)
+		{
+			field = value;
+			configSourceField = ConfigSource.Environment;
+		}
+	}
+
+	private static void SetFromConfiguration<T>(IConfiguration configuration, string key, ref T field, ref ConfigSource configSourceField,
+		Func<string?, (bool, T)> parser)
+	{
+		if (field is null)
+		{
+			var logFileDirectory = configuration?.GetValue<string>($"{ConfigurationSection}:{key}");
+
+			var (success, value) = parser(logFileDirectory);
+
+			if (success)
+			{
+				field = value;
+				configSourceField = ConfigSource.IConfiguration;
+			}
+		}
+	}
+
+	private EnabledElasticDefaults GetEnabledElasticDefaults()
+	{
+		if (_elasticDefaults.HasValue)
+			return _elasticDefaults.Value;
+
+		var defaults = EnabledElasticDefaults.None;
+
+		// NOTE: Using spans is an option here, but it's quite complex and this should only ever happen once per process
+
+		if (string.IsNullOrEmpty(EnableElasticDefaults))
+			return All();
+
+		var elements = EnableElasticDefaults.Split(',', StringSplitOptions.RemoveEmptyEntries);
+
+		if (elements.Length == 1 && elements[0].Equals("None", StringComparison.OrdinalIgnoreCase))
+			return EnabledElasticDefaults.None;
+
+		foreach (var element in elements)
+		{
+			if (element.Equals("Tracing", StringComparison.OrdinalIgnoreCase))
+				defaults |= EnabledElasticDefaults.Tracing;
+			else if (element.Equals("Metrics", StringComparison.OrdinalIgnoreCase))
+				defaults |= EnabledElasticDefaults.Metrics;
+			else if (element.Equals("Logging", StringComparison.OrdinalIgnoreCase))
+				defaults |= EnabledElasticDefaults.Logging;
+		}
+
+		// If we get this far without any matched elements, default to all
+		if (defaults.Equals(EnabledElasticDefaults.None))
+			defaults = All();
+
+		_elasticDefaults = defaults;
+
+		return defaults;
+
+		static EnabledElasticDefaults All() => EnabledElasticDefaults.Tracing | EnabledElasticDefaults.Metrics | EnabledElasticDefaults.Logging;
+	}
+
+	internal void LogConfigSources(ILogger logger)
+	{
+		logger.LogInformation("Configured value for {ConfigKey}: '{ConfigValue}' from [{ConfigSource}]", FileLogDirectoryConfigPropertyName,
+			_fileLogDirectory, _fileLogDirectorySource);
+
+		logger.LogInformation("Configured value for {ConfigKey}: '{ConfigValue}' from [{ConfigSource}]", FileLogLevelConfigPropertyName,
+			_fileLogLevel, _fileLogLevelSource);
+
+		logger.LogInformation("Configured value for {ConfigKey}: '{ConfigValue}' from [{ConfigSource}]", SkipOtlpExporterConfigPropertyName,
+			_skipOtlpExporter, _skipOtlpExporterSource);
+
+		logger.LogInformation("Configured value for {ConfigKey}: '{ConfigValue}' from [{ConfigSource}]", EnabledElasticDefaultsConfigPropertyName,
+			_enabledElasticDefaults, _enabledElasticDefaultsSource);
+	}
+
+	[Flags]
+	internal enum EnabledElasticDefaults
+	{
+		None,
+		Tracing = 1 << 0, //1
+		Metrics = 1 << 1, //2
+		Logging = 1 << 2, //4
+	}
+
+	private enum ConfigSource
+	{
+		Default, // Default value assigned within this class
+		Environment, // Loaded from an environment variable
+		IConfiguration, // Bound from an IConfiguration instance
+		Property // Set via property initializer
+	}
+}

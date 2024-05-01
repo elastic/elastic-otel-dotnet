@@ -8,11 +8,12 @@ using OpenTelemetry;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// This will add the OpenTelemetry services using Elastic defaults
 builder.AddServiceDefaults();
 
 builder.Services
 	.AddHttpClient() // Adds IHttpClientFactory
-	.AddOpenTelemetry() // Adds the OpenTelemetry SDK
+	.AddOpenTelemetry() // Adds app specific tracing
 		.WithTracing(t => t.AddSource(Api.ActivitySourceName));
 
 var app = builder.Build();

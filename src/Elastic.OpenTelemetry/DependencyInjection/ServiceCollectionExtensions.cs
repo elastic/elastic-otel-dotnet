@@ -3,6 +3,8 @@
 // See the LICENSE file in the project root for more information
 
 using Elastic.OpenTelemetry;
+using Elastic.OpenTelemetry.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 
@@ -17,26 +19,44 @@ public static class ServiceCollectionExtensions
 	/// <summary>
 	/// Registers the Elastic OpenTelemetry builder with the provided <see cref="IServiceCollection"/>.
 	/// </summary>
-	/// <param name="serviceCollection">The <see cref="IServiceCollection"/> for adding services.</param>
+	/// <param name="services">The <see cref="IServiceCollection"/> for adding services.</param>
 	/// <returns>
 	/// An instance of <see cref="IOpenTelemetryBuilder"/> that can be used to further configure the
 	/// OpenTelemetry SDK.
 	/// </returns>
-	public static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection serviceCollection) =>
-		serviceCollection.AddElasticOpenTelemetry(new ElasticOpenTelemetryOptions { Services = serviceCollection });
+	public static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection services) =>
+		services.AddElasticOpenTelemetry(new ElasticOpenTelemetryBuilderOptions { Services = services });
+
+	/// <summary>
+	/// Registers the Elastic OpenTelemetry builder with the provided <see cref="IServiceCollection"/>.
+	/// </summary>
+	/// <param name="services">The <see cref="IServiceCollection"/> for adding services.</param>
+	/// <param name="configuration">
+	/// An <see cref="IConfiguration"/> instance from which to attempt binding of configuration values.
+	/// </param>
+	/// <returns>
+	/// An instance of <see cref="IOpenTelemetryBuilder"/> that can be used to further configure the
+	/// OpenTelemetry SDK.
+	/// </returns>
+	public static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection services, IConfiguration configuration) =>
+		services.AddElasticOpenTelemetry(new ElasticOpenTelemetryBuilderOptions
+		{
+			Services = services,
+			DistroOptions = new ElasticOpenTelemetryOptions(configuration)
+		});
 
 	/// <summary>
 	/// Registers the Elastic OpenTelemetry builder with the provided <see cref="IServiceCollection"/>.
 	/// </summary>	
-	/// <param name="serviceCollection">The <see cref="IServiceCollection"/> for adding services.</param>
-	/// <param name="options"><see cref="ElasticOpenTelemetryOptions"/> for the initial OpenTelemetry registration.</param>
+	/// <param name="services">The <see cref="IServiceCollection"/> for adding services.</param>
+	/// <param name="options"><see cref="ElasticOpenTelemetryBuilderOptions"/> for the initial OpenTelemetry registration.</param>
 	/// <returns>
 	/// An instance of <see cref="IOpenTelemetryBuilder"/> that can be used to further configure the
 	/// OpenTelemetry SDK.
 	/// </returns>
-	public static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection serviceCollection, ElasticOpenTelemetryOptions options)
+	public static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection services, ElasticOpenTelemetryBuilderOptions options)
 	{
-		var descriptor = serviceCollection.SingleOrDefault(s => s.ServiceType == typeof(ElasticOpenTelemetryBuilder));
+		var descriptor = services.SingleOrDefault(s => s.ServiceType == typeof(ElasticOpenTelemetryBuilder));
 
 		if (descriptor?.ImplementationInstance is ElasticOpenTelemetryBuilder builder)
 		{
@@ -44,6 +64,7 @@ public static class ServiceCollectionExtensions
 			return builder;
 		}
 
+		options = options.Services is null ? options with { Services = services } : options;
 		return new ElasticOpenTelemetryBuilder(options);
 	}
 }

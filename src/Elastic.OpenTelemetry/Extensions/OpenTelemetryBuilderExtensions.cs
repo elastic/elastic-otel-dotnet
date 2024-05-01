@@ -33,7 +33,23 @@ public static class OpenTelemetryBuilderExtensions
 	/// </summary>
 	/// <returns>A new instance of <see cref="IInstrumentationLifetime"/> which supports disposing of the
 	/// OpenTelemetry providers to end signal collection.</returns>
-	public static IInstrumentationLifetime Build(this IOpenTelemetryBuilder builder, ILogger? logger = null, IServiceProvider? serviceProvider = null)
+	public static IInstrumentationLifetime Build(this IOpenTelemetryBuilder builder)
+		=> builder.Build(null, null);
+
+	/// <summary>
+	/// Triggers creation and registration of the OpenTelemetry components required to begin observing the application.
+	/// </summary>
+	/// <returns>A new instance of <see cref="IInstrumentationLifetime"/> which supports disposing of the
+	/// OpenTelemetry providers to end signal collection.</returns>
+	public static IInstrumentationLifetime Build(this IOpenTelemetryBuilder builder, ILogger logger)
+		=> builder.Build(logger, null);
+
+	/// <summary>
+	/// Triggers creation and registration of the OpenTelemetry components required to begin observing the application.
+	/// </summary>
+	/// <returns>A new instance of <see cref="IInstrumentationLifetime"/> which supports disposing of the
+	/// OpenTelemetry providers to end signal collection.</returns>
+	internal static IInstrumentationLifetime Build(this IOpenTelemetryBuilder builder, ILogger? logger = null, IServiceProvider? serviceProvider = null)
 	{
 		// this happens if someone calls Build() while using IServiceCollection and AddOpenTelemetry() and NOT Add*Elastic*OpenTelemetry()
 		// we treat this a NOOP

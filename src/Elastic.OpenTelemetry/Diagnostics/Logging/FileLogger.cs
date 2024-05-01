@@ -5,6 +5,7 @@
 using System.Diagnostics;
 using System.Text;
 using System.Threading.Channels;
+using Elastic.OpenTelemetry.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Elastic.OpenTelemetry.Diagnostics.Logging;
@@ -22,20 +23,32 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 		FullMode = BoundedChannelFullMode.Wait
 	});
 
-	private static readonly LogLevel ConfiguredLogLevel = AgentLoggingHelpers.GetElasticOtelLogLevel();
+	private readonly LogLevel _configuredLogLevel;
 
 	public bool FileLoggingEnabled { get; }
 
 	private readonly LoggerExternalScopeProvider _scopeProvider;
 
-	public FileLogger()
+	public FileLogger(ElasticOpenTelemetryOptions options)
 	{
 		_scopeProvider = new LoggerExternalScopeProvider();
 
-		var configuredPath = Environment.GetEnvironmentVariable(EnvironmentVariables.ElasticOtelLogDirectoryEnvironmentVariable);
+		var configuredPath = options.FileLogDirectory ?? Environment.GetEnvironmentVariable(EnvironmentVariables.ElasticOtelFileLogDirectoryEnvironmentVariable);
 
 		if (string.IsNullOrEmpty(configuredPath))
 			return;
+
+		if (!string.IsNullOrEmpty(options.FileLogLevel))
+		{
+			var logLevel = LogLevelHelpers.ToLogLevel(options.FileLogLevel);
+
+			if (logLevel != LogLevel.None)
+				_configuredLogLevel = logLevel;
+		}
+		else
+		{
+			_configuredLogLevel = AgentLoggingHelpers.GetElasticOtelLogLevelFromEnvironmentVariables();
+		}
 
 		var process = Process.GetCurrentProcess();
 
@@ -80,7 +93,7 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 		}
 	}
 
-	public bool IsEnabled(LogLevel logLevel) => FileLoggingEnabled && ConfiguredLogLevel <= logLevel;
+	public bool IsEnabled(LogLevel logLevel) => FileLoggingEnabled && _configuredLogLevel <= logLevel;
 
 	public IDisposable BeginScope<TState>(TState state) where TState : notnull => _scopeProvider.Push(state);
 

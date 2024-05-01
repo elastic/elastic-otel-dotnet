@@ -6,3 +6,5 @@ include::{asciidoc-dir}/../../shared/attributes.asciidoc[]
 include::./intro.asciidoc[]
 
 include::./getting-started.asciidoc[]
+
+include::./configuration.asciidoc[]

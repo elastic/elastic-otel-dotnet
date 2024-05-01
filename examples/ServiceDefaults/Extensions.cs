@@ -44,7 +44,7 @@ public static class Extensions
 			logging.IncludeScopes = true;
 		});
 
-		builder.Services.AddOpenTelemetry()
+		builder.Services.AddElasticOpenTelemetry(builder.Configuration)
 			.WithMetrics(metrics =>
 			{
 				metrics.AddAspNetCoreInstrumentation()

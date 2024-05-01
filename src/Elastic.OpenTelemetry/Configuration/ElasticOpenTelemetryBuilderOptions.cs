@@ -5,13 +5,15 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Elastic.OpenTelemetry;
+namespace Elastic.OpenTelemetry.Configuration;
 
 /// <summary>
 /// Expert options to provide to <see cref="ElasticOpenTelemetryBuilder"/> to control its initial OpenTelemetry registration.
 /// </summary>
-public record ElasticOpenTelemetryOptions
+public record ElasticOpenTelemetryBuilderOptions
 {
+	private ElasticOpenTelemetryOptions? _elasticOpenTelemetryOptions;
+
 	/// <summary>
 	/// Provide an additional logger to the internal file logger.
 	/// <para>
@@ -24,15 +26,15 @@ public record ElasticOpenTelemetryOptions
 	/// Provides an <see cref="IServiceCollection"/> to register the <see cref="IInstrumentationLifetime"/> into.
 	/// If null, a new local instance will be used.
 	/// </summary>
-	public IServiceCollection? Services { get; init; }
+	internal IServiceCollection? Services { get; init; }
 
 	/// <summary>
-	/// Stops <see cref="ElasticOpenTelemetryBuilder"/> from registering OLTP exporters, useful for testing scenarios.
+	/// Advanced options which can be used to finely-tune the behaviour of the Elastic
+	/// distribution of OpenTelemetry.
 	/// </summary>
-	public bool SkipOtlpExporter { get; init; }
-
-	/// <summary>
-	/// Optional name which is used when retrieving OTLP options.
-	/// </summary>
-	public string? OtlpExporterName { get; init; }
+	public ElasticOpenTelemetryOptions DistroOptions
+	{
+		get => _elasticOpenTelemetryOptions ?? new();
+		init => _elasticOpenTelemetryOptions = value;
+	}
 }

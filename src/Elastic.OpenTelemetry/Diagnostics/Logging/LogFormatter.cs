@@ -87,7 +87,7 @@ internal static class LogFormatter
 			.Append(']');
 
 		var length = builder.Length;
-		var padding = 52 - length;
+		var padding = 55 - length;
 
 		for (var i = 0; i < padding; i++)
 			builder.Append(' ');

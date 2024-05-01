@@ -2,6 +2,7 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using Elastic.OpenTelemetry.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Elastic.OpenTelemetry.Diagnostics.Logging;
@@ -13,11 +14,11 @@ namespace Elastic.OpenTelemetry.Diagnostics.Logging;
 /// <remarks>
 /// If disposed, triggers disposal of the <see cref="Logging.FileLogger"/>.
 /// </remarks>
-internal sealed class CompositeLogger(ILogger? additionalLogger) : IDisposable, IAsyncDisposable, ILogger
+internal sealed class CompositeLogger(ElasticOpenTelemetryBuilderOptions options) : IDisposable, IAsyncDisposable, ILogger
 {
-	public FileLogger FileLogger { get; } = new();
+	public FileLogger FileLogger { get; } = new(options.DistroOptions);
 
-	private ILogger? _additionalLogger = additionalLogger;
+	private ILogger? _additionalLogger = options.Logger;
 	private bool _isDisposed;
 
 	public void Dispose()
