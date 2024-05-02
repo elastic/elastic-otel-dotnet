@@ -42,7 +42,7 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output) :
 		var sut = new ElasticOpenTelemetryOptions();
 
 		sut.FileLogDirectory.Should().Be(string.Empty);
-		sut.FileLogLevel.Should().Be(string.Empty);
+		sut.FileLogLevel.Should().Be("Information");
 		sut.EnableElasticDefaults.Should().Be(string.Empty);
 		sut.EnabledDefaults.Should().HaveFlag(EnabledElasticDefaults.Tracing);
 		sut.EnabledDefaults.Should().HaveFlag(EnabledElasticDefaults.Metrics);
