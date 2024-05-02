@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information
 
 using System.Diagnostics;
+using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Diagnostics.Logging;
 using Microsoft.Extensions.Logging;
 
@@ -65,8 +66,8 @@ internal static partial class LoggerMessages
 
 		string[] environmentVariables =
 		[
-			EnvironmentVariables.ElasticOtelLogDirectoryEnvironmentVariable,
-			EnvironmentVariables.ElasticOtelLogLevelEnvironmentVariable
+			EnvironmentVariables.ElasticOtelFileLogDirectoryEnvironmentVariable,
+			EnvironmentVariables.ElasticOtelFileLogLevelEnvironmentVariable
 		];
 
 		foreach (var variable in environmentVariables)

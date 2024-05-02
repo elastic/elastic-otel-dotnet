@@ -10,7 +10,8 @@ namespace Elastic.OpenTelemetry.Tests;
 
 public class TestLogger(ITestOutputHelper testOutputHelper) : ILogger
 {
-	private readonly List<string> _messages = new();
+	private readonly List<string> _messages = [];
+
 	public IReadOnlyCollection<string> Messages => _messages.AsReadOnly();
 
 	public IDisposable BeginScope<TState>(TState state) where TState : notnull => NoopDisposable.Instance;

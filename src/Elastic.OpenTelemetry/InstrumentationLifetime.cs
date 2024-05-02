@@ -12,22 +12,22 @@ namespace Elastic.OpenTelemetry;
 internal class InstrumentationLifetime(
 	CompositeLogger logger,
 	LoggingEventListener loggingEventListener,
-	TracerProvider tracerProvider,
-	MeterProvider meterProvider
+	TracerProvider? tracerProvider,
+	MeterProvider? meterProvider
 ) : IInstrumentationLifetime
 {
 	public void Dispose()
 	{
-		tracerProvider.Dispose();
-		meterProvider.Dispose();
+		tracerProvider?.Dispose();
+		meterProvider?.Dispose();
 		loggingEventListener.Dispose();
 		logger.Dispose();
 	}
 
 	public async ValueTask DisposeAsync()
 	{
-		tracerProvider.Dispose();
-		meterProvider.Dispose();
+		tracerProvider?.Dispose();
+		meterProvider?.Dispose();
 		await loggingEventListener.DisposeAsync().ConfigureAwait(false);
 		await logger.DisposeAsync().ConfigureAwait(false);
 	}

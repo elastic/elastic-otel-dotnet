@@ -3,43 +3,26 @@
 // See the LICENSE file in the project root for more information
 
 using System.Diagnostics;
+using Elastic.OpenTelemetry.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Elastic.OpenTelemetry.Diagnostics.Logging;
 
 internal static class AgentLoggingHelpers
 {
-	public static LogLevel GetElasticOtelLogLevel()
+	public static LogLevel DefaultLogLevel => LogLevel.Information;
+
+	public static LogLevel GetElasticOtelLogLevelFromEnvironmentVariables()
 	{
-		var logLevel = LogLevel.Information;
+		var defaultLogLevel = DefaultLogLevel;
 
-		var logLevelEnvironmentVariable = Environment.GetEnvironmentVariable(EnvironmentVariables.ElasticOtelLogLevelEnvironmentVariable);
+		var logLevelEnvironmentVariable = Environment.GetEnvironmentVariable(EnvironmentVariables.ElasticOtelFileLogLevelEnvironmentVariable);
 
-		if (!string.IsNullOrEmpty(logLevelEnvironmentVariable))
-		{
-			if (logLevelEnvironmentVariable.Equals(LogLevelHelpers.Trace, StringComparison.OrdinalIgnoreCase))
-				logLevel = LogLevel.Trace;
-
-			else if (logLevelEnvironmentVariable.Equals(LogLevelHelpers.Debug, StringComparison.OrdinalIgnoreCase))
-				logLevel = LogLevel.Debug;
-
-			else if (logLevelEnvironmentVariable.Equals(LogLevelHelpers.Info, StringComparison.OrdinalIgnoreCase))
-				logLevel = LogLevel.Information;
-
-			else if (logLevelEnvironmentVariable.Equals(LogLevelHelpers.Information, StringComparison.OrdinalIgnoreCase))
-				logLevel = LogLevel.Information;
-
-			else if (logLevelEnvironmentVariable.Equals(LogLevelHelpers.Warning, StringComparison.OrdinalIgnoreCase))
-				logLevel = LogLevel.Warning;
-
-			else if (logLevelEnvironmentVariable.Equals(LogLevelHelpers.Error, StringComparison.OrdinalIgnoreCase))
-				logLevel = LogLevel.Error;
-
-			else if (logLevelEnvironmentVariable.Equals(LogLevelHelpers.Critical, StringComparison.OrdinalIgnoreCase))
-				logLevel = LogLevel.Critical;
-		}
-
-		return logLevel;
+		if (string.IsNullOrEmpty(logLevelEnvironmentVariable))
+			return defaultLogLevel;
+		
+		var parsedLogLevel = LogLevelHelpers.ToLogLevel(logLevelEnvironmentVariable);
+		return parsedLogLevel != LogLevel.None ? parsedLogLevel : defaultLogLevel;
 	}
 
 	public static void WriteLogLine(this ILogger logger, Activity? activity, int managedThreadId, DateTime dateTime, LogLevel logLevel, string logLine, string? spanId)

@@ -2,6 +2,7 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using Elastic.OpenTelemetry.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenTelemetry;
@@ -14,7 +15,11 @@ public class ServiceCollectionTests(ITestOutputHelper output)
 	[Fact]
 	public async Task ServiceCollectionAddIsSafeToCallMultipleTimes()
 	{
-		var options = new ElasticOpenTelemetryOptions { Logger = new TestLogger(output), SkipOtlpExporter = true };
+		var options = new ElasticOpenTelemetryBuilderOptions
+		{
+			Logger = new TestLogger(output),
+			DistroOptions = new ElasticOpenTelemetryOptions() { SkipOtlpExporter = true }
+		};
 
 		const string activitySourceName = nameof(ServiceCollectionAddIsSafeToCallMultipleTimes);
 		var activitySource = new ActivitySource(activitySourceName, "1.0.0");
@@ -24,7 +29,7 @@ public class ServiceCollectionTests(ITestOutputHelper output)
 		var host = Host.CreateDefaultBuilder();
 		host.ConfigureServices(s =>
 		{
-			s.AddOpenTelemetry(options)
+			s.AddElasticOpenTelemetry(options)
 				.WithTracing(tpb => tpb
 					.ConfigureResource(rb => rb.AddService("Test", "1.0.0"))
 					.AddSource(activitySourceName)

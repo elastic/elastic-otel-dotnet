@@ -2,6 +2,7 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Extensions;
 using OpenTelemetry;
 using Xunit.Abstractions;
@@ -13,7 +14,7 @@ public class TransactionIdProcessorTests(ITestOutputHelper output)
 	[Fact]
 	public void TransactionId_IsAddedToTags()
 	{
-		var options = new ElasticOpenTelemetryOptions { Logger = new TestLogger(output), SkipOtlpExporter = true };
+		var options = new ElasticOpenTelemetryBuilderOptions { Logger = new TestLogger(output), DistroOptions = new ElasticOpenTelemetryOptions() { SkipOtlpExporter = true } };
 		const string activitySourceName = nameof(TransactionId_IsAddedToTags);
 
 		var activitySource = new ActivitySource(activitySourceName, "1.0.0");
@@ -33,7 +34,7 @@ public class TransactionIdProcessorTests(ITestOutputHelper output)
 		using (var activity = activitySource.StartActivity(ActivityKind.Internal))
 			activity?.SetStatus(ActivityStatusCode.Ok);
 
-		exportedItems.Should().HaveCount(1);
+		exportedItems.Should().ContainSingle();
 
 		var exportedActivity = exportedItems[0];
 

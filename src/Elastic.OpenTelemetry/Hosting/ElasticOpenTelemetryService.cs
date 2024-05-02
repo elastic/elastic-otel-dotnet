@@ -2,6 +2,7 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using Elastic.OpenTelemetry.Diagnostics.Logging;
 using Elastic.OpenTelemetry.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -16,7 +17,7 @@ internal sealed class ElasticOpenTelemetryService(IServiceProvider serviceProvid
 	public Task StartingAsync(CancellationToken cancellationToken)
 	{
 		var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
-		var logger = loggerFactory?.CreateLogger($"{nameof(Elastic)}.{nameof(OpenTelemetry)}");
+		var logger = loggerFactory?.CreateLogger(CompositeLogger.LogCategory);
 
 		_lifeTime = serviceProvider.GetRequiredService<ElasticOpenTelemetryBuilder>().Build(logger, serviceProvider);
 
