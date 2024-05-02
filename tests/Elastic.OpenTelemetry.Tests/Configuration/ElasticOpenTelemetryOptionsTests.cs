@@ -98,6 +98,7 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output) :
 	[Fact]
 	public void ConfigurationCtor_LoadsConfigurationFromIConfiguration()
 	{
+		const string loggingSectionLogLevel = "Warning";
 		const string fileLogLevel = "Critical";
 		const string enabledElasticDefaults = "None";
 
@@ -109,6 +110,12 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output) :
 
 		var json = $$"""
 			{
+				"Logging": {
+					"LogLevel": {
+						"Default": "Information",
+						"Elastic.OpenTelemetry": "{{loggingSectionLogLevel}}"
+					}
+				},
 				"Elastic": {
 					"OpenTelemetry": {
 						"FileLogDirectory": "C:\\Temp",
@@ -131,6 +138,118 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output) :
 		sut.EnableElasticDefaults.Should().Be(enabledElasticDefaults);
 		sut.EnabledDefaults.Should().Be(EnabledElasticDefaults.None);
 		sut.SkipOtlpExporter.Should().Be(true);
+		sut.LoggingSectionLogLevel.Should().Be(loggingSectionLogLevel);
+
+		var logger = new TestLogger(_output);
+
+		sut.LogConfigSources(logger);
+
+		logger.Messages.Count.Should().Be(4);
+		foreach (var message in logger.Messages)
+		{
+			message.Should().EndWith("from [IConfiguration]");
+		}
+
+		ResetEnvironmentVariables();
+	}
+
+	[Fact]
+	public void ConfigurationCtor_LoadsConfigurationFromIConfiguration_AndFallsBackToLoggingSection_WhenAvailable()
+	{
+		const string loggingSectionLogLevel = "Warning";
+		const string enabledElasticDefaults = "None";
+
+		// Remove all env vars
+		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelFileLogDirectoryEnvironmentVariable, null);
+		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelFileLogLevelEnvironmentVariable, null);
+		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelEnableElasticDefaults, null);
+		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelSkipOtlpExporter, null);
+
+		var json = $$"""
+			{
+				"Logging": {
+					"LogLevel": {
+						"Default": "Information",
+						"Elastic.OpenTelemetry": "{{loggingSectionLogLevel}}"
+					}
+				},
+				"Elastic": {
+					"OpenTelemetry": {
+						"FileLogDirectory": "C:\\Temp",
+						"EnabledElasticDefaults": "{{enabledElasticDefaults}}",
+						"SkipOtlpExporter": true
+					}
+				}
+			}
+			""";
+
+		var config = new ConfigurationBuilder()
+			.AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(json)))
+			.Build();
+
+		var sut = new ElasticOpenTelemetryOptions(config);
+
+		sut.FileLogDirectory.Should().Be(@"C:\Temp");
+		sut.FileLogLevel.Should().Be(loggingSectionLogLevel);
+		sut.EnableElasticDefaults.Should().Be(enabledElasticDefaults);
+		sut.EnabledDefaults.Should().Be(EnabledElasticDefaults.None);
+		sut.SkipOtlpExporter.Should().Be(true);
+		sut.LoggingSectionLogLevel.Should().Be(loggingSectionLogLevel);
+
+		var logger = new TestLogger(_output);
+
+		sut.LogConfigSources(logger);
+
+		logger.Messages.Count.Should().Be(4);
+		foreach (var message in logger.Messages)
+		{
+			message.Should().EndWith("from [IConfiguration]");
+		}
+
+		ResetEnvironmentVariables();
+	}
+
+	[Fact]
+	public void ConfigurationCtor_LoadsConfigurationFromIConfiguration_AndFallsBackToLoggingSectionDefault_WhenAvailable()
+	{
+		const string loggingSectionDefaultLogLevel = "Information";
+		const string enabledElasticDefaults = "None";
+
+		// Remove all env vars
+		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelFileLogDirectoryEnvironmentVariable, null);
+		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelFileLogLevelEnvironmentVariable, null);
+		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelEnableElasticDefaults, null);
+		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelSkipOtlpExporter, null);
+
+		var json = $$"""
+			{
+				"Logging": {
+					"LogLevel": {
+						"Default": "{{loggingSectionDefaultLogLevel}}"
+					}
+				},
+				"Elastic": {
+					"OpenTelemetry": {
+						"FileLogDirectory": "C:\\Temp",
+						"EnabledElasticDefaults": "{{enabledElasticDefaults}}",
+						"SkipOtlpExporter": true
+					}
+				}
+			}
+			""";
+
+		var config = new ConfigurationBuilder()
+			.AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(json)))
+			.Build();
+
+		var sut = new ElasticOpenTelemetryOptions(config);
+
+		sut.FileLogDirectory.Should().Be(@"C:\Temp");
+		sut.FileLogLevel.Should().Be(loggingSectionDefaultLogLevel);
+		sut.EnableElasticDefaults.Should().Be(enabledElasticDefaults);
+		sut.EnabledDefaults.Should().Be(EnabledElasticDefaults.None);
+		sut.SkipOtlpExporter.Should().Be(true);
+		sut.LoggingSectionLogLevel.Should().Be(loggingSectionDefaultLogLevel);
 
 		var logger = new TestLogger(_output);
 

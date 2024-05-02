@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Elastic.OpenTelemetry.Diagnostics.Logging;
 using Microsoft.Extensions.Logging;
+using Elastic.OpenTelemetry.Configuration;
 
 namespace Elastic.OpenTelemetry.Diagnostics;
 
@@ -26,15 +27,25 @@ internal sealed
 	[GeneratedRegex(TraceParentRegularExpressionString)]
 	private static partial Regex TraceParentRegex();
 #else
-	private static readonly Regex _traceParentRegex = new Regex(TraceParentRegularExpressionString);
+	private static readonly Regex _traceParentRegex = new(TraceParentRegularExpressionString);
 	private static Regex TraceParentRegex() => _traceParentRegex;
 #endif
 
-	public LoggingEventListener(ILogger logger)
+	public LoggingEventListener(ILogger logger, ElasticOpenTelemetryOptions options)
 	{
 		_logger = logger;
 
-		var eventLevel = AgentLoggingHelpers.GetElasticOtelLogLevelFromEnvironmentVariables();
+		// When both a file log level and a logging section log level are provided, the more verbose of the two is used.
+		// This insures we subscribes to the lowest level of events needed.
+		// The specific loggers will then determine	if they should log the event based on their own log level.
+		var eventLevel = LogLevelHelpers.ToLogLevel(options.FileLogLevel);
+		if (!string.IsNullOrEmpty(options.LoggingSectionLogLevel))
+		{
+			var logLevel = LogLevelHelpers.ToLogLevel(options.LoggingSectionLogLevel);
+
+			if (logLevel < eventLevel)
+				eventLevel = logLevel;
+		}
 
 		_eventLevel = eventLevel switch
 		{

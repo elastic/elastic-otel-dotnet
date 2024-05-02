@@ -64,7 +64,7 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 		Logger = new CompositeLogger(options);
 
 		// Enables logging of OpenTelemetry-SDK event source events
-		EventListener = new LoggingEventListener(Logger);
+		EventListener = new LoggingEventListener(Logger, options.DistroOptions);
 
 		Logger.LogAgentPreamble();
 		Logger.LogElasticOpenTelemetryBuilderInitialized(Environment.NewLine, new StackTrace(true));

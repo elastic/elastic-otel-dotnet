@@ -2,6 +2,7 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using Elastic.OpenTelemetry.Diagnostics.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -40,6 +41,8 @@ public class ElasticOpenTelemetryOptions
 	private string? _enabledElasticDefaults;
 	private ConfigSource _enabledElasticDefaultsSource = ConfigSource.Default;
 
+	private string? _loggingSectionLogLevel;
+
 	/// <summary>
 	/// Creates a new instance of <see cref="ElasticOpenTelemetryOptions"/> with properties
 	/// bound from environment variables.
@@ -62,14 +65,36 @@ public class ElasticOpenTelemetryOptions
 	/// </summary>
 	internal ElasticOpenTelemetryOptions(IConfiguration configuration) : this()
 	{
-		SetFromConfiguration(configuration, FileLogDirectoryConfigPropertyName, ref _fileLogDirectory,
-			ref _fileLogDirectorySource, StringParser);
-		SetFromConfiguration(configuration, FileLogLevelConfigPropertyName, ref _fileLogLevel,
-			ref _fileLogLevelSource, StringParser);
-		SetFromConfiguration(configuration, SkipOtlpExporterConfigPropertyName, ref _skipOtlpExporter,
-			ref _skipOtlpExporterSource, BoolParser);
-		SetFromConfiguration(configuration, EnabledElasticDefaultsConfigPropertyName, ref _enabledElasticDefaults,
-			ref _enabledElasticDefaultsSource, StringParser);
+		if (configuration is not null)
+		{
+			SetFromConfiguration(configuration, FileLogDirectoryConfigPropertyName, ref _fileLogDirectory,
+						ref _fileLogDirectorySource, StringParser);
+			SetFromConfiguration(configuration, FileLogLevelConfigPropertyName, ref _fileLogLevel,
+				ref _fileLogLevelSource, StringParser);
+			SetFromConfiguration(configuration, SkipOtlpExporterConfigPropertyName, ref _skipOtlpExporter,
+				ref _skipOtlpExporterSource, BoolParser);
+			SetFromConfiguration(configuration, EnabledElasticDefaultsConfigPropertyName, ref _enabledElasticDefaults,
+				ref _enabledElasticDefaultsSource, StringParser);
+
+			BindFromLoggingSection(configuration);
+		}
+
+		void BindFromLoggingSection(IConfiguration configuration)
+		{
+			// This will be used as a fallback if a more specific configuration is not provided.
+			// We also store the logging level to use it within the logging event listener to determine the most verbose level to subscribe to.
+			_loggingSectionLogLevel = configuration.GetValue<string>($"Logging:LogLevel:{CompositeLogger.LogCategory}");
+
+			// Fall	back to the default logging level if the specific category is not configured.
+			if (string.IsNullOrEmpty(_loggingSectionLogLevel))
+				_loggingSectionLogLevel = configuration.GetValue<string>("Logging:LogLevel:Default");
+
+			if (!string.IsNullOrEmpty(_loggingSectionLogLevel) && _fileLogLevel is null)
+			{
+				_fileLogLevel = _loggingSectionLogLevel;
+				_fileLogLevelSource = ConfigSource.IConfiguration;
+			}
+		}
 	}
 
 	/// <summary>
@@ -151,6 +176,8 @@ public class ElasticOpenTelemetryOptions
 		}
 	}
 
+	internal string? LoggingSectionLogLevel => _loggingSectionLogLevel;
+
 	internal EnabledElasticDefaults EnabledDefaults => _elasticDefaults ?? GetEnabledElasticDefaults();
 
 	private static (bool, string) StringParser(string? s) => !string.IsNullOrEmpty(s) ? (true, s) : (false, string.Empty);
@@ -173,7 +200,7 @@ public class ElasticOpenTelemetryOptions
 	{
 		if (field is null)
 		{
-			var logFileDirectory = configuration?.GetValue<string>($"{ConfigurationSection}:{key}");
+			var logFileDirectory = configuration.GetValue<string>($"{ConfigurationSection}:{key}");
 
 			var (success, value) = parser(logFileDirectory);
 

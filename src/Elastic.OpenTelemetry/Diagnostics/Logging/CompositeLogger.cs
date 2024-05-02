@@ -16,6 +16,8 @@ namespace Elastic.OpenTelemetry.Diagnostics.Logging;
 /// </remarks>
 internal sealed class CompositeLogger(ElasticOpenTelemetryBuilderOptions options) : IDisposable, IAsyncDisposable, ILogger
 {
+	public const string LogCategory = "Elastic.OpenTelemetry";
+
 	public FileLogger FileLogger { get; } = new(options.DistroOptions);
 
 	private ILogger? _additionalLogger = options.Logger;
