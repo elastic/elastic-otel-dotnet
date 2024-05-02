@@ -23,8 +23,6 @@ let private clean _ =
 let private build _ = exec { run "dotnet" "build" "-c" "release" }
 
 let private release _ = printfn "release"
-    
-let private publish _ = printfn "publish"
 
 let private version _ =
     let version = Software.Version
@@ -32,7 +30,14 @@ let private version _ =
     printfn $"Semantic version: %s{version.NormalizeToShorter()}"
     
 let private generatePackages _ = exec { run "dotnet" "pack" }
-    
+
+let private format _ = exec { run "dotnet" "format" "--verbosity" "quiet" }
+
+let private checkFormat _ =
+    match exec { exit_code_of "dotnet" "format" "--verify-no-changes" } with
+    | 0 -> printfn "There are no dotnet formatting violations, continuing the build."
+    | _ -> failwithf "There are dotnet formatting violations. Call `dotnet format` to fix or specify -c to ./build.sh to skip this check"
+
 let private pristineCheck (arguments:ParseResults<Build>) =
     let skipCheck = arguments.TryGetResult Skip_Dirty_Check |> Option.isSome
     match skipCheck, Information.isCleanWorkingCopy "." with
@@ -157,7 +162,7 @@ let Setup (parsed:ParseResults<Build>) =
         // commands
         | Version -> Build.Step version
         | Clean -> Build.Cmd [Version] [] clean
-        | Build -> Build.Cmd [Clean] [] build
+        | Build -> Build.Cmd [Clean; CheckFormat] [] build
         
         | End_To_End -> Build.Cmd [] [Build] <| runTests E2E
         | Unit_Test -> Build.Cmd [] [Build] <| runTests Unit
@@ -168,9 +173,12 @@ let Setup (parsed:ParseResults<Build>) =
                 [PristineCheck; Test]
                 [ValidateLicenses; GeneratePackages; ValidatePackages; GenerateReleaseNotes; GenerateApiChanges]
                 release
-            
+
+        | Format -> Build.Step format
+
         // steps
-        | PristineCheck -> Build.Step pristineCheck  
+        | CheckFormat -> Build.Step checkFormat
+        | PristineCheck -> Build.Step pristineCheck
         | GeneratePackages -> Build.Step generatePackages
         | ValidateLicenses -> Build.Step validateLicenses
         | ValidatePackages -> Build.Step validatePackages
