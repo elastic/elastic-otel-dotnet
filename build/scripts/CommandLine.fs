@@ -23,13 +23,16 @@ type Build =
     
     | [<CliPrefix(CliPrefix.None);SubCommand>] Unit_Test
     | [<CliPrefix(CliPrefix.None);SubCommand>] End_To_End
+
+    | [<CliPrefix(CliPrefix.None);SubCommand>] Format
     
-    | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] PristineCheck 
+    | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] CheckFormat
+    | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] PristineCheck
     | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] GeneratePackages
-    | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] ValidateLicenses 
-    | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] ValidatePackages 
-    | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] GenerateReleaseNotes 
-    | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] GenerateApiChanges 
+    | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] ValidateLicenses
+    | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] ValidatePackages
+    | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] GenerateReleaseNotes
+    | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] GenerateApiChanges
     | [<CliPrefix(CliPrefix.None);SubCommand>] Release
     
     | [<Inherit;AltCommandLine("-s")>] Single_Target
@@ -49,12 +52,14 @@ with
             | End_To_End -> "alias to providing: test --test-suite=e2e"
             | Test -> "runs a clean build and then runs all the tests unless --test-suite is provided"
             | Release -> "runs build, tests, and create and validates the packages shy of publishing them"
+            | Format -> "runs dotnet format"
             
             // steps
-            | PristineCheck  
+            | CheckFormat
+            | PristineCheck
             | GeneratePackages
             | ValidateLicenses
-            | ValidatePackages 
+            | ValidatePackages
             | GenerateReleaseNotes
             | GenerateApiChanges -> "Undocumented, dependent target"
             

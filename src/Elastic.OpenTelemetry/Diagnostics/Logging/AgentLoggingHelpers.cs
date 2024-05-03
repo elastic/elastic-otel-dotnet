@@ -20,7 +20,7 @@ internal static class AgentLoggingHelpers
 
 		if (string.IsNullOrEmpty(logLevelEnvironmentVariable))
 			return defaultLogLevel;
-		
+
 		var parsedLogLevel = LogLevelHelpers.ToLogLevel(logLevelEnvironmentVariable);
 		return parsedLogLevel != LogLevel.None ? parsedLogLevel : defaultLogLevel;
 	}
