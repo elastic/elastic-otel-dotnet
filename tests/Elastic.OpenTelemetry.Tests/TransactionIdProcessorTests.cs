@@ -11,10 +11,12 @@ namespace Elastic.OpenTelemetry.Tests;
 
 public class TransactionIdProcessorTests(ITestOutputHelper output)
 {
+	private readonly ITestOutputHelper _output = output;
+
 	[Fact]
 	public void TransactionId_IsAddedToTags()
 	{
-		var options = new ElasticOpenTelemetryBuilderOptions { Logger = new TestLogger(output), DistroOptions = new ElasticOpenTelemetryOptions() { SkipOtlpExporter = true } };
+		var options = new ElasticOpenTelemetryBuilderOptions { Logger = new TestLogger(_output), DistroOptions = new ElasticOpenTelemetryOptions() { SkipOtlpExporter = true } };
 		const string activitySourceName = nameof(TransactionId_IsAddedToTags);
 
 		var activitySource = new ActivitySource(activitySourceName, "1.0.0");
