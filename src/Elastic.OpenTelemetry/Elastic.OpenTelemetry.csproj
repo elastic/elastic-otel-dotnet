@@ -2,9 +2,9 @@
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFrameworks>netstandard2.0;netstandard2.1;net8.0;net6.0;net462</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;netstandard2.1;net462;net6.0;net8.0</TargetFrameworks>
     <Title>Elastic OpenTelemetry .NET Distribution</Title>
-    <Description>OpenTelemetry extensions for Elastic Observability, fully native with zero code changes</Description>
+    <Description>OpenTelemetry extensions for Elastic Observability, fully native with zero code changes.</Description>
     <PackageTags>elastic;opentelemetry;observabillity;apm;logs;metrics;traces;monitoring</PackageTags>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
@@ -20,7 +20,6 @@
   <ItemGroup>
     <PackageReference Include="OpenTelemetry" Version="1.8.1" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.8.1" />
-    
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.8.1" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.8.1" />
     <PackageReference Include="OpenTelemetry.Instrumentation.GrpcNetClient" Version="1.8.0-beta.1" />
