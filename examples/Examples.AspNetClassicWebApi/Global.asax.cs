@@ -2,15 +2,15 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using System.Diagnostics;
+using System.Web;
 using System.Web.Http;
 using System.Web.Mvc;
 using Elastic.OpenTelemetry;
-using OpenTelemetry.Trace;
-using OpenTelemetry.Resources;
-using OpenTelemetry;
-using System.Web;
 using Elastic.OpenTelemetry.Extensions;
-using System.Diagnostics;
+using OpenTelemetry;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 namespace Examples.AspNetClassicWebApi;
 

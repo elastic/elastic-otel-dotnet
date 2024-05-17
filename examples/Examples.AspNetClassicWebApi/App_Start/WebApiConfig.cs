@@ -6,16 +6,16 @@ using System.Web.Http;
 
 namespace Examples.AspNetClassicWebApi;
 
-    public static class WebApiConfig
-    {
-        public static void Register(HttpConfiguration config)
-        {
-            config.MapHttpAttributeRoutes();
+public static class WebApiConfig
+{
+	public static void Register(HttpConfiguration config)
+	{
+		config.MapHttpAttributeRoutes();
 
-            config.Routes.MapHttpRoute(
-                name: "DefaultApi",
-                routeTemplate: "{controller}/{id}",
-                defaults: new { controller = "Home", id = RouteParameter.Optional }
-            );
-        }
-    }
+		config.Routes.MapHttpRoute(
+			name: "DefaultApi",
+			routeTemplate: "{controller}/{id}",
+			defaults: new { controller = "Home", id = RouteParameter.Optional }
+		);
+	}
+}
