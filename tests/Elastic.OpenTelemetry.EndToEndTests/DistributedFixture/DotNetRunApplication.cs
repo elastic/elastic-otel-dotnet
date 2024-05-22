@@ -83,7 +83,7 @@ public abstract class DotNetRunApplication
 				if (processIdMatch.Success)
 					ProcessId = int.Parse(processIdMatch.Groups["processid"].Value);
 
-				return l.Line.StartsWith("      Application started.");
+				return l.Line.Contains("Application started.");
 			}
 		};
 	}
