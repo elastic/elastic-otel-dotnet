@@ -94,6 +94,13 @@ public class ApmUIBrowserContext : IAsyncLifetime
 		var servicesHeader = page.GetByRole(AriaRole.Heading, new() { Name = "Services" });
 		await servicesHeader.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = timeout });
 
+		//service.name : dotnet-e2e-*
+		var queryBar = page.GetByRole(AriaRole.Textbox, new() { Name = "Start typing to search and filter the APM page" });
+		await queryBar.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = timeout });
+
+		await queryBar.FillAsync(_serviceName);
+		await queryBar.PressAsync("Enter");
+
 		Exception? observed = null;
 
 		var refreshTimeout = (float)TimeSpan.FromSeconds(5).TotalMilliseconds;
