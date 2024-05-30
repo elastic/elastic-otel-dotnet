@@ -54,7 +54,7 @@ let private runTests suite _ =
     let logger =
         // use junit xml logging locally, github actions logs using console out formats
         match BuildServer.isGitHubActionsBuild with
-        | true -> "--logger:\"GitHubActions;summary.includePassedTests=false\""
+        | true -> "--logger:\"GitHubActions;summary.includePassedTests=false;summary.includeNotFoundTests=false\""
         | false ->
             let testOutputPath = Paths.ArtifactPath "tests"
             let junitOutput = Path.Combine(testOutputPath.FullName, "junit-{assembly}-{framework}-test-results.xml")
