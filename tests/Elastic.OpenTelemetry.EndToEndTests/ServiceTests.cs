@@ -42,7 +42,7 @@ public class EndToEndTests(ITestOutputHelper output, DistributedApplicationFixtu
 		var success = PartitionContext.TestException == null;
 		await fixture.ApmUI.StopTrace(_page, success, _testName);
 
-		if (!success)
+		if (success)
 			return;
 
 		DotNetRunApplication.IterateOverLog(Output.WriteLine);
