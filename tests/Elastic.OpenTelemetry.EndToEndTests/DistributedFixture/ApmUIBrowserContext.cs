@@ -98,7 +98,7 @@ public class ApmUIBrowserContext : IAsyncLifetime
 		var queryBar = page.GetByRole(AriaRole.Textbox, new() { Name = "Start typing to search and filter the APM page" });
 		await queryBar.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = timeout });
 
-		await queryBar.FillAsync(_serviceName);
+		await queryBar.FillAsync($"service.name: {_serviceName}");
 		await queryBar.PressAsync("Enter");
 
 		Exception? observed = null;
