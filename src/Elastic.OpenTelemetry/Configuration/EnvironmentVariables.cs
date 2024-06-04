@@ -6,8 +6,12 @@ namespace Elastic.OpenTelemetry.Configuration;
 
 internal static class EnvironmentVariables
 {
-	public const string ElasticOtelSkipOtlpExporter = "ELASTIC_OTEL_SKIP_OTLP_EXPORTER";
-	public const string ElasticOtelFileLogDirectoryEnvironmentVariable = "ELASTIC_OTEL_FILE_LOG_DIRECTORY";
-	public const string ElasticOtelFileLogLevelEnvironmentVariable = "ELASTIC_OTEL_FILE_LOG_LEVEL";
-	public const string ElasticOtelEnableElasticDefaults = "ELASTIC_OTEL_ENABLE_ELASTIC_DEFAULTS";
+	// ReSharper disable InconsistentNaming
+	public const string ELASTIC_OTEL_SKIP_OTLP_EXPORTER = nameof(ELASTIC_OTEL_SKIP_OTLP_EXPORTER);
+
+	public const string ELASTIC_OTEL_LOG_DIRECTORY = nameof(ELASTIC_OTEL_LOG_DIRECTORY);
+	public const string ELASTIC_OTEL_LOG_LEVEL = nameof(ELASTIC_OTEL_LOG_LEVEL);
+
+	public const string ELASTIC_OTEL_ENABLE_ELASTIC_DEFAULTS = nameof(ELASTIC_OTEL_ENABLE_ELASTIC_DEFAULTS);
+	// ReSharper enable InconsistentNaming
 }

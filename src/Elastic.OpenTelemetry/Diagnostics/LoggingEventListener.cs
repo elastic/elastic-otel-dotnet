@@ -36,9 +36,9 @@ internal sealed
 		_logger = logger;
 
 		// When both a file log level and a logging section log level are provided, the more verbose of the two is used.
-		// This insures we subscribes to the lowest level of events needed.
+		// This insures we subscribe to the lowest level of events needed.
 		// The specific loggers will then determine	if they should log the event based on their own log level.
-		var eventLevel = LogLevelHelpers.ToLogLevel(options.FileLogLevel);
+		var eventLevel = options.FileLogLevel;
 		if (!string.IsNullOrEmpty(options.LoggingSectionLogLevel))
 		{
 			var logLevel = LogLevelHelpers.ToLogLevel(options.LoggingSectionLogLevel);

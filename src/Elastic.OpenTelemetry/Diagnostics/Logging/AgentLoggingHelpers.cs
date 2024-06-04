@@ -16,7 +16,7 @@ internal static class AgentLoggingHelpers
 	{
 		var defaultLogLevel = DefaultLogLevel;
 
-		var logLevelEnvironmentVariable = Environment.GetEnvironmentVariable(EnvironmentVariables.ElasticOtelFileLogLevelEnvironmentVariable);
+		var logLevelEnvironmentVariable = Environment.GetEnvironmentVariable(EnvironmentVariables.ELASTIC_OTEL_LOG_LEVEL);
 
 		if (string.IsNullOrEmpty(logLevelEnvironmentVariable))
 			return defaultLogLevel;

@@ -66,8 +66,8 @@ internal static partial class LoggerMessages
 
 		string[] environmentVariables =
 		[
-			EnvironmentVariables.ElasticOtelFileLogDirectoryEnvironmentVariable,
-			EnvironmentVariables.ElasticOtelFileLogLevelEnvironmentVariable
+			EnvironmentVariables.ELASTIC_OTEL_LOG_DIRECTORY,
+			EnvironmentVariables.ELASTIC_OTEL_LOG_LEVEL
 		];
 
 		foreach (var variable in environmentVariables)
