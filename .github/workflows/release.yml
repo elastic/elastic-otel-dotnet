@@ -55,24 +55,20 @@ jobs:
       run: dotnet nuget push '${{ env.RELEASE_PACKAGES }}' -k ${{secrets.NUGET_REPO_API_KEY}} -s https://api.nuget.org/v3/index.json --skip-duplicate --no-symbols
 
     - if: ${{ success() && github.event_name == 'release' }}
-      uses: elastic/apm-pipeline-library/.github/actions/slack-message@current
+      uses: elastic/oblt-actions/slack/send@v1.5.0
       with:
-        url: ${{ secrets.VAULT_ADDR }}
-        roleId: ${{ secrets.VAULT_ROLE_ID }}
-        secretId: ${{ secrets.VAULT_SECRET_ID }}
-        channel: ${{ env.SLACK_CHANNEL }}
+        bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+        channel-id: ${{ env.SLACK_CHANNEL }}
         message: |
           :large_green_circle: [${{ github.repository }}] Release *${{ github.ref_name }}* published.
           Build: (<${{ env.JOB_URL }}|here>)
           Release URL: (<https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}|${{ github.ref_name }}>)
 
     - if: ${{ failure() && github.event_name == 'release' }}
-      uses: elastic/apm-pipeline-library/.github/actions/slack-message@current
+      uses: elastic/oblt-actions/slack/send@v1.5.0
       with:
-        url: ${{ secrets.VAULT_ADDR }}
-        roleId: ${{ secrets.VAULT_ROLE_ID }}
-        secretId: ${{ secrets.VAULT_SECRET_ID }}
-        channel: ${{ env.SLACK_CHANNEL }}
+        bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+        channel-id: ${{ env.SLACK_CHANNEL }}
         message: |
           :large_yellow_circle: [${{ github.repository }}] Release *${{ github.ref_name }}* could not be published.
           Build: (<${{ env.JOB_URL }}|here>)
