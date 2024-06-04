@@ -227,7 +227,8 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 		sut.LogConfigSources(logger);
 
 		logger.Messages.Count.Should().Be(4);
-		foreach (var message in logger.Messages) message.Should().EndWith("from [IConfiguration]");
+		foreach (var message in logger.Messages)
+			message.Should().EndWith("from [IConfiguration]");
 	}
 
 	[Fact]

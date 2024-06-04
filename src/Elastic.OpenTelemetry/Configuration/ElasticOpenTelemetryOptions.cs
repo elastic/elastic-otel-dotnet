@@ -78,7 +78,8 @@ public class ElasticOpenTelemetryOptions
 	internal ElasticOpenTelemetryOptions(IConfiguration? configuration, IDictionary? environmentVariables = null)
 		: this(environmentVariables)
 	{
-		if (configuration is null) return;
+		if (configuration is null)
+			return;
 		SetFromConfiguration(configuration, LogDirectoryConfigPropertyName, ref _logDirectory, ref _logDirectorySource, StringParser);
 		SetFromConfiguration(configuration, LogLevelConfigPropertyName, ref _logLevel, ref _logLevelSource, LogLevelParser);
 		SetFromConfiguration(configuration, LogTargetsConfigPropertyName, ref _logTargets, ref _logTargetsSource, LogTargetsParser);
@@ -139,7 +140,7 @@ public class ElasticOpenTelemetryOptions
 	/// <para> - /var/log/elastic/apm-agent-dotnet (on Linux)</para>
 	/// <para> - ~/Library/Application_Support/elastic/apm-agent-dotnet (on OSX)</para>
 	/// </summary>
-	public string LogDirectoryDefault => _defaultLogDirectory ;
+	public string LogDirectoryDefault => _defaultLogDirectory;
 
 	/// <summary>
 	/// The output directory where the Elastic distribution of OpenTelemetry will write log files.
