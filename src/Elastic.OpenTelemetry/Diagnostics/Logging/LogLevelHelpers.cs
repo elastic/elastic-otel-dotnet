@@ -16,32 +16,27 @@ internal static class LogLevelHelpers
 	public const string Trace = "Trace";
 	public const string None = "None";
 
-	public static LogLevel ToLogLevel(string logLevelString)
+	public static LogLevel? ToLogLevel(string logLevelString)
 	{
-		var logLevel = LogLevel.None;
-
 		if (logLevelString.Equals(Trace, StringComparison.OrdinalIgnoreCase))
-			logLevel = LogLevel.Trace;
-
-		else if (logLevelString.Equals(Debug, StringComparison.OrdinalIgnoreCase))
-			logLevel = LogLevel.Debug;
-
-		else if (logLevelString.Equals(Information, StringComparison.OrdinalIgnoreCase))
-			logLevel = LogLevel.Information;
-
-		else if (logLevelString.Equals(Information, StringComparison.OrdinalIgnoreCase))
-			logLevel = LogLevel.Information;
-
-		else if (logLevelString.Equals(Warning, StringComparison.OrdinalIgnoreCase))
-			logLevel = LogLevel.Warning;
-
-		else if (logLevelString.Equals(Error, StringComparison.OrdinalIgnoreCase))
-			logLevel = LogLevel.Error;
-
-		else if (logLevelString.Equals(Critical, StringComparison.OrdinalIgnoreCase))
-			logLevel = LogLevel.Critical;
-
-		return logLevel;
+			return LogLevel.Trace;
+		if (logLevelString.Equals(Debug, StringComparison.OrdinalIgnoreCase))
+			return LogLevel.Debug;
+		if (logLevelString.Equals("Info", StringComparison.OrdinalIgnoreCase))
+			return LogLevel.Information;
+		if (logLevelString.Equals(Information, StringComparison.OrdinalIgnoreCase))
+			return LogLevel.Information;
+		if (logLevelString.Equals("Warn", StringComparison.OrdinalIgnoreCase))
+			return LogLevel.Warning;
+		if (logLevelString.Equals(Warning, StringComparison.OrdinalIgnoreCase))
+			return LogLevel.Warning;
+		if (logLevelString.Equals(Error, StringComparison.OrdinalIgnoreCase))
+			return LogLevel.Error;
+		if (logLevelString.Equals(Critical, StringComparison.OrdinalIgnoreCase))
+			return LogLevel.Critical;
+		if (logLevelString.Equals(None, StringComparison.OrdinalIgnoreCase))
+			return LogLevel.None;
+		return null;
 	}
 
 	public static string AsString(this LogLevel logLevel) =>

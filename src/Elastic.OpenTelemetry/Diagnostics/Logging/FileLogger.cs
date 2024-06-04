@@ -32,18 +32,17 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 	public FileLogger(ElasticOpenTelemetryOptions options)
 	{
 		_scopeProvider = new LoggerExternalScopeProvider();
+		_configuredLogLevel = options.LogLevel;
+		FileLoggingEnabled = options.GlobalLogEnabled;
 
-		var logDirectory = options.FileLogDirectory;
-		var logLevel = options.FileLogLevel;
-		if (logLevel == LogLevel.None || (logLevel == null && logDirectory == null))
+		if (!FileLoggingEnabled)
 			return;
-
-		_configuredLogLevel = logLevel ?? LogLevel.Information;
-		logDirectory ??= options.FileLogDirectoryDefault;
 
 		var process = Process.GetCurrentProcess();
 		// When ordered by filename, we get see logs from the same process grouped, then ordered by oldest to newest, then the PID for that instance
 		var logFileName = $"{process.ProcessName}_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{process.Id}.instrumentation.log";
+
+		var logDirectory = options.LogDirectory;
 		LogFilePath = Path.Combine(logDirectory, logFileName);
 
 		if (!Directory.Exists(logDirectory))
