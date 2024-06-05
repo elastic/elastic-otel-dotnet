@@ -7,6 +7,8 @@ using System.Runtime.InteropServices;
 using Elastic.OpenTelemetry.Diagnostics.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using static System.Environment;
+using static System.Runtime.InteropServices.RuntimeInformation;
 using static Elastic.OpenTelemetry.Configuration.EnvironmentVariables;
 
 namespace Elastic.OpenTelemetry.Configuration;
@@ -63,7 +65,7 @@ public class ElasticOpenTelemetryOptions
 	public ElasticOpenTelemetryOptions(IDictionary? environmentVariables = null)
 	{
 		_defaultLogDirectory = GetDefaultLogDirectory();
-		_environmentVariables = environmentVariables ?? Environment.GetEnvironmentVariables();
+		_environmentVariables = environmentVariables ?? GetEnvironmentVariables();
 		SetFromEnvironment(ELASTIC_OTEL_LOG_DIRECTORY, ref _logDirectory, ref _logDirectorySource, StringParser);
 		SetFromEnvironment(ELASTIC_OTEL_LOG_LEVEL, ref _logLevel, ref _logLevelSource, LogLevelParser);
 		SetFromEnvironment(ELASTIC_OTEL_LOG_TARGETS, ref _logTargets, ref _logTargetsSource, LogTargetsParser);
@@ -126,12 +128,15 @@ public class ElasticOpenTelemetryOptions
 		}
 	}
 
-	private static string GetDefaultLogDirectory() =>
-		Environment.OSVersion.Platform == PlatformID.Win32NT
-		? Path.Combine(Environment.GetEnvironmentVariable("PROGRAMDATA")!, "elastic", "apm-agent-dotnet", "logs")
-		: RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
-		? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "elastic", "apm-agent-dotnet")
-		: "/var/log/elastic/apm-agent-dotnet";
+	private static string GetDefaultLogDirectory()
+	{
+		var applicationMoniker = "elastic-otel-dotnet";
+		if (IsOSPlatform(OSPlatform.Windows))
+			return Path.Combine(GetFolderPath(SpecialFolder.ApplicationData), "elastic", applicationMoniker);
+		if (IsOSPlatform(OSPlatform.OSX))
+			return Path.Combine(GetFolderPath(SpecialFolder.LocalApplicationData), "elastic", applicationMoniker);
+		return $"/var/log/elastic/{applicationMoniker}";
+	}
 
 	/// <summary>
 	/// The default log directory if file logging was enabled but non was specified
