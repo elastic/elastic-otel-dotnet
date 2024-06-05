@@ -81,11 +81,16 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 		var openTelemetry =
 			Microsoft.Extensions.DependencyInjection.OpenTelemetryServicesExtensions.AddOpenTelemetry(Services);
 
-		// We always add this so we can identify a distro is being used, even if all Elastic defaults are disabled.
-		openTelemetry.ConfigureResource(r => r.AddDistroAttributes());
-
 		if (options.DistroOptions.EnabledDefaults.Equals(ElasticOpenTelemetryOptions.EnabledElasticDefaults.None))
+		{
+			Logger.LogNoElasticDefaults();
+
+			// We always add the distro attribute so that we can identify a distro is being used, even if all Elastic defaults are disabled.
+			openTelemetry.ConfigureResource(r => r.AddDistroAttributes());
 			return;
+		}
+
+		openTelemetry.ConfigureResource(r => r.AddElasticResourceDefaults(Logger));
 
 		//https://github.com/open-telemetry/opentelemetry-dotnet/pull/5400
 		if (!options.DistroOptions.SkipOtlpExporter)
@@ -93,28 +98,30 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 
 		if (options.DistroOptions.EnabledDefaults.HasFlag(ElasticOpenTelemetryOptions.EnabledElasticDefaults.Logging))
 		{
-			//TODO Move to WithLogging once it gets stable
+			// TODO: Move to WithLogging once it gets stable.
 			Services.Configure<OpenTelemetryLoggerOptions>(logging =>
 			{
 				logging.IncludeFormattedMessage = true;
 				logging.IncludeScopes = true;
-				//TODO add processor that adds service.id
 			});
+
+			// Note: We use this log method for now as the WithLogging method is not yet stable.
+			Logger.LogConfiguredSignalProvider("logging", nameof(OpenTelemetryLoggerOptions));
 		}
 
 		if (options.DistroOptions.EnabledDefaults.HasFlag(ElasticOpenTelemetryOptions.EnabledElasticDefaults.Tracing))
 		{
 			openTelemetry.WithTracing(tracing =>
-				{
-					tracing
-						.AddHttpClientInstrumentation()
-						.AddGrpcClientInstrumentation()
-						.AddEntityFrameworkCoreInstrumentation();
+			{
+				tracing
+					.AddHttpClientInstrumentation()
+					.AddGrpcClientInstrumentation()
+					.AddEntityFrameworkCoreInstrumentation();
 
-					tracing.AddElasticProcessors(Logger);
+				tracing.AddElasticProcessors(Logger);
+			});
 
-					Logger.LogConfiguredTracerProvider();
-				});
+			Logger.LogConfiguredSignalProvider("tracing", nameof(TracerProviderBuilder));
 		}
 
 		if (options.DistroOptions.EnabledDefaults.HasFlag(ElasticOpenTelemetryOptions.EnabledElasticDefaults.Metrics))
@@ -126,7 +133,7 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 					.AddRuntimeInstrumentation()
 					.AddHttpClientInstrumentation();
 
-				Logger.LogConfiguredMeterProvider();
+				Logger.LogConfiguredSignalProvider("metrics", nameof(MeterProviderBuilder));
 			});
 		}
 	}
@@ -134,12 +141,12 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 
 internal static partial class LoggerMessages
 {
-	[LoggerMessage(EventId = 0, Level = LogLevel.Trace, Message = "ElasticOpenTelemetryBuilder initialized{newline}{StackTrace}.")]
+	[LoggerMessage(EventId = 0, Level = LogLevel.Information, Message = "ElasticOpenTelemetryBuilder initialized{newline}{StackTrace}.")]
 	public static partial void LogElasticOpenTelemetryBuilderInitialized(this ILogger logger, string newline, StackTrace stackTrace);
 
-	[LoggerMessage(EventId = 1, Level = LogLevel.Trace, Message = "ElasticOpenTelemetryBuilder configured tracing services via the TracerProvider.")]
-	public static partial void LogConfiguredTracerProvider(this ILogger logger);
+	[LoggerMessage(EventId = 1, Level = LogLevel.Trace, Message = "ElasticOpenTelemetryBuilder configured {Signal} via the {Provider}.")]
+	public static partial void LogConfiguredSignalProvider(this ILogger logger, string signal, string provider);
 
-	[LoggerMessage(EventId = 2, Level = LogLevel.Trace, Message = "ElasticOpenTelemetryBuilder configured metric services via the MeterProvider.")]
-	public static partial void LogConfiguredMeterProvider(this ILogger logger);
+	[LoggerMessage(EventId = 2, Level = LogLevel.Information, Message = "No Elastic defaults were enabled.")]
+	public static partial void LogNoElasticDefaults(this ILogger logger);
 }
