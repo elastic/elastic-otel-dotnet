@@ -2,25 +2,23 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using System.Collections;
 using System.Text;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Extensions;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using Xunit.Abstractions;
 
 using static Elastic.OpenTelemetry.Configuration.ElasticOpenTelemetryOptions;
+using static Elastic.OpenTelemetry.Configuration.EnvironmentVariables;
+using static Elastic.OpenTelemetry.Diagnostics.Logging.LogLevelHelpers;
 
 namespace Elastic.OpenTelemetry.Tests.Configuration;
 
-public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output) : IDisposable
+public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 {
-	private readonly ITestOutputHelper _output = output;
-	private readonly string? _originalFileLogDirectoryEnvVar = Environment.GetEnvironmentVariable(EnvironmentVariables.ElasticOtelFileLogDirectoryEnvironmentVariable);
-	private readonly string? _originalFileLogLevelEnvVar = Environment.GetEnvironmentVariable(EnvironmentVariables.ElasticOtelFileLogLevelEnvironmentVariable);
-	private readonly string? _originalEnableElasticDefaultsEnvVar = Environment.GetEnvironmentVariable(EnvironmentVariables.ElasticOtelEnableElasticDefaults);
-	private readonly string? _originalSkipOtlpExporterEnvVar = Environment.GetEnvironmentVariable(EnvironmentVariables.ElasticOtelSkipOtlpExporter);
-
 	[Fact]
 	public void EnabledElasticDefaults_NoneIncludesExpectedValues()
 	{
@@ -34,32 +32,32 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output) :
 	[Fact]
 	public void DefaultCtor_SetsExpectedDefaults_WhenNoEnvironmentVariablesAreConfigured()
 	{
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelFileLogDirectoryEnvironmentVariable, null);
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelFileLogLevelEnvironmentVariable, null);
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelEnableElasticDefaults, null);
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelSkipOtlpExporter, null);
+		var sut = new ElasticOpenTelemetryOptions(new Hashtable
+		{
+			{ELASTIC_OTEL_LOG_DIRECTORY, null},
+			{ELASTIC_OTEL_LOG_LEVEL, null},
+			{ELASTIC_OTEL_ENABLE_ELASTIC_DEFAULTS, null},
+			{ELASTIC_OTEL_SKIP_OTLP_EXPORTER, null},
+		});
 
-		var sut = new ElasticOpenTelemetryOptions();
+		sut.GlobalLogEnabled.Should().Be(false);
+		// these default to null because any other value would enable file logging
+		sut.LogDirectory.Should().Be(sut.LogDirectoryDefault);
+		sut.LogLevel.Should().Be(LogLevel.Warning);
 
-		sut.FileLogDirectory.Should().Be(string.Empty);
-		sut.FileLogLevel.Should().Be("Information");
 		sut.EnableElasticDefaults.Should().Be(string.Empty);
 		sut.EnabledDefaults.Should().HaveFlag(EnabledElasticDefaults.Tracing);
 		sut.EnabledDefaults.Should().HaveFlag(EnabledElasticDefaults.Metrics);
 		sut.EnabledDefaults.Should().HaveFlag(EnabledElasticDefaults.Logging);
 		sut.SkipOtlpExporter.Should().Be(false);
 
-		var logger = new TestLogger(_output);
+		var logger = new TestLogger(output);
 
 		sut.LogConfigSources(logger);
 
 		logger.Messages.Count.Should().Be(4);
 		foreach (var message in logger.Messages)
-		{
 			message.Should().EndWith("from [Default]");
-		}
-
-		ResetEnvironmentVariables();
 	}
 
 	[Fact]
@@ -69,30 +67,28 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output) :
 		const string fileLogLevel = "Critical";
 		const string enabledElasticDefaults = "None";
 
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelFileLogDirectoryEnvironmentVariable, fileLogDirectory);
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelFileLogLevelEnvironmentVariable, fileLogLevel);
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelEnableElasticDefaults, enabledElasticDefaults);
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelSkipOtlpExporter, "true");
+		var sut = new ElasticOpenTelemetryOptions(new Hashtable
+		{
+			{ELASTIC_OTEL_LOG_DIRECTORY, fileLogDirectory},
+			{ELASTIC_OTEL_LOG_LEVEL, fileLogLevel},
+			{ELASTIC_OTEL_ENABLE_ELASTIC_DEFAULTS, enabledElasticDefaults},
+			{ELASTIC_OTEL_SKIP_OTLP_EXPORTER, "true"},
+		});
 
-		var sut = new ElasticOpenTelemetryOptions();
-
-		sut.FileLogDirectory.Should().Be(fileLogDirectory);
-		sut.FileLogLevel.Should().Be(fileLogLevel);
+		sut.LogDirectory.Should().Be(fileLogDirectory);
+		sut.LogLevel.Should().Be(ToLogLevel(fileLogLevel));
 		sut.EnableElasticDefaults.Should().Be(enabledElasticDefaults);
 		sut.EnabledDefaults.Should().Be(EnabledElasticDefaults.None);
 		sut.SkipOtlpExporter.Should().Be(true);
 
-		var logger = new TestLogger(_output);
+		var logger = new TestLogger(output);
 
 		sut.LogConfigSources(logger);
 
 		logger.Messages.Count.Should().Be(4);
 		foreach (var message in logger.Messages)
-		{
 			message.Should().EndWith("from [Environment]");
-		}
 
-		ResetEnvironmentVariables();
 	}
 
 	[Fact]
@@ -102,12 +98,6 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output) :
 		const string fileLogLevel = "Critical";
 		const string enabledElasticDefaults = "None";
 
-		// Remove all env vars
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelFileLogDirectoryEnvironmentVariable, null);
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelFileLogLevelEnvironmentVariable, null);
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelEnableElasticDefaults, null);
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelSkipOtlpExporter, null);
-
 		var json = $$"""
 			{
 				"Logging": {
@@ -118,8 +108,8 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output) :
 				},
 				"Elastic": {
 					"OpenTelemetry": {
-						"FileLogDirectory": "C:\\Temp",
-						"FileLogLevel": "{{fileLogLevel}}",
+						"LogDirectory": "C:\\Temp",
+						"LogLevel": "{{fileLogLevel}}",
 						"EnabledElasticDefaults": "{{enabledElasticDefaults}}",
 						"SkipOtlpExporter": true
 					}
@@ -131,26 +121,22 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output) :
 			.AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(json)))
 			.Build();
 
-		var sut = new ElasticOpenTelemetryOptions(config);
+		var sut = new ElasticOpenTelemetryOptions(config, new Hashtable());
 
-		sut.FileLogDirectory.Should().Be(@"C:\Temp");
-		sut.FileLogLevel.Should().Be(fileLogLevel);
+		sut.LogDirectory.Should().Be(@"C:\Temp");
+		sut.LogLevel.Should().Be(ToLogLevel(fileLogLevel));
 		sut.EnableElasticDefaults.Should().Be(enabledElasticDefaults);
 		sut.EnabledDefaults.Should().Be(EnabledElasticDefaults.None);
 		sut.SkipOtlpExporter.Should().Be(true);
 		sut.LoggingSectionLogLevel.Should().Be(loggingSectionLogLevel);
 
-		var logger = new TestLogger(_output);
+		var logger = new TestLogger(output);
 
 		sut.LogConfigSources(logger);
 
 		logger.Messages.Count.Should().Be(4);
 		foreach (var message in logger.Messages)
-		{
 			message.Should().EndWith("from [IConfiguration]");
-		}
-
-		ResetEnvironmentVariables();
 	}
 
 	[Fact]
@@ -159,12 +145,6 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output) :
 		const string loggingSectionLogLevel = "Warning";
 		const string enabledElasticDefaults = "None";
 
-		// Remove all env vars
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelFileLogDirectoryEnvironmentVariable, null);
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelFileLogLevelEnvironmentVariable, null);
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelEnableElasticDefaults, null);
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelSkipOtlpExporter, null);
-
 		var json = $$"""
 			{
 				"Logging": {
@@ -175,7 +155,7 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output) :
 				},
 				"Elastic": {
 					"OpenTelemetry": {
-						"FileLogDirectory": "C:\\Temp",
+						"LogDirectory": "C:\\Temp",
 						"EnabledElasticDefaults": "{{enabledElasticDefaults}}",
 						"SkipOtlpExporter": true
 					}
@@ -187,26 +167,23 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output) :
 			.AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(json)))
 			.Build();
 
-		var sut = new ElasticOpenTelemetryOptions(config);
+		var sut = new ElasticOpenTelemetryOptions(config, new Hashtable());
 
-		sut.FileLogDirectory.Should().Be(@"C:\Temp");
-		sut.FileLogLevel.Should().Be(loggingSectionLogLevel);
+		sut.LogDirectory.Should().Be(@"C:\Temp");
+		sut.LogLevel.Should().Be(ToLogLevel(loggingSectionLogLevel));
 		sut.EnableElasticDefaults.Should().Be(enabledElasticDefaults);
 		sut.EnabledDefaults.Should().Be(EnabledElasticDefaults.None);
 		sut.SkipOtlpExporter.Should().Be(true);
 		sut.LoggingSectionLogLevel.Should().Be(loggingSectionLogLevel);
 
-		var logger = new TestLogger(_output);
+		var logger = new TestLogger(output);
 
 		sut.LogConfigSources(logger);
 
 		logger.Messages.Count.Should().Be(4);
 		foreach (var message in logger.Messages)
-		{
 			message.Should().EndWith("from [IConfiguration]");
-		}
 
-		ResetEnvironmentVariables();
 	}
 
 	[Fact]
@@ -214,12 +191,6 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output) :
 	{
 		const string loggingSectionDefaultLogLevel = "Information";
 		const string enabledElasticDefaults = "None";
-
-		// Remove all env vars
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelFileLogDirectoryEnvironmentVariable, null);
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelFileLogLevelEnvironmentVariable, null);
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelEnableElasticDefaults, null);
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelSkipOtlpExporter, null);
 
 		var json = $$"""
 			{
@@ -230,7 +201,7 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output) :
 				},
 				"Elastic": {
 					"OpenTelemetry": {
-						"FileLogDirectory": "C:\\Temp",
+						"LogDirectory": "C:\\Temp",
 						"EnabledElasticDefaults": "{{enabledElasticDefaults}}",
 						"SkipOtlpExporter": true
 					}
@@ -242,26 +213,22 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output) :
 			.AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(json)))
 			.Build();
 
-		var sut = new ElasticOpenTelemetryOptions(config);
+		var sut = new ElasticOpenTelemetryOptions(config, new Hashtable());
 
-		sut.FileLogDirectory.Should().Be(@"C:\Temp");
-		sut.FileLogLevel.Should().Be(loggingSectionDefaultLogLevel);
+		sut.LogDirectory.Should().Be(@"C:\Temp");
+		sut.LogLevel.Should().Be(ToLogLevel(loggingSectionDefaultLogLevel));
 		sut.EnableElasticDefaults.Should().Be(enabledElasticDefaults);
 		sut.EnabledDefaults.Should().Be(EnabledElasticDefaults.None);
 		sut.SkipOtlpExporter.Should().Be(true);
 		sut.LoggingSectionLogLevel.Should().Be(loggingSectionDefaultLogLevel);
 
-		var logger = new TestLogger(_output);
+		var logger = new TestLogger(output);
 
 		sut.LogConfigSources(logger);
 
 		logger.Messages.Count.Should().Be(4);
 		foreach (var message in logger.Messages)
-		{
 			message.Should().EndWith("from [IConfiguration]");
-		}
-
-		ResetEnvironmentVariables();
 	}
 
 	[Fact]
@@ -271,17 +238,12 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output) :
 		const string fileLogLevel = "Critical";
 		const string enabledElasticDefaults = "None";
 
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelFileLogDirectoryEnvironmentVariable, fileLogDirectory);
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelFileLogLevelEnvironmentVariable, fileLogLevel);
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelEnableElasticDefaults, enabledElasticDefaults);
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelSkipOtlpExporter, "true");
-
 		var json = $$"""
 			{
 				"Elastic": {
 					"OpenTelemetry": {
-						"FileLogDirectory": "C:\\Json",
-						"FileLogLevel": "Trace",
+						"LogDirectory": "C:\\Json",
+						"LogLevel": "Trace",
 						"EnabledElasticDefaults": "All",
 						"SkipOtlpExporter": false
 					}
@@ -293,15 +255,19 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output) :
 			.AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(json)))
 			.Build();
 
-		var sut = new ElasticOpenTelemetryOptions(config);
+		var sut = new ElasticOpenTelemetryOptions(config, new Hashtable
+		{
+			{ELASTIC_OTEL_LOG_DIRECTORY, fileLogDirectory},
+			{ELASTIC_OTEL_LOG_LEVEL, fileLogLevel},
+			{ELASTIC_OTEL_ENABLE_ELASTIC_DEFAULTS, enabledElasticDefaults},
+			{ELASTIC_OTEL_SKIP_OTLP_EXPORTER, "true"},
+		});
 
-		sut.FileLogDirectory.Should().Be(fileLogDirectory);
-		sut.FileLogLevel.Should().Be(fileLogLevel);
+		sut.LogDirectory.Should().Be(fileLogDirectory);
+		sut.LogLevel.Should().Be(ToLogLevel(fileLogLevel));
 		sut.EnableElasticDefaults.Should().Be(enabledElasticDefaults);
 		sut.EnabledDefaults.Should().Be(EnabledElasticDefaults.None);
 		sut.SkipOtlpExporter.Should().Be(true);
-
-		ResetEnvironmentVariables();
 	}
 
 	[Fact]
@@ -311,36 +277,33 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output) :
 		const string fileLogLevel = "Critical";
 		const string enabledElasticDefaults = "None";
 
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelFileLogDirectoryEnvironmentVariable, "C:\\Temp");
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelFileLogLevelEnvironmentVariable, "Information");
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelEnableElasticDefaults, "All");
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelSkipOtlpExporter, "true");
-
-		var sut = new ElasticOpenTelemetryOptions
+		var sut = new ElasticOpenTelemetryOptions(new Hashtable
 		{
-			FileLogDirectory = fileLogDirectory,
-			FileLogLevel = fileLogLevel,
+			{ELASTIC_OTEL_LOG_DIRECTORY, "C:\\Temp"},
+			{ELASTIC_OTEL_LOG_LEVEL, "Information"},
+			{ELASTIC_OTEL_ENABLE_ELASTIC_DEFAULTS, "All"},
+			{ELASTIC_OTEL_SKIP_OTLP_EXPORTER, "true"},
+		})
+		{
+			LogDirectory = fileLogDirectory,
+			LogLevel = ToLogLevel(fileLogLevel) ?? LogLevel.None,
 			SkipOtlpExporter = false,
 			EnableElasticDefaults = enabledElasticDefaults
 		};
 
-		sut.FileLogDirectory.Should().Be(fileLogDirectory);
-		sut.FileLogLevel.Should().Be(fileLogLevel);
+		sut.LogDirectory.Should().Be(fileLogDirectory);
+		sut.LogLevel.Should().Be(ToLogLevel(fileLogLevel));
 		sut.EnableElasticDefaults.Should().Be(enabledElasticDefaults);
 		sut.EnabledDefaults.Should().Be(EnabledElasticDefaults.None);
 		sut.SkipOtlpExporter.Should().Be(false);
 
-		var logger = new TestLogger(_output);
+		var logger = new TestLogger(output);
 
 		sut.LogConfigSources(logger);
 
 		logger.Messages.Count.Should().Be(4);
 		foreach (var message in logger.Messages)
-		{
 			message.Should().EndWith("from [Property]");
-		}
-
-		ResetEnvironmentVariables();
 	}
 
 	[Theory]
@@ -430,7 +393,7 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output) :
 	{
 		var options = new ElasticOpenTelemetryBuilderOptions
 		{
-			Logger = new TestLogger(_output),
+			Logger = new TestLogger(output),
 			DistroOptions = new ElasticOpenTelemetryOptions()
 			{
 				SkipOtlpExporter = true,
@@ -465,14 +428,4 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output) :
 
 		transactionId.Should().BeNull();
 	}
-
-	private void ResetEnvironmentVariables()
-	{
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelFileLogDirectoryEnvironmentVariable, _originalFileLogDirectoryEnvVar);
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelFileLogLevelEnvironmentVariable, _originalFileLogLevelEnvVar);
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelEnableElasticDefaults, _originalEnableElasticDefaultsEnvVar);
-		Environment.SetEnvironmentVariable(EnvironmentVariables.ElasticOtelSkipOtlpExporter, _originalSkipOtlpExporterEnvVar);
-	}
-
-	public void Dispose() => ResetEnvironmentVariables();
 }

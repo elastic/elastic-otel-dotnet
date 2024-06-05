@@ -2,9 +2,14 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using System.Collections;
+using System.Runtime.InteropServices;
 using Elastic.OpenTelemetry.Diagnostics.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using static System.Environment;
+using static System.Runtime.InteropServices.RuntimeInformation;
+using static Elastic.OpenTelemetry.Configuration.EnvironmentVariables;
 
 namespace Elastic.OpenTelemetry.Configuration;
 
@@ -24,78 +29,123 @@ namespace Elastic.OpenTelemetry.Configuration;
 public class ElasticOpenTelemetryOptions
 {
 	private static readonly string ConfigurationSection = "Elastic:OpenTelemetry";
-	private static readonly string FileLogDirectoryConfigPropertyName = "FileLogDirectory";
-	private static readonly string FileLogLevelConfigPropertyName = "FileLogLevel";
+	private static readonly string LogDirectoryConfigPropertyName = "LogDirectory";
+	private static readonly string LogLevelConfigPropertyName = "LogLevel";
+	private static readonly string LogTargetsConfigPropertyName = "LogTargets";
 	private static readonly string SkipOtlpExporterConfigPropertyName = "SkipOtlpExporter";
 	private static readonly string EnabledElasticDefaultsConfigPropertyName = "EnabledElasticDefaults";
 
 	// For a relatively limited number of properties, this is okay. If this grows significantly, consider a
 	// more flexible approach similar to the layered configuration used in the Elastic APM Agent.
 	private EnabledElasticDefaults? _elasticDefaults;
-	private string? _fileLogDirectory;
-	private ConfigSource _fileLogDirectorySource = ConfigSource.Default;
-	private string? _fileLogLevel;
-	private ConfigSource _fileLogLevelSource = ConfigSource.Default;
-	private bool? _skipOtlpExporter;
-	private ConfigSource _skipOtlpExporterSource = ConfigSource.Default;
-	private string? _enabledElasticDefaults;
-	private ConfigSource _enabledElasticDefaultsSource = ConfigSource.Default;
+
+	private string? _logDirectory;
+	private ConfigSource _logDirectorySource = ConfigSource.Default;
+
+	private LogLevel? _logLevel;
+	private ConfigSource _logLevelSource = ConfigSource.Default;
+
+	private LogTargets? _logTargets;
+	private ConfigSource _logTargetsSource = ConfigSource.Default;
+
+	private readonly bool? _skipOtlpExporter;
+	private readonly ConfigSource _skipOtlpExporterSource = ConfigSource.Default;
+
+	private readonly string? _enabledElasticDefaults;
+	private readonly ConfigSource _enabledElasticDefaultsSource = ConfigSource.Default;
 
 	private string? _loggingSectionLogLevel;
+	private readonly string _defaultLogDirectory;
+	private readonly IDictionary _environmentVariables;
 
 	/// <summary>
 	/// Creates a new instance of <see cref="ElasticOpenTelemetryOptions"/> with properties
 	/// bound from environment variables.
 	/// </summary>
-	public ElasticOpenTelemetryOptions()
+	public ElasticOpenTelemetryOptions(IDictionary? environmentVariables = null)
 	{
-		SetFromEnvironment(EnvironmentVariables.ElasticOtelFileLogDirectoryEnvironmentVariable, ref _fileLogDirectory,
-			ref _fileLogDirectorySource, StringParser);
-		SetFromEnvironment(EnvironmentVariables.ElasticOtelFileLogLevelEnvironmentVariable, ref _fileLogLevel,
-			ref _fileLogLevelSource, StringParser);
-		SetFromEnvironment(EnvironmentVariables.ElasticOtelSkipOtlpExporter, ref _skipOtlpExporter,
-			ref _skipOtlpExporterSource, BoolParser);
-		SetFromEnvironment(EnvironmentVariables.ElasticOtelEnableElasticDefaults, ref _enabledElasticDefaults,
-			ref _enabledElasticDefaultsSource, StringParser);
+		_defaultLogDirectory = GetDefaultLogDirectory();
+		_environmentVariables = environmentVariables ?? GetEnvironmentVariables();
+		SetFromEnvironment(ELASTIC_OTEL_LOG_DIRECTORY, ref _logDirectory, ref _logDirectorySource, StringParser);
+		SetFromEnvironment(ELASTIC_OTEL_LOG_LEVEL, ref _logLevel, ref _logLevelSource, LogLevelParser);
+		SetFromEnvironment(ELASTIC_OTEL_LOG_TARGETS, ref _logTargets, ref _logTargetsSource, LogTargetsParser);
+		SetFromEnvironment(ELASTIC_OTEL_SKIP_OTLP_EXPORTER, ref _skipOtlpExporter, ref _skipOtlpExporterSource, BoolParser);
+		SetFromEnvironment(ELASTIC_OTEL_ENABLE_ELASTIC_DEFAULTS, ref _enabledElasticDefaults, ref _enabledElasticDefaultsSource, StringParser);
 	}
 
 	/// <summary>
 	/// Creates a new instance of <see cref="ElasticOpenTelemetryOptions"/> with properties
 	/// bound from environment variables and an <see cref="IConfiguration"/> instance.
 	/// </summary>
-	internal ElasticOpenTelemetryOptions(IConfiguration configuration) : this()
+	internal ElasticOpenTelemetryOptions(IConfiguration? configuration, IDictionary? environmentVariables = null)
+		: this(environmentVariables)
 	{
-		if (configuration is not null)
-		{
-			SetFromConfiguration(configuration, FileLogDirectoryConfigPropertyName, ref _fileLogDirectory,
-						ref _fileLogDirectorySource, StringParser);
-			SetFromConfiguration(configuration, FileLogLevelConfigPropertyName, ref _fileLogLevel,
-				ref _fileLogLevelSource, StringParser);
-			SetFromConfiguration(configuration, SkipOtlpExporterConfigPropertyName, ref _skipOtlpExporter,
-				ref _skipOtlpExporterSource, BoolParser);
-			SetFromConfiguration(configuration, EnabledElasticDefaultsConfigPropertyName, ref _enabledElasticDefaults,
-				ref _enabledElasticDefaultsSource, StringParser);
+		if (configuration is null)
+			return;
+		SetFromConfiguration(configuration, LogDirectoryConfigPropertyName, ref _logDirectory, ref _logDirectorySource, StringParser);
+		SetFromConfiguration(configuration, LogLevelConfigPropertyName, ref _logLevel, ref _logLevelSource, LogLevelParser);
+		SetFromConfiguration(configuration, LogTargetsConfigPropertyName, ref _logTargets, ref _logTargetsSource, LogTargetsParser);
+		SetFromConfiguration(configuration, SkipOtlpExporterConfigPropertyName, ref _skipOtlpExporter, ref _skipOtlpExporterSource, BoolParser);
+		SetFromConfiguration(configuration, EnabledElasticDefaultsConfigPropertyName, ref _enabledElasticDefaults, ref _enabledElasticDefaultsSource, StringParser);
 
-			BindFromLoggingSection(configuration);
-		}
+		BindFromLoggingSection(configuration);
 
-		void BindFromLoggingSection(IConfiguration configuration)
+		void BindFromLoggingSection(IConfiguration config)
 		{
 			// This will be used as a fallback if a more specific configuration is not provided.
 			// We also store the logging level to use it within the logging event listener to determine the most verbose level to subscribe to.
-			_loggingSectionLogLevel = configuration.GetValue<string>($"Logging:LogLevel:{CompositeLogger.LogCategory}");
+			_loggingSectionLogLevel = config.GetValue<string>($"Logging:LogLevel:{CompositeLogger.LogCategory}");
 
 			// Fall	back to the default logging level if the specific category is not configured.
 			if (string.IsNullOrEmpty(_loggingSectionLogLevel))
-				_loggingSectionLogLevel = configuration.GetValue<string>("Logging:LogLevel:Default");
+				_loggingSectionLogLevel = config.GetValue<string>("Logging:LogLevel:Default");
 
-			if (!string.IsNullOrEmpty(_loggingSectionLogLevel) && _fileLogLevel is null)
+			if (!string.IsNullOrEmpty(_loggingSectionLogLevel) && _logLevel is null)
 			{
-				_fileLogLevel = _loggingSectionLogLevel;
-				_fileLogLevelSource = ConfigSource.IConfiguration;
+				_logLevel = LogLevelHelpers.ToLogLevel(_loggingSectionLogLevel);
+				_logLevelSource = ConfigSource.IConfiguration;
 			}
 		}
 	}
+
+	/// <summary>
+	/// Calculates whether global logging is enabled based on
+	/// <see cref="LogTargets"/>, <see cref="LogDirectory"/> and <see cref="LogLevel"/>
+	/// </summary>
+	public bool GlobalLogEnabled
+	{
+		get
+		{
+			var isActive = (_logLevel.HasValue || !string.IsNullOrWhiteSpace(_logDirectory) || _logTargets.HasValue);
+			if (isActive)
+			{
+				if (_logLevel is LogLevel.None)
+					isActive = false;
+				else if (_logTargets is LogTargets.None)
+					isActive = false;
+			}
+			return isActive;
+		}
+	}
+
+	private static string GetDefaultLogDirectory()
+	{
+		var applicationMoniker = "elastic-otel-dotnet";
+		if (IsOSPlatform(OSPlatform.Windows))
+			return Path.Combine(GetFolderPath(SpecialFolder.ApplicationData), "elastic", applicationMoniker);
+		if (IsOSPlatform(OSPlatform.OSX))
+			return Path.Combine(GetFolderPath(SpecialFolder.LocalApplicationData), "elastic", applicationMoniker);
+		return $"/var/log/elastic/{applicationMoniker}";
+	}
+
+	/// <summary>
+	/// The default log directory if file logging was enabled but non was specified
+	/// <para>Defaults to: </para>
+	/// <para> - %PROGRAMDATA%\elastic\apm-agent-dotnet (on Windows)</para>
+	/// <para> - /var/log/elastic/apm-agent-dotnet (on Linux)</para>
+	/// <para> - ~/Library/Application_Support/elastic/apm-agent-dotnet (on OSX)</para>
+	/// </summary>
+	public string LogDirectoryDefault => _defaultLogDirectory;
 
 	/// <summary>
 	/// The output directory where the Elastic distribution of OpenTelemetry will write log files.
@@ -105,13 +155,13 @@ public class ElasticOpenTelemetryOptions
 	/// <c>{ProcessName}_{UtcUnixTimeMilliseconds}_{ProcessId}.instrumentation.log</c>.
 	/// This log file includes log messages from the OpenTelemetry SDK and the Elastic distribution.
 	/// </remarks>
-	public string FileLogDirectory
+	public string LogDirectory
 	{
-		get => _fileLogDirectory ?? string.Empty;
+		get => _logDirectory ?? LogDirectoryDefault;
 		init
 		{
-			_fileLogDirectory = value;
-			_fileLogDirectorySource = ConfigSource.Property;
+			_logDirectory = value;
+			_logDirectorySource = ConfigSource.Property;
 		}
 	}
 
@@ -130,13 +180,24 @@ public class ElasticOpenTelemetryOptions
 	/// <item><term>Trace</term><description>Contain the most detailed messages.</description></item>
 	/// </list>
 	/// </remarks>
-	public string FileLogLevel
+	public LogLevel LogLevel
 	{
-		get => _fileLogLevel ?? "Information";
+		get => _logLevel ?? LogLevel.Warning;
 		init
 		{
-			_fileLogLevel = value;
-			_fileLogLevelSource = ConfigSource.Property;
+			_logLevel = value;
+			_logLevelSource = ConfigSource.Property;
+		}
+	}
+
+	/// <inheritdoc cref="LogTargets"/>>
+	public LogTargets LogTargets
+	{
+		get => _logTargets ?? (GlobalLogEnabled ? LogTargets.File : LogTargets.None);
+		init
+		{
+			_logTargets = value;
+			_logTargetsSource = ConfigSource.Property;
 		}
 	}
 
@@ -180,13 +241,45 @@ public class ElasticOpenTelemetryOptions
 
 	internal EnabledElasticDefaults EnabledDefaults => _elasticDefaults ?? GetEnabledElasticDefaults();
 
+	private static (bool, LogLevel?) LogLevelParser(string? s) =>
+		!string.IsNullOrEmpty(s) ? (true, LogLevelHelpers.ToLogLevel(s)) : (false, null);
+
+	private static (bool, LogTargets?) LogTargetsParser(string? s)
+	{
+		//var tokens = s?.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries });
+		if (string.IsNullOrWhiteSpace(s))
+			return (false, null);
+
+		var logTargets = LogTargets.None;
+		var found = false;
+
+		foreach (var target in s.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
+		{
+			if (IsSet(target, "stdout"))
+				logTargets |= LogTargets.StdOut;
+			else if (IsSet(target, "file"))
+				logTargets |= LogTargets.File;
+			else if (IsSet(target, "none"))
+				logTargets |= LogTargets.None;
+		}
+		return !found ? (false, null) : (true, logTargets);
+
+		bool IsSet(string k, string v)
+		{
+			var b = k.Trim().Equals(v, StringComparison.InvariantCultureIgnoreCase);
+			if (b)
+				found = true;
+			return b;
+		}
+	}
+
 	private static (bool, string) StringParser(string? s) => !string.IsNullOrEmpty(s) ? (true, s) : (false, string.Empty);
 
 	private static (bool, bool?) BoolParser(string? s) => bool.TryParse(s, out var boolValue) ? (true, boolValue) : (false, null);
 
-	private static void SetFromEnvironment<T>(string key, ref T field, ref ConfigSource configSourceField, Func<string?, (bool, T)> parser)
+	private void SetFromEnvironment<T>(string key, ref T field, ref ConfigSource configSourceField, Func<string?, (bool, T)> parser)
 	{
-		var (success, value) = parser(Environment.GetEnvironmentVariable(key));
+		var (success, value) = parser(GetSafeEnvironmentVariable(key));
 
 		if (success)
 		{
@@ -250,13 +343,20 @@ public class ElasticOpenTelemetryOptions
 		static EnabledElasticDefaults All() => EnabledElasticDefaults.Tracing | EnabledElasticDefaults.Metrics | EnabledElasticDefaults.Logging;
 	}
 
+	private string GetSafeEnvironmentVariable(string key)
+	{
+		var value = _environmentVariables.Contains(key) ? _environmentVariables[key]?.ToString() : null;
+		return value ?? string.Empty;
+	}
+
+
 	internal void LogConfigSources(ILogger logger)
 	{
-		logger.LogInformation("Configured value for {ConfigKey}: '{ConfigValue}' from [{ConfigSource}]", FileLogDirectoryConfigPropertyName,
-			_fileLogDirectory, _fileLogDirectorySource);
+		logger.LogInformation("Configured value for {ConfigKey}: '{ConfigValue}' from [{ConfigSource}]", LogDirectoryConfigPropertyName,
+			_logDirectory, _logDirectorySource);
 
-		logger.LogInformation("Configured value for {ConfigKey}: '{ConfigValue}' from [{ConfigSource}]", FileLogLevelConfigPropertyName,
-			_fileLogLevel, _fileLogLevelSource);
+		logger.LogInformation("Configured value for {ConfigKey}: '{ConfigValue}' from [{ConfigSource}]", LogLevelConfigPropertyName,
+			_logLevel, _logLevelSource);
 
 		logger.LogInformation("Configured value for {ConfigKey}: '{ConfigValue}' from [{ConfigSource}]", SkipOtlpExporterConfigPropertyName,
 			_skipOtlpExporter, _skipOtlpExporterSource);

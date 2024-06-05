@@ -32,31 +32,21 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 	public FileLogger(ElasticOpenTelemetryOptions options)
 	{
 		_scopeProvider = new LoggerExternalScopeProvider();
+		_configuredLogLevel = options.LogLevel;
+		FileLoggingEnabled = options.GlobalLogEnabled;
 
-		var configuredPath = options.FileLogDirectory ?? Environment.GetEnvironmentVariable(EnvironmentVariables.ElasticOtelFileLogDirectoryEnvironmentVariable);
-
-		if (string.IsNullOrEmpty(configuredPath))
+		if (!FileLoggingEnabled)
 			return;
 
-		if (!string.IsNullOrEmpty(options.FileLogLevel))
-		{
-			var logLevel = LogLevelHelpers.ToLogLevel(options.FileLogLevel);
-
-			if (logLevel != LogLevel.None)
-				_configuredLogLevel = logLevel;
-		}
-		else
-		{
-			_configuredLogLevel = AgentLoggingHelpers.GetElasticOtelLogLevelFromEnvironmentVariables();
-		}
-
 		var process = Process.GetCurrentProcess();
-
 		// When ordered by filename, we get see logs from the same process grouped, then ordered by oldest to newest, then the PID for that instance
-		LogFilePath = Path.Combine(configuredPath, $"{process.ProcessName}_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{process.Id}.instrumentation.log");
+		var logFileName = $"{process.ProcessName}_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{process.Id}.instrumentation.log";
 
-		if (!Directory.Exists(configuredPath))
-			Directory.CreateDirectory(configuredPath);
+		var logDirectory = options.LogDirectory;
+		LogFilePath = Path.Combine(logDirectory, logFileName);
+
+		if (!Directory.Exists(logDirectory))
+			Directory.CreateDirectory(logDirectory);
 
 		//StreamWriter.Dispose disposes underlying stream too
 		var stream = new FileStream(LogFilePath, FileMode.OpenOrCreate, FileAccess.Write);
