@@ -90,7 +90,7 @@ internal sealed class HostDetector : IResourceDetector
 		foreach (var line in lines)
 		{
 #if NETFRAMEWORK
-            if (line.IndexOf("IOPlatformUUID", StringComparison.OrdinalIgnoreCase) >= 0)
+			if (line.IndexOf("IOPlatformUUID", StringComparison.OrdinalIgnoreCase) >= 0)
 #else
 			if (line.Contains("IOPlatformUUID", StringComparison.OrdinalIgnoreCase))
 #endif
