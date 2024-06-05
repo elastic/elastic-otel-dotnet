@@ -105,16 +105,18 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 		if (options.DistroOptions.EnabledDefaults.HasFlag(ElasticOpenTelemetryOptions.EnabledElasticDefaults.Tracing))
 		{
 			openTelemetry.WithTracing(tracing =>
-				{
-					tracing
-						.AddHttpClientInstrumentation()
-						.AddGrpcClientInstrumentation()
-						.AddEntityFrameworkCoreInstrumentation();
+			{
+				tracing
+					.AddHttpClientInstrumentation()
+					.AddGrpcClientInstrumentation();
 
-					tracing.AddElasticProcessors(Logger);
+#if !NETFRAMEWORK
+				tracing.AddEntityFrameworkCoreInstrumentation();
+#endif
+				tracing.AddElasticProcessors(Logger);
 
-					Logger.LogConfiguredTracerProvider();
-				});
+				Logger.LogConfiguredTracerProvider();
+			});
 		}
 
 		if (options.DistroOptions.EnabledDefaults.HasFlag(ElasticOpenTelemetryOptions.EnabledElasticDefaults.Metrics))
