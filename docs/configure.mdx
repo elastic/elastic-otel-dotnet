@@ -1,10 +1,10 @@
 [[configuration]]
 == Configuration
 
-Configuration of the OpenTelemetry SDK should be performed through the 
+Configuration of the OpenTelemetry SDK should be performed through the
 mechanisms https://opentelemetry.io/docs/languages/net/automatic/configuration/[documented on the OpenTelemetry website].
 
-The Elastic distribution can be further configured using advanced settings when 
+The Elastic distribution can be further configured using advanced settings when
 you need complete control of its behaviour. Configuration can be achieved by setting environment variables,
 using the `IConfiguration` integration, or manually configuring the Elastic distribution.
 
@@ -14,7 +14,7 @@ The Elastic distribution can be configured using environment variables. This is 
 way to configure the Elastic distribution and is especially useful in containerized environments.
 
 Environment variables are read at startup and can be used to configure the Elastic distribution.
-For details of the various options available and their corresponding environment variable names, 
+For details of the various options available and their corresponding environment variable names,
 see <<configuration-options>>.
 
 Environment variables always take precedence over configuration provided by the `IConfiguration`
@@ -22,7 +22,7 @@ system.
 
 === IConfiguration integration
 
-In applications that use the "host" pattern, such as ASP.NET Core and worker service, the Elastic 
+In applications that use the "host" pattern, such as ASP.NET Core and worker service, the Elastic
 distribution can be configured using the `IConfiguration` integration. This is done by passing an
 `IConfiguration` instance to the `AddElasticOpenTelemetry` extension method on the `IServiceCollection`.
 
@@ -36,8 +36,8 @@ var currentConfig = builder.Configuration; <1>
 ----
 <1> Access the current `IConfiguration` instance from the builder.
 
-By default, at this stage, the configuration will be populated from the default configuration sources, 
-including the `appsettings.json` file(s) and command-line arguments. You may use these sources to define 
+By default, at this stage, the configuration will be populated from the default configuration sources,
+including the `appsettings.json` file(s) and command-line arguments. You may use these sources to define
 the configuration for the Elastic distribution.
 
 For example, you can define the configuration for the Elastic distribution in the `appsettings.json` file:
@@ -54,16 +54,16 @@ For example, you can define the configuration for the Elastic distribution in th
 ----
 <1> This example sets the file log directory to `C:\Logs` which enables diagnostic file logging.
 
-Configuration from the "Elastic:OpenTelemetry" section of the `IConfiguration` instance will be 
+Configuration from the "Elastic:OpenTelemetry" section of the `IConfiguration` instance will be
 bound to the `ElasticOpenTelemetryOptions` instance used to configure the Elastic distribution.
 
-To learn more about the Microsoft configuration system, see 
+To learn more about the Microsoft configuration system, see
 https://learn.microsoft.com/en-us/aspnet/core/fundamentals/configuration[Configuration in ASP.NET Core].
 
 === Manual configuration
 
-In all other scenarios, configuration can be achieved manually in code. This is done by creating 
-an instance of `ElasticOpenTelemetryBuilderOptions` and passing it to the `ElasticOpenTelemetryBuilder` constructor 
+In all other scenarios, configuration can be achieved manually in code. This is done by creating
+an instance of `ElasticOpenTelemetryBuilderOptions` and passing it to the `ElasticOpenTelemetryBuilder` constructor
 or an overload of the `AddElasticOpenTelemetry` extension method on the `IServiceCollection`.
 
 For example, in traditional console applications, you can configure the Elastic distribution like this:
@@ -94,7 +94,7 @@ await using var session = new ElasticOpenTelemetryBuilder(builderOptions) <4>
 <2> Create an instance of `ElasticOpenTelemetryOptions` and configure the file log directory by
 setting the corresponding property.
 <3> This example sets the file log directory to `C:\Logs` which enables diagnostic file logging.
-<4> Pass the `ElasticOpenTelemetryBuilderOptions` instance to the `ElasticOpenTelemetryBuilder` constructor 
+<4> Pass the `ElasticOpenTelemetryBuilderOptions` instance to the `ElasticOpenTelemetryBuilder` constructor
 to configure the Elastic distribution.
 
 [[configuration-options]]
@@ -104,7 +104,7 @@ to configure the Elastic distribution.
 [[config-filelogdirectory]]
 ==== `FileLogDirectory`
 
-A string specifying the directory where the Elastic distribution will write diagnostic log files. 
+A string specifying the directory where the Elastic distribution will write diagnostic log files.
 When not provided, no file logging will occur. Each new .NET process will create a new log file in the
 specified directory.
 
@@ -146,7 +146,7 @@ Valid options: `Critical`, `Error`, `Warning`, `Information`, `Debug`, `Trace` a
 [[config-skipotlpexporter]]
 ==== `SkipOtlpExporter`
 
-Allows the distribution to used with its defaults, but without enabling the export of telemetry data to 
+Allows the distribution to used with its defaults, but without enabling the export of telemetry data to
 an OTLP endpoint. This can be useful when you want to test applications without sending telemetry data.
 
 [options="header"]
@@ -166,7 +166,7 @@ an OTLP endpoint. This can be useful when you want to test applications without 
 [[config-enabledelasticdefaults]]
 ==== `EnabledElasticDefaults`
 
-A comma-separated list of Elastic defaults to enable. This can be useful when you want to enable 
+A comma-separated list of Elastic defaults to enable. This can be useful when you want to enable
 only some of the Elastic distribution opinionated defaults.
 
 Valid options: `None`, `Tracing`, `Metrics`, `Logging`.
@@ -178,10 +178,10 @@ When this setting is not configured or the value is `string.Empty`, all Elastic 
 When `None` is specified, no Elastic distribution defaults will be enabled, and you will need to manually
 configure the OpenTelemetry SDK to enable collection of telemetry signals. In this mode, the Elastic distribution
 does not provide any opinionated defaults, nor register any processors, allowing you to start with the "vanilla"
-OpenTelemetry SDK configuration. You may then choose to configure the various providers and register processors 
+OpenTelemetry SDK configuration. You may then choose to configure the various providers and register processors
 as required.
 
-In all other cases, the Elastic distribution will enable the specified defaults. For example, to enable only 
+In all other cases, the Elastic distribution will enable the specified defaults. For example, to enable only
 Elastic defaults only for tracing and metrics, set this value to `Tracing,Metrics`.
 
 [options="header"]
