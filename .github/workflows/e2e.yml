@@ -25,8 +25,10 @@ concurrency:
 env:
   # (keep_serverless-staging-oblt, keep_serverless-qa-oblt or serverless-production-oblt)
   SERVERLESS_PROJECT: serverless-production-oblt
-  # (staging, qa or pro)
-  VAULT_SECRET_SUFFIX: pro
+  # Secrets managed through IasC, if you need a different environment please reach the obs robots team
+  ## TODO: Use Keyless
+  E2E__BROWSEREMAIL: ${{ secrets.OBSERVABILITY_EC_USERNAME }}
+  E2E__BROWSERPASSWORD: ${{ secrets.OBSERVABILITY_EC_PASSWORD }}
 
 # NOTE: if you add a new job and it's a mandatory check then
 #       update e2e-docs.yml
@@ -49,17 +51,6 @@ jobs:
           github-token: ${{ secrets.OBLT_CLI_GITHUB_TOKEN }}
           cluster-name:  ${{ env.SERVERLESS_PROJECT }}
 
-      - name: Get the browser email and password from Vault
-        uses: hashicorp/vault-action@v3.0.0
-        with:
-          url: ${{ secrets.VAULT_ADDR }}
-          roleId: ${{ secrets.VAULT_ROLE_ID }}
-          secretId: ${{ secrets.VAULT_SECRET_ID }}
-          method: approle
-          secrets: |
-            secret/observability-team/ci/elastic-cloud/observability-team-${{ env.VAULT_SECRET_SUFFIX }} username | E2E__BROWSEREMAIL ;
-            secret/observability-team/ci/elastic-cloud/observability-team-${{ env.VAULT_SECRET_SUFFIX }} password | E2E__BROWSERPASSWORD
-        
       - name: End-to-end tests
         run: ./build.sh test --test-suite=e2e
         env: 
