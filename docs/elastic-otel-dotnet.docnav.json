@@ -1,0 +1,17 @@
+{
+  "mission": ".NET",
+  "id": "elastic-otel-dotnet",
+  "landingPageSlug": "/otel-dotnet/intro",
+  "icon": "logoObservability",
+  "description": "Elastic OpenTelemetry Distribution for .NET",
+  "items": [
+    {
+      "label": "Get started",
+      "slug": "/otel-dotnet/get-started"
+    },
+    {
+      "label": "Configure",
+      "slug": "/otel-dotnet/configure"
+    }
+  ]
+}
