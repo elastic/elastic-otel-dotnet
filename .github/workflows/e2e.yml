@@ -25,10 +25,6 @@ concurrency:
 env:
   # (keep_serverless-staging-oblt, keep_serverless-qa-oblt or serverless-production-oblt)
   SERVERLESS_PROJECT: serverless-production-oblt
-  # Secrets managed through IasC, if you need a different environment please reach the obs robots team
-  ## TODO: Use Keyless
-  E2E__BROWSEREMAIL: ${{ secrets.OBSERVABILITY_EC_USERNAME }}
-  E2E__BROWSERPASSWORD: ${{ secrets.OBSERVABILITY_EC_PASSWORD }}
 
 # NOTE: if you add a new job and it's a mandatory check then
 #       update e2e-docs.yml
@@ -50,6 +46,13 @@ jobs:
         with:
           github-token: ${{ secrets.OBLT_CLI_GITHUB_TOKEN }}
           cluster-name:  ${{ env.SERVERLESS_PROJECT }}
+
+      - uses: google-github-actions/get-secretmanager-secrets@dc4a1392bad0fd60aee00bb2097e30ef07a1caae # v2.1.3
+        with:
+          export_to_environment: true
+          secrets: |-
+            E2E__BROWSEREMAIL:elastic-observability/secrets/elastic-cloud-observability-team-pro-username
+            E2E__BROWSERPASSWORD:elastic-observability/secrets/elastic-cloud-observability-team-pro-password
 
       - name: End-to-end tests
         run: ./build.sh test --test-suite=e2e
