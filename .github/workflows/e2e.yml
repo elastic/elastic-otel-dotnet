@@ -51,8 +51,8 @@ jobs:
         with:
           export_to_environment: true
           secrets: |-
-            E2E__BROWSEREMAIL:elastic-observability/secrets/elastic-cloud-observability-team-pro-username
-            E2E__BROWSERPASSWORD:elastic-observability/secrets/elastic-cloud-observability-team-pro-password
+            E2E__BROWSEREMAIL:elastic-observability/elastic-cloud-observability-team-pro-username
+            E2E__BROWSERPASSWORD:elastic-observability/elastic-cloud-observability-team-pro-password
 
       - name: End-to-end tests
         run: ./build.sh test --test-suite=e2e
