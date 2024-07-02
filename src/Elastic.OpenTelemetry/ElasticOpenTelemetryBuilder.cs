@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information
 
 using System.Diagnostics;
+using System.Diagnostics.Tracing;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Diagnostics;
 using Elastic.OpenTelemetry.Diagnostics.Logging;
@@ -49,6 +50,23 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 	public IServiceCollection Services { get; }
 
 	/// <summary>
+	/// Shared bootstrap routine for the Elastic OpenTelemetry Distribution.
+	/// Used to ensure auto instrumentation and manual instrumentation bootstrap the same way.
+	/// </summary>
+	public static (EventListener, ILogger) Bootstrap(ElasticOpenTelemetryBuilderOptions options)
+	{
+		var logger = new CompositeLogger(options);
+
+		// Enables logging of OpenTelemetry-SDK event source events
+		var eventListener = new LoggingEventListener(logger, options.DistroOptions);
+
+		logger.LogAgentPreamble();
+		logger.LogElasticOpenTelemetryBuilderInitialized(Environment.NewLine, new StackTrace(true));
+		options.DistroOptions.LogConfigSources(logger);
+		return (eventListener, logger);
+	}
+
+	/// <summary>
 	/// Creates an instance of the <see cref="ElasticOpenTelemetryBuilder" /> configured with default options.
 	/// </summary>
 	public ElasticOpenTelemetryBuilder()
@@ -61,14 +79,10 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 	/// </summary>
 	public ElasticOpenTelemetryBuilder(ElasticOpenTelemetryBuilderOptions options)
 	{
-		Logger = new CompositeLogger(options);
+		var (eventListener, logger) = Bootstrap(options);
 
-		// Enables logging of OpenTelemetry-SDK event source events
-		EventListener = new LoggingEventListener(Logger, options.DistroOptions);
-
-		Logger.LogAgentPreamble();
-		Logger.LogElasticOpenTelemetryBuilderInitialized(Environment.NewLine, new StackTrace(true));
-		options.DistroOptions.LogConfigSources(Logger);
+		Logger = (CompositeLogger)logger;
+		EventListener = (LoggingEventListener)eventListener;
 
 		Services = options.Services ?? new ServiceCollection();
 
@@ -81,6 +95,9 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 		var openTelemetry =
 			Microsoft.Extensions.DependencyInjection.OpenTelemetryServicesExtensions.AddOpenTelemetry(Services);
 
+		// We always add this so we can identify a distro is being used, even if all Elastic defaults are disabled.
+		openTelemetry.ConfigureResource(r => r.UseElasticDefaults());
+
 		if (options.DistroOptions.EnabledDefaults.Equals(ElasticOpenTelemetryOptions.EnabledElasticDefaults.None))
 		{
 			Logger.LogNoElasticDefaults();
@@ -90,7 +107,7 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 			return;
 		}
 
-		openTelemetry.ConfigureResource(r => r.AddElasticResourceDefaults(Logger));
+		openTelemetry.ConfigureResource(r => r.UseElasticDefaults(Logger));
 
 		//https://github.com/open-telemetry/opentelemetry-dotnet/pull/5400
 		if (!options.DistroOptions.SkipOtlpExporter)
@@ -98,44 +115,15 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 
 		if (options.DistroOptions.EnabledDefaults.HasFlag(ElasticOpenTelemetryOptions.EnabledElasticDefaults.Logging))
 		{
-			// TODO: Move to WithLogging once it gets stable.
-			Services.Configure<OpenTelemetryLoggerOptions>(logging =>
-			{
-				logging.IncludeFormattedMessage = true;
-				logging.IncludeScopes = true;
-			});
-
-			// Note: We use this log method for now as the WithLogging method is not yet stable.
-			Logger.LogConfiguredSignalProvider("logging", nameof(OpenTelemetryLoggerOptions));
+			//TODO Move to WithLogging once it gets stable
+			Services.Configure<OpenTelemetryLoggerOptions>(logging => logging.UseElasticDefaults());
 		}
 
 		if (options.DistroOptions.EnabledDefaults.HasFlag(ElasticOpenTelemetryOptions.EnabledElasticDefaults.Tracing))
-		{
-			openTelemetry.WithTracing(tracing =>
-			{
-				tracing
-					.AddHttpClientInstrumentation()
-					.AddGrpcClientInstrumentation()
-					.AddEntityFrameworkCoreInstrumentation();
-
-				tracing.AddElasticProcessors(Logger);
-			});
-
-			Logger.LogConfiguredSignalProvider("tracing", nameof(TracerProviderBuilder));
-		}
+			openTelemetry.WithTracing(tracing => tracing.UseElasticDefaults(Logger));
 
 		if (options.DistroOptions.EnabledDefaults.HasFlag(ElasticOpenTelemetryOptions.EnabledElasticDefaults.Metrics))
-		{
-			openTelemetry.WithMetrics(metrics =>
-			{
-				metrics
-					.AddProcessInstrumentation()
-					.AddRuntimeInstrumentation()
-					.AddHttpClientInstrumentation();
-
-				Logger.LogConfiguredSignalProvider("metrics", nameof(MeterProviderBuilder));
-			});
-		}
+			openTelemetry.WithMetrics(metrics => metrics.UseElasticDefaults(Logger));
 	}
 }
 

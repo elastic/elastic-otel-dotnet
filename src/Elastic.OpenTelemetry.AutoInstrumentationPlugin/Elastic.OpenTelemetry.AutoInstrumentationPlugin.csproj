@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0;netstandard2.1;net8.0;net6.0;net462</TargetFrameworks>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Elastic.OpenTelemetry\Elastic.OpenTelemetry.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="README.md" />
+  </ItemGroup>
+</Project>

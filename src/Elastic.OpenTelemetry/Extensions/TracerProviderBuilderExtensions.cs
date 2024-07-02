@@ -12,9 +12,7 @@ using OpenTelemetry.Trace;
 
 namespace Elastic.OpenTelemetry.Extensions;
 
-/// <summary>
-/// Elastic extensions for <see cref="TracerProviderBuilder"/>.
-/// </summary>
+/// <summary> Elastic extensions for <see cref="TracerProviderBuilder"/>. </summary>
 public static class TracerProviderBuilderExtensions
 {
 	/// <summary>
@@ -33,5 +31,20 @@ public static class TracerProviderBuilderExtensions
 	{
 		logger.LogProcessorAdded(processor.GetType().ToString(), builder.GetType().Name);
 		return builder.AddProcessor(processor);
+	}
+
+	/// <summary> Use Elastic distribution defaults for <see cref="TracerProviderBuilder"/> </summary>
+	public static TracerProviderBuilder UseElasticDefaults(this TracerProviderBuilder builder, ILogger? logger = null)
+	{
+		logger ??= NullLogger.Instance;
+
+		builder
+			.AddHttpClientInstrumentation()
+			.AddGrpcClientInstrumentation()
+			.AddEntityFrameworkCoreInstrumentation();
+
+		builder.AddElasticProcessors(logger);
+		logger.LogConfiguredSignalProvider("tracing", nameof(TracerProviderBuilder));
+		return builder;
 	}
 }
