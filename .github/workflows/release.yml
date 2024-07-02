@@ -44,7 +44,7 @@ jobs:
       run: dotnet nuget push '${{ env.RELEASE_PACKAGES }}' -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate --no-symbols
 
     - if: ${{ success() && github.event_name == 'release' }}
-      uses: elastic/oblt-actions/slack/send@v1.9.3
+      uses: elastic/oblt-actions/slack/send@v1.10.0
       with:
         bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
         channel-id: ${{ env.SLACK_CHANNEL }}
@@ -54,7 +54,7 @@ jobs:
           Release URL: (<https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}|${{ github.ref_name }}>)
 
     - if: ${{ failure() && github.event_name == 'release' }}
-      uses: elastic/oblt-actions/slack/send@v1.9.3
+      uses: elastic/oblt-actions/slack/send@v1.10.0
       with:
         bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
         channel-id: ${{ env.SLACK_CHANNEL }}
