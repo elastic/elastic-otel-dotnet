@@ -38,21 +38,19 @@ public static class ResourceBuilderExtensions
 	/// resource configuration.</para>
 	/// </remarks>
 	/// <param name="builder">A <see cref="ResourceBuilder"/> that will be configured with Elastic defaults.</param>
+	/// <param name="logger">Optionally provide a logger to log to</param>
 	/// <returns>The <see cref="ResourceBuilder"/> for chaining calls.</returns>
-	public static ResourceBuilder AddElasticResourceDefaults(this ResourceBuilder builder) =>
-		builder.AddElasticResourceDefaults(NullLogger.Instance);
-
-	internal static ResourceBuilder AddElasticResourceDefaults(this ResourceBuilder builder, ILogger logger)
+	public static ResourceBuilder UseElasticDefaults(this ResourceBuilder builder, ILogger? logger = null)
 	{
+		// ReSharper disable once RedundantAssignment
+		logger ??= NullLogger.Instance;
 		var defaultServiceName = "unknown_service";
 
 		try
 		{
 			var processName = Process.GetCurrentProcess().ProcessName;
 			if (!string.IsNullOrWhiteSpace(processName))
-			{
 				defaultServiceName = $"{defaultServiceName}:{processName}";
-			}
 		}
 		catch
 		{
@@ -70,9 +68,7 @@ public static class ResourceBuilderExtensions
 			.AddDistroAttributes()
 			.AddEnvironmentVariableDetector();
 
-#if NET462_OR_GREATER || NET6_0_OR_GREATER
 		builder.AddDetector(new HostDetector(logger));
-#endif
 
 		return builder;
 	}
