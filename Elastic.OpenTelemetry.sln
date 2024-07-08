@@ -45,7 +45,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Elastic.OpenTelemetry.AutoI
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Example.AutoInstrumentation", "examples\Example.AutoInstrumentation\Example.AutoInstrumentation.csproj", "{F3AA76EC-C7D8-42DA-947D-4376B6562772}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoInstrumentationTests", "tests\AutoInstrumentationTests\AutoInstrumentationTests.csproj", "{782E4DC1-8186-4BAC-B2F4-89E6DF22A4DD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoInstrumentation.IntegrationTests", "tests\AutoInstrumentation.IntegrationTests\AutoInstrumentation.IntegrationTests.csproj", "{782E4DC1-8186-4BAC-B2F4-89E6DF22A4DD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
