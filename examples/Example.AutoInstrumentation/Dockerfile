@@ -46,10 +46,18 @@ COPY --from=build_plugin /src/.artifacts/bin/Elastic.OpenTelemetry.AutoInstrumen
 COPY --from=build_plugin /src/.artifacts/bin/Elastic.OpenTelemetry.AutoInstrumentationPlugin/release_net8.0/Elastic.OpenTelemetry.AutoInstrumentationPlugin.dll /app/otel/net/
 COPY --from=build_plugin /src/.artifacts/bin/Elastic.OpenTelemetry/release_net8.0/Elastic.OpenTelemetry.dll /app/otel/net/
 
+ARG TARGETPLATFORM
+ARG TARGETARCH
+ARG TARGETVARIANT
+RUN printf "I'm building for TARGETPLATFORM=${TARGETPLATFORM}" \
+    && printf ", TARGETARCH=${TARGETARCH}" \
+    && printf ", TARGETVARIANT=${TARGETVARIANT} \n" \
+    && printf "With uname -s : " && uname -s \
+    && printf "and  uname -m : " && uname -m
 
 ENV CORECLR_ENABLE_PROFILING="1"
 ENV CORECLR_PROFILER="{918728DD-259F-4A6A-AC2B-B85E1B658318}"
-ENV CORECLR_PROFILER_PATH="/app/otel/linux-arm64/OpenTelemetry.AutoInstrumentation.Native.so"
+ENV CORECLR_PROFILER_PATH="/app/otel/linux-${TARGETARCH}/OpenTelemetry.AutoInstrumentation.Native.so"
 ENV OTEL_DOTNET_AUTO_PLUGINS="Elastic.OpenTelemetry.AutoInstrumentationPlugin.ElasticAutoInstrumentationPlugin, Elastic.OpenTelemetry.AutoInstrumentationPlugin, Version=1.0.0.0, Culture=neutral, PublicKeyToken=069ca2728db333c1"
        
 #ENV COREHOST_TRACE=1
