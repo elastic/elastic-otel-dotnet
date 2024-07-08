@@ -26,7 +26,6 @@ public class ElasticAutoInstrumentationPlugin
 	/// <inheritdoc cref="ElasticAutoInstrumentationPlugin"/>
 	public ElasticAutoInstrumentationPlugin()
 	{
-		Console.WriteLine(nameof(ElasticAutoInstrumentationPlugin));
 		var options = new ElasticOpenTelemetryBuilderOptions();
 		var (eventListener, logger) = ElasticOpenTelemetryBuilder.Bootstrap(options);
 

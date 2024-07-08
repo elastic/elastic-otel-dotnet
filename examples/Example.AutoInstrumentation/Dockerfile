@@ -1,12 +1,15 @@
 ﻿FROM mcr.microsoft.com/dotnet/runtime:8.0 AS base
 RUN apt-get update && apt-get install -y unzip curl strace
-USER $APP_UID
+#USER $APP_UID
 WORKDIR /app
+RUN chown app:app .
 
 FROM base AS otel
 ARG OTEL_VERSION=1.7.0
 # install OpenTelemetry .NET Automatic Instrumentation
-ADD --chown=$APP_UID --chmod=777 https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation/releases/download/v${OTEL_VERSION}/otel-dotnet-auto-install.sh otel-dotnet-auto-install.sh
+#ADD --chown=$APP_UID --chmod=777 https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation/releases/download/v${OTEL_VERSION}/otel-dotnet-auto-install.sh otel-dotnet-auto-install.sh
+ADD https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation/releases/download/v${OTEL_VERSION}/otel-dotnet-auto-install.sh otel-dotnet-auto-install.sh
+RUN chmod +x otel-dotnet-auto-install.sh
 RUN OTEL_DOTNET_AUTO_HOME="/app/otel" sh otel-dotnet-auto-install.sh
 
 
@@ -27,6 +30,8 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build_plugin
 ARG BUILD_CONFIGURATION
 WORKDIR /src
 COPY ["README.md", "."]
+COPY ["LICENSE.txt", "."]
+COPY ["NOTICE.txt", "."]
 COPY ["src/Elastic.OpenTelemetry.AutoInstrumentationPlugin/Elastic.OpenTelemetry.AutoInstrumentationPlugin.csproj", "src/Elastic.OpenTelemetry.AutoInstrumentationPlugin/"]
 RUN dotnet restore "src/Elastic.OpenTelemetry.AutoInstrumentationPlugin/Elastic.OpenTelemetry.AutoInstrumentationPlugin.csproj"
 COPY . .
@@ -50,9 +55,9 @@ ENV OTEL_DOTNET_AUTO_PLUGINS="Elastic.OpenTelemetry.AutoInstrumentationPlugin.El
 #ENV COREHOST_TRACE=1
 #ENV COREHOST_TRACEFILE=/app/corehost_verbose_tracing.log
 
-#ENV OTEL_TRACES_EXPORTER=none
-#ENV OTEL_METRICS_EXPORTER=none
-#ENV OTEL_LOGS_EXPORTER=none
+ENV OTEL_TRACES_EXPORTER=none
+ENV OTEL_METRICS_EXPORTER=none
+ENV OTEL_LOGS_EXPORTER=none
 ENV OTEL_SERVICE_NAME=ExampleInstrumentation
 
 ENV OTEL_LOG_LEVEL=info

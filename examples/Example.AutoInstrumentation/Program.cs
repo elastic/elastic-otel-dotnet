@@ -1,11 +1,6 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
-using System.Collections;
-
 Console.WriteLine("Hello, World!");
-
-foreach (DictionaryEntry kv in Environment.GetEnvironmentVariables())
-	Console.WriteLine($"{kv.Key}={kv.Value}");
 
 var httpClient = new HttpClient();
 for (var i = 0; i < 10; i++)

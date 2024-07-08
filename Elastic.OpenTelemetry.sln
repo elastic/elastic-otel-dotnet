@@ -45,6 +45,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Elastic.OpenTelemetry.AutoI
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Example.AutoInstrumentation", "examples\Example.AutoInstrumentation\Example.AutoInstrumentation.csproj", "{F3AA76EC-C7D8-42DA-947D-4376B6562772}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoInstrumentationTests", "tests\AutoInstrumentationTests\AutoInstrumentationTests.csproj", "{782E4DC1-8186-4BAC-B2F4-89E6DF22A4DD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -107,6 +109,10 @@ Global
 		{F3AA76EC-C7D8-42DA-947D-4376B6562772}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F3AA76EC-C7D8-42DA-947D-4376B6562772}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F3AA76EC-C7D8-42DA-947D-4376B6562772}.Release|Any CPU.Build.0 = Release|Any CPU
+		{782E4DC1-8186-4BAC-B2F4-89E6DF22A4DD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{782E4DC1-8186-4BAC-B2F4-89E6DF22A4DD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{782E4DC1-8186-4BAC-B2F4-89E6DF22A4DD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{782E4DC1-8186-4BAC-B2F4-89E6DF22A4DD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -123,6 +129,7 @@ Global
 		{A3D1ED4D-863B-45D7-9829-305DD33B4CE5} = {4E95C87B-655B-4BC3-8F2A-DF06B7AAB7E9}
 		{B61D749B-21E5-430D-B50D-CA02EBAA7F2F} = {E622CFF2-C6C4-40FB-BE42-7C4F2B38B75A}
 		{F3AA76EC-C7D8-42DA-947D-4376B6562772} = {4E95C87B-655B-4BC3-8F2A-DF06B7AAB7E9}
+		{782E4DC1-8186-4BAC-B2F4-89E6DF22A4DD} = {AAD39891-0B70-47FA-A212-43E1AAE5DF56}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {573B2B5F-8CBB-4D52-A55A-4E65E282AAFB}
