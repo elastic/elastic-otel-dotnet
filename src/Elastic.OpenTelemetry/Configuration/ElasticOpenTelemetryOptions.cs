@@ -117,7 +117,8 @@ public class ElasticOpenTelemetryOptions
 		get
 		{
 			var isActive = _logLevel.HasValue || !string.IsNullOrWhiteSpace(_logDirectory) || _logTargets.HasValue;
-			if (!isActive) return isActive;
+			if (!isActive)
+				return isActive;
 
 			if (_logLevel is LogLevel.None)
 				isActive = false;

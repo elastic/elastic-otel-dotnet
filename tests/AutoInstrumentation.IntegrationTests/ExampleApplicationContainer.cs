@@ -2,15 +2,14 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
-using Nullean.Xunit.Partitions;
-using Xunit;
-
 using DotNet.Testcontainers;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Images;
+using Nullean.Xunit.Partitions;
 using Nullean.Xunit.Partitions.Sdk;
+using Xunit;
 
 
 [assembly: TestFramework(Partition.TestFramework, Partition.Assembly)]
@@ -20,8 +19,8 @@ namespace Elastic.OpenTelemetry.AutoInstrumentationTests;
 // ReSharper disable once ClassNeverInstantiated.Global
 public class ExampleApplicationContainer : IPartitionLifetime
 {
-	private IContainer _container;
-	private IOutputConsumer _output;
+	private readonly IContainer _container;
+	private readonly IOutputConsumer _output;
 	private readonly IFutureDockerImage _image;
 
 	// docker build -t example.autoinstrumentation:latest -f examples/Example.AutoInstrumentation/Dockerfile . \
