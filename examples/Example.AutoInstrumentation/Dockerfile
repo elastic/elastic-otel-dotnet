@@ -3,6 +3,14 @@ RUN apt-get update && apt-get install -y unzip curl strace
 #USER $APP_UID
 WORKDIR /app
 RUN chown app:app .
+ARG TARGETPLATFORM
+ARG TARGETARCH
+ARG TARGETVARIANT
+RUN printf "I'm building for TARGETPLATFORM=${TARGETPLATFORM}" \
+    && printf ", TARGETARCH=${TARGETARCH}" \
+    && printf ", TARGETVARIANT=${TARGETVARIANT} \n" \
+    && printf "With uname -s : " && uname -s \
+    && printf "and  uname -m : " && uname -m
 
 FROM base AS otel
 ARG OTEL_VERSION=1.7.0
@@ -45,15 +53,6 @@ COPY --from=otel /app/otel /app/otel
 COPY --from=build_plugin /src/.artifacts/bin/Elastic.OpenTelemetry.AutoInstrumentationPlugin/release_net462/Elastic.OpenTelemetry.AutoInstrumentationPlugin.dll /app/otel/netfx/
 COPY --from=build_plugin /src/.artifacts/bin/Elastic.OpenTelemetry.AutoInstrumentationPlugin/release_net8.0/Elastic.OpenTelemetry.AutoInstrumentationPlugin.dll /app/otel/net/
 COPY --from=build_plugin /src/.artifacts/bin/Elastic.OpenTelemetry/release_net8.0/Elastic.OpenTelemetry.dll /app/otel/net/
-
-ARG TARGETPLATFORM
-ARG TARGETARCH
-ARG TARGETVARIANT
-RUN printf "I'm building for TARGETPLATFORM=${TARGETPLATFORM}" \
-    && printf ", TARGETARCH=${TARGETARCH}" \
-    && printf ", TARGETVARIANT=${TARGETVARIANT} \n" \
-    && printf "With uname -s : " && uname -s \
-    && printf "and  uname -m : " && uname -m
 
 ENV CORECLR_ENABLE_PROFILING="1"
 ENV CORECLR_PROFILER="{918728DD-259F-4A6A-AC2B-B85E1B658318}"
