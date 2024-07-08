@@ -50,6 +50,7 @@ with
             | Build -> "Run build"
             
             | Unit_Test -> "alias to providing: test --test-suite=unit"
+            | Integrate -> "alias to providing: test --test-suite=integration"
             | End_To_End -> "alias to providing: test --test-suite=e2e"
             | Test -> "runs a clean build and then runs all the tests unless --test-suite is provided"
             | Release -> "runs build, tests, and create and validates the packages shy of publishing them"
