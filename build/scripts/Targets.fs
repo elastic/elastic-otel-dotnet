@@ -165,6 +165,7 @@ let Setup (parsed:ParseResults<Build>) =
         | Build -> Build.Cmd [Clean; CheckFormat] [] build
         
         | End_To_End -> Build.Cmd [] [Build] <| runTests E2E
+        | Integrate -> Build.Cmd [] [Build] <| runTests Integration
         | Unit_Test -> Build.Cmd [] [Build] <| runTests Unit
         | Test -> Build.Cmd [] [Build] test
         

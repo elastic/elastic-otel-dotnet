@@ -22,6 +22,7 @@ type Build =
     | [<CliPrefix(CliPrefix.None);SubCommand>] Test
     
     | [<CliPrefix(CliPrefix.None);SubCommand>] Unit_Test
+    | [<CliPrefix(CliPrefix.None);SubCommand>] Integrate
     | [<CliPrefix(CliPrefix.None);SubCommand>] End_To_End
 
     | [<CliPrefix(CliPrefix.None);SubCommand>] Format

@@ -11,10 +11,9 @@ using Nullean.Xunit.Partitions;
 using Nullean.Xunit.Partitions.Sdk;
 using Xunit;
 
-
 [assembly: TestFramework(Partition.TestFramework, Partition.Assembly)]
 
-namespace Elastic.OpenTelemetry.AutoInstrumentationTests;
+namespace Elastic.OpenTelemetry.AutoInstrumentation.IntegrationTests;
 
 // ReSharper disable once ClassNeverInstantiated.Global
 public class ExampleApplicationContainer : IPartitionLifetime

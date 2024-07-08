@@ -6,7 +6,7 @@ using FluentAssertions;
 using Nullean.Xunit.Partitions.Sdk;
 using Xunit;
 
-namespace Elastic.OpenTelemetry.AutoInstrumentationTests;
+namespace Elastic.OpenTelemetry.AutoInstrumentation.IntegrationTests;
 
 public class PluginLoaderTests(ExampleApplicationContainer exampleApplicationContainer) : IPartitionFixture<ExampleApplicationContainer>
 {

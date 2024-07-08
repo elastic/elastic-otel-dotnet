@@ -4,7 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>Elastic.OpenTelemetry.AutoInstrumentationTests</RootNamespace>
+    <RootNamespace>Elastic.OpenTelemetry.AutoInstrumentation.IntegrationTests</RootNamespace>
     <NoWarn>xUnit1041</NoWarn>
   </PropertyGroup>
 
