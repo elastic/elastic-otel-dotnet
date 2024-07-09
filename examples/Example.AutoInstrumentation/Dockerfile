@@ -44,7 +44,7 @@ COPY ["src/Elastic.OpenTelemetry.AutoInstrumentationPlugin/Elastic.OpenTelemetry
 RUN dotnet restore "src/Elastic.OpenTelemetry.AutoInstrumentationPlugin/Elastic.OpenTelemetry.AutoInstrumentationPlugin.csproj"
 COPY . .
 WORKDIR "/src/src/Elastic.OpenTelemetry.AutoInstrumentationPlugin"
-RUN dotnet build "Elastic.OpenTelemetry.AutoInstrumentationPlugin.csproj" -c Release 
+RUN dotnet build "Elastic.OpenTelemetry.AutoInstrumentationPlugin.csproj" -c release 
 
 FROM otel AS final
 WORKDIR /app
