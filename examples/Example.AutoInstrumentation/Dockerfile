@@ -57,6 +57,7 @@ WORKDIR /app
 COPY --from=publish_example /app/example /app/example
 COPY --from=otel /app/otel /app/otel
 
+RUN true
 COPY --from=build_plugin /app/temp /app/temp
 RUN true
 RUN ls -al /app/temp
