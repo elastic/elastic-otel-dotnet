@@ -50,8 +50,12 @@ FROM otel AS final
 WORKDIR /app
 COPY --from=publish_example /app/example /app/example
 COPY --from=otel /app/otel /app/otel
+# https://stackoverflow.com/a/62409523
+RUN true
 COPY --from=build_plugin /src/.artifacts/bin/Elastic.OpenTelemetry.AutoInstrumentationPlugin/release_net8.0/Elastic.OpenTelemetry.AutoInstrumentationPlugin.dll /app/otel/net/
+RUN true
 COPY --from=build_plugin /src/.artifacts/bin/Elastic.OpenTelemetry/release_net8.0/Elastic.OpenTelemetry.dll /app/otel/net/
+RUN true
 
 ENV CORECLR_ENABLE_PROFILING="1"
 ENV CORECLR_PROFILER="{918728DD-259F-4A6A-AC2B-B85E1B658318}"
