@@ -45,14 +45,16 @@ RUN dotnet restore "src/Elastic.OpenTelemetry.AutoInstrumentationPlugin/Elastic.
 COPY . .
 WORKDIR "/src/src/Elastic.OpenTelemetry.AutoInstrumentationPlugin"
 RUN dotnet build "Elastic.OpenTelemetry.AutoInstrumentationPlugin.csproj" -c release 
-COPY /src/.artifacts/bin /app/temp
+RUN mkdir -p /app/temp
+RUN cp -r /src/.artifacts/bin /app/temp
+RUN ls -al /app/temp
 
 FROM otel AS final
 WORKDIR /app
 COPY --from=publish_example /app/example /app/example
 COPY --from=otel /app/otel /app/otel
 
-COPY --from=build_plugin /apm/temp /app/temp
+COPY --from=build_plugin /app/temp /app/temp
 RUN ls -al /app/temp
 
 COPY --from=build_plugin "/src/.artifacts/bin/Elastic.OpenTelemetry.AutoInstrumentationPlugin/release_net8.0/Elastic.OpenTelemetry.AutoInstrumentationPlugin.dll" /app/otel/net/
