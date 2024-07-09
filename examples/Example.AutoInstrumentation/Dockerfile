@@ -71,13 +71,6 @@ RUN ls -al /app
 RUN ls -al /app/otel
 RUN ls -al /app/otel/net
 
-RUN printf "I'm building for TARGETPLATFORM=${TARGETPLATFORM}" \
-    && printf ", TARGETARCH=${TARGETARCH}" \
-    && printf ", TARGETVARIANT=${TARGETVARIANT} \n" \
-    && printf "With uname -s : " && uname -s \
-    && printf "and  uname -m : " && uname -m \
-    
-
 ENV CORECLR_ENABLE_PROFILING="1"
 ENV CORECLR_PROFILER="{918728DD-259F-4A6A-AC2B-B85E1B658318}"
 ENV CORECLR_PROFILER_PATH="/app/otel/linux-${TARGETARCH}/OpenTelemetry.AutoInstrumentation.Native.so"
