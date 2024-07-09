@@ -65,6 +65,10 @@ RUN mkdir -p /app/otel/net
 RUN cp "/app/temp/bin/Elastic.OpenTelemetry.AutoInstrumentationPlugin/release_net8.0/Elastic.OpenTelemetry.AutoInstrumentationPlugin.dll" /app/otel/net/
 RUN cp "/app/temp/bin/Elastic.OpenTelemetry/release_net8.0/Elastic.OpenTelemetry.dll" /app/otel/net/
 
+RUN ls -al /app
+RUN ls -al /app/otel
+RUN ls -al /app/otel/net
+
 ENV CORECLR_ENABLE_PROFILING="1"
 ENV CORECLR_PROFILER="{918728DD-259F-4A6A-AC2B-B85E1B658318}"
 ENV CORECLR_PROFILER_PATH="/app/otel/linux-${TARGETARCH}/OpenTelemetry.AutoInstrumentation.Native.so"
