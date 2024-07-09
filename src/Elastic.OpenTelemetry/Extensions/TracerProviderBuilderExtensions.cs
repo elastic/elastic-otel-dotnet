@@ -33,7 +33,7 @@ public static class TracerProviderBuilderExtensions
 		return builder.AddProcessor(processor);
 	}
 
-	/// <summary> Use Elastic distribution defaults for <see cref="TracerProviderBuilder"/> </summary>
+	/// <summary> Use Elastic Distribution for OpenTelemetry .NET defaults for <see cref="TracerProviderBuilder"/> </summary>
 	public static TracerProviderBuilder UseElasticDefaults(this TracerProviderBuilder builder, ILogger? logger = null)
 	{
 		logger ??= NullLogger.Instance;

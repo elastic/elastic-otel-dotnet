@@ -148,7 +148,7 @@ public class ElasticOpenTelemetryOptions
 	public string LogDirectoryDefault => _defaultLogDirectory;
 
 	/// <summary>
-	/// The output directory where the Elastic distribution of OpenTelemetry will write log files.
+	/// The output directory where the Elastic Distribution for OpenTelemetry .NET will write log files.
 	/// </summary>
 	/// <remarks>
 	/// When configured, a file log will be created in this directory with the name

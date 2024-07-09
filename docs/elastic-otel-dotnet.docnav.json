@@ -3,7 +3,7 @@
   "id": "elastic-otel-dotnet",
   "landingPageSlug": "/otel-dotnet/intro",
   "icon": "logoObservability",
-  "description": "Elastic OpenTelemetry Distribution for .NET",
+  "description": "Elastic Distribution for OpenTelemetry .NET",
   "items": [
     {
       "label": "Get started",
