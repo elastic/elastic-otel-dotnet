@@ -1,6 +1,8 @@
-﻿FROM mcr.microsoft.com/dotnet/runtime:8.0 AS base
-ARG OTEL_VERSION=1.7.0
+﻿ARG OTEL_VERSION=1.7.0
+FROM mcr.microsoft.com/dotnet/runtime:8.0 AS base
+ARG TARGETPLATFORM
 ARG TARGETARCH
+ARG TARGETVARIANT
 RUN apt-get update && apt-get install -y unzip curl strace
 # Would love to run as non root but TestContainers does not utilize buildkit like `docker build` does OOTB
 #USER $APP_UID
@@ -42,7 +44,9 @@ RUN mkdir -p /app/temp
 RUN cp -r /src/.artifacts/bin /app/temp
 
 FROM otel AS final
+ARG TARGETPLATFORM
 ARG TARGETARCH
+ARG TARGETVARIANT
 WORKDIR /app
 COPY --from=publish_example /app/example /app/example
 COPY --from=otel /app/otel /app/otel
