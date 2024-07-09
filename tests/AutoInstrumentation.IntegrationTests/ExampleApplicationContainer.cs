@@ -2,6 +2,7 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using System.Runtime.InteropServices;
 using DotNet.Testcontainers;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
@@ -33,6 +34,13 @@ public class ExampleApplicationContainer : IPartitionLifetime
 			.WithDockerfileDirectory(directory, string.Empty)
 			.WithDockerfile("examples/Example.AutoInstrumentation/Dockerfile")
 			.WithLogger(ConsoleLogger.Instance)
+			.WithBuildArgument("TARGETARCH", RuntimeInformation.ProcessArchitecture switch
+			{
+				Architecture.Arm64 => "arm64",
+				Architecture.X64 => "x64",
+				Architecture.X86 => "x86",
+				_ => "unsupported"
+			})
 			.Build();
 
 		_output = Consume.RedirectStdoutAndStderrToStream(new MemoryStream(), new MemoryStream());
