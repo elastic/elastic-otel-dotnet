@@ -60,10 +60,10 @@ COPY --from=otel /app/otel /app/otel
 RUN true
 COPY --from=build_plugin /app/temp /app/temp
 RUN true
-RUN ls -al /app/temp
-
-COPY --from=build_plugin "/src/.artifacts/bin/Elastic.OpenTelemetry.AutoInstrumentationPlugin/release_net8.0/Elastic.OpenTelemetry.AutoInstrumentationPlugin.dll" /app/otel/net/
-COPY --from=build_plugin "/src/.artifacts/bin/Elastic.OpenTelemetry/release_net8.0/Elastic.OpenTelemetry.dll" /app/otel/net/
+RUN ls -al /app/temp/bin
+RUN mkdir -p /app/otel/net
+RUN cp "/app/temp/bin/Elastic.OpenTelemetry.AutoInstrumentationPlugin/release_net8.0/Elastic.OpenTelemetry.AutoInstrumentationPlugin.dll" /app/otel/net/
+RUN cp "/app/temp/bin/Elastic.OpenTelemetry/release_net8.0/Elastic.OpenTelemetry.dll" /app/otel/net/
 
 ENV CORECLR_ENABLE_PROFILING="1"
 ENV CORECLR_PROFILER="{918728DD-259F-4A6A-AC2B-B85E1B658318}"
