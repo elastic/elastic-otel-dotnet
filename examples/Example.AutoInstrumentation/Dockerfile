@@ -50,7 +50,6 @@ FROM otel AS final
 WORKDIR /app
 COPY --from=publish_example /app/example /app/example
 COPY --from=otel /app/otel /app/otel
-COPY --from=build_plugin /src/.artifacts/bin/Elastic.OpenTelemetry.AutoInstrumentationPlugin/release_net462/Elastic.OpenTelemetry.AutoInstrumentationPlugin.dll /app/otel/netfx/
 COPY --from=build_plugin /src/.artifacts/bin/Elastic.OpenTelemetry.AutoInstrumentationPlugin/release_net8.0/Elastic.OpenTelemetry.AutoInstrumentationPlugin.dll /app/otel/net/
 COPY --from=build_plugin /src/.artifacts/bin/Elastic.OpenTelemetry/release_net8.0/Elastic.OpenTelemetry.dll /app/otel/net/
 
