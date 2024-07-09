@@ -1,11 +1,11 @@
 ﻿FROM mcr.microsoft.com/dotnet/runtime:8.0 AS base
+ARG TARGETPLATFORM
+ARG TARGETARCH
+ARG TARGETVARIANT
 RUN apt-get update && apt-get install -y unzip curl strace
 #USER $APP_UID
 WORKDIR /app
 RUN chown app:app .
-ARG TARGETPLATFORM
-ARG TARGETARCH
-ARG TARGETVARIANT
 RUN printf "I'm building for TARGETPLATFORM=${TARGETPLATFORM}" \
     && printf ", TARGETARCH=${TARGETARCH}" \
     && printf ", TARGETVARIANT=${TARGETVARIANT} \n" \
@@ -53,6 +53,7 @@ RUN ls -al /app/temp/bin/Elastic.OpenTelemetry.AutoInstrumentationPlugin
 RUN ls -al "/app/temp/bin/Elastic.OpenTelemetry.AutoInstrumentationPlugin/release_net8.0"
 
 FROM otel AS final
+ARG TARGETARCH
 WORKDIR /app
 COPY --from=publish_example /app/example /app/example
 COPY --from=otel /app/otel /app/otel
