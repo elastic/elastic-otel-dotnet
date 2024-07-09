@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFrameworks>netstandard2.0;netstandard2.1;net462;net6.0;net8.0</TargetFrameworks>
-    <Title>Elastic OpenTelemetry .NET Distribution</Title>
+    <Title>Elastic Distribution for OpenTelemetry .NET</Title>
     <Description>OpenTelemetry extensions for Elastic Observability, fully native with zero code changes.</Description>
     <PackageTags>elastic;opentelemetry;observabillity;apm;logs;metrics;traces;monitoring</PackageTags>
     <ImplicitUsings>enable</ImplicitUsings>

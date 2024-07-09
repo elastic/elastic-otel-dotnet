@@ -33,9 +33,9 @@ public class LoggingTests(ITestOutputHelper output)
 		}
 
 		//assert preamble information gets logged
-		logger.Messages.Should().ContainMatch("*Elastic OpenTelemetry Distribution:*");
+		logger.Messages.Should().ContainMatch("*Elastic Distribution for OpenTelemetry .NET:*");
 
-		var preambles = logger.Messages.Where(l => l.Contains("[Information]  Elastic OpenTelemetry Distribution:")).ToList();
+		var preambles = logger.Messages.Where(l => l.Contains("[Information]  Elastic Distribution for OpenTelemetry .NET:")).ToList();
 		preambles.Should().NotBeNull().And.HaveCount(1);
 
 		// assert instrumentation session logs initialized and stack trace gets dumped.

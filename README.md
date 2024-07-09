@@ -1,8 +1,8 @@
 [![Pull Request Validation](https://github.com/elastic/elastic-otel-dotnet/actions/workflows/ci.yml/badge.svg)](https://github.com/elastic/elastic-otel-dotnet/actions/workflows/ci.yml)
 
-# Elastic OpenTelemetry .NET Distribution
+# Elastic Distribution for OpenTelemetry .NET
 
-The Elastic OpenTelemetry .NET Distribution provides a zero code change extension 
+The Elastic Distribution for OpenTelemetry .NET provides a zero code change extension 
 to [OpenTelemetry SDK for .NET](https://opentelemetry.io/docs/languages/net). These extensions ensure 
 a smooth and rich out of the box experience with [Elastic Observability](https://www.elastic.co/observability) 
 through strictly OpenTelemetry native means.
@@ -10,14 +10,14 @@ through strictly OpenTelemetry native means.
 This ensures there are no new concepts to learn with the full OpenTelemetry ecosystem remains at ones 
 fingertips. Read more about the concept of [OpenTelemetry Distributions](https://opentelemetry.io/docs/concepts/distributions).
 
-The Elastic distribution includes some Elastic-specific processors to ensure the best 
+The Elastic Distribution for OpenTelemetry .NET includes some Elastic-specific processors to ensure the best 
 compatibility when exporting OpenTelemetry signal data [Elastic Observability](https://www.elastic.co/observability). 
 The distribution also preconfigures the collection of tracing, metrics and logs signals, applying 
 some opinionated defaults, such as which sources are collected by default. The distribution also 
 ensures that the OTLP exporter is enabled by default.
 
-> **_IMPORTANT:_**  The Elastic distribution is currently in early alpha release status. It is not yet feature
-complete and may contain bugs. We are actively working on improving the distribution and
+> **_IMPORTANT:_**  The Elastic Distribution for OpenTelemetry .NET is currently in early alpha release status. 
+> It is not yet feature complete and may contain bugs. We are actively working on improving the distribution and
 adding new features.
 >
 >  If you would like to experience the alpha and help us improve the distribution by providing
@@ -40,7 +40,7 @@ Before continuing, ensure that you have a supported
 
 ### Installation
 
-To get started with the Elastic OpenTelemetry .NET Distribution, you must add the 
+To get started with the Elastic Distribution for OpenTelemetry .NET, you must add the 
 [`Elastic.OpenTelemetry`](https://www.nuget.org/packages/Elastic.OpenTelemetry)
 NuGet package to your project. This can be achieved by adding the package reference to your project file.
 
@@ -50,25 +50,25 @@ NuGet package to your project. This can be achieved by adding the package refere
 > **_NOTE:_** Replace the `<LATEST>` placeholder with the latest available package from 
 [NuGet.org](https://www.nuget.org/packages/Elastic.OpenTelemetry).
 
-After adding the package reference, you can start using the Elastic OpenTelemetry distribution 
+After adding the package reference, you can start using the Elastic Distribution for OpenTelemetry .NET 
 in your application. The distribution includes a transitive dependency on the OpenTelemetry SDK, 
 so you do not need to add the OpenTelemetry SDK package to your project, although doing so will 
-cause no harm and may be used to opt into newer SDK versions before the Elastic distribution 
+cause no harm and may be used to opt into newer SDK versions before the Elastic Distribution for OpenTelemetry .NET 
 references them.
 
-The Elastic OpenTelemetry distribution is designed to be easy to use and integrate into your 
+The Elastic Distribution for OpenTelemetry .NET is designed to be easy to use and integrate into your 
 applications. This includes applications which have previously used the OpenTelemetry SDK directly. 
 In situations where the OpenTelemetry SDK is already used, the only required change is  
 to add the [`Elastic.OpenTelemetry`](https://www.nuget.org/packages/Elastic.OpenTelemetry) NuGet 
 package to the project. Doing so will automatically switch to the opinionated configuration provided 
-by the Elastic distribution.
+by the Elastic Distribution for OpenTelemetry .NET.
 
 ### ASP.NET Core usage
 
 A common requirement is to instrument ASP.NET Core applications based on the `Microsoft.Extensions.Hosting` 
 libraries which provide dependency injection via an `IServiceProvider`.
 
-The OpenTelemetry SDK and the Elastic distribution provide extension methods to enable observability 
+The OpenTelemetry SDK and the Elastic Distribution for OpenTelemetry .NET provide extension methods to enable observability 
 features in your application by adding a few lines of code.
 
 In this section, we'll focus on instrumenting an ASP.NET Core minimal API application using the Elastic 
@@ -88,7 +88,7 @@ NuGet package to your project:
 
 This package includes instrumentation to collect traces for requests handled by ASP.NET Core endpoints.
 
-> **_NOTE:_** The ASP.NET Core instrumentation is not included by default in the Elastic OpenTelemetry distribution. 
+> **_NOTE:_** The ASP.NET Core instrumentation is not included by default in the Elastic Distribution for OpenTelemetry .NET. 
 As with all optional instrumentation libraries, you can choose to include them in your application by 
 adding a suitable package reference.
 
@@ -100,7 +100,7 @@ using OpenTelemetry.Trace;
 ```
 
 The OpenTelemetry SDK provides extension methods on the `IServiceCollection` to support enabling the 
-providers and configuring the SDK. The Elastic distribution overrides the default SDK registration, 
+providers and configuring the SDK. The Elastic Distribution for OpenTelemetry .NET overrides the default SDK registration, 
 adding several opinionated defaults.
 
 In the minimal API template, the `WebApplicationBuilder` exposes a `Services` property that can be used 
@@ -120,12 +120,12 @@ injection container. This is NOT required to enable OpenTelemetry, but the examp
 send an HTTP request.
 
 <2> The `AddOpenTelemetry` method registers the OpenTelemetry SDK with the dependency injection 
-container. When available, the Elastic distribution will override this to add opinionated defaults.
+container. When available, the Elastic Distribution for OpenTelemetry .NET will override this to add opinionated defaults.
 
 <3> Configure tracing to instrument requests handled by ASP.NET Core.
 
 With these limited changes to the `Program.cs` file, the application is now configured to use the 
-OpenTelemetry SDK and the Elastic distribution to collect traces and metrics, which are exported via 
+OpenTelemetry SDK and the Elastic Distribution for OpenTelemetry .NET to collect traces and metrics, which are exported via 
 OTLP.
 
 To demonstrate the tracing capabilities, add a simple endpoint to the application:
@@ -144,7 +144,7 @@ app.MapGet("/", async (IHttpClientFactory httpClientFactory) =>
 ```
 <1> Using this URL will require two redirects, allowing us to see multiple spans in the trace.
 
-The Elastic distribution will automatically enable the exporting of signals via the OTLP exporter. This 
+The Elastic Distribution for OpenTelemetry .NET will automatically enable the exporting of signals via the OTLP exporter. This 
 exporter requires that endpoint(s) are configured. A common mechanism for configuring endpoints is 
 via environment variables. 
 
