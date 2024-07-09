@@ -7,12 +7,6 @@ RUN apt-get update && apt-get install -y unzip curl strace
 WORKDIR /app
 RUN chown app:app .
 
-RUN printf "I'm building for TARGETPLATFORM=${TARGETPLATFORM}" \
-    && printf ", TARGETARCH=${TARGETARCH}" \
-    && printf ", TARGETVARIANT=${TARGETVARIANT} \n" \
-    && printf "With uname -s : " && uname -s \
-    && printf "and  uname -m : " && uname -m \
-    
 FROM base AS otel
 ARG OTEL_VERSION=1.7.0
 # install OpenTelemetry .NET Automatic Instrumentation
