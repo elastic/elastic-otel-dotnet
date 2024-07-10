@@ -33,7 +33,7 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 	{
 		_scopeProvider = new LoggerExternalScopeProvider();
 		_configuredLogLevel = options.LogLevel;
-		FileLoggingEnabled = options.GlobalLogEnabled;
+		FileLoggingEnabled = options.GlobalLogEnabled && options.LogTargets.HasFlag(LogTargets.File);
 
 		if (!FileLoggingEnabled)
 			return;

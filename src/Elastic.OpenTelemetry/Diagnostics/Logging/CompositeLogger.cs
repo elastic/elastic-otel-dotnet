@@ -19,6 +19,7 @@ internal sealed class CompositeLogger(ElasticOpenTelemetryBuilderOptions options
 	public const string LogCategory = "Elastic.OpenTelemetry";
 
 	public FileLogger FileLogger { get; } = new(options.DistroOptions);
+	public StandardOutLogger ConsoleLogger { get; } = new(options.DistroOptions);
 
 	private ILogger? _additionalLogger = options.Logger;
 	private bool _isDisposed;
@@ -26,13 +27,17 @@ internal sealed class CompositeLogger(ElasticOpenTelemetryBuilderOptions options
 	public void Dispose()
 	{
 		_isDisposed = true;
+		if (_additionalLogger is IDisposable ad)
+			ad.Dispose();
 		FileLogger.Dispose();
 	}
 
-	public ValueTask DisposeAsync()
+	public async ValueTask DisposeAsync()
 	{
 		_isDisposed = true;
-		return FileLogger.DisposeAsync();
+		if (_additionalLogger is IAsyncDisposable ad)
+			await ad.DisposeAsync().ConfigureAwait(false);
+		await FileLogger.DisposeAsync().ConfigureAwait(false);
 	}
 
 	public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
@@ -42,6 +47,9 @@ internal sealed class CompositeLogger(ElasticOpenTelemetryBuilderOptions options
 
 		if (FileLogger.IsEnabled(logLevel))
 			FileLogger.Log(logLevel, eventId, state, exception, formatter);
+
+		if (ConsoleLogger.IsEnabled(logLevel))
+			ConsoleLogger.Log(logLevel, eventId, state, exception, formatter);
 
 		if (_additionalLogger == null)
 			return;
@@ -55,7 +63,7 @@ internal sealed class CompositeLogger(ElasticOpenTelemetryBuilderOptions options
 
 	public void SetAdditionalLogger(ILogger? logger) => _additionalLogger ??= logger;
 
-	public bool IsEnabled(LogLevel logLevel) => FileLogger.IsEnabled(logLevel) || (_additionalLogger?.IsEnabled(logLevel) ?? false);
+	public bool IsEnabled(LogLevel logLevel) => ConsoleLogger.IsEnabled(logLevel) || FileLogger.IsEnabled(logLevel) || (_additionalLogger?.IsEnabled(logLevel) ?? false);
 
 	public IDisposable BeginScope<TState>(TState state) where TState : notnull =>
 		new CompositeDisposable(FileLogger.BeginScope(state), _additionalLogger?.BeginScope(state));

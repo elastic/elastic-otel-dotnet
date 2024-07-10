@@ -28,13 +28,14 @@ public record ElasticOpenTelemetryBuilderOptions
 	/// </summary>
 	internal IServiceCollection? Services { get; init; }
 
+	private static readonly ElasticOpenTelemetryOptions DefaultDistroOptions = new();
 	/// <summary>
 	/// Advanced options which can be used to finely-tune the behaviour of the Elastic
 	/// distribution of OpenTelemetry.
 	/// </summary>
 	public ElasticOpenTelemetryOptions DistroOptions
 	{
-		get => _elasticOpenTelemetryOptions ?? new();
+		get => _elasticOpenTelemetryOptions ?? DefaultDistroOptions;
 		init => _elasticOpenTelemetryOptions = value;
 	}
 }

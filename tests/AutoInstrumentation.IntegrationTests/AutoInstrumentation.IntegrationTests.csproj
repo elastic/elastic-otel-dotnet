@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Elastic.OpenTelemetry.AutoInstrumentation.IntegrationTests</RootNamespace>
+    <NoWarn>xUnit1041</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Nullean.Xunit.Partitions" Version="0.5.0" />
+    <PackageReference Include="Testcontainers" Version="3.9.0"/>
+  </ItemGroup>
+
+</Project>

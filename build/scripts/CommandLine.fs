@@ -22,6 +22,7 @@ type Build =
     | [<CliPrefix(CliPrefix.None);SubCommand>] Test
     
     | [<CliPrefix(CliPrefix.None);SubCommand>] Unit_Test
+    | [<CliPrefix(CliPrefix.None);SubCommand>] Integrate
     | [<CliPrefix(CliPrefix.None);SubCommand>] End_To_End
 
     | [<CliPrefix(CliPrefix.None);SubCommand>] Format
@@ -49,6 +50,7 @@ with
             | Build -> "Run build"
             
             | Unit_Test -> "alias to providing: test --test-suite=unit"
+            | Integrate -> "alias to providing: test --test-suite=integration"
             | End_To_End -> "alias to providing: test --test-suite=e2e"
             | Test -> "runs a clean build and then runs all the tests unless --test-suite is provided"
             | Release -> "runs build, tests, and create and validates the packages shy of publishing them"
