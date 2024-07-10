@@ -40,9 +40,9 @@ jobs:
         id: bootstrap
         uses: ./.github/workflows/bootstrap
 
-      - uses: elastic/oblt-actions/google/auth@v1.10.0
+      - uses: elastic/oblt-actions/google/auth@v1.12.0
 
-      - uses: elastic/oblt-actions/oblt-cli/cluster-credentials@v1.10.0
+      - uses: elastic/oblt-actions/oblt-cli/cluster-credentials@v1.12.0
         with:
           github-token: ${{ secrets.OBLT_CLI_GITHUB_TOKEN }}
           cluster-name:  ${{ env.SERVERLESS_PROJECT }}
