@@ -1,37 +1,64 @@
 [[configure]]
 == Configure
 
+:language: .NET
+:language_lc: dotnet
+:distro_name: Elastic Distribution for OpenTelemetry {language}
+
+include::release-status.asciidoc[]
+
+The {distro_name} ("the distro") offers a lot of flexibility...
+
+////
+How do users set configuration options?
+////
+[discrete]
+[[configure-methods]]
+=== Configuration methods
+
 Configuration of the OpenTelemetry SDK should be performed through the
 mechanisms https://opentelemetry.io/docs/languages/net/automatic/configuration/[documented on the OpenTelemetry website].
+The distro can be further configured using advanced settings when you need complete control of its behavior.
 
-The Elastic Distribution for OpenTelemetry .NET can be further configured using advanced settings when
-you need complete control of its behaviour. Configuration can be achieved by setting environment variables,
-using the `IConfiguration` integration, or manually configuring the Elastic distribution.
+You can set configuration options using a few different methods:
+
+* <<configure-environment-variables,Setting environment variables>>
+* <<configure-iconfiguration-integration,Using the `IConfiguration` integration>>
+* <<configure-manual-configuration,Manually configuring the Elastic distribution>>
 
 [discrete]
 [[configure-environment-variables]]
-=== Environment variables
+==== Environment variables
 
-The Elastic Distribution for OpenTelemetry .NET can be configured using environment variables. This is a cross-platform
-way to configure the Elastic Distribution for OpenTelemetry .NET and is especially useful in containerized environments.
+// What and why
+The distro can be configured using environment variables.
+This is a cross-platform way to configure the distro and is especially useful in containerized environments.
 
+// How
 Environment variables are read at startup and can be used to configure the Elastic distribution.
 For details of the various options available and their corresponding environment variable names,
 see <<configure-configuration-options>>.
 
+// Example
+
+// Order of operations
 Environment variables always take precedence over configuration provided by the `IConfiguration`
 system.
 
 [discrete]
 [[configure-iconfiguration-integration]]
-=== IConfiguration integration
+==== IConfiguration integration
 
-In applications that use the "host" pattern, such as ASP.NET Core and worker service, the Elastic
-distribution can be configured using the `IConfiguration` integration. This is done by passing an
-`IConfiguration` instance to the `AddElasticOpenTelemetry` extension method on the `IServiceCollection`.
+// What and why
+In applications that use the "host" pattern, such as ASP.NET Core and worker service, the distro
+can be configured using the `IConfiguration` integration.
+
+// How
+This is done by passing an `IConfiguration` instance to the `AddElasticOpenTelemetry` extension
+method on the `IServiceCollection`.
 
 When using an `IHostApplicationBuilder` such as modern ASP.NET Core applications, the current `IConfiguration`
-can be accessed via the `Configuration` property on the builder.
+can be accessed via the `Configuration` property on the builder:
 
 [source,csharp]
 ----
@@ -44,6 +71,7 @@ By default, at this stage, the configuration will be populated from the default 
 including the `appsettings.json` file(s) and command-line arguments. You may use these sources to define
 the configuration for the Elastic Distribution for OpenTelemetry .NET.
 
+// Example
 For example, you can define the configuration for the Elastic Distribution for OpenTelemetry .NET in the `appsettings.json` file:
 
 [source,json]
@@ -58,6 +86,7 @@ For example, you can define the configuration for the Elastic Distribution for O
 ----
 <1> This example sets the file log directory to `C:\Logs` which enables diagnostic file logging.
 
+// Order of operations
 Configuration from the "Elastic:OpenTelemetry" section of the `IConfiguration` instance will be
 bound to the `ElasticOpenTelemetryOptions` instance used to configure the Elastic distribution.
 
@@ -66,13 +95,19 @@ https://learn.microsoft.com/en-us/aspnet/core/fundamentals/configuration[Configu
 
 [discrete]
 [[configure-manual-configuration]]
-=== Manual configuration
+==== Manual configuration
 
-In all other scenarios, configuration can be achieved manually in code. This is done by creating
-an instance of `ElasticOpenTelemetryBuilderOptions` and passing it to the `ElasticOpenTelemetryBuilder` constructor
-or an overload of the `AddElasticOpenTelemetry` extension method on the `IServiceCollection`.
+// What and why
+In all other scenarios, configuration can be achieved manually in code.
 
-For example, in traditional console applications, you can configure the Elastic Distribution for OpenTelemetry .NET like this:
+// How
+This is done by creating an instance of `ElasticOpenTelemetryBuilderOptions` and passing it to the
+`ElasticOpenTelemetryBuilder` constructor or an overload of the `AddElasticOpenTelemetry` extension
+method on the `IServiceCollection`.
+
+// Example
+For example, in traditional console applications, you can configure the
+Elastic Distribution for OpenTelemetry .NET like this:
 
 [source,csharp]
 ----
@@ -103,13 +138,43 @@ setting the corresponding property.
 <4> Pass the `ElasticOpenTelemetryBuilderOptions` instance to the `ElasticOpenTelemetryBuilder` constructor
 to configure the Elastic Distribution for OpenTelemetry .NET.
 
+// Order of operations
+
+////
+What are the available configuration options?
+////
 [discrete]
 [[configure-configuration-options]]
 === Configuration options
 
+////
+Is this true? Is the distro a wrapper around the OpenTelemetry .NET agent
+which is a wrapper around the general OpenTelemetry SDK? 🌀
+////
+Because the {distro_name} ("the distro") is a wrapper around the https://github.com/open-telemetry/opentelemetry-{language_lc}-instrumentation[OpenTelemetry {language} agent], it supports both:
+
+* General OpenTelemetry SDK configuration options
+* Elastic-specific configuration options that are only available when using the distro
+
+[discrete]
+[[configure-otel-sdk-options]]
+==== OpenTelemetry SDK configuration options
+
+////
+Is this true? Are there any options that aren't supported?
+Any options that shouldn't be used?
+////
+The distro supports all configuration options listed in the https://opentelemetry.io/docs/languages/sdk-configuration/general/[OpenTelemetry General SDK Configuration documentation].
+
+[discrete]
+[[configure-distro-options]]
+==== Elastic-specific configuration options
+
+The distro supports the following custom options.
+
 [discrete]
 [[configure-filelogdirectory]]
-==== `FileLogDirectory`
+===== `FileLogDirectory`
 
 A string specifying the directory where the Elastic Distribution for OpenTelemetry .NET will write diagnostic log files.
 When not provided, no file logging will occur. Each new .NET process will create a new log file in the
@@ -129,7 +194,7 @@ specified directory.
 
 [discrete]
 [[configure-fileloglevel]]
-==== `FileLogLevel`
+===== `FileLogLevel`
 
 Sets the logging level for the distribution.
 
@@ -149,7 +214,7 @@ Valid options: `Critical`, `Error`, `Warning`, `Information`, `Debug`, `Trace` a
 
 [discrete]
 [[configure-skipotlpexporter]]
-==== `SkipOtlpExporter`
+===== `SkipOtlpExporter`
 
 Allows the distribution to used with its defaults, but without enabling the export of telemetry data to
 an OTLP endpoint. This can be useful when you want to test applications without sending telemetry data.
@@ -168,7 +233,7 @@ an OTLP endpoint. This can be useful when you want to test applications without 
 
 [discrete]
 [[config-enabledelasticdefaults]]
-==== `EnabledElasticDefaults`
+===== `EnabledElasticDefaults`
 
 A comma-separated list of Elastic defaults to enable. This can be useful when you want to enable
 only some of the Elastic Distribution for OpenTelemetry .NET opinionated defaults.
@@ -199,3 +264,7 @@ Elastic defaults only for tracing and metrics, set this value to `Tracing,Metric
 | Default | Type
 | `string.Empty` | String
 |===
+
+:!language:
+:!language_lc:
+:!distro_name:
