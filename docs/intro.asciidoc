@@ -1,22 +1,26 @@
----
-slug: /otel-dotnet/intro
-title: Elastic OpenTelemetry Distribution for .NET
----
+[[intro]]
+== Elastic OpenTelemetry Distribution for .NET
 
-<DocCallOut color="warning" title="Alpha release">
-  This project is not yet recommended for production use.
-  Functionality may be changed or removed in future releases.
-  Alpha releases are not subject to the support SLA of official GA features.
+++++
+<titleabbrev>Introduction</titleabbrev>
+++++
 
-  If you would like to experience the alpha and help us improve the distribution by providing
-  early feedback, see [get started](get-started).
-</DocCallOut>
+.Alpha release
+[WARNING]
+====
+This project is not yet recommended for production use.
+Functionality may be changed or removed in future releases.
+Alpha releases are not subject to the support SLA of official GA features.
+
+If you would like to experience the alpha and help us improve the distribution by providing
+early feedback, see <<get-started>>.
+====
 
 The `Elastic.OpenTelemetry` package contains an Elastic Distribution for OpenTelemetry .NET of the
-[OpenTelemetry SDK for .NET](https://opentelemetry.io/docs/languages/net). A distribution
+https://opentelemetry.io/docs/languages/net[OpenTelemetry SDK for .NET]. A distribution
 is a wrapper around an upstream OpenTelemetry repository with some customizations. For
 more details about distributions in general, visit the
-[OpenTelemetry documentation](https://opentelemetry.io/docs/concepts/distributions).
+https://opentelemetry.io/docs/concepts/distributions[OpenTelemetry documentation].
 
 The Elastic Distribution for OpenTelemtry .NET includes some Elastic-specific processors to ensure the best
 compatibility when exporting OpenTelemetry signal data to an Elastic backend such
