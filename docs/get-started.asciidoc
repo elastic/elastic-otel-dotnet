@@ -1,3 +1,13 @@
+////
+Goal of this doc:
+The user is able to successfully see data from their .NET application make it to the Elastic UI via the Elastic Distribution for OpenTelemetry .NET
+
+Assumptions we're comfortable making about the reader:
+* They are familiar with Elastic
+* They are familiar with OpenTelemetry
+* They have dotnet installed
+////
+
 [[get-started]]
 == Get started
 
@@ -10,6 +20,14 @@ include::release-status.asciidoc[]
 This guide shows you how to use the {distro_name} ("the distro") to instrument your {language} application and send OpenTelemetry data to an Elastic Observability deployment.
 
 ////
+Is this true?
+////
+[NOTE]
+====
+As an OpenTelemetry SDK, the distro supports sending data to any OpenTelemetry protocol (OTLP) endpoint (for example, an https://opentelemetry.io/docs/collector/[OpenTelemetry Collector]).
+====
+
+////
 What does a user need to know and/or do before they install the distro?
 ////
 [discrete]
@@ -20,14 +38,24 @@ Before getting started:
 
 // Familiarity with OpenTelemetry
 * *Familiarize yourself with the OpenTelemetry SDK.* The distro is a lightweight wrapper around the OpenTelemetry SDK. You should be broadly familiar with the OpenTelemetry SDK concepts and instrumenting applications using the Microsoft diagnostic APIs. If you are not familiar with this, start with the https://opentelemetry.io/docs/languages/net[OpenTelemetry SDK documentation].
-// Any dependencies (including supported versions)
+// Any dependencies (including specific supported versions)
 * *Check your .NET SDK version.* The current documentation and examples are written with .NET 6 and newer applications in mind. Before continuing, ensure that you have a supported https://dotnet.microsoft.com/en-us/download/dotnet[.NET SDK version] installed locally.
++
+* *Set up Elastic Observability*. You'll need somewhere to send the gathered OpenTelemetry data, so it can be viewed and analyzed. This doc assumes you're using an https://www.elastic.co/observability[Elastic Observability] cloud deployment. You can use an existing one or set up a new one.
++
+[[elastic-observability-setup]]
+[%collapsible]
+.*Expand for setup instructions*
+====
+This section shows how to create an https://www.elastic.co/observability[Elastic Observability] cloud deployment and get the data you need to configure the distro to send data to it.
+
+. Register at https://cloud.elastic.co/registration[cloud.elastic.co], if you haven't already. This supports starting **free trial**.
+. After registering, click *Create deployment* at `<https://cloud.elastic.co/home>`.
+. Once that is created, click *Open* to visit your Kibana home page, e.g. `https://{DEPLOYMENT_NAME}.kb.{REGION}.cloud.es.io/app/home#/getting_started`.
+====
 
 ////
-// Possible items to add:
-//
-// Elastic Observability deployment
-// Other
+Other prereqs?
 ////
 
 ////
@@ -47,7 +75,7 @@ To get started with the Elastic OpenTelemetry Distribution for .NET, add the `El
 <PackageReference Include="Elastic.OpenTelemetry" Version="0.1.0-alpha.1" />
 ----
 
-After adding the package reference, you can start using the Elastic OpenTelemetry Distribution for .NET
+After adding the package reference, you can start using the distro
 in your application.
 
 ////
@@ -72,24 +100,17 @@ switch to the opinionated configuration provided by the Elastic distro.
 ====
 
 ////
-Are there any configuration options that are _required_?
-What does the minimal configuration / set up look like?
-What should they expect to see after setting up and running the distro?
-How do they know it worked as expected?
+What does the user need to do in their application to prepare to send data Elastic?
 ////
 [discrete]
-[[get-started-asp-net-core-usage]]
-=== ASP.NET Core usage
-
-It's common to want to instrument ASP.NET Core applications based on the `Microsoft.Extensions.Hosting`
-libraries, which provide dependency injection via an `IServiceProvider`.
-
-////
-I don't understand how this sentence relates to the paragraph before and after...
+[[get-started-send-data]]
+=== Send data to Elastic from an ASP.NET Core application
 
 The OpenTelemetry SDK and the distro provide extension methods to enable observability
 features in your application with a few lines of code.
-////
+
+It's common to want to instrument ASP.NET Core applications based on the `Microsoft.Extensions.Hosting`
+libraries, which provide dependency injection via an `IServiceProvider`.
 
 If you want to instrument an ASP.NET Core minimal API application using the distro, follow the
 steps below. Similar steps can also be used to instrument other ASP.NET Core workloads and other
@@ -101,8 +122,13 @@ The examples below assume your code uses the top-level statements feature introd
 and the default choice for applications created using the latest templates.
 ====
 
+////
+Are there any dependencies that need to be installed in addition to the distro?
+If yes, does it matter in what order dependencies are defined?
+If no, delete this section.
+////
 [discrete]
-[[get-started-asp-net-core-dependencies]]
+[[get-started-add-dependencies]]
 ==== Add dependencies
 
 . To take advantage of the OpenTelemetry SDK instrumentation for ASP.NET Core, add the following
@@ -159,8 +185,8 @@ OpenTelemetry SDK and the distro to collect traces and metrics, which are export
 OpenTelemetry protocol (OTLP).
 
 [discrete]
-[[get-started-asp-net-core-sample-endpoint]]
-==== Add an endpoint
+[[get-started-sample-endpoint]]
+==== Add a sample endpoint
 
 To demonstrate the tracing capabilities, add a simple endpoint to the application:
 
@@ -183,9 +209,21 @@ The distro will automatically enable the exporting of signals via the OTLP expor
 exporter requires that endpoint(s) are configured. A common mechanism for configuring
 endpoints is via environment variables.
 
+////
+What does the _minimal_ configuration / setup look like?
+Are there any configuration options that are _required_?
+////
 [discrete]
-[[get-started-asp-net-core-environment-variables]]
-==== Set environment variables
+[[get-started-configure]]
+==== Configure the distro
+
+To configure the distro, at a minimum you'll need the deployment's OTLP endpoint and
+authorization data to set the appropriate `OTLP_*` environment variables:
+
+* `OTEL_EXPORTER_OTLP_ENDPOINT`: The full URL of the endpoint where data will be sent.
+* `OTEL_EXPORTER_OTLP_HEADERS`: A comma-separated list of `key=value` pairs that will
+be added to the headers of every request. This is typically this is used for
+authentication information.
 
 [NOTE]
 ====
@@ -196,7 +234,7 @@ for your observability data.
 ////
 Step-by-step instructions
 ////
-To view the configuration details that should be supplied to the application:
+When sending data to Elastic, you can find the values of these variables in Kibana's APM setup guide:
 
 . In {kib}, go to *Setup guides*.
 . Select *Observability*.
@@ -210,9 +248,28 @@ where the application is running.
 . Once configured, run the application and make a request to the root endpoint. A trace will be generated
 and exported to the OTLP endpoint.
 
+For more information on all the available configuration options, refer to <<configure>>.
+
+////
+Does the user need to do something after configuring the distro
+for data to start being sent Elastic?
+If no, delete this section.
+////
 [discrete]
-[[get-started-asp-net-core-view-traces]]
-==== View traces
+[[get-started-initialization]]
+==== Initialize the distro
+
+////
+Step-by-step instructions
+////
+
+////
+What should they expect to see after running this?
+How do they know it worked as expected?
+////
+[discrete]
+[[get-started-view-traces]]
+=== View traces
 
 To view the traces, you can use the Elastic APM UI:
 
