@@ -18,13 +18,13 @@ namespace Elastic.OpenTelemetry;
 /// <para>Ensures all signals are rich enough to report to Elastic</para>
 /// </summary>
 // ReSharper disable once UnusedType.Global
-public class Plugin
+public class AutoInstrumentationPlugin
 {
 	private readonly ILogger _logger;
 	private readonly EventListener _eventListener;
 
-	/// <inheritdoc cref="Plugin"/>
-	public Plugin()
+	/// <inheritdoc cref="AutoInstrumentationPlugin"/>
+	public AutoInstrumentationPlugin()
 	{
 		var options = new ElasticOpenTelemetryBuilderOptions();
 		var (eventListener, logger) = ElasticOpenTelemetryBuilder.Bootstrap(options);
