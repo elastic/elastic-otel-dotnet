@@ -14,23 +14,23 @@ internal static partial class LoggerMessages
 #pragma warning disable SYSLIB1006 // Multiple logging methods cannot use the same event id within a class
 	// We explictly reuse the same event ID and this is the same log message, but with different types for the structured data
 
-	[LoggerMessage(EventId = 100, Level = LogLevel.Trace, Message = "{ProcessorName} found `{AttributeName}` attribute with value '{AttributeValue}' on the span.")]
+	[LoggerMessage(EventId = 100, Level = LogLevel.Debug, Message = "{ProcessorName} found `{AttributeName}` attribute with value '{AttributeValue}' on the span.")]
 	internal static partial void FoundTag(this ILogger logger, string processorName, string attributeName, string attributeValue);
 
-	[LoggerMessage(EventId = 100, Level = LogLevel.Trace, Message = "{ProcessorName} found `{AttributeName}` attribute with value '{AttributeValue}' on the span.")]
+	[LoggerMessage(EventId = 100, Level = LogLevel.Debug, Message = "{ProcessorName} found `{AttributeName}` attribute with value '{AttributeValue}' on the span.")]
 	internal static partial void FoundTag(this ILogger logger, string processorName, string attributeName, int attributeValue);
 
-	[LoggerMessage(EventId = 101, Level = LogLevel.Trace, Message = "{ProcessorName} set `{AttributeName}` attribute with value '{AttributeValue}' on the span.")]
+	[LoggerMessage(EventId = 101, Level = LogLevel.Debug, Message = "{ProcessorName} set `{AttributeName}` attribute with value '{AttributeValue}' on the span.")]
 	internal static partial void SetTag(this ILogger logger, string processorName, string attributeName, string attributeValue);
 
-	[LoggerMessage(EventId = 101, Level = LogLevel.Trace, Message = "{ProcessorName} set `{AttributeName}` attribute with value '{AttributeValue}' on the span.")]
+	[LoggerMessage(EventId = 101, Level = LogLevel.Debug, Message = "{ProcessorName} set `{AttributeName}` attribute with value '{AttributeValue}' on the span.")]
 	internal static partial void SetTag(this ILogger logger, string processorName, string attributeName, int attributeValue);
 #pragma warning restore SYSLIB1006 // Multiple logging methods cannot use the same event id within a class
 
-	[LoggerMessage(EventId = 20, Level = LogLevel.Trace, Message = "Added '{ProcessorTypeName}' processor to '{BuilderTypeName}'.")]
+	[LoggerMessage(EventId = 20, Level = LogLevel.Debug, Message = "Added '{ProcessorTypeName}' processor to '{BuilderTypeName}'.")]
 	public static partial void LogProcessorAdded(this ILogger logger, string processorTypeName, string builderTypeName);
 
-	[LoggerMessage(EventId = 21, Level = LogLevel.Trace, Message = "Added '{MeterName}' meter to '{BuilderTypeName}'.")]
+	[LoggerMessage(EventId = 21, Level = LogLevel.Debug, Message = "Added '{MeterName}' meter to '{BuilderTypeName}'.")]
 	public static partial void LogMeterAdded(this ILogger logger, string meterName, string builderTypeName);
 
 	public static void LogAgentPreamble(this ILogger logger)
@@ -66,8 +66,8 @@ internal static partial class LoggerMessages
 
 		string[] environmentVariables =
 		[
-			EnvironmentVariables.ELASTIC_OTEL_LOG_DIRECTORY,
-			EnvironmentVariables.ELASTIC_OTEL_LOG_LEVEL
+			EnvironmentVariables.OTEL_DOTNET_AUTO_LOG_DIRECTORY,
+			EnvironmentVariables.OTEL_LOG_LEVEL
 		];
 
 		foreach (var variable in environmentVariables)
