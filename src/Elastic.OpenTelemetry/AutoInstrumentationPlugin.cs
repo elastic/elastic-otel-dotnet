@@ -11,20 +11,20 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
-namespace Elastic.OpenTelemetry.AutoInstrumentationPlugin;
+namespace Elastic.OpenTelemetry;
 
 /// <summary>
 /// Elastic Distribution for OpenTelemetry .NET plugin for Auto Instrumentation.
 /// <para>Ensures all signals are rich enough to report to Elastic</para>
 /// </summary>
 // ReSharper disable once UnusedType.Global
-public class ElasticAutoInstrumentationPlugin
+public class AutoInstrumentationPlugin
 {
 	private readonly ILogger _logger;
 	private readonly EventListener _eventListener;
 
-	/// <inheritdoc cref="ElasticAutoInstrumentationPlugin"/>
-	public ElasticAutoInstrumentationPlugin()
+	/// <inheritdoc cref="AutoInstrumentationPlugin"/>
+	public AutoInstrumentationPlugin()
 	{
 		var options = new ElasticOpenTelemetryBuilderOptions();
 		var (eventListener, logger) = ElasticOpenTelemetryBuilder.Bootstrap(options);
