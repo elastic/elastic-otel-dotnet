@@ -20,28 +20,28 @@ RUN OTEL_DOTNET_AUTO_HOME="/app/otel" sh otel-dotnet-auto-install.sh
 
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build_example
-WORKDIR /src
-COPY ["examples/Example.AutoInstrumentation/Example.AutoInstrumentation.csproj", "examples/Example.AutoInstrumentation/"]
-RUN dotnet restore "examples/Example.AutoInstrumentation/Example.AutoInstrumentation.csproj"
-COPY . .
-WORKDIR "/src/examples/Example.AutoInstrumentation"
-RUN dotnet build "Example.AutoInstrumentation.csproj" -c Release -o /app/build_example
+ENV _PROJECT="Example.AutoInstrumentation"
+ENV _PROJECTPATH="${_PROJECT}/${_PROJECT}.csproj"
+WORKDIR /work
+COPY ["examples/${_PROJECTPATH}", "examples/${_PROJECT}/"]
+RUN dotnet restore "examples/${_PROJECT}"
+COPY .git .git
+COPY examples/${_PROJECT} examples/${_PROJECT}
+WORKDIR "/work/examples/${_PROJECT}"
+RUN dotnet build "${_PROJECT}.csproj" -c Release -o /app/build_example
 
 FROM build_example AS publish_example
 RUN dotnet publish "Example.AutoInstrumentation.csproj" -c Release -o /app/example /p:UseAppHost=false
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build_plugin
-WORKDIR /src
-COPY ["README.md", "."]
-COPY ["LICENSE.txt", "."]
-COPY ["NOTICE.txt", "."]
-COPY ["src/Elastic.OpenTelemetry.AutoInstrumentationPlugin/Elastic.OpenTelemetry.AutoInstrumentationPlugin.csproj", "src/Elastic.OpenTelemetry.AutoInstrumentationPlugin/"]
-RUN dotnet restore "src/Elastic.OpenTelemetry.AutoInstrumentationPlugin/Elastic.OpenTelemetry.AutoInstrumentationPlugin.csproj"
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build_distro
+ENV _PROJECT="Elastic.OpenTelemetry"
+ENV _PROJECTPATH="${_PROJECT}/${_PROJECT}.csproj"
+WORKDIR /work
+COPY ["src/${_PROJECTPATH}", "src/${_PROJECT}/"]
+RUN dotnet restore "src/${_PROJECTPATH}"
 COPY . .
-WORKDIR "/src/src/Elastic.OpenTelemetry.AutoInstrumentationPlugin"
-RUN dotnet build "Elastic.OpenTelemetry.AutoInstrumentationPlugin.csproj" -c release 
-RUN mkdir -p /app/temp
-RUN cp -r /src/.artifacts/bin /app/temp
+WORKDIR "/work/src/${_PROJECT}"
+RUN dotnet build "${_PROJECT}.csproj" -c Release 
 
 FROM otel AS final
 ARG TARGETPLATFORM
@@ -49,24 +49,13 @@ ARG TARGETARCH
 ARG TARGETVARIANT
 WORKDIR /app
 COPY --from=publish_example /app/example /app/example
-COPY --from=otel /app/otel /app/otel
-
-# This `RUN true` is a bit of magic that I don't care to understand 
-# https://github.com/moby/moby/issues/37965
-# Seems to relate to the fs driver on GitHub Actions failing to copy files from the `build_plugin` layer.
-# Hence we copy the whole .artifacts/bin folder manually and copy the files to /app/otel/net
-RUN true
-COPY --from=build_plugin /app/temp /app/temp
-RUN true
-RUN ls -al /app/temp/bin
-RUN mkdir -p /app/otel/net
-RUN cp "/app/temp/bin/Elastic.OpenTelemetry.AutoInstrumentationPlugin/release_net8.0/Elastic.OpenTelemetry.AutoInstrumentationPlugin.dll" /app/otel/net/
-RUN cp "/app/temp/bin/Elastic.OpenTelemetry/release_net8.0/Elastic.OpenTelemetry.dll" /app/otel/net/
+COPY --from=build_distro /work/.artifacts/bin/Elastic.OpenTelemetry/release_netstandard2.1/Elastic.OpenTelemetry.dll /app/otel/net/
+COPY --from=build_distro /work/.artifacts/bin/Elastic.OpenTelemetry/release_netstandard2.1/Elastic.OpenTelemetry.pdb /app/otel/net/
 
 ENV CORECLR_ENABLE_PROFILING="1"
 ENV CORECLR_PROFILER="{918728DD-259F-4A6A-AC2B-B85E1B658318}"
 ENV CORECLR_PROFILER_PATH="/app/otel/linux-${TARGETARCH}/OpenTelemetry.AutoInstrumentation.Native.so"
-ENV OTEL_DOTNET_AUTO_PLUGINS="Elastic.OpenTelemetry.AutoInstrumentationPlugin.ElasticAutoInstrumentationPlugin, Elastic.OpenTelemetry.AutoInstrumentationPlugin, Version=1.0.0.0, Culture=neutral, PublicKeyToken=069ca2728db333c1"
+ENV OTEL_DOTNET_AUTO_PLUGINS="Elastic.OpenTelemetry.AutoInstrumentationPlugin, Elastic.OpenTelemetry, Version=1.0.0.0, Culture=neutral, PublicKeyToken=069ca2728db333c1"
        
 ENV OTEL_TRACES_EXPORTER=none
 ENV OTEL_METRICS_EXPORTER=none
@@ -81,5 +70,7 @@ ENV OTEL_DOTNET_AUTO_HOME="/app/otel"
 ENV DOTNET_ADDITIONAL_DEPS="/app/otel/AdditionalDeps"
 ENV DOTNET_SHARED_STORE="/app/otel/store"
 ENV DOTNET_STARTUP_HOOKS="/app/otel/net/OpenTelemetry.AutoInstrumentation.StartupHook.dll"
+
+ENV OTEL_DOTNET_AUTO_FAIL_FAST_ENABLED=true
 
 ENTRYPOINT ["dotnet", "/app/example/Example.AutoInstrumentation.dll"]
