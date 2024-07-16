@@ -23,8 +23,8 @@ public class GlobalLogConfigurationTests
 
 	//
 	[Theory]
-	[InlineData(ELASTIC_OTEL_LOG_LEVEL, "Info")]
-	[InlineData(ELASTIC_OTEL_LOG_DIRECTORY, "1")]
+	[InlineData(OTEL_LOG_LEVEL, "Debug")]
+	[InlineData(OTEL_DOTNET_AUTO_LOG_DIRECTORY, "1")]
 	//only if explicitly specified to 'none' should we not default to file logging.
 	[InlineData(ELASTIC_OTEL_LOG_TARGETS, "file")]
 	public void CheckActivation(string environmentVariable, string value)
@@ -36,14 +36,15 @@ public class GlobalLogConfigurationTests
 
 	//
 	[Theory]
-	[InlineData(ELASTIC_OTEL_LOG_LEVEL, "none")]
+	[InlineData(OTEL_LOG_LEVEL, "none")]
+	[InlineData(OTEL_LOG_LEVEL, "info")]
 	//only if explicitly specified to 'none' should we not default to file logging.
 	[InlineData(ELASTIC_OTEL_LOG_TARGETS, "none")]
 	public void CheckDeactivation(string environmentVariable, string value)
 	{
 		var config = new ElasticOpenTelemetryOptions(new Hashtable
 		{
-			{ ELASTIC_OTEL_LOG_DIRECTORY, "" },
+			{ OTEL_DOTNET_AUTO_LOG_DIRECTORY, "" },
 			{ environmentVariable, value }
 		});
 		config.GlobalLogEnabled.Should().BeFalse();
@@ -55,7 +56,7 @@ public class GlobalLogConfigurationTests
 	//setting targets to none will result in no global trace logging
 	[InlineData(ELASTIC_OTEL_LOG_TARGETS, "None")]
 	//setting file log level to none will result in no global trace logging
-	[InlineData(ELASTIC_OTEL_LOG_LEVEL, "None")]
+	[InlineData(OTEL_LOG_LEVEL, "None")]
 	public void CheckNonActivation(string environmentVariable, string value)
 	{
 		var config = new ElasticOpenTelemetryOptions(new Hashtable { { environmentVariable, value } });
@@ -63,23 +64,24 @@ public class GlobalLogConfigurationTests
 	}
 
 	[Theory]
-	[InlineData("trace", LogLevel.Trace)]
-	[InlineData("Trace", LogLevel.Trace)]
-	[InlineData("TraCe", LogLevel.Trace)]
-	[InlineData("debug", LogLevel.Debug)]
-	[InlineData("info", LogLevel.Information)]
-	[InlineData("warn", LogLevel.Warning)]
-	[InlineData("error", LogLevel.Error)]
-	[InlineData("none", LogLevel.None)]
-	public void Check_LogLevelValues_AreMappedCorrectly(string envVarValue, LogLevel logLevel)
+	[InlineData("trace", LogLevel.Debug, true)]
+	[InlineData("Trace", LogLevel.Debug, true)]
+	[InlineData("TraCe", LogLevel.Debug, true)]
+	[InlineData("debug", LogLevel.Debug, true)]
+	[InlineData("info", LogLevel.Information, false)]
+	[InlineData("warn", LogLevel.Warning, false)]
+	[InlineData("error", LogLevel.Error, false)]
+	[InlineData("none", LogLevel.None, false)]
+	public void Check_LogLevelValues_AreMappedCorrectly(string envVarValue, LogLevel logLevel, bool globalLogEnabled)
 	{
-		Check(ELASTIC_OTEL_LOG_LEVEL, envVarValue, logLevel);
+		Check(OTEL_LOG_LEVEL, envVarValue, logLevel, globalLogEnabled);
 		return;
 
-		static void Check(string key, string envVarValue, LogLevel level)
+		static void Check(string key, string envVarValue, LogLevel level, bool enabled)
 		{
 			var config = CreateConfig(key, envVarValue);
 			config.LogLevel.Should().Be(level, "{0}", key);
+			config.GlobalLogEnabled.Should().Be(enabled, "{0}", key);
 		}
 	}
 
@@ -90,7 +92,7 @@ public class GlobalLogConfigurationTests
 	[InlineData("tracing")]
 	public void Check_InvalidLogLevelValues_AreMappedToDefaultWarn(string? envVarValue)
 	{
-		Check(ELASTIC_OTEL_LOG_LEVEL, envVarValue);
+		Check(OTEL_LOG_LEVEL, envVarValue);
 		return;
 
 		static void Check(string key, string? envVarValue)
@@ -103,7 +105,7 @@ public class GlobalLogConfigurationTests
 	[Fact]
 	public void Check_LogDir_IsEvaluatedCorrectly()
 	{
-		Check(ELASTIC_OTEL_LOG_DIRECTORY, "/foo/bar");
+		Check(OTEL_DOTNET_AUTO_LOG_DIRECTORY, "/foo/bar");
 		return;
 
 		static void Check(string key, string envVarValue)
@@ -137,6 +139,27 @@ public class GlobalLogConfigurationTests
 			var config = CreateConfig(key, envVarValue);
 			config.LogTargets.Should().Be(targets, "{0}", key);
 		}
+	}
+
+	[Theory]
+	[InlineData(LogLevel.Debug, null, LogTargets.StdOut, true, true)]
+	[InlineData(LogLevel.Information, null, LogTargets.None, true, false)]
+	[InlineData(LogLevel.Debug, null, LogTargets.File, false, true)]
+	[InlineData(LogLevel.Information, null, LogTargets.None, false, false)]
+	//Ensure explicit loglevel config always takes precedence
+	[InlineData(LogLevel.Debug, "file", LogTargets.File, true, true)]
+	[InlineData(LogLevel.Information, "file", LogTargets.File, false, true)]
+	internal void LogTargetDefaultsToStandardOutIfRunningInContainerWithLogLevelDebug(LogLevel level, string? logTargetsEnvValue, LogTargets targets, bool inContainer, bool globalLogging)
+	{
+		var env = new Hashtable { { OTEL_LOG_LEVEL, level.ToString() } };
+		if (inContainer)
+			env.Add(DOTNET_RUNNING_IN_CONTAINER, "1");
+		if (!string.IsNullOrWhiteSpace(logTargetsEnvValue))
+			env.Add(ELASTIC_OTEL_LOG_TARGETS, logTargetsEnvValue);
+
+		var config = new ElasticOpenTelemetryOptions(env);
+		config.GlobalLogEnabled.Should().Be(globalLogging);
+		config.LogTargets.Should().Be(targets);
 	}
 
 	private static ElasticOpenTelemetryOptions CreateConfig(string key, string? envVarValue)

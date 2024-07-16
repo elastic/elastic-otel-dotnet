@@ -132,7 +132,7 @@ internal static partial class LoggerMessages
 	[LoggerMessage(EventId = 0, Level = LogLevel.Information, Message = "ElasticOpenTelemetryBuilder initialized{newline}{StackTrace}.")]
 	public static partial void LogElasticOpenTelemetryBuilderInitialized(this ILogger logger, string newline, StackTrace stackTrace);
 
-	[LoggerMessage(EventId = 1, Level = LogLevel.Trace, Message = "ElasticOpenTelemetryBuilder configured {Signal} via the {Provider}.")]
+	[LoggerMessage(EventId = 1, Level = LogLevel.Debug, Message = "ElasticOpenTelemetryBuilder configured {Signal} via the {Provider}.")]
 	public static partial void LogConfiguredSignalProvider(this ILogger logger, string signal, string provider);
 
 	[LoggerMessage(EventId = 2, Level = LogLevel.Information, Message = "No Elastic defaults were enabled.")]

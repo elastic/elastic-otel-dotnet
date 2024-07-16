@@ -18,8 +18,11 @@ internal static class LogLevelHelpers
 
 	public static LogLevel? ToLogLevel(string logLevelString)
 	{
+		//TRACE does not exist in OTEL_LOG_LEVEL ensure we parse it to next granularity
+		//debug, NOTE that OpenTelemetry treats this as invalid and will parse to 'Information'
+		//We treat Debug & Trace as a signal global file logging should be enabled.
 		if (logLevelString.Equals(Trace, StringComparison.OrdinalIgnoreCase))
-			return LogLevel.Trace;
+			return LogLevel.Debug;
 		if (logLevelString.Equals(Debug, StringComparison.OrdinalIgnoreCase))
 			return LogLevel.Debug;
 		if (logLevelString.Equals("Info", StringComparison.OrdinalIgnoreCase))

@@ -73,6 +73,6 @@ public static class OpenTelemetryBuilderExtensions
 
 internal static partial class LoggerMessages
 {
-	[LoggerMessage(EventId = 10, Level = LogLevel.Trace, Message = "ElasticOpenTelemetryBuilder built.")]
+	[LoggerMessage(EventId = 10, Level = LogLevel.Debug, Message = "ElasticOpenTelemetryBuilder built.")]
 	public static partial void LogElasticOpenTelemetryBuilderBuilt(this ILogger logger);
 }

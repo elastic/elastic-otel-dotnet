@@ -34,8 +34,8 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 	{
 		var sut = new ElasticOpenTelemetryOptions(new Hashtable
 		{
-			{ELASTIC_OTEL_LOG_DIRECTORY, null},
-			{ELASTIC_OTEL_LOG_LEVEL, null},
+			{OTEL_DOTNET_AUTO_LOG_DIRECTORY, null},
+			{OTEL_LOG_LEVEL, null},
 			{ELASTIC_OTEL_ENABLE_ELASTIC_DEFAULTS, null},
 			{ELASTIC_OTEL_SKIP_OTLP_EXPORTER, null},
 		});
@@ -69,8 +69,8 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		var sut = new ElasticOpenTelemetryOptions(new Hashtable
 		{
-			{ELASTIC_OTEL_LOG_DIRECTORY, fileLogDirectory},
-			{ELASTIC_OTEL_LOG_LEVEL, fileLogLevel},
+			{OTEL_DOTNET_AUTO_LOG_DIRECTORY, fileLogDirectory},
+			{OTEL_LOG_LEVEL, fileLogLevel},
 			{ELASTIC_OTEL_ENABLE_ELASTIC_DEFAULTS, enabledElasticDefaults},
 			{ELASTIC_OTEL_SKIP_OTLP_EXPORTER, "true"},
 		});
@@ -257,8 +257,8 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		var sut = new ElasticOpenTelemetryOptions(config, new Hashtable
 		{
-			{ELASTIC_OTEL_LOG_DIRECTORY, fileLogDirectory},
-			{ELASTIC_OTEL_LOG_LEVEL, fileLogLevel},
+			{OTEL_DOTNET_AUTO_LOG_DIRECTORY, fileLogDirectory},
+			{OTEL_LOG_LEVEL, fileLogLevel},
 			{ELASTIC_OTEL_ENABLE_ELASTIC_DEFAULTS, enabledElasticDefaults},
 			{ELASTIC_OTEL_SKIP_OTLP_EXPORTER, "true"},
 		});
@@ -279,8 +279,8 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		var sut = new ElasticOpenTelemetryOptions(new Hashtable
 		{
-			{ELASTIC_OTEL_LOG_DIRECTORY, "C:\\Temp"},
-			{ELASTIC_OTEL_LOG_LEVEL, "Information"},
+			{OTEL_DOTNET_AUTO_LOG_DIRECTORY, "C:\\Temp"},
+			{OTEL_LOG_LEVEL, "Information"},
 			{ELASTIC_OTEL_ENABLE_ELASTIC_DEFAULTS, "All"},
 			{ELASTIC_OTEL_SKIP_OTLP_EXPORTER, "true"},
 		})

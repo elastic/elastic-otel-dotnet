@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information
 
 using System.Collections;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Elastic.OpenTelemetry.Diagnostics.Logging;
 using Microsoft.Extensions.Configuration;
@@ -54,6 +55,9 @@ public class ElasticOpenTelemetryOptions
 	private readonly string? _enabledElasticDefaults;
 	private readonly ConfigSource _enabledElasticDefaultsSource = ConfigSource.Default;
 
+	private readonly bool? _runningInContainer;
+	private readonly ConfigSource _runningInContainerSource = ConfigSource.Default;
+
 	private string? _loggingSectionLogLevel;
 	private readonly string _defaultLogDirectory;
 	private readonly IDictionary _environmentVariables;
@@ -66,8 +70,10 @@ public class ElasticOpenTelemetryOptions
 	{
 		_defaultLogDirectory = GetDefaultLogDirectory();
 		_environmentVariables = environmentVariables ?? GetEnvironmentVariables();
-		SetFromEnvironment(ELASTIC_OTEL_LOG_DIRECTORY, ref _logDirectory, ref _logDirectorySource, StringParser);
-		SetFromEnvironment(ELASTIC_OTEL_LOG_LEVEL, ref _logLevel, ref _logLevelSource, LogLevelParser);
+		SetFromEnvironment(DOTNET_RUNNING_IN_CONTAINER, ref _runningInContainer, ref _runningInContainerSource, BoolParser);
+
+		SetFromEnvironment(OTEL_DOTNET_AUTO_LOG_DIRECTORY, ref _logDirectory, ref _logDirectorySource, StringParser);
+		SetFromEnvironment(OTEL_LOG_LEVEL, ref _logLevel, ref _logLevelSource, LogLevelParser);
 		SetFromEnvironment(ELASTIC_OTEL_LOG_TARGETS, ref _logTargets, ref _logTargetsSource, LogTargetsParser);
 		SetFromEnvironment(ELASTIC_OTEL_SKIP_OTLP_EXPORTER, ref _skipOtlpExporter, ref _skipOtlpExporterSource, BoolParser);
 		SetFromEnvironment(ELASTIC_OTEL_ENABLE_ELASTIC_DEFAULTS, ref _enabledElasticDefaults, ref _enabledElasticDefaultsSource, StringParser);
@@ -116,7 +122,7 @@ public class ElasticOpenTelemetryOptions
 	{
 		get
 		{
-			var isActive = _logLevel.HasValue || !string.IsNullOrWhiteSpace(_logDirectory) || _logTargets.HasValue;
+			var isActive = _logLevel is <= LogLevel.Debug || !string.IsNullOrWhiteSpace(_logDirectory) || _logTargets.HasValue;
 			if (!isActive)
 				return isActive;
 
@@ -193,7 +199,9 @@ public class ElasticOpenTelemetryOptions
 	/// <inheritdoc cref="LogTargets"/>>
 	public LogTargets LogTargets
 	{
-		get => _logTargets ?? (GlobalLogEnabled ? LogTargets.File : LogTargets.None);
+		get => _logTargets ?? (GlobalLogEnabled ?
+			_runningInContainer.HasValue && _runningInContainer.Value ? LogTargets.StdOut : LogTargets.File
+			: LogTargets.None);
 		init
 		{
 			_logTargets = value;
@@ -275,7 +283,13 @@ public class ElasticOpenTelemetryOptions
 
 	private static (bool, string) StringParser(string? s) => !string.IsNullOrEmpty(s) ? (true, s) : (false, string.Empty);
 
-	private static (bool, bool?) BoolParser(string? s) => bool.TryParse(s, out var boolValue) ? (true, boolValue) : (false, null);
+	private static (bool, bool?) BoolParser(string? s) =>
+		s switch
+		{
+			"1" => (true, true),
+			"0" => (true, false),
+			_ => bool.TryParse(s, out var boolValue) ? (true, boolValue) : (false, null)
+		};
 
 	private void SetFromEnvironment<T>(string key, ref T field, ref ConfigSource configSourceField, Func<string?, (bool, T)> parser)
 	{
