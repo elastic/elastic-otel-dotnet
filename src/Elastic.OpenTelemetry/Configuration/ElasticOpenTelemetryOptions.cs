@@ -30,11 +30,12 @@ namespace Elastic.OpenTelemetry.Configuration;
 public class ElasticOpenTelemetryOptions
 {
 	private static readonly string ConfigurationSection = "Elastic:OpenTelemetry";
-	private static readonly string LogDirectoryConfigPropertyName = "LogDirectory";
-	private static readonly string LogLevelConfigPropertyName = "LogLevel";
-	private static readonly string LogTargetsConfigPropertyName = "LogTargets";
-	private static readonly string SkipOtlpExporterConfigPropertyName = "SkipOtlpExporter";
-	private static readonly string EnabledElasticDefaultsConfigPropertyName = "EnabledElasticDefaults";
+	private static readonly string LogDirectoryConfigPropertyName = nameof(LogDirectory);
+	private static readonly string LogLevelConfigPropertyName = nameof(LogLevel);
+	private static readonly string LogTargetsConfigPropertyName = nameof(LogTargets);
+	private static readonly string SkipOtlpExporterConfigPropertyName = nameof(SkipOtlpExporter);
+	private static readonly string EnabledDefaultsConfigPropertyName = nameof(EnabledDefaults);
+	private static readonly string EnabledSignalsConfigPropertyName = nameof(EnabledSignals);
 
 	private string? _logDirectory;
 	private ConfigSource _logDirectorySource = ConfigSource.Default;
@@ -53,6 +54,9 @@ public class ElasticOpenTelemetryOptions
 
 	private readonly bool? _runningInContainer;
 	private readonly ConfigSource _runningInContainerSource = ConfigSource.Default;
+
+	private readonly Signals? _signals;
+	private readonly ConfigSource _signalsSource = ConfigSource.Default;
 
 	private string? _loggingSectionLogLevel;
 	private readonly string _defaultLogDirectory;
@@ -73,6 +77,43 @@ public class ElasticOpenTelemetryOptions
 		SetFromEnvironment(ELASTIC_OTEL_LOG_TARGETS, ref _logTargets, ref _logTargetsSource, LogTargetsParser);
 		SetFromEnvironment(ELASTIC_OTEL_SKIP_OTLP_EXPORTER, ref _skipOtlpExporter, ref _skipOtlpExporterSource, BoolParser);
 		SetFromEnvironment(ELASTIC_OTEL_ENABLE_ELASTIC_DEFAULTS, ref _elasticDefaults, ref _elasticDefaultsSource, EnabledDefaultsParser);
+
+		ParseOtelSignalsConfiguration(ref _signals, ref _signalsSource);
+
+		void ParseOtelSignalsConfiguration(ref Signals? signals, ref ConfigSource signalsSource)
+		{
+			var defaultSignals = Signals.All;
+			var (succes, allEnabled) = BoolParser(GetSafeEnvironmentVariable(OTEL_DOTNET_AUTO_INSTRUMENTATION_ENABLED));
+			if (succes && allEnabled.HasValue)
+			{
+				defaultSignals = allEnabled.Value ? Signals.All : Signals.None;
+				signals = defaultSignals;
+				signalsSource = ConfigSource.Environment;
+			}
+
+			var (s1, logsEnabled) = BoolParser(GetSafeEnvironmentVariable(OTEL_DOTNET_AUTO_LOGS_INSTRUMENTATION_ENABLED));
+			var (s2, tracesEnabled) = BoolParser(GetSafeEnvironmentVariable(OTEL_DOTNET_AUTO_TRACES_INSTRUMENTATION_ENABLED));
+			var (s3, metricsEnabled) = BoolParser(GetSafeEnvironmentVariable(OTEL_DOTNET_AUTO_METRICS_INSTRUMENTATION_ENABLED));
+			if (!s1 && !s2 && !s3) return;
+
+			signals = defaultSignals;
+			signalsSource = ConfigSource.Environment;
+
+			if (logsEnabled.HasValue && logsEnabled.Value)
+				signals |= Signals.Logging;
+			else if (logsEnabled.HasValue)
+				signals &= ~Signals.Logging;
+
+			if (tracesEnabled.HasValue && tracesEnabled.Value)
+				signals |= Signals.Tracing;
+			else if (tracesEnabled.HasValue)
+				signals &= ~Signals.Tracing;
+
+			if (metricsEnabled.HasValue && metricsEnabled.Value)
+				signals |= Signals.Metrics;
+			else if (metricsEnabled.HasValue)
+				signals &= ~Signals.Metrics;
+		}
 	}
 
 	/// <summary>
@@ -88,7 +129,8 @@ public class ElasticOpenTelemetryOptions
 		SetFromConfiguration(configuration, LogLevelConfigPropertyName, ref _logLevel, ref _logLevelSource, LogLevelParser);
 		SetFromConfiguration(configuration, LogTargetsConfigPropertyName, ref _logTargets, ref _logTargetsSource, LogTargetsParser);
 		SetFromConfiguration(configuration, SkipOtlpExporterConfigPropertyName, ref _skipOtlpExporter, ref _skipOtlpExporterSource, BoolParser);
-		SetFromConfiguration(configuration, EnabledElasticDefaultsConfigPropertyName, ref _elasticDefaults, ref _elasticDefaultsSource, EnabledDefaultsParser);
+		SetFromConfiguration(configuration, EnabledDefaultsConfigPropertyName, ref _elasticDefaults, ref _elasticDefaultsSource, EnabledDefaultsParser);
+		SetFromConfiguration(configuration, EnabledSignalsConfigPropertyName, ref _signals, ref _signalsSource, EnabledSignalsParser);
 
 		BindFromLoggingSection(configuration);
 
@@ -232,13 +274,35 @@ public class ElasticOpenTelemetryOptions
 	/// <item><term>Logging</term><description> Enables Elastic defaults for logging.</description></item>
 	/// </list>
 	/// </remarks>
-	public ElasticDefaults Defaults
+	public ElasticDefaults EnabledDefaults
 	{
 		get => _elasticDefaults ?? ElasticDefaults.All;
 		init
 		{
 			_elasticDefaults = value;
 			_elasticDefaultsSource = ConfigSource.Property;
+		}
+	}
+
+	/// <summary>
+	/// Control which signals will be automatically enabled by the Elastic Distribution for OpenTelemetry .NET.
+	/// <para>
+	/// This configuration respects the open telemetry environment configuration out of the box:
+	///	<list type="bullet">
+	/// <item><see cref="EnvironmentVariables.OTEL_DOTNET_AUTO_TRACES_INSTRUMENTATION_ENABLED"/></item>
+	/// <item><see cref="EnvironmentVariables.OTEL_DOTNET_AUTO_LOGS_INSTRUMENTATION_ENABLED"/></item>
+	/// <item><see cref="EnvironmentVariables.OTEL_DOTNET_AUTO_METRICS_INSTRUMENTATION_ENABLED"/></item>
+	/// </list>
+	/// </para>
+	/// <para>Setting this propery in code or configuration will take precedence over environment variables</para>
+	/// </summary>
+	public Signals EnabledSignals
+	{
+		get => _signals ?? Signals.All;
+		init
+		{
+			_signals = value;
+			_signalsSource = ConfigSource.Property;
 		}
 	}
 
@@ -313,6 +377,44 @@ public class ElasticOpenTelemetryOptions
 			return b;
 		}
 	}
+	private static (bool, Signals?) EnabledSignalsParser(string? s)
+	{
+		if (string.IsNullOrWhiteSpace(s))
+			return (false, null);
+
+		var enabledDefaults = Signals.None;
+		var found = false;
+
+		foreach (var target in s.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries))
+		{
+			if (IsSet(target, nameof(Signals.Tracing)))
+				enabledDefaults |= Signals.Tracing;
+			else if (IsSet(target, nameof(Signals.Metrics)))
+				enabledDefaults |= Signals.Metrics;
+			else if (IsSet(target, nameof(Signals.Logging)))
+				enabledDefaults |= Signals.Logging;
+			else if (IsSet(target, nameof(Signals.All)))
+			{
+				enabledDefaults = Signals.All;
+				break;
+			}
+			else if (IsSet(target, "none"))
+			{
+				enabledDefaults = Signals.None;
+				break;
+
+			}
+		}
+		return !found ? (false, null) : (true, enabledDefaults);
+
+		bool IsSet(string k, string v)
+		{
+			var b = k.Trim().Equals(v, StringComparison.InvariantCultureIgnoreCase);
+			if (b)
+				found = true;
+			return b;
+		}
+	}
 
 	private static (bool, string) StringParser(string? s) => !string.IsNullOrEmpty(s) ? (true, s) : (false, string.Empty);
 
@@ -370,7 +472,7 @@ public class ElasticOpenTelemetryOptions
 		logger.LogInformation("Configured value for {ConfigKey}: '{ConfigValue}' from [{ConfigSource}]", SkipOtlpExporterConfigPropertyName,
 			_skipOtlpExporter, _skipOtlpExporterSource);
 
-		logger.LogInformation("Configured value for {ConfigKey}: '{ConfigValue}' from [{ConfigSource}]", EnabledElasticDefaultsConfigPropertyName,
+		logger.LogInformation("Configured value for {ConfigKey}: '{ConfigValue}' from [{ConfigSource}]", EnabledDefaultsConfigPropertyName,
 			_elasticDefaults, _elasticDefaultsSource);
 	}
 
@@ -381,6 +483,24 @@ public class ElasticOpenTelemetryOptions
 	/// </summary>
 	[Flags]
 	public enum ElasticDefaults
+	{
+		/// <summary> No Elastic defaults will be included, acting effectively as a vanilla OpenTelemetry </summary>
+		None,
+		/// <summary> Include Elastic Distribution for OpenTelemetry .NET tracing defaults</summary>
+		Tracing = 1 << 0, //1
+		/// <summary> Include Elastic Distribution for OpenTelemetry .NET metrics defaults</summary>
+		Metrics = 1 << 1, //2
+		/// <summary> Include Elastic Distribution for OpenTelemetry .NET logging defaults</summary>
+		Logging = 1 << 2, //4
+		/// <summary> (default) Include all Elastic Distribution for OpenTelemetry .NET logging defaults</summary>
+		All = ~0
+	}
+
+	/// <summary>
+	///
+	/// </summary>
+	[Flags]
+	public enum Signals
 	{
 		/// <summary> No Elastic defaults will be included, acting effectively as a vanilla OpenTelemetry </summary>
 		None,

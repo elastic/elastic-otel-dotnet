@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
+using static Elastic.OpenTelemetry.Configuration.ElasticOpenTelemetryOptions.Signals;
 
 namespace Elastic.OpenTelemetry.Extensions;
 
@@ -44,7 +45,7 @@ public static class TracerProviderBuilderExtensions
 			.AddEntityFrameworkCoreInstrumentation();
 
 		builder.AddElasticProcessors(logger);
-		logger.LogConfiguredSignalProvider("tracing", nameof(TracerProviderBuilder));
+		logger.LogConfiguredSignalProvider(nameof(Tracing), nameof(TracerProviderBuilder));
 		return builder;
 	}
 }
