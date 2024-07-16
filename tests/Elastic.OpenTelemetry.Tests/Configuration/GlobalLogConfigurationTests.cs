@@ -37,7 +37,7 @@ public class GlobalLogConfigurationTests
 	//
 	[Theory]
 	[InlineData(OTEL_LOG_LEVEL, "none")]
-	[InlineData(OTEL_LOG_LEVEL, "Debug")]
+	[InlineData(OTEL_LOG_LEVEL, "info")]
 	//only if explicitly specified to 'none' should we not default to file logging.
 	[InlineData(ELASTIC_OTEL_LOG_TARGETS, "none")]
 	public void CheckDeactivation(string environmentVariable, string value)
