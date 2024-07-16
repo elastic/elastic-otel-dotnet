@@ -17,6 +17,7 @@ using OpenTelemetry;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
+using static Elastic.OpenTelemetry.Configuration.ElasticOpenTelemetryOptions;
 
 namespace Elastic.OpenTelemetry;
 
@@ -98,7 +99,7 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 		// We always add this so we can identify a distro is being used, even if all Elastic defaults are disabled.
 		openTelemetry.ConfigureResource(r => r.UseElasticDefaults());
 
-		if (options.DistroOptions.EnabledDefaults.Equals(ElasticOpenTelemetryOptions.EnabledElasticDefaults.None))
+		if (options.DistroOptions.Defaults.Equals(ElasticDefaults.None))
 		{
 			Logger.LogNoElasticDefaults();
 
@@ -113,16 +114,16 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 		if (!options.DistroOptions.SkipOtlpExporter)
 			openTelemetry.UseOtlpExporter();
 
-		if (options.DistroOptions.EnabledDefaults.HasFlag(ElasticOpenTelemetryOptions.EnabledElasticDefaults.Logging))
+		if (options.DistroOptions.Defaults.HasFlag(ElasticDefaults.Logging))
 		{
 			//TODO Move to WithLogging once it gets stable
 			Services.Configure<OpenTelemetryLoggerOptions>(logging => logging.UseElasticDefaults());
 		}
 
-		if (options.DistroOptions.EnabledDefaults.HasFlag(ElasticOpenTelemetryOptions.EnabledElasticDefaults.Tracing))
+		if (options.DistroOptions.Defaults.HasFlag(ElasticDefaults.Tracing))
 			openTelemetry.WithTracing(tracing => tracing.UseElasticDefaults(Logger));
 
-		if (options.DistroOptions.EnabledDefaults.HasFlag(ElasticOpenTelemetryOptions.EnabledElasticDefaults.Metrics))
+		if (options.DistroOptions.Defaults.HasFlag(ElasticDefaults.Metrics))
 			openTelemetry.WithMetrics(metrics => metrics.UseElasticDefaults(Logger));
 	}
 }

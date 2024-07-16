@@ -22,11 +22,11 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 	[Fact]
 	public void EnabledElasticDefaults_NoneIncludesExpectedValues()
 	{
-		var sut = EnabledElasticDefaults.None;
+		var sut = ElasticDefaults.None;
 
-		sut.HasFlag(EnabledElasticDefaults.Tracing).Should().BeFalse();
-		sut.HasFlag(EnabledElasticDefaults.Logging).Should().BeFalse();
-		sut.HasFlag(EnabledElasticDefaults.Metrics).Should().BeFalse();
+		sut.HasFlag(ElasticDefaults.Tracing).Should().BeFalse();
+		sut.HasFlag(ElasticDefaults.Logging).Should().BeFalse();
+		sut.HasFlag(ElasticDefaults.Metrics).Should().BeFalse();
 	}
 
 	[Fact]
@@ -45,10 +45,10 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 		sut.LogDirectory.Should().Be(sut.LogDirectoryDefault);
 		sut.LogLevel.Should().Be(LogLevel.Warning);
 
-		sut.EnableElasticDefaults.Should().Be(string.Empty);
-		sut.EnabledDefaults.Should().HaveFlag(EnabledElasticDefaults.Tracing);
-		sut.EnabledDefaults.Should().HaveFlag(EnabledElasticDefaults.Metrics);
-		sut.EnabledDefaults.Should().HaveFlag(EnabledElasticDefaults.Logging);
+		sut.Defaults.Should().Be(ElasticDefaults.All);
+		sut.Defaults.Should().HaveFlag(ElasticDefaults.Tracing);
+		sut.Defaults.Should().HaveFlag(ElasticDefaults.Metrics);
+		sut.Defaults.Should().HaveFlag(ElasticDefaults.Logging);
 		sut.SkipOtlpExporter.Should().Be(false);
 
 		var logger = new TestLogger(output);
@@ -77,8 +77,7 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		sut.LogDirectory.Should().Be(fileLogDirectory);
 		sut.LogLevel.Should().Be(ToLogLevel(fileLogLevel));
-		sut.EnableElasticDefaults.Should().Be(enabledElasticDefaults);
-		sut.EnabledDefaults.Should().Be(EnabledElasticDefaults.None);
+		sut.Defaults.Should().Be(ElasticDefaults.None);
 		sut.SkipOtlpExporter.Should().Be(true);
 
 		var logger = new TestLogger(output);
@@ -125,8 +124,7 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		sut.LogDirectory.Should().Be(@"C:\Temp");
 		sut.LogLevel.Should().Be(ToLogLevel(fileLogLevel));
-		sut.EnableElasticDefaults.Should().Be(enabledElasticDefaults);
-		sut.EnabledDefaults.Should().Be(EnabledElasticDefaults.None);
+		sut.Defaults.Should().Be(ElasticDefaults.None);
 		sut.SkipOtlpExporter.Should().Be(true);
 		sut.LoggingSectionLogLevel.Should().Be(loggingSectionLogLevel);
 
@@ -171,8 +169,7 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		sut.LogDirectory.Should().Be(@"C:\Temp");
 		sut.LogLevel.Should().Be(ToLogLevel(loggingSectionLogLevel));
-		sut.EnableElasticDefaults.Should().Be(enabledElasticDefaults);
-		sut.EnabledDefaults.Should().Be(EnabledElasticDefaults.None);
+		sut.Defaults.Should().Be(ElasticDefaults.None);
 		sut.SkipOtlpExporter.Should().Be(true);
 		sut.LoggingSectionLogLevel.Should().Be(loggingSectionLogLevel);
 
@@ -217,8 +214,7 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		sut.LogDirectory.Should().Be(@"C:\Temp");
 		sut.LogLevel.Should().Be(ToLogLevel(loggingSectionDefaultLogLevel));
-		sut.EnableElasticDefaults.Should().Be(enabledElasticDefaults);
-		sut.EnabledDefaults.Should().Be(EnabledElasticDefaults.None);
+		sut.Defaults.Should().Be(ElasticDefaults.None);
 		sut.SkipOtlpExporter.Should().Be(true);
 		sut.LoggingSectionLogLevel.Should().Be(loggingSectionDefaultLogLevel);
 
@@ -265,8 +261,7 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		sut.LogDirectory.Should().Be(fileLogDirectory);
 		sut.LogLevel.Should().Be(ToLogLevel(fileLogLevel));
-		sut.EnableElasticDefaults.Should().Be(enabledElasticDefaults);
-		sut.EnabledDefaults.Should().Be(EnabledElasticDefaults.None);
+		sut.Defaults.Should().Be(ElasticDefaults.None);
 		sut.SkipOtlpExporter.Should().Be(true);
 	}
 
@@ -275,7 +270,6 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 	{
 		const string fileLogDirectory = "C:\\Property";
 		const string fileLogLevel = "Critical";
-		const string enabledElasticDefaults = "None";
 
 		var sut = new ElasticOpenTelemetryOptions(new Hashtable
 		{
@@ -288,13 +282,12 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 			LogDirectory = fileLogDirectory,
 			LogLevel = ToLogLevel(fileLogLevel) ?? LogLevel.None,
 			SkipOtlpExporter = false,
-			EnableElasticDefaults = enabledElasticDefaults
+			Defaults = ElasticDefaults.None
 		};
 
 		sut.LogDirectory.Should().Be(fileLogDirectory);
 		sut.LogLevel.Should().Be(ToLogLevel(fileLogLevel));
-		sut.EnableElasticDefaults.Should().Be(enabledElasticDefaults);
-		sut.EnabledDefaults.Should().Be(EnabledElasticDefaults.None);
+		sut.Defaults.Should().Be(ElasticDefaults.None);
 		sut.SkipOtlpExporter.Should().Be(false);
 
 		var logger = new TestLogger(output);
@@ -308,82 +301,88 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 	[Theory]
 	[ClassData(typeof(DefaultsData))]
-	internal void ElasticDefaults_ConvertsAsExpected(string optionValue, Action<EnabledElasticDefaults> asserts)
+	internal void ElasticDefaults_ConvertsAsExpected(string optionValue, Action<ElasticDefaults> asserts)
 	{
-		var sut = new ElasticOpenTelemetryOptions
-		{
-			EnableElasticDefaults = optionValue
-		};
 
-		asserts(sut.EnabledDefaults);
+		var env = new Hashtable {{ ELASTIC_OTEL_ENABLE_ELASTIC_DEFAULTS, optionValue} };
+		var sut = new ElasticOpenTelemetryOptions(env);
+
+		asserts(sut.Defaults);
 	}
 
-	internal class DefaultsData : TheoryData<string, Action<EnabledElasticDefaults>>
+	internal class DefaultsData : TheoryData<string, Action<ElasticDefaults>>
 	{
 		public DefaultsData()
 		{
 			Add("All", a =>
 			{
-				a.HasFlag(EnabledElasticDefaults.Tracing).Should().BeTrue();
-				a.HasFlag(EnabledElasticDefaults.Metrics).Should().BeTrue();
-				a.HasFlag(EnabledElasticDefaults.Logging).Should().BeTrue();
-				a.Equals(EnabledElasticDefaults.None).Should().BeFalse();
+				a.HasFlag(ElasticDefaults.Tracing).Should().BeTrue();
+				a.HasFlag(ElasticDefaults.Metrics).Should().BeTrue();
+				a.HasFlag(ElasticDefaults.Logging).Should().BeTrue();
+				a.Equals(ElasticDefaults.None).Should().BeFalse();
 			});
 
 			Add("all", a =>
 			{
-				a.HasFlag(EnabledElasticDefaults.Tracing).Should().BeTrue();
-				a.HasFlag(EnabledElasticDefaults.Metrics).Should().BeTrue();
-				a.HasFlag(EnabledElasticDefaults.Logging).Should().BeTrue();
-				a.Equals(EnabledElasticDefaults.None).Should().BeFalse();
+				a.HasFlag(ElasticDefaults.Tracing).Should().BeTrue();
+				a.HasFlag(ElasticDefaults.Metrics).Should().BeTrue();
+				a.HasFlag(ElasticDefaults.Logging).Should().BeTrue();
+				a.Equals(ElasticDefaults.None).Should().BeFalse();
 			});
 
 			Add("Tracing", a =>
 			{
-				a.HasFlag(EnabledElasticDefaults.Tracing).Should().BeTrue();
-				a.HasFlag(EnabledElasticDefaults.Metrics).Should().BeFalse();
-				a.HasFlag(EnabledElasticDefaults.Logging).Should().BeFalse();
-				a.Equals(EnabledElasticDefaults.None).Should().BeFalse();
+				a.HasFlag(ElasticDefaults.Tracing).Should().BeTrue();
+				a.HasFlag(ElasticDefaults.Metrics).Should().BeFalse();
+				a.HasFlag(ElasticDefaults.Logging).Should().BeFalse();
+				a.Equals(ElasticDefaults.None).Should().BeFalse();
 			});
 
 			Add("Metrics", a =>
 			{
-				a.HasFlag(EnabledElasticDefaults.Tracing).Should().BeFalse();
-				a.HasFlag(EnabledElasticDefaults.Metrics).Should().BeTrue();
-				a.HasFlag(EnabledElasticDefaults.Logging).Should().BeFalse();
-				a.Equals(EnabledElasticDefaults.None).Should().BeFalse();
+				a.HasFlag(ElasticDefaults.Tracing).Should().BeFalse();
+				a.HasFlag(ElasticDefaults.Metrics).Should().BeTrue();
+				a.HasFlag(ElasticDefaults.Logging).Should().BeFalse();
+				a.Equals(ElasticDefaults.None).Should().BeFalse();
 			});
 
 			Add("Logging", a =>
 			{
-				a.HasFlag(EnabledElasticDefaults.Tracing).Should().BeFalse();
-				a.HasFlag(EnabledElasticDefaults.Metrics).Should().BeFalse();
-				a.HasFlag(EnabledElasticDefaults.Logging).Should().BeTrue();
-				a.Equals(EnabledElasticDefaults.None).Should().BeFalse();
+				a.HasFlag(ElasticDefaults.Tracing).Should().BeFalse();
+				a.HasFlag(ElasticDefaults.Metrics).Should().BeFalse();
+				a.HasFlag(ElasticDefaults.Logging).Should().BeTrue();
+				a.Equals(ElasticDefaults.None).Should().BeFalse();
 			});
 
 			Add("Tracing,Logging", a =>
 			{
-				a.HasFlag(EnabledElasticDefaults.Tracing).Should().BeTrue();
-				a.HasFlag(EnabledElasticDefaults.Metrics).Should().BeFalse();
-				a.HasFlag(EnabledElasticDefaults.Logging).Should().BeTrue();
-				a.Equals(EnabledElasticDefaults.None).Should().BeFalse();
+				a.HasFlag(ElasticDefaults.Tracing).Should().BeTrue();
+				a.HasFlag(ElasticDefaults.Metrics).Should().BeFalse();
+				a.HasFlag(ElasticDefaults.Logging).Should().BeTrue();
+				a.Equals(ElasticDefaults.None).Should().BeFalse();
+			});
+			Add("Tracing;Logging", a =>
+			{
+				a.HasFlag(ElasticDefaults.Tracing).Should().BeTrue();
+				a.HasFlag(ElasticDefaults.Metrics).Should().BeFalse();
+				a.HasFlag(ElasticDefaults.Logging).Should().BeTrue();
+				a.Equals(ElasticDefaults.None).Should().BeFalse();
 			});
 
 			Add("tracing,logging,metrics", a =>
 			{
-				a.HasFlag(EnabledElasticDefaults.Tracing).Should().BeTrue();
-				a.HasFlag(EnabledElasticDefaults.Metrics).Should().BeTrue();
-				a.HasFlag(EnabledElasticDefaults.Logging).Should().BeTrue();
-				a.Equals(EnabledElasticDefaults.None).Should().BeFalse();
+				a.HasFlag(ElasticDefaults.Tracing).Should().BeTrue();
+				a.HasFlag(ElasticDefaults.Metrics).Should().BeTrue();
+				a.HasFlag(ElasticDefaults.Logging).Should().BeTrue();
+				a.Equals(ElasticDefaults.None).Should().BeFalse();
 			});
 
 			Add("None", a =>
 			{
-				a.HasFlag(EnabledElasticDefaults.Tracing).Should().BeFalse();
-				a.HasFlag(EnabledElasticDefaults.Metrics).Should().BeFalse();
-				a.HasFlag(EnabledElasticDefaults.Logging).Should().BeFalse();
-				a.Equals(EnabledElasticDefaults.None).Should().BeTrue();
+				a.HasFlag(ElasticDefaults.Tracing).Should().BeFalse();
+				a.HasFlag(ElasticDefaults.Metrics).Should().BeFalse();
+				a.HasFlag(ElasticDefaults.Logging).Should().BeFalse();
+				a.Equals(ElasticDefaults.None).Should().BeTrue();
 			});
 		}
 	};
@@ -397,7 +396,7 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 			DistroOptions = new ElasticOpenTelemetryOptions()
 			{
 				SkipOtlpExporter = true,
-				EnableElasticDefaults = "None"
+				Defaults = ElasticDefaults.None
 			}
 		};
 
