@@ -40,7 +40,7 @@ public class ElasticOpenTelemetryOptions
 	private readonly ConfigCell<bool?> _skipOtlpExporter = new(nameof(SkipOtlpExporter), false);
 	private readonly ConfigCell<ElasticDefaults?> _enabledDefaults = new(nameof(ElasticDefaults), ElasticDefaults.All);
 	private readonly ConfigCell<bool?> _runningInContainer = new(nameof(_runningInContainer), false);
-	private readonly ConfigCell<Signals?> _signals = new(nameof(EnabledSignals), Signals.All);
+	private readonly ConfigCell<Signals?> _signals = new(nameof(Signals), Signals.All);
 
 	private readonly ConfigCell<TraceInstrumentations> _tracing = new(nameof(Tracing), TraceInstrumentations.All);
 	private readonly ConfigCell<MetricInstrumentations> _metrics = new(nameof(Metrics), MetricInstrumentations.All);
@@ -223,7 +223,7 @@ public class ElasticOpenTelemetryOptions
 	/// </para>
 	/// <para>Setting this propery in code or configuration will take precedence over environment variables</para>
 	/// </summary>
-	public Signals EnabledSignals
+	public Signals Signals
 	{
 		get => _signals.Value ?? Signals.All;
 		init => _signals.Assign(value, ConfigSource.Property);

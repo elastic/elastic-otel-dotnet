@@ -26,7 +26,7 @@ public class EnabledSignalsConfigurationTest(ITestOutputHelper output)
 					 {
 					 	"Elastic": {
 					 		"OpenTelemetry": {
-					 			"EnabledSignals": "{{optionValue}}",
+					 			"Signals": "{{optionValue}}",
 					 		}
 					 	}
 					 }
@@ -36,7 +36,7 @@ public class EnabledSignalsConfigurationTest(ITestOutputHelper output)
 			.AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(json)))
 			.Build();
 		var sut = new ElasticOpenTelemetryOptions(config, new Hashtable());
-		asserts(sut.EnabledSignals);
+		asserts(sut.Signals);
 	}
 
 	[Fact]
@@ -44,10 +44,10 @@ public class EnabledSignalsConfigurationTest(ITestOutputHelper output)
 	{
 		var env = new Hashtable { { OTEL_DOTNET_AUTO_LOGS_INSTRUMENTATION_ENABLED, "1" } };
 		var options = new ElasticOpenTelemetryOptions(env);
-		options.EnabledSignals.Should().HaveFlag(Logs);
-		options.EnabledSignals.Should().HaveFlag(Metrics);
-		options.EnabledSignals.Should().HaveFlag(Traces);
-		options.EnabledSignals.Should().HaveFlag(All);
+		options.Signals.Should().HaveFlag(Logs);
+		options.Signals.Should().HaveFlag(Metrics);
+		options.Signals.Should().HaveFlag(Traces);
+		options.Signals.Should().HaveFlag(All);
 	}
 
 	[Fact]
@@ -55,10 +55,10 @@ public class EnabledSignalsConfigurationTest(ITestOutputHelper output)
 	{
 		var env = new Hashtable { { OTEL_DOTNET_AUTO_LOGS_INSTRUMENTATION_ENABLED, "0" } };
 		var options = new ElasticOpenTelemetryOptions(env);
-		options.EnabledSignals.Should().NotHaveFlag(Logs);
-		options.EnabledSignals.Should().HaveFlag(Metrics);
-		options.EnabledSignals.Should().HaveFlag(Traces);
-		options.EnabledSignals.Should().NotHaveFlag(All);
+		options.Signals.Should().NotHaveFlag(Logs);
+		options.Signals.Should().HaveFlag(Metrics);
+		options.Signals.Should().HaveFlag(Traces);
+		options.Signals.Should().NotHaveFlag(All);
 	}
 
 	[Fact]
@@ -68,7 +68,7 @@ public class EnabledSignalsConfigurationTest(ITestOutputHelper output)
 					 {
 					 	"Elastic": {
 					 		"OpenTelemetry": {
-					 			"EnabledSignals": "All",
+					 			"Signals": "All",
 					 			"Tracing" : "AspNet;ElasticTransport"
 					 		}
 					 	}
@@ -89,7 +89,7 @@ public class EnabledSignalsConfigurationTest(ITestOutputHelper output)
 					 {
 					 	"Elastic": {
 					 		"OpenTelemetry": {
-					 			"EnabledSignals": "All",
+					 			"Signals": "All",
 					 			"Tracing" : "-AspNet;-ElasticTransport"
 					 		}
 					 	}
@@ -120,19 +120,19 @@ public class EnabledSignalsConfigurationTest(ITestOutputHelper output)
 		var env = new Hashtable { { OTEL_DOTNET_AUTO_INSTRUMENTATION_ENABLED, instrumentation }, { OTEL_DOTNET_AUTO_METRICS_INSTRUMENTATION_ENABLED, metrics } };
 		var options = new ElasticOpenTelemetryOptions(env);
 		if (metricsEnabled)
-			options.EnabledSignals.Should().HaveFlag(Metrics);
+			options.Signals.Should().HaveFlag(Metrics);
 		else
-			options.EnabledSignals.Should().NotHaveFlag(Metrics);
+			options.Signals.Should().NotHaveFlag(Metrics);
 
 		if (traceEnabled)
-			options.EnabledSignals.Should().HaveFlag(Traces);
+			options.Signals.Should().HaveFlag(Traces);
 		else
-			options.EnabledSignals.Should().NotHaveFlag(Traces);
+			options.Signals.Should().NotHaveFlag(Traces);
 
 		if (instrumentation == "0" && metrics == "0")
-			options.EnabledSignals.Should().Be(None);
+			options.Signals.Should().Be(None);
 		else
-			options.EnabledSignals.Should().NotBe(None);
+			options.Signals.Should().NotBe(None);
 	}
 
 	[Theory]
@@ -162,9 +162,9 @@ public class EnabledSignalsConfigurationTest(ITestOutputHelper output)
 			options.Metrics.Should().NotContain(MetricInstrumentation.AspNet);
 
 		if (enabledMetrics)
-			options.EnabledSignals.Should().HaveFlag(Metrics);
+			options.Signals.Should().HaveFlag(Metrics);
 		else
-			options.EnabledSignals.Should().NotHaveFlag(Metrics);
+			options.Signals.Should().NotHaveFlag(Metrics);
 	}
 
 

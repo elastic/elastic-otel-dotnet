@@ -82,7 +82,7 @@ internal static class SharedParsers
 		}
 	}
 
-	internal static Signals? EnabledSignalsParser(string? s)
+	internal static Signals? SignalsParser(string? s)
 	{
 		if (string.IsNullOrWhiteSpace(s))
 			return null;

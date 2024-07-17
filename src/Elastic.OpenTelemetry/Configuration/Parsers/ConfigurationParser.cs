@@ -91,7 +91,7 @@ internal class ConfigurationParser
 		SetFromConfiguration(_configuration, skipOtlpExporter, BoolParser);
 
 	public void ParseSignals(ConfigCell<Signals?> signals) =>
-		SetFromConfiguration(_configuration, signals, EnabledSignalsParser);
+		SetFromConfiguration(_configuration, signals, SignalsParser);
 
 	public void ParseElasticDefaults(ConfigCell<ElasticDefaults?> defaults) =>
 		SetFromConfiguration(_configuration, defaults, ElasticDefaultsParser);
