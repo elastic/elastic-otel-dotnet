@@ -10,7 +10,7 @@ namespace Elastic.OpenTelemetry.Configuration.Instrumentations;
 public class TraceInstrumentations : HashSet<TraceInstrumentation>
 {
 	/// <summary> All available <see cref="TraceInstrumentation"/> </summary>
-	public static readonly TraceInstrumentations All = new([..TraceInstrumentationExtensions.GetValues()]);
+	public static readonly TraceInstrumentations All = new([.. TraceInstrumentationExtensions.GetValues()]);
 
 	/// <summary> Explicitly enable specific <see cref="TraceInstrumentation"/> </summary>
 	public TraceInstrumentations(IEnumerable<TraceInstrumentation> instrumentations) : base(instrumentations) { }
@@ -18,8 +18,10 @@ public class TraceInstrumentations : HashSet<TraceInstrumentation>
 	/// <inheritdoc cref="object.ToString"/>
 	public override string ToString()
 	{
-		if (Count == 0) return "None";
-		if (Count == All.Count) return "All";
+		if (Count == 0)
+			return "None";
+		if (Count == All.Count)
+			return "All";
 		if (All.Count - Count < 5)
 			return $"All Except: {string.Join(", ", All.Except(this).Select(i => i.ToStringFast()))}";
 		return string.Join(", ", this.Select(i => i.ToStringFast()));

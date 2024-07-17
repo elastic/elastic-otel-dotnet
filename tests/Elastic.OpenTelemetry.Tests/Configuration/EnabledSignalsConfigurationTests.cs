@@ -10,8 +10,8 @@ using Elastic.OpenTelemetry.Extensions;
 using Microsoft.Extensions.Configuration;
 using OpenTelemetry;
 using Xunit.Abstractions;
-using static Elastic.OpenTelemetry.Configuration.Signals;
 using static Elastic.OpenTelemetry.Configuration.EnvironmentVariables;
+using static Elastic.OpenTelemetry.Configuration.Signals;
 
 namespace Elastic.OpenTelemetry.Tests.Configuration;
 
@@ -111,13 +111,13 @@ public class EnabledSignalsConfigurationTest(ITestOutputHelper output)
 
 
 	[Theory]
-	[InlineData("1", "1", true, true )]
+	[InlineData("1", "1", true, true)]
 	[InlineData("0", "1", true, false)]
 	[InlineData("0", "0", false, false)]
 	[InlineData("1", "0", false, true)]
 	internal void RespectsOveralSignalsEnvironmentVar(string instrumentation, string metrics, bool metricsEnabled, bool traceEnabled)
 	{
-		var env = new Hashtable { {OTEL_DOTNET_AUTO_INSTRUMENTATION_ENABLED, instrumentation}, { OTEL_DOTNET_AUTO_METRICS_INSTRUMENTATION_ENABLED, metrics } };
+		var env = new Hashtable { { OTEL_DOTNET_AUTO_INSTRUMENTATION_ENABLED, instrumentation }, { OTEL_DOTNET_AUTO_METRICS_INSTRUMENTATION_ENABLED, metrics } };
 		var options = new ElasticOpenTelemetryOptions(env);
 		if (metricsEnabled)
 			options.EnabledSignals.Should().HaveFlag(Metrics);

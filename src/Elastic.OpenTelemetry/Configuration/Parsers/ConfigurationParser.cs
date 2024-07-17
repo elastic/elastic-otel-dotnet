@@ -7,8 +7,8 @@ using Elastic.OpenTelemetry.Configuration.Instrumentations;
 using Elastic.OpenTelemetry.Diagnostics.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using static Elastic.OpenTelemetry.Configuration.Parsers.SharedParsers;
 using static System.StringSplitOptions;
+using static Elastic.OpenTelemetry.Configuration.Parsers.SharedParsers;
 
 namespace Elastic.OpenTelemetry.Configuration.Parsers;
 
@@ -40,9 +40,11 @@ internal class ConfigurationParser
 			return;
 
 		var lookup = configuration.GetValue<string>($"{ConfigurationSection}:{cell.Key}");
-		if (lookup is null) return;
+		if (lookup is null)
+			return;
 		var parsed = parser(lookup);
-		if (parsed is null) return;
+		if (parsed is null)
+			return;
 
 		cell.Assign(parsed, ConfigSource.IConfiguration);
 	}
@@ -131,8 +133,10 @@ internal class ConfigurationParser
 			if (!instrumentation.HasValue)
 				continue;
 
-			if (remove) toRemove.Add(instrumentation.Value);
-			else toAdd.Add(instrumentation.Value);
+			if (remove)
+				toRemove.Add(instrumentation.Value);
+			else
+				toAdd.Add(instrumentation.Value);
 		}
 		if (toAdd.Count > 0)
 			return toAdd;

@@ -123,10 +123,12 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 			{
 				if (distro.EnabledDefaults.HasFlag(ElasticDefaults.Logs))
 					logging.UseElasticDefaults();
-				else Logger.LogDefaultsDisabled(nameof(ElasticDefaults.Logs));
+				else
+					Logger.LogDefaultsDisabled(nameof(ElasticDefaults.Logs));
 			});
 		}
-		else Logger.LogSignalDisabled(nameof(Signals.Logs));
+		else
+			Logger.LogSignalDisabled(nameof(Signals.Logs));
 
 		if (distro.EnabledSignals.HasFlag(Signals.Traces))
 		{
@@ -134,10 +136,12 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 			{
 				if (distro.EnabledDefaults.HasFlag(ElasticDefaults.Traces))
 					tracing.UseElasticDefaults(Logger);
-				else Logger.LogDefaultsDisabled(nameof(ElasticDefaults.Traces));
+				else
+					Logger.LogDefaultsDisabled(nameof(ElasticDefaults.Traces));
 			});
 		}
-		else Logger.LogSignalDisabled(nameof(Signals.Metrics));
+		else
+			Logger.LogSignalDisabled(nameof(Signals.Metrics));
 
 		if (distro.EnabledSignals.HasFlag(Signals.Metrics))
 		{
@@ -145,10 +149,12 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 			{
 				if (distro.EnabledDefaults.HasFlag(ElasticDefaults.Metrics))
 					metrics.UseElasticDefaults(Logger);
-				else Logger.LogDefaultsDisabled(nameof(ElasticDefaults.Metrics));
+				else
+					Logger.LogDefaultsDisabled(nameof(ElasticDefaults.Metrics));
 			});
 		}
-		else Logger.LogSignalDisabled(nameof(Signals.Metrics));
+		else
+			Logger.LogSignalDisabled(nameof(Signals.Metrics));
 	}
 }
 

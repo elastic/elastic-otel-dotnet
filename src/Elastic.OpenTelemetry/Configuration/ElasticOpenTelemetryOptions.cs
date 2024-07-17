@@ -32,7 +32,7 @@ namespace Elastic.OpenTelemetry.Configuration;
 /// </remarks>
 public class ElasticOpenTelemetryOptions
 {
-	private readonly ConfigCell<string?> _logDirectory = new (nameof(LogDirectory), null);
+	private readonly ConfigCell<string?> _logDirectory = new(nameof(LogDirectory), null);
 	private readonly ConfigCell<LogTargets?> _logTargets = new(nameof(LogTargets), null);
 
 	private readonly EventLevel _eventLevel = EventLevel.Informational;

@@ -22,7 +22,7 @@ internal enum ConfigSource
 {
 	Default, // Default value assigned within this class
 	Environment, // Loaded from an environment variable
-	// ReSharper disable once InconsistentNaming
+				 // ReSharper disable once InconsistentNaming
 	IConfiguration, // Bound from an IConfiguration instance
 	Property // Set via property initializer
 }

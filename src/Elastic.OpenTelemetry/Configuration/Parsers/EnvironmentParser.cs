@@ -61,7 +61,7 @@ internal class EnvironmentParser(IDictionary environmentVariables)
 		var traces = BoolParser(GetSafeEnvironmentVariable(OTEL_DOTNET_AUTO_TRACES_INSTRUMENTATION_ENABLED));
 		var metrics = BoolParser(GetSafeEnvironmentVariable(OTEL_DOTNET_AUTO_METRICS_INSTRUMENTATION_ENABLED));
 		// was explicitly configured using environment variables
-		bool Configured(bool? source) => source.HasValue ? source.Value : allEnabled.HasValue ? allEnabled.Value : true;
+		bool Configured(bool? source) => source ?? allEnabled ?? true;
 
 		var traceEnabled = Configured(traces);
 		var (optedTraces, traceInstrumentations) = EnabledTraceInstrumentations(traceEnabled);
