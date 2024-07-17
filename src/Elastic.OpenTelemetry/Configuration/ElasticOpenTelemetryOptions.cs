@@ -62,7 +62,7 @@ public class ElasticOpenTelemetryOptions
 		SetFromEnvironment(OTEL_LOG_LEVEL, _logLevel, LogLevelParser);
 		SetFromEnvironment(ELASTIC_OTEL_LOG_TARGETS, _logTargets, LogTargetsParser);
 		SetFromEnvironment(ELASTIC_OTEL_SKIP_OTLP_EXPORTER, _skipOtlpExporter, BoolParser);
-		SetFromEnvironment(ELASTIC_OTEL_ENABLE_ELASTIC_DEFAULTS, _enabledDefaults, ElasticDefaultsParser);
+		SetFromEnvironment(ELASTIC_OTEL_DEFAULTS_ENABLE, _enabledDefaults, ElasticDefaultsParser);
 
 		var parser = new EnvironmentParser(_environmentVariables);
 		parser.ParseInstrumentationVariables(_signals, _tracing, _metrics, _logging);
