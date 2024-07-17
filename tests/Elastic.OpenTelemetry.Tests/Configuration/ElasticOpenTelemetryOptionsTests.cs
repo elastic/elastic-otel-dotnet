@@ -36,7 +36,7 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 		{
 			{ OTEL_DOTNET_AUTO_LOG_DIRECTORY, null },
 			{ OTEL_LOG_LEVEL, null },
-			{ ELASTIC_OTEL_DEFAULTS_ENABLE, null },
+			{ ELASTIC_OTEL_DEFAULTS_ENABLED, null },
 			{ ELASTIC_OTEL_SKIP_OTLP_EXPORTER, null },
 		});
 
@@ -71,7 +71,7 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 		{
 			{ OTEL_DOTNET_AUTO_LOG_DIRECTORY, fileLogDirectory },
 			{ OTEL_LOG_LEVEL, fileLogLevel },
-			{ ELASTIC_OTEL_DEFAULTS_ENABLE, enabledElasticDefaults },
+			{ ELASTIC_OTEL_DEFAULTS_ENABLED, enabledElasticDefaults },
 			{ ELASTIC_OTEL_SKIP_OTLP_EXPORTER, "true" },
 		});
 
@@ -263,7 +263,7 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 		{
 			{ OTEL_DOTNET_AUTO_LOG_DIRECTORY, fileLogDirectory },
 			{ OTEL_LOG_LEVEL, fileLogLevel },
-			{ ELASTIC_OTEL_DEFAULTS_ENABLE, enabledElasticDefaults },
+			{ ELASTIC_OTEL_DEFAULTS_ENABLED, enabledElasticDefaults },
 			{ ELASTIC_OTEL_SKIP_OTLP_EXPORTER, "true" },
 		});
 
@@ -283,7 +283,7 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 		{
 			{ OTEL_DOTNET_AUTO_LOG_DIRECTORY, "C:\\Temp" },
 			{ OTEL_LOG_LEVEL, "Information" },
-			{ ELASTIC_OTEL_DEFAULTS_ENABLE, "All" },
+			{ ELASTIC_OTEL_DEFAULTS_ENABLED, "All" },
 			{ ELASTIC_OTEL_SKIP_OTLP_EXPORTER, "true" },
 		})
 		{

@@ -39,7 +39,7 @@ public class ElasticDefaultsConfigurationTest
 	internal void ParseFromEnvironment(string optionValue, Action<ElasticDefaults> asserts)
 	{
 
-		var env = new Hashtable { { EnvironmentVariables.ELASTIC_OTEL_DEFAULTS_ENABLE, optionValue } };
+		var env = new Hashtable { { EnvironmentVariables.ELASTIC_OTEL_DEFAULTS_ENABLED, optionValue } };
 		var sut = new ElasticOpenTelemetryOptions(env);
 
 		asserts(sut.ElasticDefaults);
