@@ -6,7 +6,7 @@ using System.Collections;
 using System.Text;
 using Elastic.OpenTelemetry.Configuration;
 using Microsoft.Extensions.Configuration;
-using static Elastic.OpenTelemetry.Configuration.ElasticOpenTelemetryOptions.Signals;
+using static Elastic.OpenTelemetry.Configuration.Signals;
 using static Elastic.OpenTelemetry.Configuration.EnvironmentVariables;
 
 namespace Elastic.OpenTelemetry.Tests.Configuration;
@@ -16,7 +16,7 @@ public class EnabledSignalsConfigurationTest
 
 	[Theory]
 	[ClassData(typeof(SignalsAsStringInConfigurationData))]
-	public void ParsesFromConfiguration(string optionValue, Action<ElasticOpenTelemetryOptions.Signals> asserts)
+	public void ParsesFromConfiguration(string optionValue, Action<Signals> asserts)
 	{
 		var json = $$"""
 					 {
@@ -40,9 +40,9 @@ public class EnabledSignalsConfigurationTest
 	{
 		var env = new Hashtable { { OTEL_DOTNET_AUTO_LOGS_INSTRUMENTATION_ENABLED, "1" } };
 		var options = new ElasticOpenTelemetryOptions(env);
-		options.EnabledSignals.Should().HaveFlag(Logging);
+		options.EnabledSignals.Should().HaveFlag(Logs);
 		options.EnabledSignals.Should().HaveFlag(Metrics);
-		options.EnabledSignals.Should().HaveFlag(Tracing);
+		options.EnabledSignals.Should().HaveFlag(Traces);
 		options.EnabledSignals.Should().HaveFlag(All);
 	}
 
@@ -51,108 +51,136 @@ public class EnabledSignalsConfigurationTest
 	{
 		var env = new Hashtable { { OTEL_DOTNET_AUTO_LOGS_INSTRUMENTATION_ENABLED, "0" } };
 		var options = new ElasticOpenTelemetryOptions(env);
-		options.EnabledSignals.Should().NotHaveFlag(Logging);
+		options.EnabledSignals.Should().NotHaveFlag(Logs);
 		options.EnabledSignals.Should().HaveFlag(Metrics);
-		options.EnabledSignals.Should().HaveFlag(Tracing);
+		options.EnabledSignals.Should().HaveFlag(Traces);
 		options.EnabledSignals.Should().NotHaveFlag(All);
 	}
 	[Theory]
-	[InlineData("1", "1", true, true)]
-	[InlineData("0", "1", true, false)]
-	[InlineData("0", "0", false, false)]
-	[InlineData("1", "0", false, true)]
-	internal void RespectsOveralSignalsEnvironmentVar(string instrumentation, string logsInstrumentation, bool logEnabled, bool traceEnabled)
+	[InlineData("1", "1", true, true, OTEL_DOTNET_AUTO_METRICS_INSTRUMENTATION_ENABLED)]
+	[InlineData("0", "1", true, false, OTEL_DOTNET_AUTO_METRICS_INSTRUMENTATION_ENABLED)]
+	[InlineData("0", "0", false, false, OTEL_DOTNET_AUTO_METRICS_INSTRUMENTATION_ENABLED)]
+	[InlineData("1", "0", false, true, OTEL_DOTNET_AUTO_METRICS_INSTRUMENTATION_ENABLED)]
+	[InlineData("1", "1", true, true, "OTEL_DOTNET_AUTO_METRICS_ASPNET_INSTRUMENTATION_ENABLED")]
+	[InlineData("0", "1", true, false, "OTEL_DOTNET_AUTO_METRICS_ASPNET_INSTRUMENTATION_ENABLED")]
+	[InlineData("0", "0", false, false, "OTEL_DOTNET_AUTO_METRICS_ASPNET_INSTRUMENTATION_ENABLED")]
+	[InlineData("1", "0", false, true, "OTEL_DOTNET_AUTO_METRICS_ASPNET_INSTRUMENTATION_ENABLED")]
+	internal void RespectsOveralSignalsEnvironmentVar(string instrumentation, string metrics, bool metricsEnabled, bool traceEnabled, string metricsVar)
 	{
-		var env = new Hashtable { {OTEL_DOTNET_AUTO_INSTRUMENTATION_ENABLED, instrumentation}, { OTEL_DOTNET_AUTO_LOGS_INSTRUMENTATION_ENABLED, logsInstrumentation } };
+		var env = new Hashtable { {OTEL_DOTNET_AUTO_INSTRUMENTATION_ENABLED, instrumentation}, { metricsVar, metrics } };
 		var options = new ElasticOpenTelemetryOptions(env);
-		if (logEnabled)
-			options.EnabledSignals.Should().HaveFlag(Logging);
+		if (metricsEnabled)
+			options.EnabledSignals.Should().HaveFlag(Metrics);
 		else
-			options.EnabledSignals.Should().NotHaveFlag(Logging);
+			options.EnabledSignals.Should().NotHaveFlag(Metrics);
 
 		if (traceEnabled)
-			options.EnabledSignals.Should().HaveFlag(Tracing);
+			options.EnabledSignals.Should().HaveFlag(Traces);
 		else
-			options.EnabledSignals.Should().NotHaveFlag(Tracing);
+			options.EnabledSignals.Should().NotHaveFlag(Traces);
 
-		if (instrumentation == "0" && logsInstrumentation == "0")
+		if (instrumentation == "0" && metrics == "0")
 			options.EnabledSignals.Should().Be(None);
 		else
 			options.EnabledSignals.Should().NotBe(None);
 	}
 
-	private class SignalsAsStringInConfigurationData : TheoryData<string, Action<ElasticOpenTelemetryOptions.Signals>>
+	[Theory]
+	[InlineData("1", "0", false, true, "OTEL_DOTNET_AUTO_METRICS_ASPNET_INSTRUMENTATION_ENABLED")]
+	internal void OptInOverridesDefaults(string instrumentation, string metrics, bool metricsEnabled, bool traceEnabled, string metricsVar)
+	{
+		var env = new Hashtable { {OTEL_DOTNET_AUTO_INSTRUMENTATION_ENABLED, instrumentation}, { metricsVar, metrics } };
+		var options = new ElasticOpenTelemetryOptions(env);
+		if (metricsEnabled)
+			options.EnabledSignals.Should().HaveFlag(Metrics);
+		else
+			options.EnabledSignals.Should().NotHaveFlag(Metrics);
+
+		if (traceEnabled)
+			options.EnabledSignals.Should().HaveFlag(Traces);
+		else
+			options.EnabledSignals.Should().NotHaveFlag(Traces);
+
+		if (instrumentation == "0" && metrics == "0")
+			options.EnabledSignals.Should().Be(None);
+		else
+			options.EnabledSignals.Should().NotBe(None);
+	}
+
+
+
+	private class SignalsAsStringInConfigurationData : TheoryData<string, Action<Signals>>
 	{
 		public SignalsAsStringInConfigurationData()
 		{
 			Add("All", a =>
 			{
-				a.HasFlag(Tracing).Should().BeTrue();
+				a.HasFlag(Traces).Should().BeTrue();
 				a.HasFlag(Metrics).Should().BeTrue();
-				a.HasFlag(Logging).Should().BeTrue();
+				a.HasFlag(Logs).Should().BeTrue();
 				a.Equals(None).Should().BeFalse();
 			});
 
 			Add("all", a =>
 			{
-				a.HasFlag(Tracing).Should().BeTrue();
+				a.HasFlag(Traces).Should().BeTrue();
 				a.HasFlag(Metrics).Should().BeTrue();
-				a.HasFlag(Logging).Should().BeTrue();
+				a.HasFlag(Logs).Should().BeTrue();
 				a.Equals(None).Should().BeFalse();
 			});
 
-			Add("Tracing", a =>
+			Add("Traces", a =>
 			{
-				a.HasFlag(Tracing).Should().BeTrue();
+				a.HasFlag(Traces).Should().BeTrue();
 				a.HasFlag(Metrics).Should().BeFalse();
-				a.HasFlag(Logging).Should().BeFalse();
+				a.HasFlag(Logs).Should().BeFalse();
 				a.Equals(None).Should().BeFalse();
 			});
 
 			Add("Metrics", a =>
 			{
-				a.HasFlag(Tracing).Should().BeFalse();
+				a.HasFlag(Traces).Should().BeFalse();
 				a.HasFlag(Metrics).Should().BeTrue();
-				a.HasFlag(Logging).Should().BeFalse();
+				a.HasFlag(Logs).Should().BeFalse();
 				a.Equals(None).Should().BeFalse();
 			});
 
-			Add("Logging", a =>
+			Add("Logs", a =>
 			{
-				a.HasFlag(Tracing).Should().BeFalse();
+				a.HasFlag(Traces).Should().BeFalse();
 				a.HasFlag(Metrics).Should().BeFalse();
-				a.HasFlag(Logging).Should().BeTrue();
+				a.HasFlag(Logs).Should().BeTrue();
 				a.Equals(None).Should().BeFalse();
 			});
 
-			Add("Tracing,Logging", a =>
+			Add("Traces,Logs", a =>
 			{
-				a.HasFlag(Tracing).Should().BeTrue();
+				a.HasFlag(Traces).Should().BeTrue();
 				a.HasFlag(Metrics).Should().BeFalse();
-				a.HasFlag(Logging).Should().BeTrue();
+				a.HasFlag(Logs).Should().BeTrue();
 				a.Equals(None).Should().BeFalse();
 			});
-			Add("Tracing;Logging", a =>
+			Add("Traces;Logs", a =>
 			{
-				a.HasFlag(Tracing).Should().BeTrue();
+				a.HasFlag(Traces).Should().BeTrue();
 				a.HasFlag(Metrics).Should().BeFalse();
-				a.HasFlag(Logging).Should().BeTrue();
+				a.HasFlag(Logs).Should().BeTrue();
 				a.Equals(None).Should().BeFalse();
 			});
 
-			Add("tracing,logging,metrics", a =>
+			Add("traces,logs,metrics", a =>
 			{
-				a.HasFlag(Tracing).Should().BeTrue();
+				a.HasFlag(Traces).Should().BeTrue();
 				a.HasFlag(Metrics).Should().BeTrue();
-				a.HasFlag(Logging).Should().BeTrue();
+				a.HasFlag(Logs).Should().BeTrue();
 				a.Equals(None).Should().BeFalse();
 			});
 
 			Add("None", a =>
 			{
-				a.HasFlag(Tracing).Should().BeFalse();
+				a.HasFlag(Traces).Should().BeFalse();
 				a.HasFlag(Metrics).Should().BeFalse();
-				a.HasFlag(Logging).Should().BeFalse();
+				a.HasFlag(Logs).Should().BeFalse();
 				a.Equals(None).Should().BeTrue();
 			});
 		}

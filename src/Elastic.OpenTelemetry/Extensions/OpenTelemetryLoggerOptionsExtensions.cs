@@ -5,7 +5,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using OpenTelemetry.Logs;
-using static Elastic.OpenTelemetry.Configuration.ElasticOpenTelemetryOptions.Signals;
+using static Elastic.OpenTelemetry.Configuration.Signals;
 
 namespace Elastic.OpenTelemetry.Extensions;
 
@@ -22,6 +22,6 @@ public static class OpenTelemetryLoggerOptionsExtensions
 		logger ??= NullLogger.Instance;
 		options.IncludeFormattedMessage = true;
 		options.IncludeScopes = true;
-		logger.LogConfiguredSignalProvider(nameof(Logging), nameof(OpenTelemetryLoggerOptions));
+		logger.LogConfiguredSignalProvider(nameof(Logs), nameof(OpenTelemetryLoggerOptions));
 	}
 }

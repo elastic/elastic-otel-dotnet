@@ -20,7 +20,7 @@ public class TransactionProcessorTests(ITestOutputHelper output)
 			DistroOptions = new ElasticOpenTelemetryOptions()
 			{
 				SkipOtlpExporter = true,
-				EnabledDefaults = ElasticOpenTelemetryOptions.ElasticDefaults.None
+				EnabledDefaults = ElasticDefaults.None
 			}
 		};
 

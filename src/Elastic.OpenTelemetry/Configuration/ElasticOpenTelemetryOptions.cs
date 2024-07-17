@@ -3,14 +3,15 @@
 // See the LICENSE file in the project root for more information
 
 using System.Collections;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Elastic.OpenTelemetry.Configuration.Parsers;
 using Elastic.OpenTelemetry.Diagnostics.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using static System.Environment;
 using static System.Runtime.InteropServices.RuntimeInformation;
 using static Elastic.OpenTelemetry.Configuration.EnvironmentVariables;
+using static Elastic.OpenTelemetry.Configuration.Parsers.ConfigurationParsers;
 
 namespace Elastic.OpenTelemetry.Configuration;
 
@@ -36,6 +37,7 @@ public class ElasticOpenTelemetryOptions
 	private static readonly string SkipOtlpExporterConfigPropertyName = nameof(SkipOtlpExporter);
 	private static readonly string EnabledDefaultsConfigPropertyName = nameof(EnabledDefaults);
 	private static readonly string EnabledSignalsConfigPropertyName = nameof(EnabledSignals);
+	private static readonly string TraceInstrumentationsConfigPropertyName = nameof(TraceInstrumentations);
 
 	private string? _logDirectory;
 	private ConfigSource _logDirectorySource = ConfigSource.Default;
@@ -58,6 +60,9 @@ public class ElasticOpenTelemetryOptions
 	private readonly Signals? _signals;
 	private readonly ConfigSource _signalsSource = ConfigSource.Default;
 
+	private readonly HashSet<TraceInstrumentation> _traceInstrumentation;
+	private readonly ConfigSource _traceInstrumentationSource = ConfigSource.Default;
+
 	private string? _loggingSectionLogLevel;
 	private readonly string _defaultLogDirectory;
 	private readonly IDictionary _environmentVariables;
@@ -68,6 +73,9 @@ public class ElasticOpenTelemetryOptions
 	/// </summary>
 	public ElasticOpenTelemetryOptions(IDictionary? environmentVariables = null)
 	{
+		//TODO temp
+		_traceInstrumentation = new HashSet<TraceInstrumentation>();
+
 		_defaultLogDirectory = GetDefaultLogDirectory();
 		_environmentVariables = environmentVariables ?? GetEnvironmentVariables();
 		SetFromEnvironment(DOTNET_RUNNING_IN_CONTAINER, ref _runningInContainer, ref _runningInContainerSource, BoolParser);
@@ -78,42 +86,9 @@ public class ElasticOpenTelemetryOptions
 		SetFromEnvironment(ELASTIC_OTEL_SKIP_OTLP_EXPORTER, ref _skipOtlpExporter, ref _skipOtlpExporterSource, BoolParser);
 		SetFromEnvironment(ELASTIC_OTEL_ENABLE_ELASTIC_DEFAULTS, ref _elasticDefaults, ref _elasticDefaultsSource, EnabledDefaultsParser);
 
-		ParseOtelSignalsConfiguration(ref _signals, ref _signalsSource);
+		var instrumentationParser = new InstrumentationParsers(_environmentVariables);
+		instrumentationParser.Assign(ref _signals, ref _signalsSource);
 
-		void ParseOtelSignalsConfiguration(ref Signals? signals, ref ConfigSource signalsSource)
-		{
-			var defaultSignals = Signals.All;
-			var (succes, allEnabled) = BoolParser(GetSafeEnvironmentVariable(OTEL_DOTNET_AUTO_INSTRUMENTATION_ENABLED));
-			if (succes && allEnabled.HasValue)
-			{
-				defaultSignals = allEnabled.Value ? Signals.All : Signals.None;
-				signals = defaultSignals;
-				signalsSource = ConfigSource.Environment;
-			}
-
-			var (s1, logsEnabled) = BoolParser(GetSafeEnvironmentVariable(OTEL_DOTNET_AUTO_LOGS_INSTRUMENTATION_ENABLED));
-			var (s2, tracesEnabled) = BoolParser(GetSafeEnvironmentVariable(OTEL_DOTNET_AUTO_TRACES_INSTRUMENTATION_ENABLED));
-			var (s3, metricsEnabled) = BoolParser(GetSafeEnvironmentVariable(OTEL_DOTNET_AUTO_METRICS_INSTRUMENTATION_ENABLED));
-			if (!s1 && !s2 && !s3) return;
-
-			signals = defaultSignals;
-			signalsSource = ConfigSource.Environment;
-
-			if (logsEnabled.HasValue && logsEnabled.Value)
-				signals |= Signals.Logging;
-			else if (logsEnabled.HasValue)
-				signals &= ~Signals.Logging;
-
-			if (tracesEnabled.HasValue && tracesEnabled.Value)
-				signals |= Signals.Tracing;
-			else if (tracesEnabled.HasValue)
-				signals &= ~Signals.Tracing;
-
-			if (metricsEnabled.HasValue && metricsEnabled.Value)
-				signals |= Signals.Metrics;
-			else if (metricsEnabled.HasValue)
-				signals &= ~Signals.Metrics;
-		}
 	}
 
 	/// <summary>
@@ -125,6 +100,7 @@ public class ElasticOpenTelemetryOptions
 	{
 		if (configuration is null)
 			return;
+
 		SetFromConfiguration(configuration, LogDirectoryConfigPropertyName, ref _logDirectory, ref _logDirectorySource, StringParser);
 		SetFromConfiguration(configuration, LogLevelConfigPropertyName, ref _logLevel, ref _logLevelSource, LogLevelParser);
 		SetFromConfiguration(configuration, LogTargetsConfigPropertyName, ref _logTargets, ref _logTargetsSource, LogTargetsParser);
@@ -179,6 +155,7 @@ public class ElasticOpenTelemetryOptions
 			return Path.Combine(GetFolderPath(SpecialFolder.ApplicationData), "elastic", applicationMoniker);
 		if (IsOSPlatform(OSPlatform.OSX))
 			return Path.Combine(GetFolderPath(SpecialFolder.LocalApplicationData), "elastic", applicationMoniker);
+
 		return $"/var/log/elastic/{applicationMoniker}";
 	}
 
@@ -237,8 +214,8 @@ public class ElasticOpenTelemetryOptions
 	/// <inheritdoc cref="LogTargets"/>
 	public LogTargets LogTargets
 	{
-		get => _logTargets ?? (GlobalLogEnabled ?
-			_runningInContainer.HasValue && _runningInContainer.Value ? LogTargets.StdOut : LogTargets.File
+		get => _logTargets ?? (GlobalLogEnabled
+			? _runningInContainer.HasValue && _runningInContainer.Value ? LogTargets.StdOut : LogTargets.File
 			: LogTargets.None);
 		init
 		{
@@ -306,125 +283,19 @@ public class ElasticOpenTelemetryOptions
 		}
 	}
 
+	/// <summary> Enabled trace instrumentations </summary>
+	public HashSet<TraceInstrumentation> TraceInstrumentations
+	{
+		get => _traceInstrumentation;
+		init
+		{
+			_traceInstrumentation = value;
+			_traceInstrumentationSource = ConfigSource.Property;
+		}
+	}
+
 	internal string? LoggingSectionLogLevel => _loggingSectionLogLevel;
 
-	private static (bool, LogLevel?) LogLevelParser(string? s) =>
-		!string.IsNullOrEmpty(s) ? (true, LogLevelHelpers.ToLogLevel(s)) : (false, null);
-
-	private static (bool, LogTargets?) LogTargetsParser(string? s)
-	{
-		//var tokens = s?.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries });
-		if (string.IsNullOrWhiteSpace(s))
-			return (false, null);
-
-		var logTargets = LogTargets.None;
-		var found = false;
-
-		foreach (var target in s.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries))
-		{
-			if (IsSet(target, "stdout"))
-				logTargets |= LogTargets.StdOut;
-			else if (IsSet(target, "file"))
-				logTargets |= LogTargets.File;
-			else if (IsSet(target, "none"))
-				logTargets |= LogTargets.None;
-		}
-		return !found ? (false, null) : (true, logTargets);
-
-		bool IsSet(string k, string v)
-		{
-			var b = k.Trim().Equals(v, StringComparison.InvariantCultureIgnoreCase);
-			if (b)
-				found = true;
-			return b;
-		}
-	}
-	private static (bool, ElasticDefaults?) EnabledDefaultsParser(string? s)
-	{
-		if (string.IsNullOrWhiteSpace(s))
-			return (false, null);
-
-		var enabledDefaults = ElasticDefaults.None;
-		var found = false;
-
-		foreach (var target in s.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries))
-		{
-			if (IsSet(target, nameof(ElasticDefaults.Tracing)))
-				enabledDefaults |= ElasticDefaults.Tracing;
-			else if (IsSet(target, nameof(ElasticDefaults.Metrics)))
-				enabledDefaults |= ElasticDefaults.Metrics;
-			else if (IsSet(target, nameof(ElasticDefaults.Logging)))
-				enabledDefaults |= ElasticDefaults.Logging;
-			else if (IsSet(target, nameof(ElasticDefaults.All)))
-			{
-				enabledDefaults = ElasticDefaults.All;
-				break;
-			}
-			else if (IsSet(target, "none"))
-			{
-				enabledDefaults = ElasticDefaults.None;
-				break;
-
-			}
-		}
-		return !found ? (false, null) : (true, enabledDefaults);
-
-		bool IsSet(string k, string v)
-		{
-			var b = k.Trim().Equals(v, StringComparison.InvariantCultureIgnoreCase);
-			if (b)
-				found = true;
-			return b;
-		}
-	}
-	private static (bool, Signals?) EnabledSignalsParser(string? s)
-	{
-		if (string.IsNullOrWhiteSpace(s))
-			return (false, null);
-
-		var enabledDefaults = Signals.None;
-		var found = false;
-
-		foreach (var target in s.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries))
-		{
-			if (IsSet(target, nameof(Signals.Tracing)))
-				enabledDefaults |= Signals.Tracing;
-			else if (IsSet(target, nameof(Signals.Metrics)))
-				enabledDefaults |= Signals.Metrics;
-			else if (IsSet(target, nameof(Signals.Logging)))
-				enabledDefaults |= Signals.Logging;
-			else if (IsSet(target, nameof(Signals.All)))
-			{
-				enabledDefaults = Signals.All;
-				break;
-			}
-			else if (IsSet(target, "none"))
-			{
-				enabledDefaults = Signals.None;
-				break;
-
-			}
-		}
-		return !found ? (false, null) : (true, enabledDefaults);
-
-		bool IsSet(string k, string v)
-		{
-			var b = k.Trim().Equals(v, StringComparison.InvariantCultureIgnoreCase);
-			if (b)
-				found = true;
-			return b;
-		}
-	}
-
-	private static (bool, string) StringParser(string? s) => !string.IsNullOrEmpty(s) ? (true, s) : (false, string.Empty);
-
-	private static (bool, bool?) BoolParser(string? s) =>
-		s switch
-		{
-			"1" => (true, true),
-			"0" => (true, false),
-			_ => bool.TryParse(s, out var boolValue) ? (true, boolValue) : (false, null)
-		};
 
 	private void SetFromEnvironment<T>(string key, ref T field, ref ConfigSource configSourceField, Func<string?, (bool, T)> parser)
 	{
@@ -438,19 +309,16 @@ public class ElasticOpenTelemetryOptions
 	}
 
 	private static void SetFromConfiguration<T>(IConfiguration configuration, string key, ref T field, ref ConfigSource configSourceField,
-		Func<string?, (bool, T)> parser)
+		Func<string?, (bool, T)> parser
+	)
 	{
-		if (field is null)
+		var lookup = configuration.GetValue<string>($"{ConfigurationSection}:{key}");
+		var (success, parsed) = parser(lookup);
+
+		if (success)
 		{
-			var logFileDirectory = configuration.GetValue<string>($"{ConfigurationSection}:{key}");
-
-			var (success, value) = parser(logFileDirectory);
-
-			if (success)
-			{
-				field = value;
-				configSourceField = ConfigSource.IConfiguration;
-			}
+			field = parsed;
+			configSourceField = ConfigSource.IConfiguration;
 		}
 	}
 
@@ -463,62 +331,32 @@ public class ElasticOpenTelemetryOptions
 
 	internal void LogConfigSources(ILogger logger)
 	{
-		logger.LogInformation("Configured value for {ConfigKey}: '{ConfigValue}' from [{ConfigSource}]", LogDirectoryConfigPropertyName,
-			_logDirectory, _logDirectorySource);
+		logger.LogInformation("Configured value for {ConfigKey}: '{ConfigValue}' from [{ConfigSource}]",
+			LogDirectoryConfigPropertyName, _logDirectory, _logDirectorySource);
 
-		logger.LogInformation("Configured value for {ConfigKey}: '{ConfigValue}' from [{ConfigSource}]", LogLevelConfigPropertyName,
-			_logLevel, _logLevelSource);
+		logger.LogInformation("Configured value for {ConfigKey}: '{ConfigValue}' from [{ConfigSource}]",
+			LogLevelConfigPropertyName, _logLevel, _logLevelSource);
 
-		logger.LogInformation("Configured value for {ConfigKey}: '{ConfigValue}' from [{ConfigSource}]", SkipOtlpExporterConfigPropertyName,
-			_skipOtlpExporter, _skipOtlpExporterSource);
+		logger.LogInformation("Configured value for {ConfigKey}: '{ConfigValue}' from [{ConfigSource}]",
+			SkipOtlpExporterConfigPropertyName, _skipOtlpExporter, _skipOtlpExporterSource);
 
-		logger.LogInformation("Configured value for {ConfigKey}: '{ConfigValue}' from [{ConfigSource}]", EnabledDefaultsConfigPropertyName,
-			_elasticDefaults, _elasticDefaultsSource);
+		logger.LogInformation("Configured value for {ConfigKey}: '{ConfigValue}' from [{ConfigSource}]",
+			EnabledDefaultsConfigPropertyName, _elasticDefaults, _elasticDefaultsSource);
+
+		logger.LogInformation("Configured value for {ConfigKey}: '{ConfigValue}' from [{ConfigSource}]",
+			EnabledSignalsConfigPropertyName, _signals, _signalsSource);
+
+		logger.LogInformation("Configured value for {ConfigKey}: '{ConfigValue}' from [{ConfigSource}]",
+			TraceInstrumentationsConfigPropertyName, _traceInstrumentation, _traceInstrumentationSource);
 	}
 
-	/// <summary>
-	/// Control which elastic defaults you want to include.
-	/// <para>NOTE: this is an expert level option only use this if you want to take full control of the OTEL configuration</para>
-	/// <para>defaults to <see cref="ElasticDefaults.All"/></para>
-	/// </summary>
-	[Flags]
-	public enum ElasticDefaults
-	{
-		/// <summary> No Elastic defaults will be included, acting effectively as a vanilla OpenTelemetry </summary>
-		None,
-		/// <summary> Include Elastic Distribution for OpenTelemetry .NET tracing defaults</summary>
-		Tracing = 1 << 0, //1
-		/// <summary> Include Elastic Distribution for OpenTelemetry .NET metrics defaults</summary>
-		Metrics = 1 << 1, //2
-		/// <summary> Include Elastic Distribution for OpenTelemetry .NET logging defaults</summary>
-		Logging = 1 << 2, //4
-		/// <summary> (default) Include all Elastic Distribution for OpenTelemetry .NET logging defaults</summary>
-		All = ~0
-	}
 
-	/// <summary>
-	///
-	/// </summary>
-	[Flags]
-	public enum Signals
-	{
-		/// <summary> No Elastic defaults will be included, acting effectively as a vanilla OpenTelemetry </summary>
-		None,
-		/// <summary> Include Elastic Distribution for OpenTelemetry .NET tracing defaults</summary>
-		Tracing = 1 << 0, //1
-		/// <summary> Include Elastic Distribution for OpenTelemetry .NET metrics defaults</summary>
-		Metrics = 1 << 1, //2
-		/// <summary> Include Elastic Distribution for OpenTelemetry .NET logging defaults</summary>
-		Logging = 1 << 2, //4
-		/// <summary> (default) Include all Elastic Distribution for OpenTelemetry .NET logging defaults</summary>
-		All = ~0
-	}
-
-	private enum ConfigSource
+	internal enum ConfigSource
 	{
 		Default, // Default value assigned within this class
 		Environment, // Loaded from an environment variable
 		IConfiguration, // Bound from an IConfiguration instance
 		Property // Set via property initializer
 	}
+
 }

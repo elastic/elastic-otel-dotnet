@@ -6,7 +6,7 @@ using System.Collections;
 using System.Text;
 using Elastic.OpenTelemetry.Configuration;
 using Microsoft.Extensions.Configuration;
-using static Elastic.OpenTelemetry.Configuration.ElasticOpenTelemetryOptions.ElasticDefaults;
+using static Elastic.OpenTelemetry.Configuration.ElasticDefaults;
 
 namespace Elastic.OpenTelemetry.Tests.Configuration;
 
@@ -15,7 +15,7 @@ public class EnabledDefaultsConfigurationTest
 
 	[Theory]
 	[ClassData(typeof(DefaultsData))]
-	public void ParsesFromConfiguration(string optionValue, Action<ElasticOpenTelemetryOptions.ElasticDefaults> asserts)
+	public void ParsesFromConfiguration(string optionValue, Action<ElasticDefaults> asserts)
 	{
 		var json = $$"""
 					 {
@@ -36,7 +36,7 @@ public class EnabledDefaultsConfigurationTest
 
 	[Theory]
 	[ClassData(typeof(DefaultsData))]
-	internal void ParseFromEnvironment(string optionValue, Action<ElasticOpenTelemetryOptions.ElasticDefaults> asserts)
+	internal void ParseFromEnvironment(string optionValue, Action<ElasticDefaults> asserts)
 	{
 
 		var env = new Hashtable { { EnvironmentVariables.ELASTIC_OTEL_ENABLE_ELASTIC_DEFAULTS, optionValue } };
@@ -45,7 +45,7 @@ public class EnabledDefaultsConfigurationTest
 		asserts(sut.EnabledDefaults);
 	}
 
-	internal class DefaultsData : TheoryData<string, Action<ElasticOpenTelemetryOptions.ElasticDefaults>>
+	internal class DefaultsData : TheoryData<string, Action<ElasticDefaults>>
 	{
 		public DefaultsData()
 		{

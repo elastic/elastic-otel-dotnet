@@ -116,7 +116,7 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 		if (!distro.SkipOtlpExporter)
 			openTelemetry.UseOtlpExporter();
 
-		if (distro.EnabledSignals.HasFlag(Signals.Logging))
+		if (distro.EnabledSignals.HasFlag(Signals.Logs))
 		{
 			//TODO Move to WithLogging once it gets stable
 			Services.Configure<OpenTelemetryLoggerOptions>(logging =>
@@ -126,9 +126,9 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 				else Logger.LogDefaultsDisabled(nameof(ElasticDefaults.Logging));
 			});
 		}
-		else Logger.LogSignalDisabled(nameof(Signals.Logging));
+		else Logger.LogSignalDisabled(nameof(Signals.Logs));
 
-		if (distro.EnabledSignals.HasFlag(Signals.Tracing))
+		if (distro.EnabledSignals.HasFlag(Signals.Traces))
 		{
 			openTelemetry.WithTracing(tracing =>
 			{
@@ -137,7 +137,7 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 				else Logger.LogDefaultsDisabled(nameof(ElasticDefaults.Tracing));
 			});
 		}
-		else Logger.LogSignalDisabled(nameof(Signals.Tracing));
+		else Logger.LogSignalDisabled(nameof(Signals.Metrics));
 
 		if (distro.EnabledSignals.HasFlag(Signals.Metrics))
 		{

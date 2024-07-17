@@ -7,6 +7,7 @@ namespace Elastic.OpenTelemetry.Configuration;
 internal static class EnvironmentVariables
 {
 	// ReSharper disable InconsistentNaming
+	// ReSharper disable IdentifierTypo
 	public const string ELASTIC_OTEL_SKIP_OTLP_EXPORTER = nameof(ELASTIC_OTEL_SKIP_OTLP_EXPORTER);
 
 	public const string OTEL_DOTNET_AUTO_LOG_DIRECTORY = nameof(OTEL_DOTNET_AUTO_LOG_DIRECTORY);
@@ -20,11 +21,11 @@ internal static class EnvironmentVariables
 
 
 	public const string OTEL_DOTNET_AUTO_INSTRUMENTATION_ENABLED = nameof(OTEL_DOTNET_AUTO_INSTRUMENTATION_ENABLED);
+
 	public const string OTEL_DOTNET_AUTO_TRACES_INSTRUMENTATION_ENABLED = nameof(OTEL_DOTNET_AUTO_TRACES_INSTRUMENTATION_ENABLED);
 	public const string OTEL_DOTNET_AUTO_METRICS_INSTRUMENTATION_ENABLED = nameof(OTEL_DOTNET_AUTO_METRICS_INSTRUMENTATION_ENABLED);
 	public const string OTEL_DOTNET_AUTO_LOGS_INSTRUMENTATION_ENABLED = nameof(OTEL_DOTNET_AUTO_LOGS_INSTRUMENTATION_ENABLED);
 
-
-	//
+	// ReSharper enable IdentifierTypo
 	// ReSharper enable InconsistentNaming
 }

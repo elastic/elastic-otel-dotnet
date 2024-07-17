@@ -5,7 +5,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using OpenTelemetry.Metrics;
-using static Elastic.OpenTelemetry.Configuration.ElasticOpenTelemetryOptions.Signals;
+using static Elastic.OpenTelemetry.Configuration.Signals;
 
 namespace Elastic.OpenTelemetry.Extensions;
 
