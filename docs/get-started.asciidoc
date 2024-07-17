@@ -20,7 +20,7 @@ include::release-status.asciidoc[]
 This guide shows you how to use the {distro_name} ("the distro") to instrument your {language} application and send OpenTelemetry data to an Elastic Observability deployment.
 
 ////
-Is this true?
+TO DO: Is this true?
 ////
 [NOTE]
 ====
@@ -28,7 +28,7 @@ As an OpenTelemetry SDK, the distro supports sending data to any OpenTelemetry p
 ====
 
 ////
-What does a user need to know and/or do before they install the distro?
+✅ What the user needs to know and/or do before they install the distro
 ////
 [discrete]
 [[get-started-prerequisites]]
@@ -55,18 +55,14 @@ This section shows how to create an https://www.elastic.co/observability[Elastic
 ====
 
 ////
-Other prereqs?
-////
-
-////
-How does a user install the distro?
+✅ How to install the distro
 ////
 [discrete]
 [[get-started-install]]
 === Install
 
 ////
-Step-by-step instructions
+✅ Step-by-step instructions
 ////
 To get started with the Elastic OpenTelemetry Distribution for .NET, add the `Elastic.OpenTelemetry` NuGet package reference to your project file:
 
@@ -79,7 +75,7 @@ After adding the package reference, you can start using the distro
 in your application.
 
 ////
-Any additional info related to installation
+✅ Any additional info related to installation
 ////
 [NOTE]
 .The Elastic distro and the OpenTelemetry SDK
@@ -100,7 +96,7 @@ switch to the opinionated configuration provided by the Elastic distro.
 ====
 
 ////
-What does the user need to do in their application to prepare to send data Elastic?
+✅ Start-to-finish operation
 ////
 [discrete]
 [[get-started-send-data]]
@@ -123,9 +119,7 @@ and the default choice for applications created using the latest templates.
 ====
 
 ////
-Are there any dependencies that need to be installed in addition to the distro?
-If yes, does it matter in what order dependencies are defined?
-If no, delete this section.
+✅ Any dependencies that need to be installed in addition to the distro
 ////
 [discrete]
 [[get-started-add-dependencies]]
@@ -210,8 +204,7 @@ exporter requires that endpoint(s) are configured. A common mechanism for config
 endpoints is via environment variables.
 
 ////
-What does the _minimal_ configuration / setup look like?
-Are there any configuration options that are _required_?
+✅ Provide _minimal_ configuration/setup
 ////
 [discrete]
 [[get-started-configure]]
@@ -232,7 +225,7 @@ for your observability data.
 ====
 
 ////
-Step-by-step instructions
+✅ Step-by-step instructions
 ////
 When sending data to Elastic, you can find the values of these variables in Kibana's APM setup guide:
 
@@ -251,21 +244,7 @@ and exported to the OTLP endpoint.
 For more information on all the available configuration options, refer to <<configure>>.
 
 ////
-Does the user need to do something after configuring the distro
-for data to start being sent Elastic?
-If no, delete this section.
-////
-[discrete]
-[[get-started-initialization]]
-==== Initialize the distro
-
-////
-Step-by-step instructions
-////
-
-////
-What should they expect to see after running this?
-How do they know it worked as expected?
+✅ What success looks like
 ////
 [discrete]
 [[get-started-view-traces]]
@@ -274,13 +253,13 @@ How do they know it worked as expected?
 To view the traces, you can use the Elastic APM UI:
 
 ////
-Step-by-step instructions
+TO DO: Step-by-step instructions
 ////
 
 image:images/trace-sample-minimal-api.png[Minimal API request trace sample in the Elastic APM UI]
 
 ////
-What should they do next?
+TO DO: What should they do next?
 ////
 [discrete]
 [[get-started-next-steps]]
