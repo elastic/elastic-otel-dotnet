@@ -93,11 +93,10 @@ internal class ConfigurationParser
 	public void ParseSignals(ConfigCell<Signals?> signals) =>
 		SetFromConfiguration(_configuration, signals, EnabledSignalsParser);
 
-	public void ParseEnabledDefaults(ConfigCell<ElasticDefaults?> defaults) =>
-		SetFromConfiguration(_configuration, defaults, EnabledDefaultsParser);
+	public void ParseElasticDefaults(ConfigCell<ElasticDefaults?> defaults) =>
+		SetFromConfiguration(_configuration, defaults, ElasticDefaultsParser);
 
 	public void ParseInstrumentations(
-		ConfigCell<Signals?> signals,
 		ConfigCell<TraceInstrumentations> tracing,
 		ConfigCell<MetricInstrumentations> metrics,
 		ConfigCell<LogInstrumentations> logging
@@ -114,7 +113,7 @@ internal class ConfigurationParser
 
 	}
 
-	private static IEnumerable<T>? ParseInstrumentation<T>(string? config, T[] all, Func<string, Nullable<T>> getter)
+	private static IEnumerable<T>? ParseInstrumentation<T>(string? config, T[] all, Func<string, T?> getter)
 		where T : struct
 	{
 		if (string.IsNullOrWhiteSpace(config))

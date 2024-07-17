@@ -45,10 +45,10 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 		sut.LogDirectory.Should().Be(sut.LogDirectoryDefault);
 		sut.LogLevel.Should().Be(LogLevel.Warning);
 
-		sut.EnabledDefaults.Should().Be(ElasticDefaults.All);
-		sut.EnabledDefaults.Should().HaveFlag(ElasticDefaults.Traces);
-		sut.EnabledDefaults.Should().HaveFlag(ElasticDefaults.Metrics);
-		sut.EnabledDefaults.Should().HaveFlag(ElasticDefaults.Logs);
+		sut.ElasticDefaults.Should().Be(ElasticDefaults.All);
+		sut.ElasticDefaults.Should().HaveFlag(ElasticDefaults.Traces);
+		sut.ElasticDefaults.Should().HaveFlag(ElasticDefaults.Metrics);
+		sut.ElasticDefaults.Should().HaveFlag(ElasticDefaults.Logs);
 		sut.SkipOtlpExporter.Should().Be(false);
 
 		var logger = new TestLogger(output);
@@ -77,7 +77,7 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		sut.LogDirectory.Should().Be(fileLogDirectory);
 		sut.LogLevel.Should().Be(ToLogLevel(fileLogLevel));
-		sut.EnabledDefaults.Should().Be(ElasticDefaults.None);
+		sut.ElasticDefaults.Should().Be(ElasticDefaults.None);
 		sut.SkipOtlpExporter.Should().Be(true);
 
 		var logger = new TestLogger(output);
@@ -111,7 +111,7 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 					 		"OpenTelemetry": {
 					 			"LogDirectory": "C:\\Temp",
 					 			"LogLevel": "{{fileLogLevel}}",
-					 			"EnabledDefaults": "{{enabledElasticDefaults}}",
+					 			"ElasticDefaults": "{{enabledElasticDefaults}}",
 					 			"SkipOtlpExporter": true
 					 		}
 					 	}
@@ -126,9 +126,10 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		sut.LogDirectory.Should().Be(@"C:\Temp");
 		sut.LogLevel.Should().Be(ToLogLevel(fileLogLevel));
-		sut.EnabledDefaults.Should().Be(ElasticDefaults.None);
+		sut.ElasticDefaults.Should().Be(ElasticDefaults.None);
 		sut.SkipOtlpExporter.Should().Be(true);
-		sut.EventLogLevel.Should().Be(EventLevel.Informational);
+		sut.EventLogLevel.Should().Be(EventLevel.Warning);
+		sut.LogLevel.Should().Be(LogLevel.Critical);
 
 		var logger = new TestLogger(output);
 
@@ -158,7 +159,7 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 					 	"Elastic": {
 					 		"OpenTelemetry": {
 					 			"LogDirectory": "C:\\Temp",
-					 			"EnabledDefaults": "{{enabledElasticDefaults}}",
+					 			"ElasticDefaults": "{{enabledElasticDefaults}}",
 					 			"SkipOtlpExporter": true
 					 		}
 					 	}
@@ -173,9 +174,10 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		sut.LogDirectory.Should().Be(@"C:\Temp");
 		sut.LogLevel.Should().Be(ToLogLevel(loggingSectionLogLevel));
-		sut.EnabledDefaults.Should().Be(ElasticDefaults.None);
+		sut.ElasticDefaults.Should().Be(ElasticDefaults.None);
 		sut.SkipOtlpExporter.Should().Be(true);
-		sut.EventLogLevel.Should().Be(EventLevel.Informational);
+		sut.LogLevel.Should().Be(LogLevel.Warning);
+		sut.EventLogLevel.Should().Be(EventLevel.Warning);
 
 		var logger = new TestLogger(output);
 
@@ -204,7 +206,7 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 					 	"Elastic": {
 					 		"OpenTelemetry": {
 					 			"LogDirectory": "C:\\Temp",
-					 			"EnabledDefaults": "{{enabledElasticDefaults}}",
+					 			"ElasticDefaults": "{{enabledElasticDefaults}}",
 					 			"SkipOtlpExporter": true
 					 		}
 					 	}
@@ -219,7 +221,7 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		sut.LogDirectory.Should().Be(@"C:\Temp");
 		sut.LogLevel.Should().Be(ToLogLevel(loggingSectionDefaultLogLevel));
-		sut.EnabledDefaults.Should().Be(ElasticDefaults.None);
+		sut.ElasticDefaults.Should().Be(ElasticDefaults.None);
 		sut.SkipOtlpExporter.Should().Be(true);
 		sut.EventLogLevel.Should().Be(EventLevel.Informational);
 
@@ -246,7 +248,7 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 					 		"OpenTelemetry": {
 					 			"LogDirectory": "C:\\Json",
 					 			"LogLevel": "Trace",
-					 			"EnabledDefaults": "All",
+					 			"ElasticDefaults": "All",
 					 			"SkipOtlpExporter": false
 					 		}
 					 	}
@@ -267,7 +269,7 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		sut.LogDirectory.Should().Be(fileLogDirectory);
 		sut.LogLevel.Should().Be(ToLogLevel(fileLogLevel));
-		sut.EnabledDefaults.Should().Be(ElasticDefaults.None);
+		sut.ElasticDefaults.Should().Be(ElasticDefaults.None);
 		sut.SkipOtlpExporter.Should().Be(true);
 	}
 
@@ -288,12 +290,12 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 			LogDirectory = fileLogDirectory,
 			LogLevel = ToLogLevel(fileLogLevel) ?? LogLevel.None,
 			SkipOtlpExporter = false,
-			EnabledDefaults = ElasticDefaults.None
+			ElasticDefaults = ElasticDefaults.None
 		};
 
 		sut.LogDirectory.Should().Be(fileLogDirectory);
 		sut.LogLevel.Should().Be(ToLogLevel(fileLogLevel));
-		sut.EnabledDefaults.Should().Be(ElasticDefaults.None);
+		sut.ElasticDefaults.Should().Be(ElasticDefaults.None);
 		sut.SkipOtlpExporter.Should().Be(false);
 
 		var logger = new TestLogger(output);

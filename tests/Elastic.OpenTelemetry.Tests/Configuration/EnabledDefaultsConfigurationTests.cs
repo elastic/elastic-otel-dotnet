@@ -10,7 +10,7 @@ using static Elastic.OpenTelemetry.Configuration.ElasticDefaults;
 
 namespace Elastic.OpenTelemetry.Tests.Configuration;
 
-public class EnabledDefaultsConfigurationTest
+public class ElasticDefaultsConfigurationTest
 {
 
 	[Theory]
@@ -21,7 +21,7 @@ public class EnabledDefaultsConfigurationTest
 					 {
 					 	"Elastic": {
 					 		"OpenTelemetry": {
-					 			"EnabledDefaults": "{{optionValue}}",
+					 			"ElasticDefaults": "{{optionValue}}",
 					 		}
 					 	}
 					 }
@@ -31,7 +31,7 @@ public class EnabledDefaultsConfigurationTest
 			.AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(json)))
 			.Build();
 		var sut = new ElasticOpenTelemetryOptions(config, new Hashtable());
-		asserts(sut.EnabledDefaults);
+		asserts(sut.ElasticDefaults);
 	}
 
 	[Theory]
@@ -42,7 +42,7 @@ public class EnabledDefaultsConfigurationTest
 		var env = new Hashtable { { EnvironmentVariables.ELASTIC_OTEL_ENABLE_ELASTIC_DEFAULTS, optionValue } };
 		var sut = new ElasticOpenTelemetryOptions(env);
 
-		asserts(sut.EnabledDefaults);
+		asserts(sut.ElasticDefaults);
 	}
 
 	internal class DefaultsData : TheoryData<string, Action<ElasticDefaults>>

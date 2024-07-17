@@ -38,7 +38,7 @@ public class ElasticOpenTelemetryOptions
 	private readonly EventLevel _eventLevel = EventLevel.Informational;
 	private readonly ConfigCell<LogLevel?> _logLevel = new(nameof(LogLevel), LogLevel.Warning);
 	private readonly ConfigCell<bool?> _skipOtlpExporter = new(nameof(SkipOtlpExporter), false);
-	private readonly ConfigCell<ElasticDefaults?> _enabledDefaults = new(nameof(EnabledDefaults), ElasticDefaults.All);
+	private readonly ConfigCell<ElasticDefaults?> _enabledDefaults = new(nameof(ElasticDefaults), ElasticDefaults.All);
 	private readonly ConfigCell<bool?> _runningInContainer = new(nameof(_runningInContainer), false);
 	private readonly ConfigCell<Signals?> _signals = new(nameof(EnabledSignals), Signals.All);
 
@@ -62,7 +62,7 @@ public class ElasticOpenTelemetryOptions
 		SetFromEnvironment(OTEL_LOG_LEVEL, _logLevel, LogLevelParser);
 		SetFromEnvironment(ELASTIC_OTEL_LOG_TARGETS, _logTargets, LogTargetsParser);
 		SetFromEnvironment(ELASTIC_OTEL_SKIP_OTLP_EXPORTER, _skipOtlpExporter, BoolParser);
-		SetFromEnvironment(ELASTIC_OTEL_ENABLE_ELASTIC_DEFAULTS, _enabledDefaults, EnabledDefaultsParser);
+		SetFromEnvironment(ELASTIC_OTEL_ENABLE_ELASTIC_DEFAULTS, _enabledDefaults, ElasticDefaultsParser);
 
 		var parser = new EnvironmentParser(_environmentVariables);
 		parser.ParseInstrumentationVariables(_signals, _tracing, _metrics, _logging);
@@ -84,10 +84,10 @@ public class ElasticOpenTelemetryOptions
 		parser.ParseLogTargets(_logTargets);
 		parser.ParseLogLevel(_logLevel, ref _eventLevel);
 		parser.ParseSkipOtlpExporter(_skipOtlpExporter);
-		parser.ParseEnabledDefaults(_enabledDefaults);
+		parser.ParseElasticDefaults(_enabledDefaults);
 		parser.ParseSignals(_signals);
 
-		parser.ParseInstrumentations(_signals, _tracing, _metrics, _logging);
+		parser.ParseInstrumentations(_tracing, _metrics, _logging);
 
 	}
 
@@ -192,7 +192,7 @@ public class ElasticOpenTelemetryOptions
 	}
 
 	/// <summary>
-	/// Allows flags to be set based of <see cref="ElasticDefaults"/> to selectively opt in to Elastic Distribution for OpenTelemetry .NET features.
+	/// Allows flags to be set based of <see cref="Configuration.ElasticDefaults"/> to selectively opt in to Elastic Distribution for OpenTelemetry .NET features.
 	/// <para>Defaults to <see cref="ElasticDefaults.All"/></para>
 	/// </summary>
 	/// <remarks>
@@ -205,7 +205,7 @@ public class ElasticOpenTelemetryOptions
 	/// <item><term>Logging</term><description> Enables Elastic defaults for logging.</description></item>
 	/// </list>
 	/// </remarks>
-	public ElasticDefaults EnabledDefaults
+	public ElasticDefaults ElasticDefaults
 	{
 		get => _enabledDefaults.Value ?? ElasticDefaults.All;
 		init => _enabledDefaults.Assign(value, ConfigSource.Property);

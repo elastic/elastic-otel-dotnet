@@ -44,7 +44,7 @@ internal static class SharedParsers
 		}
 	}
 
-	internal static ElasticDefaults? EnabledDefaultsParser(string? s)
+	internal static ElasticDefaults? ElasticDefaultsParser(string? s)
 	{
 		if (string.IsNullOrWhiteSpace(s))
 			return null;
