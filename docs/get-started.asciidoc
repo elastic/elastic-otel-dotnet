@@ -19,12 +19,9 @@ include::release-status.asciidoc[]
 
 This guide shows you how to use the {distro_name} ("the distro") to instrument your {language} application and send OpenTelemetry data to an Elastic Observability deployment.
 
-////
-TO DO: Is this true?
-////
 [NOTE]
 ====
-As an OpenTelemetry SDK, the distro supports sending data to any OpenTelemetry protocol (OTLP) endpoint (for example, an https://opentelemetry.io/docs/collector/[OpenTelemetry Collector]).
+As an OpenTelemetry SDK, the distro supports sending data to any OpenTelemetry protocol (OTLP) endpoint (https://opentelemetry.io/docs/collector/[OpenTelemetry Collector]), but this guide assumes you are sending data to Elastic.
 ====
 
 ////

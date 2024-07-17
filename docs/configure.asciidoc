@@ -294,14 +294,14 @@ When sending data to Elastic, there are two ways you can authenticate: using a s
 [[configure-api-key]]
 ==== Use an APM agent key (API key)
 
-// What is this?
+// ✅ What is this?
 It is also possible to authenticate to an Elastic Observability endpoint using
 an _APM agent key_. These are revocable API keys.
 
 // TO DO:Why would you choose this method?
 // ??
 
-// How do you authenticate using this method?
+// ✅ How do you authenticate using this method?
 To create and manage APM Agent keys in Kibana:
 
 . Go to *APM Settings*.
