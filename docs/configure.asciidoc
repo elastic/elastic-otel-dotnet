@@ -48,9 +48,10 @@ Environment variables are read at startup and can be used to configure the Elast
 For details of the various options available and their corresponding environment variable names,
 see <<configure-configuration-options>>.
 
-// TO DO: Example
-
-// ✅ Order of operations
+// Order of operations
+//
+// TO DO: What if a configuration option is set manually in the code?
+// Would that take precedence over environment variables and/or the `IConfiguration` system?
 Environment variables always take precedence over configuration provided by the `IConfiguration`
 system.
 
@@ -95,7 +96,6 @@ For example, you can define the configuration for the Elastic Distribution for O
 ----
 <1> This example sets the file log directory to `C:\Logs` which enables diagnostic file logging.
 
-// ✅ Order of operations
 Configuration from the "Elastic:OpenTelemetry" section of the `IConfiguration` instance will be
 bound to the `ElasticOpenTelemetryOptions` instance used to configure the Elastic distribution.
 
@@ -146,8 +146,6 @@ setting the corresponding property.
 <3> This example sets the file log directory to `C:\Logs` which enables diagnostic file logging.
 <4> Pass the `ElasticOpenTelemetryBuilderOptions` instance to the `ElasticOpenTelemetryBuilder` constructor
 to configure the Elastic Distribution for OpenTelemetry .NET.
-
-// TO DO: Order of operations
 
 ////
 ✅ List all available configuration options
@@ -281,13 +279,13 @@ When sending data to Elastic, there are two ways you can authenticate: using a s
 [[configure-secret-token]]
 ==== Use a secret token
 
-// TO DO:What is this?
+// TO DO: What is this?
 // ??
 
-// TO DO:Why would you choose this method?
+// TO DO: Why would you choose this method?
 // ??
 
-// TO DO:How do you authenticate using this method?
+// TO DO: How do you authenticate using this method?
 // ??
 
 [discrete]
@@ -298,7 +296,7 @@ When sending data to Elastic, there are two ways you can authenticate: using a s
 It is also possible to authenticate to an Elastic Observability endpoint using
 an _APM agent key_. These are revocable API keys.
 
-// TO DO:Why would you choose this method?
+// TO DO: Why would you choose this method?
 // ??
 
 // ✅ How do you authenticate using this method?
@@ -310,9 +308,7 @@ To create and manage APM Agent keys in Kibana:
 When using an APM Agent key, the `OTEL_EXPORTER_OTLP_HEADERS` is set using a
 different auth schema (`ApiKey` rather than `Bearer`). For example:
 
-////
-TO DO:Code example
-////
+// TO DO: Code example
 
 :!language:
 :!language_lc:

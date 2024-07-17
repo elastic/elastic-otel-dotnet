@@ -250,25 +250,25 @@ For more information on all the available configuration options, refer to <<conf
 To view the traces, you can use the Elastic APM UI:
 
 ////
-TO DO: Step-by-step instructions
+TO DO: Verify step-by-step instructions
 ////
+In {kib}:
+
+. Go to *APM* -> *Traces*.
+. You should see the service you just started tracking.
+. Click on the name in the list to see traces.
 
 image:images/trace-sample-minimal-api.png[Minimal API request trace sample in the Elastic APM UI]
 
 ////
-TO DO: What should they do next?
+✅ What they should do next
 ////
 [discrete]
 [[get-started-next-steps]]
 === Next steps
 
-////
-// Examples:
-//
-// See all configuration options
-// Learn more about interpreting data
-// Other
-////
+* Browse all <<configure,distro configuration options>>.
+* Learn more about viewing and interpreting data in the {observability-guide}/apm.html[Observability guide].
 
 :!language:
 :!language_lc:
