@@ -5,11 +5,11 @@
 using System.Collections;
 using Elastic.OpenTelemetry.Configuration.Instrumentations;
 using static Elastic.OpenTelemetry.Configuration.EnvironmentVariables;
-using static Elastic.OpenTelemetry.Configuration.Parsers.ConfigurationParsers;
+using static Elastic.OpenTelemetry.Configuration.Parsers.SharedParsers;
 
 namespace Elastic.OpenTelemetry.Configuration.Parsers;
 
-internal class InstrumentationEnvironmentParser(IDictionary environmentVariables)
+internal class EnvironmentParser(IDictionary environmentVariables)
 {
 	private string GetSafeEnvironmentVariable(string key)
 	{

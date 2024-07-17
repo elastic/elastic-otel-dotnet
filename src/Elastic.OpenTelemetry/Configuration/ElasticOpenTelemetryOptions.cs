@@ -8,13 +8,12 @@ using System.Runtime.InteropServices;
 using Elastic.OpenTelemetry.Configuration.Instrumentations;
 using Elastic.OpenTelemetry.Configuration.Parsers;
 using Elastic.OpenTelemetry.Diagnostics;
-using Elastic.OpenTelemetry.Diagnostics.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using static System.Environment;
 using static System.Runtime.InteropServices.RuntimeInformation;
 using static Elastic.OpenTelemetry.Configuration.EnvironmentVariables;
-using static Elastic.OpenTelemetry.Configuration.Parsers.ConfigurationParsers;
+using static Elastic.OpenTelemetry.Configuration.Parsers.SharedParsers;
 
 namespace Elastic.OpenTelemetry.Configuration;
 
@@ -65,7 +64,7 @@ public class ElasticOpenTelemetryOptions
 		SetFromEnvironment(ELASTIC_OTEL_SKIP_OTLP_EXPORTER, _skipOtlpExporter, BoolParser);
 		SetFromEnvironment(ELASTIC_OTEL_ENABLE_ELASTIC_DEFAULTS, _enabledDefaults, EnabledDefaultsParser);
 
-		var parser = new InstrumentationEnvironmentParser(_environmentVariables);
+		var parser = new EnvironmentParser(_environmentVariables);
 		parser.ParseInstrumentationVariables(_signals, _tracing, _metrics, _logging);
 
 	}
@@ -80,7 +79,7 @@ public class ElasticOpenTelemetryOptions
 		if (configuration is null)
 			return;
 
-		var parser = new InstrumentationConfigurationParser(configuration);
+		var parser = new ConfigurationParser(configuration);
 		parser.ParseLogDirectory(_logDirectory);
 		parser.ParseLogTargets(_logTargets);
 		parser.ParseLogLevel(_logLevel, ref _eventLevel);
@@ -279,30 +278,4 @@ public class ElasticOpenTelemetryOptions
 		logger.LogInformation("Configured value for {Configuration}", _metrics);
 		logger.LogInformation("Configured value for {Configuration}", _logging);
 	}
-
-
 }
-
-	internal class ConfigCell<T>(string key, T value)
-	{
-		public string Key { get; } = key;
-		public T? Value { get; private set; } = value;
-		public ConfigSource Source { get; set; } = ConfigSource.Default;
-
-		public void Assign(T value, ConfigSource source)
-		{
-			Value = value;
-			Source = source;
-		}
-
-		public override string ToString() => $"{Key}: '{Value}' from [{Source}]";
-	}
-
-	internal enum ConfigSource
-	{
-		Default, // Default value assigned within this class
-		Environment, // Loaded from an environment variable
-		// ReSharper disable once InconsistentNaming
-		IConfiguration, // Bound from an IConfiguration instance
-		Property // Set via property initializer
-	}

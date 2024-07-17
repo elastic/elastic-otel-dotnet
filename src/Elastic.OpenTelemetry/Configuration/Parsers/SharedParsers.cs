@@ -9,7 +9,7 @@ using static System.StringSplitOptions;
 
 namespace Elastic.OpenTelemetry.Configuration.Parsers;
 
-internal static class ConfigurationParsers {
+internal static class SharedParsers {
 
 	internal static LogLevel? LogLevelParser(string? s) =>
 		!string.IsNullOrEmpty(s) ? LogLevelHelpers.ToLogLevel(s) : null;

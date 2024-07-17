@@ -2,26 +2,24 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
-using System.Collections;
 using System.Diagnostics.Tracing;
 using Elastic.OpenTelemetry.Configuration.Instrumentations;
 using Elastic.OpenTelemetry.Diagnostics.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using static Elastic.OpenTelemetry.Configuration.Parsers.ConfigurationParsers;
-using static System.StringComparison;
+using static Elastic.OpenTelemetry.Configuration.Parsers.SharedParsers;
 using static System.StringSplitOptions;
 
 namespace Elastic.OpenTelemetry.Configuration.Parsers;
 
-internal class InstrumentationConfigurationParser
+internal class ConfigurationParser
 {
 	private readonly IConfiguration _configuration;
 	private static readonly string ConfigurationSection = "Elastic:OpenTelemetry";
 
 	internal string? LoggingSectionLogLevel { get; }
 
-	public InstrumentationConfigurationParser(IConfiguration configuration)
+	public ConfigurationParser(IConfiguration configuration)
 	{
 		_configuration = configuration;
 
