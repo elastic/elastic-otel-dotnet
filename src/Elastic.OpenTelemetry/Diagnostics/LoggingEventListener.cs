@@ -34,28 +34,8 @@ internal sealed
 	public LoggingEventListener(ILogger logger, ElasticOpenTelemetryOptions options)
 	{
 		_logger = logger;
+		_eventLevel = options.EventLogLevel;
 
-		// When both a file log level and a logging section log level are provided, the more verbose of the two is used.
-		// This insures we subscribe to the lowest level of events needed.
-		// The specific loggers will then determine	if they should log the event based on their own log level.
-		var eventLevel = options.LogLevel;
-		if (!string.IsNullOrEmpty(options.LoggingSectionLogLevel))
-		{
-			var logLevel = LogLevelHelpers.ToLogLevel(options.LoggingSectionLogLevel) ?? LogLevel.None;
-
-			if (logLevel < eventLevel)
-				eventLevel = logLevel;
-		}
-
-		_eventLevel = eventLevel switch
-		{
-			LogLevel.Trace => EventLevel.Verbose,
-			LogLevel.Information => EventLevel.Informational,
-			LogLevel.Warning => EventLevel.Warning,
-			LogLevel.Error => EventLevel.Error,
-			LogLevel.Critical => EventLevel.Critical,
-			_ => EventLevel.Informational // fallback to info level
-		};
 	}
 
 	public override void Dispose()

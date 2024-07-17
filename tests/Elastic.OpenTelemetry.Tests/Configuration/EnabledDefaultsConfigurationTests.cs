@@ -51,72 +51,72 @@ public class EnabledDefaultsConfigurationTest
 		{
 			Add("All", a =>
 			{
-				a.HasFlag(Tracing).Should().BeTrue();
+				a.HasFlag(Traces).Should().BeTrue();
 				a.HasFlag(Metrics).Should().BeTrue();
-				a.HasFlag(Logging).Should().BeTrue();
+				a.HasFlag(Logs).Should().BeTrue();
 				a.Equals(None).Should().BeFalse();
 			});
 
 			Add("all", a =>
 			{
-				a.HasFlag(Tracing).Should().BeTrue();
+				a.HasFlag(Traces).Should().BeTrue();
 				a.HasFlag(Metrics).Should().BeTrue();
-				a.HasFlag(Logging).Should().BeTrue();
+				a.HasFlag(Logs).Should().BeTrue();
 				a.Equals(None).Should().BeFalse();
 			});
 
-			Add("Tracing", a =>
+			Add("Traces", a =>
 			{
-				a.HasFlag(Tracing).Should().BeTrue();
+				a.HasFlag(Traces).Should().BeTrue();
 				a.HasFlag(Metrics).Should().BeFalse();
-				a.HasFlag(Logging).Should().BeFalse();
+				a.HasFlag(Logs).Should().BeFalse();
 				a.Equals(None).Should().BeFalse();
 			});
 
 			Add("Metrics", a =>
 			{
-				a.HasFlag(Tracing).Should().BeFalse();
+				a.HasFlag(Traces).Should().BeFalse();
 				a.HasFlag(Metrics).Should().BeTrue();
-				a.HasFlag(Logging).Should().BeFalse();
+				a.HasFlag(Logs).Should().BeFalse();
 				a.Equals(None).Should().BeFalse();
 			});
 
-			Add("Logging", a =>
+			Add("Logs", a =>
 			{
-				a.HasFlag(Tracing).Should().BeFalse();
+				a.HasFlag(Traces).Should().BeFalse();
 				a.HasFlag(Metrics).Should().BeFalse();
-				a.HasFlag(Logging).Should().BeTrue();
+				a.HasFlag(Logs).Should().BeTrue();
 				a.Equals(None).Should().BeFalse();
 			});
 
-			Add("Tracing,Logging", a =>
+			Add("Traces,Logs", a =>
 			{
-				a.HasFlag(Tracing).Should().BeTrue();
+				a.HasFlag(Traces).Should().BeTrue();
 				a.HasFlag(Metrics).Should().BeFalse();
-				a.HasFlag(Logging).Should().BeTrue();
+				a.HasFlag(Logs).Should().BeTrue();
 				a.Equals(None).Should().BeFalse();
 			});
-			Add("Tracing;Logging", a =>
+			Add("Traces;Logs", a =>
 			{
-				a.HasFlag(Tracing).Should().BeTrue();
+				a.HasFlag(Traces).Should().BeTrue();
 				a.HasFlag(Metrics).Should().BeFalse();
-				a.HasFlag(Logging).Should().BeTrue();
+				a.HasFlag(Logs).Should().BeTrue();
 				a.Equals(None).Should().BeFalse();
 			});
 
-			Add("tracing,logging,metrics", a =>
+			Add("traces,logs,metrics", a =>
 			{
-				a.HasFlag(Tracing).Should().BeTrue();
+				a.HasFlag(Traces).Should().BeTrue();
 				a.HasFlag(Metrics).Should().BeTrue();
-				a.HasFlag(Logging).Should().BeTrue();
+				a.HasFlag(Logs).Should().BeTrue();
 				a.Equals(None).Should().BeFalse();
 			});
 
 			Add("None", a =>
 			{
-				a.HasFlag(Tracing).Should().BeFalse();
+				a.HasFlag(Traces).Should().BeFalse();
 				a.HasFlag(Metrics).Should().BeFalse();
-				a.HasFlag(Logging).Should().BeFalse();
+				a.HasFlag(Logs).Should().BeFalse();
 				a.Equals(None).Should().BeTrue();
 			});
 		}

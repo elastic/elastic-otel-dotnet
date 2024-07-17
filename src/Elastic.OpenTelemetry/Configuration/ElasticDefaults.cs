@@ -16,13 +16,13 @@ public enum ElasticDefaults
 	None,
 
 	/// <summary> Include Elastic Distribution for OpenTelemetry .NET tracing defaults</summary>
-	Tracing = 1 << 0, //1
+	Traces = 1 << 0, //1
 
 	/// <summary> Include Elastic Distribution for OpenTelemetry .NET metrics defaults</summary>
 	Metrics = 1 << 1, //2
 
 	/// <summary> Include Elastic Distribution for OpenTelemetry .NET logging defaults</summary>
-	Logging = 1 << 2, //4
+	Logs = 1 << 2, //4
 
 	/// <summary> (default) Include all Elastic Distribution for OpenTelemetry .NET logging defaults</summary>
 	All = ~0

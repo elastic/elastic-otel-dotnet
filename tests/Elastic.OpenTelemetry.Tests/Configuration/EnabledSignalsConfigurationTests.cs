@@ -5,13 +5,17 @@
 using System.Collections;
 using System.Text;
 using Elastic.OpenTelemetry.Configuration;
+using Elastic.OpenTelemetry.Configuration.Instrumentations;
+using Elastic.OpenTelemetry.Extensions;
 using Microsoft.Extensions.Configuration;
+using OpenTelemetry;
+using Xunit.Abstractions;
 using static Elastic.OpenTelemetry.Configuration.Signals;
 using static Elastic.OpenTelemetry.Configuration.EnvironmentVariables;
 
 namespace Elastic.OpenTelemetry.Tests.Configuration;
 
-public class EnabledSignalsConfigurationTest
+public class EnabledSignalsConfigurationTest(ITestOutputHelper output)
 {
 
 	[Theory]
@@ -56,18 +60,64 @@ public class EnabledSignalsConfigurationTest
 		options.EnabledSignals.Should().HaveFlag(Traces);
 		options.EnabledSignals.Should().NotHaveFlag(All);
 	}
-	[Theory]
-	[InlineData("1", "1", true, true, OTEL_DOTNET_AUTO_METRICS_INSTRUMENTATION_ENABLED)]
-	[InlineData("0", "1", true, false, OTEL_DOTNET_AUTO_METRICS_INSTRUMENTATION_ENABLED)]
-	[InlineData("0", "0", false, false, OTEL_DOTNET_AUTO_METRICS_INSTRUMENTATION_ENABLED)]
-	[InlineData("1", "0", false, true, OTEL_DOTNET_AUTO_METRICS_INSTRUMENTATION_ENABLED)]
-	[InlineData("1", "1", true, true, "OTEL_DOTNET_AUTO_METRICS_ASPNET_INSTRUMENTATION_ENABLED")]
-	[InlineData("0", "1", true, false, "OTEL_DOTNET_AUTO_METRICS_ASPNET_INSTRUMENTATION_ENABLED")]
-	[InlineData("0", "0", false, false, "OTEL_DOTNET_AUTO_METRICS_ASPNET_INSTRUMENTATION_ENABLED")]
-	[InlineData("1", "0", false, true, "OTEL_DOTNET_AUTO_METRICS_ASPNET_INSTRUMENTATION_ENABLED")]
-	internal void RespectsOveralSignalsEnvironmentVar(string instrumentation, string metrics, bool metricsEnabled, bool traceEnabled, string metricsVar)
+
+	[Fact]
+	public void OptInFromConfig()
 	{
-		var env = new Hashtable { {OTEL_DOTNET_AUTO_INSTRUMENTATION_ENABLED, instrumentation}, { metricsVar, metrics } };
+		var json = $$"""
+					 {
+					 	"Elastic": {
+					 		"OpenTelemetry": {
+					 			"EnabledSignals": "All",
+					 			"Tracing" : "AspNet;ElasticTransport"
+					 		}
+					 	}
+					 }
+					 """;
+
+		var config = new ConfigurationBuilder()
+			.AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(json)))
+			.Build();
+		var options = new ElasticOpenTelemetryOptions(config, new Hashtable());
+
+		options.Tracing.Should().HaveCount(2);
+	}
+	[Fact]
+	public void OptOutFromConfig()
+	{
+		var json = $$"""
+					 {
+					 	"Elastic": {
+					 		"OpenTelemetry": {
+					 			"EnabledSignals": "All",
+					 			"Tracing" : "-AspNet;-ElasticTransport"
+					 		}
+					 	}
+					 }
+					 """;
+
+		var config = new ConfigurationBuilder()
+			.AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(json)))
+			.Build();
+
+		var logger = new TestLogger(output);
+		var options = new ElasticOpenTelemetryOptions(config, new Hashtable());
+		options.LogConfigSources(logger);
+
+		options.Tracing.Should().HaveCount(TraceInstrumentations.All.Count - 2);
+
+		logger.Messages.Should().ContainMatch("*Configured value for Tracing: 'All Except: AspNet, ElasticTransport'*");
+	}
+
+
+	[Theory]
+	[InlineData("1", "1", true, true )]
+	[InlineData("0", "1", true, false)]
+	[InlineData("0", "0", false, false)]
+	[InlineData("1", "0", false, true)]
+	internal void RespectsOveralSignalsEnvironmentVar(string instrumentation, string metrics, bool metricsEnabled, bool traceEnabled)
+	{
+		var env = new Hashtable { {OTEL_DOTNET_AUTO_INSTRUMENTATION_ENABLED, instrumentation}, { OTEL_DOTNET_AUTO_METRICS_INSTRUMENTATION_ENABLED, metrics } };
 		var options = new ElasticOpenTelemetryOptions(env);
 		if (metricsEnabled)
 			options.EnabledSignals.Should().HaveFlag(Metrics);
@@ -86,25 +136,35 @@ public class EnabledSignalsConfigurationTest
 	}
 
 	[Theory]
-	[InlineData("1", "0", false, true, "OTEL_DOTNET_AUTO_METRICS_ASPNET_INSTRUMENTATION_ENABLED")]
-	internal void OptInOverridesDefaults(string instrumentation, string metrics, bool metricsEnabled, bool traceEnabled, string metricsVar)
+	[InlineData("1", "0", true)]
+	[InlineData("0", "1", true)]
+	[InlineData("0", "0", false)]
+	internal void OptInOverridesDefaults(string instrumentation, string metrics, bool enabledMetrics)
 	{
-		var env = new Hashtable { {OTEL_DOTNET_AUTO_INSTRUMENTATION_ENABLED, instrumentation}, { metricsVar, metrics } };
+		var env = new Hashtable
+		{
+			{ OTEL_DOTNET_AUTO_INSTRUMENTATION_ENABLED, instrumentation },
+			{ "OTEL_DOTNET_AUTO_METRICS_ASPNET_INSTRUMENTATION_ENABLED", metrics }
+		};
 		var options = new ElasticOpenTelemetryOptions(env);
-		if (metricsEnabled)
+		if (metrics == "1")
+		{
+			options.Metrics.Should().Contain(MetricInstrumentation.AspNet);
+			//ensure opt in behavior
+			if (instrumentation == "0")
+				options.Metrics.Should().HaveCount(1);
+			//ensure opt out behaviour
+			else
+				options.Metrics.Should().HaveCount(MetricInstrumentations.All.Count - 1);
+
+		}
+		else
+			options.Metrics.Should().NotContain(MetricInstrumentation.AspNet);
+
+		if (enabledMetrics)
 			options.EnabledSignals.Should().HaveFlag(Metrics);
 		else
 			options.EnabledSignals.Should().NotHaveFlag(Metrics);
-
-		if (traceEnabled)
-			options.EnabledSignals.Should().HaveFlag(Traces);
-		else
-			options.EnabledSignals.Should().NotHaveFlag(Traces);
-
-		if (instrumentation == "0" && metrics == "0")
-			options.EnabledSignals.Should().Be(None);
-		else
-			options.EnabledSignals.Should().NotBe(None);
 	}
 
 

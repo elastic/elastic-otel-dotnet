@@ -3,13 +3,13 @@
 // See the LICENSE file in the project root for more information
 
 using System.Collections;
+using System.Diagnostics.Tracing;
 using System.Text;
 using Elastic.OpenTelemetry.Configuration;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Xunit.Abstractions;
 
-using static Elastic.OpenTelemetry.Configuration.ElasticOpenTelemetryOptions;
 using static Elastic.OpenTelemetry.Configuration.EnvironmentVariables;
 using static Elastic.OpenTelemetry.Diagnostics.Logging.LogLevelHelpers;
 
@@ -17,13 +17,15 @@ namespace Elastic.OpenTelemetry.Tests.Configuration;
 
 public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 {
+	private const int ExpectedLogsLength = 8;
+
 	[Fact]
 	public void EnabledElasticDefaults_NoneIncludesExpectedValues()
 	{
 		var sut = ElasticDefaults.None;
 
-		sut.HasFlag(ElasticDefaults.Tracing).Should().BeFalse();
-		sut.HasFlag(ElasticDefaults.Logging).Should().BeFalse();
+		sut.HasFlag(ElasticDefaults.Traces).Should().BeFalse();
+		sut.HasFlag(ElasticDefaults.Logs).Should().BeFalse();
 		sut.HasFlag(ElasticDefaults.Metrics).Should().BeFalse();
 	}
 
@@ -44,16 +46,16 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 		sut.LogLevel.Should().Be(LogLevel.Warning);
 
 		sut.EnabledDefaults.Should().Be(ElasticDefaults.All);
-		sut.EnabledDefaults.Should().HaveFlag(ElasticDefaults.Tracing);
+		sut.EnabledDefaults.Should().HaveFlag(ElasticDefaults.Traces);
 		sut.EnabledDefaults.Should().HaveFlag(ElasticDefaults.Metrics);
-		sut.EnabledDefaults.Should().HaveFlag(ElasticDefaults.Logging);
+		sut.EnabledDefaults.Should().HaveFlag(ElasticDefaults.Logs);
 		sut.SkipOtlpExporter.Should().Be(false);
 
 		var logger = new TestLogger(output);
 
 		sut.LogConfigSources(logger);
 
-		logger.Messages.Count.Should().Be(4);
+		logger.Messages.Count.Should().Be(ExpectedLogsLength);
 		foreach (var message in logger.Messages)
 			message.Should().EndWith("from [Default]");
 	}
@@ -82,9 +84,11 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		sut.LogConfigSources(logger);
 
-		logger.Messages.Count.Should().Be(4);
-		foreach (var message in logger.Messages)
-			message.Should().EndWith("from [Environment]");
+		logger.Messages.Should()
+			.Contain(s => s.EndsWith("from [Environment]"))
+			.And.Contain(s => s.EndsWith("from [Default]"))
+			.And.NotContain(s => s.EndsWith("from [IConfiguration]"));
+
 
 	}
 
@@ -124,15 +128,17 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 		sut.LogLevel.Should().Be(ToLogLevel(fileLogLevel));
 		sut.EnabledDefaults.Should().Be(ElasticDefaults.None);
 		sut.SkipOtlpExporter.Should().Be(true);
-		sut.LoggingSectionLogLevel.Should().Be(loggingSectionLogLevel);
+		sut.EventLogLevel.Should().Be(EventLevel.Informational);
 
 		var logger = new TestLogger(output);
 
 		sut.LogConfigSources(logger);
 
-		logger.Messages.Count.Should().Be(4);
-		foreach (var message in logger.Messages)
-			message.Should().EndWith("from [IConfiguration]");
+		logger.Messages.Count.Should().Be(ExpectedLogsLength);
+		logger.Messages.Should()
+			.Contain(s => s.EndsWith("from [IConfiguration]"))
+			.And.Contain(s => s.EndsWith("from [Default]"))
+			.And.NotContain(s => s.EndsWith("from [Environment]"));
 	}
 
 	[Fact]
@@ -169,15 +175,16 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 		sut.LogLevel.Should().Be(ToLogLevel(loggingSectionLogLevel));
 		sut.EnabledDefaults.Should().Be(ElasticDefaults.None);
 		sut.SkipOtlpExporter.Should().Be(true);
-		sut.LoggingSectionLogLevel.Should().Be(loggingSectionLogLevel);
+		sut.EventLogLevel.Should().Be(EventLevel.Informational);
 
 		var logger = new TestLogger(output);
 
 		sut.LogConfigSources(logger);
 
-		logger.Messages.Count.Should().Be(4);
-		foreach (var message in logger.Messages)
-			message.Should().EndWith("from [IConfiguration]");
+		logger.Messages.Should()
+			.Contain(s => s.EndsWith("from [IConfiguration]"))
+			.And.Contain(s => s.EndsWith("from [Default]"))
+			.And.NotContain(s => s.EndsWith("from [Environment]"));
 
 	}
 
@@ -214,15 +221,16 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 		sut.LogLevel.Should().Be(ToLogLevel(loggingSectionDefaultLogLevel));
 		sut.EnabledDefaults.Should().Be(ElasticDefaults.None);
 		sut.SkipOtlpExporter.Should().Be(true);
-		sut.LoggingSectionLogLevel.Should().Be(loggingSectionDefaultLogLevel);
+		sut.EventLogLevel.Should().Be(EventLevel.Informational);
 
 		var logger = new TestLogger(output);
 
 		sut.LogConfigSources(logger);
 
-		logger.Messages.Count.Should().Be(4);
-		foreach (var message in logger.Messages)
-			message.Should().EndWith("from [IConfiguration]");
+		logger.Messages.Should()
+			.Contain(s => s.EndsWith("from [IConfiguration]"))
+			.And.Contain(s => s.EndsWith("from [Default]"))
+			.And.NotContain(s => s.EndsWith("from [Environment]"));
 	}
 
 	[Fact]
@@ -292,8 +300,9 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		sut.LogConfigSources(logger);
 
-		logger.Messages.Count.Should().Be(4);
-		foreach (var message in logger.Messages)
-			message.Should().EndWith("from [Property]");
+		logger.Messages.Should()
+			.Contain(s => s.EndsWith("from [Property]"))
+			.And.Contain(s => s.EndsWith("from [Default]"))
+			.And.NotContain(s => s.EndsWith("from [Environment]"));
 	}
 }

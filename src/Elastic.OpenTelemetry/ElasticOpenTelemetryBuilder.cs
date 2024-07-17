@@ -121,9 +121,9 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 			//TODO Move to WithLogging once it gets stable
 			Services.Configure<OpenTelemetryLoggerOptions>(logging =>
 			{
-				if (distro.EnabledDefaults.HasFlag(ElasticDefaults.Logging))
+				if (distro.EnabledDefaults.HasFlag(ElasticDefaults.Logs))
 					logging.UseElasticDefaults();
-				else Logger.LogDefaultsDisabled(nameof(ElasticDefaults.Logging));
+				else Logger.LogDefaultsDisabled(nameof(ElasticDefaults.Logs));
 			});
 		}
 		else Logger.LogSignalDisabled(nameof(Signals.Logs));
@@ -132,9 +132,9 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 		{
 			openTelemetry.WithTracing(tracing =>
 			{
-				if (distro.EnabledDefaults.HasFlag(ElasticDefaults.Tracing))
+				if (distro.EnabledDefaults.HasFlag(ElasticDefaults.Traces))
 					tracing.UseElasticDefaults(Logger);
-				else Logger.LogDefaultsDisabled(nameof(ElasticDefaults.Tracing));
+				else Logger.LogDefaultsDisabled(nameof(ElasticDefaults.Traces));
 			});
 		}
 		else Logger.LogSignalDisabled(nameof(Signals.Metrics));

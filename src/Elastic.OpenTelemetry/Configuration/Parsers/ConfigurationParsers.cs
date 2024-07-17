@@ -11,14 +11,14 @@ namespace Elastic.OpenTelemetry.Configuration.Parsers;
 
 internal static class ConfigurationParsers {
 
-	internal static (bool, LogLevel?) LogLevelParser(string? s) =>
-		!string.IsNullOrEmpty(s) ? (true, LogLevelHelpers.ToLogLevel(s)) : (false, null);
+	internal static LogLevel? LogLevelParser(string? s) =>
+		!string.IsNullOrEmpty(s) ? LogLevelHelpers.ToLogLevel(s) : null;
 
-	internal static (bool, LogTargets?) LogTargetsParser(string? s)
+	internal static LogTargets? LogTargetsParser(string? s)
 	{
 		//var tokens = s?.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries });
 		if (string.IsNullOrWhiteSpace(s))
-			return (false, null);
+			return null;
 
 		var logTargets = LogTargets.None;
 		var found = false;
@@ -32,7 +32,7 @@ internal static class ConfigurationParsers {
 			else if (IsSet(target, "none"))
 				logTargets |= LogTargets.None;
 		}
-		return !found ? (false, null) : (true, logTargets);
+		return !found ? null : logTargets;
 
 		bool IsSet(string k, string v)
 		{
@@ -43,22 +43,22 @@ internal static class ConfigurationParsers {
 		}
 	}
 
-	internal static (bool, ElasticDefaults?) EnabledDefaultsParser(string? s)
+	internal static ElasticDefaults? EnabledDefaultsParser(string? s)
 	{
 		if (string.IsNullOrWhiteSpace(s))
-			return (false, null);
+			return null;
 
 		var enabledDefaults = ElasticDefaults.None;
 		var found = false;
 
 		foreach (var target in s.Split(new[] { ';', ',' }, RemoveEmptyEntries))
 		{
-			if (IsSet(target, nameof(ElasticDefaults.Tracing)))
-				enabledDefaults |= ElasticDefaults.Tracing;
+			if (IsSet(target, nameof(ElasticDefaults.Traces)))
+				enabledDefaults |= ElasticDefaults.Traces;
 			else if (IsSet(target, nameof(ElasticDefaults.Metrics)))
 				enabledDefaults |= ElasticDefaults.Metrics;
-			else if (IsSet(target, nameof(ElasticDefaults.Logging)))
-				enabledDefaults |= ElasticDefaults.Logging;
+			else if (IsSet(target, nameof(ElasticDefaults.Logs)))
+				enabledDefaults |= ElasticDefaults.Logs;
 			else if (IsSet(target, nameof(ElasticDefaults.All)))
 			{
 				enabledDefaults = ElasticDefaults.All;
@@ -70,7 +70,7 @@ internal static class ConfigurationParsers {
 				break;
 			}
 		}
-		return !found ? (false, null) : (true, enabledDefaults);
+		return !found ? null : enabledDefaults;
 
 		bool IsSet(string k, string v)
 		{
@@ -81,10 +81,10 @@ internal static class ConfigurationParsers {
 		}
 	}
 
-	internal static (bool, Signals?) EnabledSignalsParser(string? s)
+	internal static Signals? EnabledSignalsParser(string? s)
 	{
 		if (string.IsNullOrWhiteSpace(s))
-			return (false, null);
+			return null;
 
 		var enabledDefaults = Signals.None;
 		var found = false;
@@ -108,7 +108,7 @@ internal static class ConfigurationParsers {
 				break;
 			}
 		}
-		return !found ? (false, null) : (true, enabledDefaults);
+		return !found ? null : enabledDefaults;
 
 		bool IsSet(string k, string v)
 		{
@@ -119,13 +119,13 @@ internal static class ConfigurationParsers {
 		}
 	}
 
-	internal static (bool, string) StringParser(string? s) => !string.IsNullOrEmpty(s) ? (true, s) : (false, string.Empty);
+	internal static string? StringParser(string? s) => !string.IsNullOrEmpty(s) ? s : null;
 
-	internal static (bool, bool?) BoolParser(string? s) =>
+	internal static bool? BoolParser(string? s) =>
 		s switch
 		{
-			"1" => (true, true),
-			"0" => (true, false),
-			_ => bool.TryParse(s, out var boolValue) ? (true, boolValue) : (false, null)
+			"1" => true,
+			"0" => false,
+			_ => bool.TryParse(s, out var boolValue) ? boolValue : null
 		};
 }
