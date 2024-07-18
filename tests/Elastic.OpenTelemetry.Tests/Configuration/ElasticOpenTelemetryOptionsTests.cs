@@ -3,15 +3,13 @@
 // See the LICENSE file in the project root for more information
 
 using System.Collections;
+using System.Diagnostics.Tracing;
 using System.Text;
 using Elastic.OpenTelemetry.Configuration;
-using Elastic.OpenTelemetry.Extensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using OpenTelemetry;
 using Xunit.Abstractions;
 
-using static Elastic.OpenTelemetry.Configuration.ElasticOpenTelemetryOptions;
 using static Elastic.OpenTelemetry.Configuration.EnvironmentVariables;
 using static Elastic.OpenTelemetry.Diagnostics.Logging.LogLevelHelpers;
 
@@ -19,14 +17,16 @@ namespace Elastic.OpenTelemetry.Tests.Configuration;
 
 public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 {
+	private const int ExpectedLogsLength = 8;
+
 	[Fact]
 	public void EnabledElasticDefaults_NoneIncludesExpectedValues()
 	{
-		var sut = EnabledElasticDefaults.None;
+		var sut = ElasticDefaults.None;
 
-		sut.HasFlag(EnabledElasticDefaults.Tracing).Should().BeFalse();
-		sut.HasFlag(EnabledElasticDefaults.Logging).Should().BeFalse();
-		sut.HasFlag(EnabledElasticDefaults.Metrics).Should().BeFalse();
+		sut.HasFlag(ElasticDefaults.Traces).Should().BeFalse();
+		sut.HasFlag(ElasticDefaults.Logs).Should().BeFalse();
+		sut.HasFlag(ElasticDefaults.Metrics).Should().BeFalse();
 	}
 
 	[Fact]
@@ -34,10 +34,10 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 	{
 		var sut = new ElasticOpenTelemetryOptions(new Hashtable
 		{
-			{OTEL_DOTNET_AUTO_LOG_DIRECTORY, null},
-			{OTEL_LOG_LEVEL, null},
-			{ELASTIC_OTEL_ENABLE_ELASTIC_DEFAULTS, null},
-			{ELASTIC_OTEL_SKIP_OTLP_EXPORTER, null},
+			{ OTEL_DOTNET_AUTO_LOG_DIRECTORY, null },
+			{ OTEL_LOG_LEVEL, null },
+			{ ELASTIC_OTEL_DEFAULTS_ENABLED, null },
+			{ ELASTIC_OTEL_SKIP_OTLP_EXPORTER, null },
 		});
 
 		sut.GlobalLogEnabled.Should().Be(false);
@@ -45,17 +45,17 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 		sut.LogDirectory.Should().Be(sut.LogDirectoryDefault);
 		sut.LogLevel.Should().Be(LogLevel.Warning);
 
-		sut.EnableElasticDefaults.Should().Be(string.Empty);
-		sut.EnabledDefaults.Should().HaveFlag(EnabledElasticDefaults.Tracing);
-		sut.EnabledDefaults.Should().HaveFlag(EnabledElasticDefaults.Metrics);
-		sut.EnabledDefaults.Should().HaveFlag(EnabledElasticDefaults.Logging);
+		sut.ElasticDefaults.Should().Be(ElasticDefaults.All);
+		sut.ElasticDefaults.Should().HaveFlag(ElasticDefaults.Traces);
+		sut.ElasticDefaults.Should().HaveFlag(ElasticDefaults.Metrics);
+		sut.ElasticDefaults.Should().HaveFlag(ElasticDefaults.Logs);
 		sut.SkipOtlpExporter.Should().Be(false);
 
 		var logger = new TestLogger(output);
 
 		sut.LogConfigSources(logger);
 
-		logger.Messages.Count.Should().Be(4);
+		logger.Messages.Count.Should().Be(ExpectedLogsLength);
 		foreach (var message in logger.Messages)
 			message.Should().EndWith("from [Default]");
 	}
@@ -69,25 +69,26 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		var sut = new ElasticOpenTelemetryOptions(new Hashtable
 		{
-			{OTEL_DOTNET_AUTO_LOG_DIRECTORY, fileLogDirectory},
-			{OTEL_LOG_LEVEL, fileLogLevel},
-			{ELASTIC_OTEL_ENABLE_ELASTIC_DEFAULTS, enabledElasticDefaults},
-			{ELASTIC_OTEL_SKIP_OTLP_EXPORTER, "true"},
+			{ OTEL_DOTNET_AUTO_LOG_DIRECTORY, fileLogDirectory },
+			{ OTEL_LOG_LEVEL, fileLogLevel },
+			{ ELASTIC_OTEL_DEFAULTS_ENABLED, enabledElasticDefaults },
+			{ ELASTIC_OTEL_SKIP_OTLP_EXPORTER, "true" },
 		});
 
 		sut.LogDirectory.Should().Be(fileLogDirectory);
 		sut.LogLevel.Should().Be(ToLogLevel(fileLogLevel));
-		sut.EnableElasticDefaults.Should().Be(enabledElasticDefaults);
-		sut.EnabledDefaults.Should().Be(EnabledElasticDefaults.None);
+		sut.ElasticDefaults.Should().Be(ElasticDefaults.None);
 		sut.SkipOtlpExporter.Should().Be(true);
 
 		var logger = new TestLogger(output);
 
 		sut.LogConfigSources(logger);
 
-		logger.Messages.Count.Should().Be(4);
-		foreach (var message in logger.Messages)
-			message.Should().EndWith("from [Environment]");
+		logger.Messages.Should()
+			.Contain(s => s.EndsWith("from [Environment]"))
+			.And.Contain(s => s.EndsWith("from [Default]"))
+			.And.NotContain(s => s.EndsWith("from [IConfiguration]"));
+
 
 	}
 
@@ -99,23 +100,23 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 		const string enabledElasticDefaults = "None";
 
 		var json = $$"""
-			{
-				"Logging": {
-					"LogLevel": {
-						"Default": "Information",
-						"Elastic.OpenTelemetry": "{{loggingSectionLogLevel}}"
-					}
-				},
-				"Elastic": {
-					"OpenTelemetry": {
-						"LogDirectory": "C:\\Temp",
-						"LogLevel": "{{fileLogLevel}}",
-						"EnabledElasticDefaults": "{{enabledElasticDefaults}}",
-						"SkipOtlpExporter": true
-					}
-				}
-			}
-			""";
+					 {
+					 	"Logging": {
+					 		"LogLevel": {
+					 			"Default": "Information",
+					 			"Elastic.OpenTelemetry": "{{loggingSectionLogLevel}}"
+					 		}
+					 	},
+					 	"Elastic": {
+					 		"OpenTelemetry": {
+					 			"LogDirectory": "C:\\Temp",
+					 			"LogLevel": "{{fileLogLevel}}",
+					 			"ElasticDefaults": "{{enabledElasticDefaults}}",
+					 			"SkipOtlpExporter": true
+					 		}
+					 	}
+					 }
+					 """;
 
 		var config = new ConfigurationBuilder()
 			.AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(json)))
@@ -125,18 +126,20 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		sut.LogDirectory.Should().Be(@"C:\Temp");
 		sut.LogLevel.Should().Be(ToLogLevel(fileLogLevel));
-		sut.EnableElasticDefaults.Should().Be(enabledElasticDefaults);
-		sut.EnabledDefaults.Should().Be(EnabledElasticDefaults.None);
+		sut.ElasticDefaults.Should().Be(ElasticDefaults.None);
 		sut.SkipOtlpExporter.Should().Be(true);
-		sut.LoggingSectionLogLevel.Should().Be(loggingSectionLogLevel);
+		sut.EventLogLevel.Should().Be(EventLevel.Warning);
+		sut.LogLevel.Should().Be(LogLevel.Critical);
 
 		var logger = new TestLogger(output);
 
 		sut.LogConfigSources(logger);
 
-		logger.Messages.Count.Should().Be(4);
-		foreach (var message in logger.Messages)
-			message.Should().EndWith("from [IConfiguration]");
+		logger.Messages.Count.Should().Be(ExpectedLogsLength);
+		logger.Messages.Should()
+			.Contain(s => s.EndsWith("from [IConfiguration]"))
+			.And.Contain(s => s.EndsWith("from [Default]"))
+			.And.NotContain(s => s.EndsWith("from [Environment]"));
 	}
 
 	[Fact]
@@ -146,22 +149,22 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 		const string enabledElasticDefaults = "None";
 
 		var json = $$"""
-			{
-				"Logging": {
-					"LogLevel": {
-						"Default": "Information",
-						"Elastic.OpenTelemetry": "{{loggingSectionLogLevel}}"
-					}
-				},
-				"Elastic": {
-					"OpenTelemetry": {
-						"LogDirectory": "C:\\Temp",
-						"EnabledElasticDefaults": "{{enabledElasticDefaults}}",
-						"SkipOtlpExporter": true
-					}
-				}
-			}
-			""";
+					 {
+					 	"Logging": {
+					 		"LogLevel": {
+					 			"Default": "Information",
+					 			"Elastic.OpenTelemetry": "{{loggingSectionLogLevel}}"
+					 		}
+					 	},
+					 	"Elastic": {
+					 		"OpenTelemetry": {
+					 			"LogDirectory": "C:\\Temp",
+					 			"ElasticDefaults": "{{enabledElasticDefaults}}",
+					 			"SkipOtlpExporter": true
+					 		}
+					 	}
+					 }
+					 """;
 
 		var config = new ConfigurationBuilder()
 			.AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(json)))
@@ -171,18 +174,19 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		sut.LogDirectory.Should().Be(@"C:\Temp");
 		sut.LogLevel.Should().Be(ToLogLevel(loggingSectionLogLevel));
-		sut.EnableElasticDefaults.Should().Be(enabledElasticDefaults);
-		sut.EnabledDefaults.Should().Be(EnabledElasticDefaults.None);
+		sut.ElasticDefaults.Should().Be(ElasticDefaults.None);
 		sut.SkipOtlpExporter.Should().Be(true);
-		sut.LoggingSectionLogLevel.Should().Be(loggingSectionLogLevel);
+		sut.LogLevel.Should().Be(LogLevel.Warning);
+		sut.EventLogLevel.Should().Be(EventLevel.Warning);
 
 		var logger = new TestLogger(output);
 
 		sut.LogConfigSources(logger);
 
-		logger.Messages.Count.Should().Be(4);
-		foreach (var message in logger.Messages)
-			message.Should().EndWith("from [IConfiguration]");
+		logger.Messages.Should()
+			.Contain(s => s.EndsWith("from [IConfiguration]"))
+			.And.Contain(s => s.EndsWith("from [Default]"))
+			.And.NotContain(s => s.EndsWith("from [Environment]"));
 
 	}
 
@@ -193,21 +197,21 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 		const string enabledElasticDefaults = "None";
 
 		var json = $$"""
-			{
-				"Logging": {
-					"LogLevel": {
-						"Default": "{{loggingSectionDefaultLogLevel}}"
-					}
-				},
-				"Elastic": {
-					"OpenTelemetry": {
-						"LogDirectory": "C:\\Temp",
-						"EnabledElasticDefaults": "{{enabledElasticDefaults}}",
-						"SkipOtlpExporter": true
-					}
-				}
-			}
-			""";
+					 {
+					 	"Logging": {
+					 		"LogLevel": {
+					 			"Default": "{{loggingSectionDefaultLogLevel}}"
+					 		}
+					 	},
+					 	"Elastic": {
+					 		"OpenTelemetry": {
+					 			"LogDirectory": "C:\\Temp",
+					 			"ElasticDefaults": "{{enabledElasticDefaults}}",
+					 			"SkipOtlpExporter": true
+					 		}
+					 	}
+					 }
+					 """;
 
 		var config = new ConfigurationBuilder()
 			.AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(json)))
@@ -217,18 +221,18 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		sut.LogDirectory.Should().Be(@"C:\Temp");
 		sut.LogLevel.Should().Be(ToLogLevel(loggingSectionDefaultLogLevel));
-		sut.EnableElasticDefaults.Should().Be(enabledElasticDefaults);
-		sut.EnabledDefaults.Should().Be(EnabledElasticDefaults.None);
+		sut.ElasticDefaults.Should().Be(ElasticDefaults.None);
 		sut.SkipOtlpExporter.Should().Be(true);
-		sut.LoggingSectionLogLevel.Should().Be(loggingSectionDefaultLogLevel);
+		sut.EventLogLevel.Should().Be(EventLevel.Informational);
 
 		var logger = new TestLogger(output);
 
 		sut.LogConfigSources(logger);
 
-		logger.Messages.Count.Should().Be(4);
-		foreach (var message in logger.Messages)
-			message.Should().EndWith("from [IConfiguration]");
+		logger.Messages.Should()
+			.Contain(s => s.EndsWith("from [IConfiguration]"))
+			.And.Contain(s => s.EndsWith("from [Default]"))
+			.And.NotContain(s => s.EndsWith("from [Environment]"));
 	}
 
 	[Fact]
@@ -239,17 +243,17 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 		const string enabledElasticDefaults = "None";
 
 		var json = $$"""
-			{
-				"Elastic": {
-					"OpenTelemetry": {
-						"LogDirectory": "C:\\Json",
-						"LogLevel": "Trace",
-						"EnabledElasticDefaults": "All",
-						"SkipOtlpExporter": false
-					}
-				}
-			}
-			""";
+					 {
+					 	"Elastic": {
+					 		"OpenTelemetry": {
+					 			"LogDirectory": "C:\\Json",
+					 			"LogLevel": "Trace",
+					 			"ElasticDefaults": "All",
+					 			"SkipOtlpExporter": false
+					 		}
+					 	}
+					 }
+					 """;
 
 		var config = new ConfigurationBuilder()
 			.AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(json)))
@@ -257,16 +261,15 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		var sut = new ElasticOpenTelemetryOptions(config, new Hashtable
 		{
-			{OTEL_DOTNET_AUTO_LOG_DIRECTORY, fileLogDirectory},
-			{OTEL_LOG_LEVEL, fileLogLevel},
-			{ELASTIC_OTEL_ENABLE_ELASTIC_DEFAULTS, enabledElasticDefaults},
-			{ELASTIC_OTEL_SKIP_OTLP_EXPORTER, "true"},
+			{ OTEL_DOTNET_AUTO_LOG_DIRECTORY, fileLogDirectory },
+			{ OTEL_LOG_LEVEL, fileLogLevel },
+			{ ELASTIC_OTEL_DEFAULTS_ENABLED, enabledElasticDefaults },
+			{ ELASTIC_OTEL_SKIP_OTLP_EXPORTER, "true" },
 		});
 
 		sut.LogDirectory.Should().Be(fileLogDirectory);
 		sut.LogLevel.Should().Be(ToLogLevel(fileLogLevel));
-		sut.EnableElasticDefaults.Should().Be(enabledElasticDefaults);
-		sut.EnabledDefaults.Should().Be(EnabledElasticDefaults.None);
+		sut.ElasticDefaults.Should().Be(ElasticDefaults.None);
 		sut.SkipOtlpExporter.Should().Be(true);
 	}
 
@@ -275,157 +278,33 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 	{
 		const string fileLogDirectory = "C:\\Property";
 		const string fileLogLevel = "Critical";
-		const string enabledElasticDefaults = "None";
 
 		var sut = new ElasticOpenTelemetryOptions(new Hashtable
 		{
-			{OTEL_DOTNET_AUTO_LOG_DIRECTORY, "C:\\Temp"},
-			{OTEL_LOG_LEVEL, "Information"},
-			{ELASTIC_OTEL_ENABLE_ELASTIC_DEFAULTS, "All"},
-			{ELASTIC_OTEL_SKIP_OTLP_EXPORTER, "true"},
+			{ OTEL_DOTNET_AUTO_LOG_DIRECTORY, "C:\\Temp" },
+			{ OTEL_LOG_LEVEL, "Information" },
+			{ ELASTIC_OTEL_DEFAULTS_ENABLED, "All" },
+			{ ELASTIC_OTEL_SKIP_OTLP_EXPORTER, "true" },
 		})
 		{
 			LogDirectory = fileLogDirectory,
 			LogLevel = ToLogLevel(fileLogLevel) ?? LogLevel.None,
 			SkipOtlpExporter = false,
-			EnableElasticDefaults = enabledElasticDefaults
+			ElasticDefaults = ElasticDefaults.None
 		};
 
 		sut.LogDirectory.Should().Be(fileLogDirectory);
 		sut.LogLevel.Should().Be(ToLogLevel(fileLogLevel));
-		sut.EnableElasticDefaults.Should().Be(enabledElasticDefaults);
-		sut.EnabledDefaults.Should().Be(EnabledElasticDefaults.None);
+		sut.ElasticDefaults.Should().Be(ElasticDefaults.None);
 		sut.SkipOtlpExporter.Should().Be(false);
 
 		var logger = new TestLogger(output);
 
 		sut.LogConfigSources(logger);
 
-		logger.Messages.Count.Should().Be(4);
-		foreach (var message in logger.Messages)
-			message.Should().EndWith("from [Property]");
-	}
-
-	[Theory]
-	[ClassData(typeof(DefaultsData))]
-	internal void ElasticDefaults_ConvertsAsExpected(string optionValue, Action<EnabledElasticDefaults> asserts)
-	{
-		var sut = new ElasticOpenTelemetryOptions
-		{
-			EnableElasticDefaults = optionValue
-		};
-
-		asserts(sut.EnabledDefaults);
-	}
-
-	internal class DefaultsData : TheoryData<string, Action<EnabledElasticDefaults>>
-	{
-		public DefaultsData()
-		{
-			Add("All", a =>
-			{
-				a.HasFlag(EnabledElasticDefaults.Tracing).Should().BeTrue();
-				a.HasFlag(EnabledElasticDefaults.Metrics).Should().BeTrue();
-				a.HasFlag(EnabledElasticDefaults.Logging).Should().BeTrue();
-				a.Equals(EnabledElasticDefaults.None).Should().BeFalse();
-			});
-
-			Add("all", a =>
-			{
-				a.HasFlag(EnabledElasticDefaults.Tracing).Should().BeTrue();
-				a.HasFlag(EnabledElasticDefaults.Metrics).Should().BeTrue();
-				a.HasFlag(EnabledElasticDefaults.Logging).Should().BeTrue();
-				a.Equals(EnabledElasticDefaults.None).Should().BeFalse();
-			});
-
-			Add("Tracing", a =>
-			{
-				a.HasFlag(EnabledElasticDefaults.Tracing).Should().BeTrue();
-				a.HasFlag(EnabledElasticDefaults.Metrics).Should().BeFalse();
-				a.HasFlag(EnabledElasticDefaults.Logging).Should().BeFalse();
-				a.Equals(EnabledElasticDefaults.None).Should().BeFalse();
-			});
-
-			Add("Metrics", a =>
-			{
-				a.HasFlag(EnabledElasticDefaults.Tracing).Should().BeFalse();
-				a.HasFlag(EnabledElasticDefaults.Metrics).Should().BeTrue();
-				a.HasFlag(EnabledElasticDefaults.Logging).Should().BeFalse();
-				a.Equals(EnabledElasticDefaults.None).Should().BeFalse();
-			});
-
-			Add("Logging", a =>
-			{
-				a.HasFlag(EnabledElasticDefaults.Tracing).Should().BeFalse();
-				a.HasFlag(EnabledElasticDefaults.Metrics).Should().BeFalse();
-				a.HasFlag(EnabledElasticDefaults.Logging).Should().BeTrue();
-				a.Equals(EnabledElasticDefaults.None).Should().BeFalse();
-			});
-
-			Add("Tracing,Logging", a =>
-			{
-				a.HasFlag(EnabledElasticDefaults.Tracing).Should().BeTrue();
-				a.HasFlag(EnabledElasticDefaults.Metrics).Should().BeFalse();
-				a.HasFlag(EnabledElasticDefaults.Logging).Should().BeTrue();
-				a.Equals(EnabledElasticDefaults.None).Should().BeFalse();
-			});
-
-			Add("tracing,logging,metrics", a =>
-			{
-				a.HasFlag(EnabledElasticDefaults.Tracing).Should().BeTrue();
-				a.HasFlag(EnabledElasticDefaults.Metrics).Should().BeTrue();
-				a.HasFlag(EnabledElasticDefaults.Logging).Should().BeTrue();
-				a.Equals(EnabledElasticDefaults.None).Should().BeFalse();
-			});
-
-			Add("None", a =>
-			{
-				a.HasFlag(EnabledElasticDefaults.Tracing).Should().BeFalse();
-				a.HasFlag(EnabledElasticDefaults.Metrics).Should().BeFalse();
-				a.HasFlag(EnabledElasticDefaults.Logging).Should().BeFalse();
-				a.Equals(EnabledElasticDefaults.None).Should().BeTrue();
-			});
-		}
-	};
-
-	[Fact]
-	public void TransactionId_IsNotAdded_WhenElasticDefaultsDoesNotIncludeTracing()
-	{
-		var options = new ElasticOpenTelemetryBuilderOptions
-		{
-			Logger = new TestLogger(output),
-			DistroOptions = new ElasticOpenTelemetryOptions()
-			{
-				SkipOtlpExporter = true,
-				EnableElasticDefaults = "None"
-			}
-		};
-
-		const string activitySourceName = nameof(TransactionId_IsNotAdded_WhenElasticDefaultsDoesNotIncludeTracing);
-
-		var activitySource = new ActivitySource(activitySourceName, "1.0.0");
-
-		var exportedItems = new List<Activity>();
-
-		using var session = new ElasticOpenTelemetryBuilder(options)
-			.WithTracing(tpb =>
-			{
-				tpb
-					.ConfigureResource(rb => rb.AddService("Test", "1.0.0"))
-					.AddSource(activitySourceName)
-					.AddInMemoryExporter(exportedItems);
-			})
-			.Build();
-
-		using (var activity = activitySource.StartActivity(ActivityKind.Internal))
-			activity?.SetStatus(ActivityStatusCode.Ok);
-
-		exportedItems.Should().ContainSingle();
-
-		var exportedActivity = exportedItems[0];
-
-		var transactionId = exportedActivity.GetTagItem(TransactionIdProcessor.TransactionIdTagName);
-
-		transactionId.Should().BeNull();
+		logger.Messages.Should()
+			.Contain(s => s.EndsWith("from [Property]"))
+			.And.Contain(s => s.EndsWith("from [Default]"))
+			.And.NotContain(s => s.EndsWith("from [Environment]"));
 	}
 }

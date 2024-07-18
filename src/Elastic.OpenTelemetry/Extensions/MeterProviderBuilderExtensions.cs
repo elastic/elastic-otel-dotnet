@@ -5,6 +5,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using OpenTelemetry.Metrics;
+using static Elastic.OpenTelemetry.Configuration.Signals;
 
 namespace Elastic.OpenTelemetry.Extensions;
 
@@ -23,7 +24,7 @@ public static class MeterProviderBuilderExtensions
 			.AddRuntimeInstrumentation()
 			.AddHttpClientInstrumentation();
 
-		logger.LogConfiguredSignalProvider("metrics", nameof(MeterProviderBuilder));
+		logger.LogConfiguredSignalProvider(nameof(Metrics), nameof(MeterProviderBuilder));
 
 		return builder;
 	}
