@@ -34,6 +34,7 @@ type Build =
     | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] ValidatePackages
     | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] GenerateReleaseNotes
     | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] GenerateApiChanges
+    | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] Redistribute
     | [<CliPrefix(CliPrefix.None);SubCommand>] Release
     
     | [<Inherit;AltCommandLine("-s")>] Single_Target
@@ -63,6 +64,7 @@ with
             | ValidateLicenses
             | ValidatePackages
             | GenerateReleaseNotes
+            | Redistribute
             | GenerateApiChanges -> "Undocumented, dependent target"
             
             // flags

@@ -8,6 +8,7 @@
   <ItemGroup>
     <PackageReference Include="Argu" Version="6.1.4"/>
     <PackageReference Include="Bullseye" Version="4.2.1"/>
+    <PackageReference Include="Octokit" Version="13.0.1" />
     <PackageReference Include="Proc.Fs" Version="0.8.1"/>
     <PackageReference Include="Fake.Tools.Git" Version="5.20.3"/>
     <PackageReference Remove="FSharp.Core"/>
@@ -21,6 +22,7 @@
   <ItemGroup>
     <Compile Include="scripts\BuildInformation.fs"/>
     <Compile Include="scripts\CommandLine.fs"/>
+    <Compile Include="scripts\Packaging.fs" />
     <Compile Include="scripts\Targets.fs"/>
     <Compile Include="scripts\Program.fs"/>
     <None Include="**\*"/>
