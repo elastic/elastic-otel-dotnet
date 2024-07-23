@@ -19,6 +19,10 @@ include::release-status.asciidoc[]
 
 This guide shows you how to use the {distro_name} ("the distro") to instrument your {language} application and send OpenTelemetry data to an Elastic Observability deployment.
 
+This doc will guide you through the minimal configuration options to get the Elastic distro set up in your application.
+You do _not_ need any existing experience with OpenTelemetry to set up the Elastic distro initially.
+If you need more control over your configuration after getting set up, you can learn more in the https://opentelemetry.io/docs/languages/net[OpenTelemetry SDK documentation].
+
 [NOTE]
 ====
 As an OpenTelemetry SDK, the distro supports sending data to any OpenTelemetry protocol (OTLP) endpoint (https://opentelemetry.io/docs/collector/[OpenTelemetry Collector]), but this guide assumes you are sending data to Elastic.
@@ -33,9 +37,6 @@ As an OpenTelemetry SDK, the distro supports sending data to any OpenTelemetry p
 
 Before getting started:
 
-// Familiarity with OpenTelemetry
-* *Familiarize yourself with the OpenTelemetry SDK.* The distro is a lightweight wrapper around the OpenTelemetry SDK. You should be broadly familiar with the OpenTelemetry SDK concepts and instrumenting applications using the Microsoft diagnostic APIs. If you are not familiar with this, start with the https://opentelemetry.io/docs/languages/net[OpenTelemetry SDK documentation].
-// Any dependencies (including specific supported versions)
 * *Check your .NET SDK version.* The current documentation and examples are written with .NET 6 and newer applications in mind. Before continuing, ensure that you have a supported https://dotnet.microsoft.com/en-us/download/dotnet[.NET SDK version] installed locally.
 +
 * *Set up Elastic Observability*. You'll need somewhere to send the gathered OpenTelemetry data, so it can be viewed and analyzed. This doc assumes you're using an https://www.elastic.co/observability[Elastic Observability] cloud deployment. You can use an existing one or set up a new one.
@@ -224,15 +225,8 @@ for your observability data.
 ////
 ✅ Step-by-step instructions
 ////
-When sending data to Elastic, you can find the values of these variables in Kibana's APM setup guide:
-
-. In {kib}, go to *Setup guides*.
-. Select *Observability*.
-. Select *Monitor my application performance*.
-. Scroll down and select the *OpenTelemetry* option.
+include::configure.asciidoc[tag=get-auth]
 +
-image:images/elastic-cloud-opentelemetry-configuration.png[Elastic Cloud OpenTelemetry configuration]
-
 . Configure environment variables for the application either in `launchSettings.json` or in the environment
 where the application is running.
 . Once configured, run the application and make a request to the root endpoint. A trace will be generated
@@ -244,20 +238,16 @@ For more information on all the available configuration options, refer to <<conf
 ✅ What success looks like
 ////
 [discrete]
-[[get-started-view-traces]]
-=== View traces
+[[get-started-confirm]]
+=== Confirm that the distro is working
 
-To view the traces, you can use the Elastic APM UI:
+To confirm that the distro has successfully connected to Elastic:
 
-////
-TO DO: Verify step-by-step instructions
-////
-In {kib}:
-
-. Go to *APM* -> *Traces*.
-. You should see the service you just started tracking.
-. Click on the name in the list to see traces.
-
+. In {kib}, go to *Observability* → *Applications* → *Traces*.
+. You should see the name of the service to which you just added the distro.
+It can take several minutes after setting up the distro for the service to show up in this list.
+. Click on the name of the service in the list to see traces.
++
 image:images/trace-sample-minimal-api.png[Minimal API request trace sample in the Elastic APM UI]
 
 ////
