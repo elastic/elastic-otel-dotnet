@@ -14,6 +14,7 @@ open Fake.Tools.Git
 type BuildConfiguration = 
     static member ValidateAssemblyName = false
     static member GenerateApiChanges = false
+    static member OpenTelemetryAutoInstrumentationVersion = SemVer.parse("1.7.0")
 
 type Software =
     static member Organization = "elastic"

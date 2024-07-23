@@ -9,8 +9,11 @@ open System
 open System.IO
 open System.Net.Http
 open Argu
+open BuildInformation
 open CommandLine
 open Octokit
+
+let private otelAutoVersion = BuildConfiguration.OpenTelemetryAutoInstrumentationVersion;
 
 let downloadArtifacts (arguments:ParseResults<Build>) =
     let client = GitHubClient(ProductHeaderValue("Elastic.OpenTelemetry"))
@@ -19,21 +22,20 @@ let downloadArtifacts (arguments:ParseResults<Build>) =
         Console.WriteLine($"using GITHUB_TOKEN");
         let tokenAuth = Credentials(token); // This can be a PAT or an OAuth token.
         client.Credentials <- tokenAuth
-    //https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation/releases/tag/v1.7.0
-    
-    let downloadFolder = Path.Combine(".artifacts", "otel-distribution") |> Directory.CreateDirectory
+    let downloadFolder = Path.Combine(".artifacts", "otel-distribution", otelAutoVersion.AsString) |> Directory.CreateDirectory
     
     let assets =
         async {
-            let! release = client.Repository.Release.Get("open-telemetry", "opentelemetry-dotnet-instrumentation", "v1.7.0") |> Async.AwaitTask;
+            let! release = client.Repository.Release.Get("open-telemetry", "opentelemetry-dotnet-instrumentation", $"v{otelAutoVersion.AsString}") |> Async.AwaitTask;
             Console.WriteLine($"Release %s{release.Name} has %i{release.Assets.Count} assets");
             return release.Assets
+                |> Seq.map (fun asset -> (asset, Path.Combine(downloadFolder.FullName, asset.Name)))
+                |> Seq.toList
         } |> Async.RunSynchronously
     
     async {
         use httpClient = new HttpClient()
         assets
-        |> Seq.map (fun asset -> (asset, Path.Combine(downloadFolder.FullName, asset.Name)))
         |> Seq.filter (fun (_, path) -> not <| File.Exists path)
         |> Seq.iter (fun (asset, path) ->
             async {
