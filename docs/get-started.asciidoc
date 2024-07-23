@@ -49,7 +49,7 @@ This section shows how to create an https://www.elastic.co/observability[Elastic
 
 . Register at https://cloud.elastic.co/registration[cloud.elastic.co], if you haven't already. This supports starting **free trial**.
 . After registering, click *Create deployment* at `<https://cloud.elastic.co/home>`.
-. Once that is created, click *Open* to visit your Kibana home page, e.g. `https://{DEPLOYMENT_NAME}.kb.{REGION}.cloud.es.io/app/home#/getting_started`.
+. Once that is created, click *Open* to visit your {kib} home page, (for example, `https://{DEPLOYMENT_NAME}.kb.{REGION}.cloud.es.io/app/home#/getting_started`).
 ====
 
 ////
