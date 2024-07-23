@@ -4,6 +4,7 @@
 
 using System.Diagnostics;
 using System.Diagnostics.Tracing;
+using System.Reflection;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Diagnostics;
 using Elastic.OpenTelemetry.Diagnostics.Logging;
@@ -17,6 +18,7 @@ using OpenTelemetry;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
+using static Elastic.OpenTelemetry.Configuration.ElasticOpenTelemetryOptions;
 
 namespace Elastic.OpenTelemetry;
 
@@ -98,7 +100,7 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 		// We always add this so we can identify a distro is being used, even if all Elastic defaults are disabled.
 		openTelemetry.ConfigureResource(r => r.UseElasticDefaults());
 
-		if (options.DistroOptions.EnabledDefaults.Equals(ElasticOpenTelemetryOptions.EnabledElasticDefaults.None))
+		if (options.DistroOptions.ElasticDefaults.Equals(ElasticDefaults.None))
 		{
 			Logger.LogNoElasticDefaults();
 
@@ -108,22 +110,51 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 		}
 
 		openTelemetry.ConfigureResource(r => r.UseElasticDefaults(Logger));
+		var distro = options.DistroOptions;
 
 		//https://github.com/open-telemetry/opentelemetry-dotnet/pull/5400
-		if (!options.DistroOptions.SkipOtlpExporter)
+		if (!distro.SkipOtlpExporter)
 			openTelemetry.UseOtlpExporter();
 
-		if (options.DistroOptions.EnabledDefaults.HasFlag(ElasticOpenTelemetryOptions.EnabledElasticDefaults.Logging))
+		if (distro.Signals.HasFlag(Signals.Logs))
 		{
 			//TODO Move to WithLogging once it gets stable
-			Services.Configure<OpenTelemetryLoggerOptions>(logging => logging.UseElasticDefaults());
+			Services.Configure<OpenTelemetryLoggerOptions>(logging =>
+			{
+				if (distro.ElasticDefaults.HasFlag(ElasticDefaults.Logs))
+					logging.UseElasticDefaults();
+				else
+					Logger.LogDefaultsDisabled(nameof(ElasticDefaults.Logs));
+			});
 		}
+		else
+			Logger.LogSignalDisabled(nameof(Signals.Logs));
 
-		if (options.DistroOptions.EnabledDefaults.HasFlag(ElasticOpenTelemetryOptions.EnabledElasticDefaults.Tracing))
-			openTelemetry.WithTracing(tracing => tracing.UseElasticDefaults(Logger));
+		if (distro.Signals.HasFlag(Signals.Traces))
+		{
+			openTelemetry.WithTracing(tracing =>
+			{
+				if (distro.ElasticDefaults.HasFlag(ElasticDefaults.Traces))
+					tracing.UseElasticDefaults(Logger);
+				else
+					Logger.LogDefaultsDisabled(nameof(ElasticDefaults.Traces));
+			});
+		}
+		else
+			Logger.LogSignalDisabled(nameof(Signals.Metrics));
 
-		if (options.DistroOptions.EnabledDefaults.HasFlag(ElasticOpenTelemetryOptions.EnabledElasticDefaults.Metrics))
-			openTelemetry.WithMetrics(metrics => metrics.UseElasticDefaults(Logger));
+		if (distro.Signals.HasFlag(Signals.Metrics))
+		{
+			openTelemetry.WithMetrics(metrics =>
+			{
+				if (distro.ElasticDefaults.HasFlag(ElasticDefaults.Metrics))
+					metrics.UseElasticDefaults(Logger);
+				else
+					Logger.LogDefaultsDisabled(nameof(ElasticDefaults.Metrics));
+			});
+		}
+		else
+			Logger.LogSignalDisabled(nameof(Signals.Metrics));
 	}
 }
 
@@ -132,9 +163,16 @@ internal static partial class LoggerMessages
 	[LoggerMessage(EventId = 0, Level = LogLevel.Information, Message = "ElasticOpenTelemetryBuilder initialized{newline}{StackTrace}.")]
 	public static partial void LogElasticOpenTelemetryBuilderInitialized(this ILogger logger, string newline, StackTrace stackTrace);
 
-	[LoggerMessage(EventId = 1, Level = LogLevel.Trace, Message = "ElasticOpenTelemetryBuilder configured {Signal} via the {Provider}.")]
+	[LoggerMessage(EventId = 1, Level = LogLevel.Debug, Message = "ElasticOpenTelemetryBuilder configured {Signal} via the {Provider}.")]
 	public static partial void LogConfiguredSignalProvider(this ILogger logger, string signal, string provider);
 
 	[LoggerMessage(EventId = 2, Level = LogLevel.Information, Message = "No Elastic defaults were enabled.")]
 	public static partial void LogNoElasticDefaults(this ILogger logger);
+
+	[LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "ElasticOpenTelemetryBuilder {Signal} skipped, configured to be disabled")]
+	public static partial void LogSignalDisabled(this ILogger logger, string signal);
+
+	[LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "Elastic defaults for {Signal} skipped, configured to be disabled")]
+	public static partial void LogDefaultsDisabled(this ILogger logger, string signal);
+
 }

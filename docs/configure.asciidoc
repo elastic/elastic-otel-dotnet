@@ -223,13 +223,13 @@ an OTLP endpoint. This can be useful when you want to test applications without 
 |===
 
 [discrete]
-[[config-enabledelasticdefaults]]
-===== `EnabledElasticDefaults`
+[[config-elasticdefaults]]
+===== `ElasticDefaults`
 
 A comma-separated list of Elastic defaults to enable. This can be useful when you want to enable
 only some of the Elastic Distribution for OpenTelemetry .NET opinionated defaults.
 
-Valid options: `None`, `Tracing`, `Metrics`, `Logging`.
+Valid options: `None`, `Traces`, `Metrics`, `Logs`, `All`.
 
 Except for the `None` option, all other options can be combined.
 
@@ -242,12 +242,12 @@ OpenTelemetry SDK configuration. You may then choose to configure the various pr
 as required.
 
 In all other cases, the Elastic Distribution for OpenTelemetry .NET will enable the specified defaults. For example, to enable only
-Elastic defaults only for tracing and metrics, set this value to `Tracing,Metrics`.
+Elastic defaults only for tracing and metrics, set this value to `Traces,Metrics`.
 
 [%header]
 |===
 | Environment variable name | `IConfiguration` key
-| `ELASTIC_OTEL_ENABLE_ELASTIC_DEFAULTS` | `Elastic:OpenTelemetry:EnabledElasticDefaults`
+| `ELASTIC_OTEL_DEFAULTS_ENABLED` | `Elastic:OpenTelemetry:ElasticDefaults` |
 |===
 
 [%header]

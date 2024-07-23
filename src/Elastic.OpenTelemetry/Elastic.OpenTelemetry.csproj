@@ -11,6 +11,7 @@
     <IsPackable>True</IsPackable>
     <PolyPublic>false</PolyPublic>
     <NoWarn>$(NoWarn);OTEL1000</NoWarn>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(TargetFramework.StartsWith('netstandard2.0')) OR $(TargetFramework.StartsWith('net4'))">
@@ -27,6 +28,7 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.9.0" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Process" Version="0.5.0-beta.6" />
     <PackageReference Include="Polyfill" Version="4.4.0" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
+    <PackageReference Include="NetEscapades.EnumGenerators" Version="1.0.0-beta09" PrivateAssets="all" ExcludeAssets="runtime" />
   </ItemGroup>
 
   <ItemGroup Condition="$(TargetFramework.StartsWith('netstandard2')) OR $(TargetFramework.StartsWith('net4'))">
