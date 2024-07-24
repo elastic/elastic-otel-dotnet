@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net6.0;net462</TargetFrameworks>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+      <IsPackable>True</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="OpenTelemetry.AutoInstrumentation" Version="1.7.0"  GeneratePathProperty="true" PrivateAssets="contentfiles" />
+    </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="README.md" />
+
+    <Content Update="instrument.cmd" CopyToPublishDirectory="Never" CopyToOutputDirectory="Never" />
+    <Content Remove="instrument.cmd" />
+    <Content Include="_instrument.cmd"  CopyToOutputDirectory="Always" CopyToPublishDirectory="Always"
+             Pack="True" PackagePath="contentFiles/any/any/_instrument.cmd"/>
+    <Content Include="instrument.cmd"  CopyToOutputDirectory="Always" CopyToPublishDirectory="Always"
+             Pack="True" PackagePath="contentFiles/any/any/instrument.cmd"/>
+  </ItemGroup>
+  
+  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+    <Copy SourceFiles="$(PkgOpenTelemetry_AutoInstrumentation)/contentFiles/any/any/instrument.cmd" DestinationFiles="$(MSBuildThisFileDirectory)/_instrument.cmd"/>
+  </Target>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\Elastic.OpenTelemetry\Elastic.OpenTelemetry.csproj" />
+  </ItemGroup>
+
+</Project>

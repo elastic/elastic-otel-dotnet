@@ -185,7 +185,7 @@ let Setup (parsed:ParseResults<Build>) =
         | ValidatePackages -> Build.Step validatePackages
         | GenerateReleaseNotes -> Build.Step generateReleaseNotes
         | GenerateApiChanges -> Build.Step generateApiChanges
-        | Redistribute -> Build.Step Packaging.downloadArtifacts
+        | Redistribute -> Build.Step Packaging.redistribute
             
         // flags
         | Single_Target
