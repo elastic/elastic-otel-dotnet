@@ -32,7 +32,7 @@ The {distro_name} ("the distro") is a {language} package that provides:
 ✅ What is it?
 ✅ Why use it?
 ////
-A _distribution_ is a customized version of an upstream OpenTelemetry repository with some customizations. The {distro_name} is an extension of the https://opentelemetry.io/docs/languages/{language_lc}[OpenTelemetry SDK for {language}] and includes the following customizations:
+A _distribution_ is a customized version of an upstream OpenTelemetry repository with some customizations. The {distro_name} is an extension of the https://opentelemetry.io/docs/zero-code/net/configuration/[OpenTelemetry SDK for {language}] and includes the following customizations:
 
 * Uses Elastic-specific processors that ensure optimal compatibility when exporting OpenTelemetry signal data to an Elastic backend like Elastic APM server.
 * Preconfigures the collection of tracing and metrics signals, applying some opinionated defaults, such as which sources are collected by default.
