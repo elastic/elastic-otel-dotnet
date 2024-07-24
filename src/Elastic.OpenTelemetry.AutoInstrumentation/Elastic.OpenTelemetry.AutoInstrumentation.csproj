@@ -39,6 +39,8 @@
   </ItemGroup>
   
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+    <!-- Copies the content files manually as physical files in the source repository -->
+    <!-- we manually repackage these as contentfiles (albeit renamed) --> 
     <Copy SourceFiles="$(PkgOpenTelemetry_AutoInstrumentation)/contentFiles/any/any/instrument.cmd" DestinationFiles="$(MSBuildThisFileDirectory)/_instrument.cmd"/>
     <Copy SourceFiles="$(PkgOpenTelemetry_AutoInstrumentation)/contentFiles/any/any/instrument.sh" DestinationFiles="$(MSBuildThisFileDirectory)/_instrument.sh"/>
   </Target>
