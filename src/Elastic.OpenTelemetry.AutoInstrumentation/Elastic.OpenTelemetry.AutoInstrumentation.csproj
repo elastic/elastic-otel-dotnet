@@ -34,7 +34,7 @@
              Pack="True" PackagePath="contentFiles/any/any/instrument.sh"/>
 
     <Content Include="instrument.props"  CopyToOutputDirectory="Always" CopyToPublishDirectory="Always"
-             Pack="True" PackagePath="build/Elastic.OpenTelemetry.AutoInstrumentation.props"/>
+             Pack="True" PackagePath="build/elastic.opentelemetry.autoinstrumentation.props"/>
 
   </ItemGroup>
   
