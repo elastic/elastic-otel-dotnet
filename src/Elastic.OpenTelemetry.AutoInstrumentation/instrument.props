@@ -5,6 +5,8 @@
 <ItemGroup>
   <Content Update="@(Content)">
     <Visible Condition="'%(NuGetItemType)' == 'Content' and '%(NuGetPackageId)' == 'elastic.opentelemetry.autoinstrumentation'">False</Visible>
+    <CopyToOutputDirectory Condition="'%(NuGetItemType)' == 'Content' and '%(NuGetPackageId)' == 'elastic.opentelemetry.autoinstrumentation'">Always</CopyToOutputDirectory>
+    <CopyToPublishDirectory Condition="'%(NuGetItemType)' == 'Content' and '%(NuGetPackageId)' == 'elastic.opentelemetry.autoinstrumentation'">Always</CopyToPublishDirectory>
   </Content>
 </ItemGroup>
 </Project>
