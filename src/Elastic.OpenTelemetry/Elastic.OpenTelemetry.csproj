@@ -41,7 +41,6 @@
 
   <ItemGroup>
     <Content Remove="README.md" />
-    <Content Include="instrument.sh" CopyToOutputDirectory="PreserveNewest" Pack="True" PackagePath="instrument.sh" />
   </ItemGroup>
 
 </Project>
