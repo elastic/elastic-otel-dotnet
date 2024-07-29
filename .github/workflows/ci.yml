@@ -31,7 +31,6 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-        
 
       - name: Bootstrap Action Workspace
         id: bootstrap
@@ -53,3 +52,23 @@ jobs:
       # We still run the full release build on pull-requests this ensures packages are validated ahead of time
       - name: Release
         run: ./build.sh release --test-suite=skip-e2e
+  
+  container-build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - machine: ubuntu-20.04
+          - machine: ubuntu-20.04
+            base-image: alpine-x64
+            os-type: linux-musl
+            # architecture: "x64"
+          - machine: [self-hosted, Linux, ARM64]
+            base-image: alpine-arm64
+            os-type: linux-musl
+            # architecture: "arm64"
+          - machine: [self-hosted, Linux, ARM64]
+            base-image: debian-arm64
+            os-type: linux-glibc
+            # architecture: "arm64"
+    runs-on: ${{ matrix.machine }}
