@@ -35,7 +35,7 @@ jobs:
       name: Release
 
     - name: Generate build provenance
-      uses: actions/attest-build-provenance@bdd51370e0416ac948727f861e03c2f05d32d78e  # v1.3.2
+      uses: actions/attest-build-provenance@5e9cb68e95676991667494a6a4e59b8a2f13e1d0  # v1.3.3
       with:
         subject-path: "${{ github.workspace }}/${{ env.RELEASE_PACKAGES }}"
 
@@ -44,7 +44,7 @@ jobs:
       run: dotnet nuget push '${{ env.RELEASE_PACKAGES }}' -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate --no-symbols
 
     - if: ${{ success() && github.event_name == 'release' }}
-      uses: elastic/oblt-actions/slack/send@v1.12.0
+      uses: elastic/oblt-actions/slack/send@v1.12.1
       with:
         bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
         channel-id: ${{ env.SLACK_CHANNEL }}
@@ -54,7 +54,7 @@ jobs:
           Release URL: (<https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}|${{ github.ref_name }}>)
 
     - if: ${{ failure() && github.event_name == 'release' }}
-      uses: elastic/oblt-actions/slack/send@v1.12.0
+      uses: elastic/oblt-actions/slack/send@v1.12.1
       with:
         bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
         channel-id: ${{ env.SLACK_CHANNEL }}
