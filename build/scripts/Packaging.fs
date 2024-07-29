@@ -68,7 +68,7 @@ let downloadArtifacts (_:ParseResults<Build>) =
 let injectPluginFiles (asset: ReleaseAsset) (stagedZip: FileInfo) tfm target  = 
     use zipArchive = ZipFile.Open(stagedZip.FullName, ZipArchiveMode.Update)
     pluginFiles tfm  |> List.iter(fun f ->
-        printfn $"Staging zip: %s{asset.Name}, Adding: %s{f.Name} (%s{tfm}_ to %s{target}"
+        printfn $"Staging zip: %s{stagedZip.Name}, Adding: %s{f.Name} (%s{tfm}) to %s{target}"
         zipArchive.CreateEntryFromFile(f.FullName, Path.Combine(target, f.Name)) |> ignore
     )
     
@@ -93,7 +93,7 @@ let stageArtifacts (assets:List<ReleaseAsset * FileInfo>) =
         path.MoveTo(distro.FullName, true)
         distro.Refresh()
         
-        printfn $"Created: %s{distro.FullName}"
+        printfn $"Moved staging to: %s{distro.FullName}"
     )
     stagedZips
     
@@ -101,11 +101,13 @@ let stageArtifacts (assets:List<ReleaseAsset * FileInfo>) =
   
 let redistribute (arguments:ParseResults<Build>) =
     let assets = downloadArtifacts arguments
-    let staged = stageArtifacts assets
-        
     printfn ""
     assets |> List.iter (fun (asset, path) ->
         printfn "Asset: %s" asset.Name
     )
+    
+    let staged = stageArtifacts assets
+    ignore()
+        
     
     

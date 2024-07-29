@@ -31,7 +31,7 @@ jobs:
       id: bootstrap
       uses: ./.github/workflows/bootstrap
 
-    - run: ./build.sh release --test-suite=skip-all
+    - run: ./build.sh release
       name: Release
 
     - name: Generate build provenance

@@ -20,8 +20,9 @@ let private clean _ =
     removeArtifacts "release-notes"
     removeArtifacts "tests"
     
-let private build _ = exec { run "dotnet" "build" "-c" "release" }
+let private compile _ = exec { run "dotnet" "build" "-c" "release" }
 
+let private build _ = printfn "build"
 let private release _ = printfn "release"
 
 let private version _ =
@@ -162,7 +163,9 @@ let Setup (parsed:ParseResults<Build>) =
         // commands
         | Version -> Build.Step version
         | Clean -> Build.Cmd [Version] [] clean
-        | Build -> Build.Cmd [Clean; CheckFormat] [] build
+        | Compile -> Build.Step compile
+        | Redistribute -> Build.Step Packaging.redistribute
+        | Build -> Build.Cmd [Clean; CheckFormat; Compile; Redistribute] [] build
         
         | End_To_End -> Build.Cmd [] [Build] <| runTests E2E
         | Integrate -> Build.Cmd [] [Build] <| runTests Integration
@@ -171,7 +174,7 @@ let Setup (parsed:ParseResults<Build>) =
         
         | Release -> 
             Build.Cmd 
-                [PristineCheck; Test]
+                [PristineCheck; Build]
                 [ValidateLicenses; GeneratePackages; ValidatePackages; GenerateReleaseNotes; GenerateApiChanges]
                 release
 
@@ -185,7 +188,6 @@ let Setup (parsed:ParseResults<Build>) =
         | ValidatePackages -> Build.Step validatePackages
         | GenerateReleaseNotes -> Build.Step generateReleaseNotes
         | GenerateApiChanges -> Build.Step generateApiChanges
-        | Redistribute -> Build.Step Packaging.redistribute
             
         // flags
         | Single_Target
