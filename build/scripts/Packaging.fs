@@ -14,7 +14,7 @@ open BuildInformation
 open CommandLine
 open Octokit
 
-let private otelAutoVersion = BuildConfiguration.OpenTelemetryAutoInstrumentationVersion;
+let private otelAutoVersion = Software.OpenTelemetryAutoInstrumentationVersion;
 
 let private downloadFolder = Path.Combine(".artifacts", "otel-distribution", otelAutoVersion.AsString) |> Directory.CreateDirectory
 let private distroFolder = Path.Combine(".artifacts", "elastic-distribution", otelAutoVersion.AsString) |> Directory.CreateDirectory

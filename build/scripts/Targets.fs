@@ -29,6 +29,10 @@ let private version _ =
     let version = Software.Version
     printfn $"Informational version: %s{version.AsString}"
     printfn $"Semantic version: %s{version.NormalizeToShorter()}"
+    let otelVersion = Software.OpenTelemetryVersion;
+    printfn $"OpenTelemetry version: %s{otelVersion.AsString}"
+    let otelAutoVersion = Software.OpenTelemetryAutoInstrumentationVersion;
+    printfn $"OpenTelemetry Auto Instrumentation version: %s{otelAutoVersion.AsString}"
     
 let private generatePackages _ = exec { run "dotnet" "pack" }
 

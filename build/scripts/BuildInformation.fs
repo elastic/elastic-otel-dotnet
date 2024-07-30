@@ -7,20 +7,47 @@ module BuildInformation
 open System
 open System.IO
 open System.Threading
+open System.Xml.Linq
+open System.Xml.XPath
 open Fake.Core
 open Proc.Fs
 open Fake.Tools.Git
 
+type Paths =
+    static member private Root =
+        let mutable dir = DirectoryInfo(".")
+        while dir.GetFiles("*.sln").Length = 0 do dir <- dir.Parent
+        Environment.CurrentDirectory <- dir.FullName
+        dir
+        
+    static member RelativePathToRoot path = Path.GetRelativePath(Paths.Root.FullName, path) 
+        
+    static member ArtifactFolder = DirectoryInfo(Path.Combine(Paths.Root.FullName, ".artifacts"))
+    static member ArtifactPath t = DirectoryInfo(Path.Combine(Paths.ArtifactFolder.FullName, t))
+    
+    static member private SrcFolder = DirectoryInfo(Path.Combine(Paths.Root.FullName, "src"))
+    static member SrcPath (t: string list) = DirectoryInfo(Path.Combine([Paths.SrcFolder.FullName] @ t |> List.toArray))
+
+
 type BuildConfiguration = 
     static member ValidateAssemblyName = false
     static member GenerateApiChanges = false
-    static member OpenTelemetryAutoInstrumentationVersion = SemVer.parse("1.7.0")
+    
+        
+        
 
 type Software =
     static member Organization = "elastic"
     static member Repository = "elastic-otel-dotnet"
     static member GithubMoniker = $"%s{Software.Organization}/%s{Software.Repository}"
     static member SignKey = "069ca2728db333c1"
+    
+    static let queryPackageRef upstreamPackage distroPackage =
+        let path = Paths.SrcPath [distroPackage; $"{distroPackage}.csproj"]
+        let project = XDocument.Load(path.FullName)
+        let packageRef = project.XPathSelectElement($"//PackageReference[@Include = '{upstreamPackage}']")
+        let upstreamVersion = packageRef.Attribute("Version").Value
+        SemVer.parse(upstreamVersion)
 
     static let restore =
         Lazy<unit>((fun _ -> exec { run "dotnet" "tool" "restore" }), LazyThreadSafetyMode.ExecutionAndPublication)
@@ -35,20 +62,19 @@ type Software =
             }
             SemVer.parse <| $"%s{output.Line}+%s{sha}"
         , LazyThreadSafetyMode.ExecutionAndPublication)
-    
+        
     static member Version = restore.Value; versionInfo.Value
-
-type Paths =
-    static member private Root =
-        let mutable dir = DirectoryInfo(".")
-        while dir.GetFiles("*.sln").Length = 0 do dir <- dir.Parent
-        Environment.CurrentDirectory <- dir.FullName
-        dir
+    
+    static member OpenTelemetryAutoInstrumentationVersion =
+        let upstreamPackage = "OpenTelemetry.AutoInstrumentation";
+        let distroPackage = $"Elastic.{upstreamPackage}"
+        queryPackageRef upstreamPackage distroPackage
         
-    static member RelativePathToRoot path = Path.GetRelativePath(Paths.Root.FullName, path) 
+    static member OpenTelemetryVersion =
+        let upstreamPackage = "OpenTelemetry";
+        let distroPackage = $"Elastic.{upstreamPackage}"
+        queryPackageRef upstreamPackage distroPackage
         
-    static member ArtifactFolder = DirectoryInfo(Path.Combine(Paths.Root.FullName, ".artifacts"))
-    static member ArtifactPath t = DirectoryInfo(Path.Combine(Paths.ArtifactFolder.FullName, t))
 
 type OS =
     | OSX | Windows | Linux

@@ -27,7 +27,7 @@ COPY ".artifacts/otel-distribution" /distro/otel
 
 COPY --from=build /app/example /app/example
 
-RUN OTEL_DOTNET_AUTO_HOME="/app/otel" TMPDIR="/distro/elastic/1.7.0" sh /distro/otel/1.7.0/otel-dotnet-auto-install.sh
+RUN OTEL_DOTNET_AUTO_HOME="/app/otel" DOWNLOAD_DIR="/distro/elastic/1.7.0" sh /distro/otel/1.7.0/otel-dotnet-auto-install.sh
 
 ENV OTEL_DOTNET_AUTO_HOME="/app/otel"
 ENV OTEL_LOG_LEVEL=debug
