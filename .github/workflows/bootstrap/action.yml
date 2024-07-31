@@ -26,6 +26,14 @@ runs:
         restore-keys: |
           ${{ runner.os }}-nuget
           
+    # ensures we don't hit GitHub releases all the time to download the OpenTelemetry auto instrumentation assets
+    # if not available they will be download in .artifacts/otel-distribution/{otel-version}
+    - name: Cache OpenTelemetry Distribution
+      uses: actions/cache@v4
+      with:
+        path: .artifacts/otel-distribution
+        key: otel-distribution
+    
     - name: Setup dotnet
       uses: actions/setup-dotnet@v4
       with:

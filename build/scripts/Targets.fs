@@ -20,14 +20,19 @@ let private clean _ =
     removeArtifacts "release-notes"
     removeArtifacts "tests"
     
-let private build _ = exec { run "dotnet" "build" "-c" "release" }
+let private compile _ = exec { run "dotnet" "build" "-c" "release" }
 
+let private build _ = printfn "build"
 let private release _ = printfn "release"
 
 let private version _ =
     let version = Software.Version
     printfn $"Informational version: %s{version.AsString}"
     printfn $"Semantic version: %s{version.NormalizeToShorter()}"
+    let otelVersion = Software.OpenTelemetryVersion;
+    printfn $"OpenTelemetry version: %s{otelVersion.AsString}"
+    let otelAutoVersion = Software.OpenTelemetryAutoInstrumentationVersion;
+    printfn $"OpenTelemetry Auto Instrumentation version: %s{otelAutoVersion.AsString}"
     
 let private generatePackages _ = exec { run "dotnet" "pack" }
 
@@ -162,16 +167,19 @@ let Setup (parsed:ParseResults<Build>) =
         // commands
         | Version -> Build.Step version
         | Clean -> Build.Cmd [Version] [] clean
-        | Build -> Build.Cmd [Clean; CheckFormat] [] build
+        | Compile -> Build.Step compile
+        | Build -> Build.Cmd [Clean; CheckFormat; Compile] [] build
         
         | End_To_End -> Build.Cmd [] [Build] <| runTests E2E
         | Integrate -> Build.Cmd [] [Build] <| runTests Integration
         | Unit_Test -> Build.Cmd [] [Build] <| runTests Unit
         | Test -> Build.Cmd [] [Build] test
         
+        | Redistribute -> Build.Cmd [Compile;] [] Packaging.redistribute
+        
         | Release -> 
             Build.Cmd 
-                [PristineCheck; Test]
+                [PristineCheck; Build; Redistribute]
                 [ValidateLicenses; GeneratePackages; ValidatePackages; GenerateReleaseNotes; GenerateApiChanges]
                 release
 
@@ -185,7 +193,6 @@ let Setup (parsed:ParseResults<Build>) =
         | ValidatePackages -> Build.Step validatePackages
         | GenerateReleaseNotes -> Build.Step generateReleaseNotes
         | GenerateApiChanges -> Build.Step generateApiChanges
-        | Redistribute -> Build.Step Packaging.redistribute
             
         // flags
         | Single_Target

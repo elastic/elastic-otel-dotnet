@@ -18,3 +18,9 @@ To quickly see the `DockerFile`  in action run the following from the root of th
 $ docker build -t example.autoinstrumentation:latest -f examples/Example.AutoInstrumentation/Dockerfile --no-cache . && \
    docker run -it --rm -p 5000:8080 --name autoin example.autoinstrumentation:latest
 ```
+
+
+```bash
+docker build -t distribution.autoinstrumentation:latest -f examples/Example.AutoInstrumentation/distribution.Dockerfile --platform linux/arm64 --no-cache . && \
+         docker run -it --rm -p 5000:8080 --name distri --platform linux/arm64 distribution.autoinstrumentation:latest
+```

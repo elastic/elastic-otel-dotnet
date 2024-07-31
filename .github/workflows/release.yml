@@ -15,6 +15,7 @@ env:
   JOB_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
   SLACK_CHANNEL: "#apm-agent-dotnet"
   RELEASE_PACKAGES: ".artifacts/package/release/*.nupkg"
+  RELEASE_DISTRO: ".artifacts/elastic-distribution/*"
 
 jobs:
   release:
@@ -31,10 +32,21 @@ jobs:
       id: bootstrap
       uses: ./.github/workflows/bootstrap
 
-    - run: ./build.sh release --test-suite=skip-all
+    - run: ./build.sh release
       name: Release
 
-    - name: Generate build provenance
+    - name: Attach Distribution to release
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh release upload ${{ github.ref_name }} "${{ env.RELEASE_DISTRO }}"
+
+    - name: Generate build provenance (Distribution)
+      uses: actions/attest-build-provenance@5e9cb68e95676991667494a6a4e59b8a2f13e1d0  # v1.3.3
+      with:
+        subject-path: "${{ github.workspace }}/${{ env.RELASE_DISTRO }}"
+        
+    - name: Generate build provenance (Packages)
       uses: actions/attest-build-provenance@5e9cb68e95676991667494a6a4e59b8a2f13e1d0  # v1.3.3
       with:
         subject-path: "${{ github.workspace }}/${{ env.RELEASE_PACKAGES }}"

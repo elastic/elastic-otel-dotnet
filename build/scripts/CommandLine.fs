@@ -18,6 +18,7 @@ type TestSuite = All | Unit | Integration | E2E | Skip_All | Skip_E2E
 type Build =
     | [<CliPrefix(CliPrefix.None);SubCommand>] Clean
     | [<CliPrefix(CliPrefix.None);SubCommand>] Version
+    | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] Compile
     | [<CliPrefix(CliPrefix.None);SubCommand>] Build
     | [<CliPrefix(CliPrefix.None);SubCommand>] Test
     
@@ -64,6 +65,7 @@ with
             | ValidateLicenses
             | ValidatePackages
             | GenerateReleaseNotes
+            | Compile 
             | Redistribute
             | GenerateApiChanges -> "Undocumented, dependent target"
             
