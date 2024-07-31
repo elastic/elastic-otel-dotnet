@@ -26,7 +26,10 @@ jobs:
         id: bootstrap
         uses: ./.github/workflows/bootstrap
 
-      - run: ./build.sh release
+      - name: Test
+        run: ./build.sh test --test-suite=skip-e2e
+
+      - run: ./build.sh release -c
         name: Release
         
       - uses: actions/upload-artifact@v4
