@@ -168,17 +168,18 @@ let Setup (parsed:ParseResults<Build>) =
         | Version -> Build.Step version
         | Clean -> Build.Cmd [Version] [] clean
         | Compile -> Build.Step compile
-        | Redistribute -> Build.Cmd [Compile;] [] Packaging.redistribute
-        | Build -> Build.Cmd [Clean; CheckFormat; Redistribute] [] build
+        | Build -> Build.Cmd [Clean; CheckFormat; Compile] [] build
         
         | End_To_End -> Build.Cmd [] [Build] <| runTests E2E
         | Integrate -> Build.Cmd [] [Build] <| runTests Integration
         | Unit_Test -> Build.Cmd [] [Build] <| runTests Unit
         | Test -> Build.Cmd [] [Build] test
         
+        | Redistribute -> Build.Cmd [Compile;] [] Packaging.redistribute
+        
         | Release -> 
             Build.Cmd 
-                [PristineCheck; Build]
+                [PristineCheck; Build; Redistribute]
                 [ValidateLicenses; GeneratePackages; ValidatePackages; GenerateReleaseNotes; GenerateApiChanges]
                 release
 

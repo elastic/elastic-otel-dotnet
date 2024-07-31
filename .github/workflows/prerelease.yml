@@ -10,6 +10,7 @@ permissions:
 env:
   NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
   RELEASE_PACKAGES: ".artifacts/package/release/*.nupkg"
+  RELEASE_DISTRO: ".artifacts/elastic-distribution/*"
 
 jobs:
   release:
@@ -27,11 +28,22 @@ jobs:
 
       - run: ./build.sh release
         name: Release
+        
+      - uses: actions/upload-artifact@v4
+        with:
+          name: elastic-distribution
+          path: ${{ env.RELEASE_DISTRO }}
 
-      - name: Generate build provenance
+      - name: Generate build provenance (Distribution)
+        uses: actions/attest-build-provenance@5e9cb68e95676991667494a6a4e59b8a2f13e1d0  # v1.3.3
+        with:
+          subject-path: "${{ github.workspace }}/${{ env.RELEASE_DISTRO }}"
+          
+      - name: Generate build provenance (Packages)
         uses: actions/attest-build-provenance@5e9cb68e95676991667494a6a4e59b8a2f13e1d0  # v1.3.3
         with:
           subject-path: "${{ github.workspace }}/${{ env.RELEASE_PACKAGES }}"
+
 
       # Push to feedz.io 
       - name: publish canary packages to feedz.io
