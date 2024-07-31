@@ -14,15 +14,38 @@ open BuildInformation
 open CommandLine
 open Octokit
 
+///
+/// This module is hard to read, with so many file manipulations it's kinda hard to avoid.
+///
+/// Packaging ultimately ensures artifacts are available under .artifacts/elastic-distribution/{version}
+///
+/// - Download release assets from: github.com/open-telemetry/opentelemetry-dotnet-instrumentation/{version}
+///     - cached under .artifacts/otel-distribution/{version}, only downloaded again if an asset is missing
+/// - Staging copies are created in the `otel-distribution`, renaming `opentelemetry-` to `staging-`
+///     - these copies are used to do mutations and removed afterward
+/// - Zip mutations
+///     - Ensure we package our plugin dll and related files under net/netfx inside the staging zips.
+///     - Ensure we rename `instrument.sh` to `_instrument.sh` inside the scripts
+///     - Include our wrapping `instrument.sh` as the new main entry script.
+/// - Move mutated staging zips `.artifacts/elastic-distribution/{version}` renaming `stage-` to `elastic-`.
+/// 
+
 let private otelAutoVersion = Software.OpenTelemetryAutoInstrumentationVersion;
 
 let private downloadFolder = Path.Combine(".artifacts", "otel-distribution", otelAutoVersion.AsString) |> Directory.CreateDirectory
 let private distroFolder = Path.Combine(".artifacts", "elastic-distribution", otelAutoVersion.AsString) |> Directory.CreateDirectory
 
 let private fileInfo (directory: DirectoryInfo) file = Path.Combine(directory.FullName, file) |> FileInfo
-let private downloadFile (asset: ReleaseAsset) = fileInfo downloadFolder asset.Name
-let private stageFile (asset: ReleaseAsset) = fileInfo downloadFolder (asset.Name.Replace("opentelemetry", "stage"))
-let private distroFile (asset: ReleaseAsset) = fileInfo distroFolder (asset.Name.Replace("opentelemetry", "elastic"))
+let private downloadFileInfo (file: string) = fileInfo downloadFolder file
+let private downloadAsset (asset: ReleaseAsset) = fileInfo downloadFolder asset.Name
+
+let private _stage (s: string) = s.Replace("opentelemetry", "stage").Replace("otel", "stage")
+let private stageFile (file: FileInfo) = fileInfo downloadFolder (file.Name |> _stage)
+let private stageAsset (asset: ReleaseAsset) = fileInfo downloadFolder (asset.Name |> _stage)
+
+let private _distro (s: string) = (s |> _stage).Replace("stage", "elastic")
+let private distroFile (file: FileInfo) = fileInfo distroFolder (file.Name |> _distro)
+let private distroAsset (asset: ReleaseAsset) = fileInfo distroFolder (asset.Name |> _distro)
 
 let pluginFiles tfm =
     ["dll"; "pdb"; "xml"]
@@ -36,7 +59,7 @@ let downloadArtifacts (_:ParseResults<Build>) =
     let client = GitHubClient(ProductHeaderValue("Elastic.OpenTelemetry"))
     let token = Environment.GetEnvironmentVariable("GITHUB_TOKEN")
     if not(String.IsNullOrWhiteSpace(token)) then 
-        Console.WriteLine($"using GITHUB_TOKEN");
+        printfn "using GITHUB_TOKEN";
         let tokenAuth = Credentials(token); 
         client.Credentials <- tokenAuth
     
@@ -45,7 +68,7 @@ let downloadArtifacts (_:ParseResults<Build>) =
             let! release = client.Repository.Release.Get("open-telemetry", "opentelemetry-dotnet-instrumentation", $"v{otelAutoVersion.AsString}") |> Async.AwaitTask;
             Console.WriteLine($"Release %s{release.Name} has %i{release.Assets.Count} assets");
             return release.Assets
-                |> Seq.map (fun asset -> (asset, downloadFile asset))
+                |> Seq.map (fun asset -> (asset, downloadAsset asset))
                 |> Seq.toList
         } |> Async.RunSynchronously
     
@@ -72,24 +95,85 @@ let injectPluginFiles (asset: ReleaseAsset) (stagedZip: FileInfo) tfm target  =
         zipArchive.CreateEntryFromFile(f.FullName, Path.Combine(target, f.Name)) |> ignore
     )
     
+let injectPluginScripts (stagedZip: FileInfo) (otelScript: FileInfo) (script: FileInfo) = 
+    use zipArchive = ZipFile.Open(stagedZip.FullName, ZipArchiveMode.Update)
+    
+    printfn $"Staging : %s{stagedZip.Name}, Adding: %s{otelScript.Name}"
+    zipArchive.CreateEntryFromFile(otelScript.FullName, otelScript.Name) |> ignore
+    
+    printfn $"Staging : %s{stagedZip.Name}, Adding: %s{script.FullName}"
+    let entry = zipArchive.Entries |> Seq.find(fun e -> e.Name = "instrument.sh")
+    entry.Delete()
+    
+    zipArchive.CreateEntryFromFile(script.FullName, script.Name) |> ignore
+    
+let stageInstrumentationScript (stagedZips:List<ReleaseAsset * FileInfo>) =
+    let openTelemetryVersion = downloadFileInfo "opentelemetry-instrument.sh"
+    let stageVersion = downloadFileInfo "_instrument.sh"
+    let stageScript =
+        match stageVersion.Exists with
+        | true -> stageVersion
+        | _ -> 
+            let instrumentShZip =
+                stagedZips
+                |> List.map(fun (_, p) -> p)
+                |> List.find (fun p -> not <| p.Name.EndsWith("-windows.zip"))
+            use zipArchive = ZipFile.Open(instrumentShZip.FullName, ZipArchiveMode.Read)
+            let shArchive = zipArchive.Entries |> Seq.find(fun e -> e.Name = "instrument.sh")
+            shArchive.ExtractToFile openTelemetryVersion.FullName
+            openTelemetryVersion.Refresh()
+            openTelemetryVersion.MoveTo stageVersion.FullName
+            stageVersion.Refresh()
+            stageVersion
+        
+    let wrapperScript = downloadFileInfo "instrument.sh"
+    let copyScript = Path.Combine("src", "Elastic.OpenTelemetry.AutoInstrumentation", "instrument.sh") |> FileInfo
+    let script = copyScript.CopyTo(wrapperScript.FullName, true)
+    (stageVersion, script)
+
+let stageInstallationBashScript () =
+    let installScript = downloadFileInfo "otel-dotnet-auto-install.sh"
+    let staged = installScript.CopyTo ((stageFile installScript).FullName, true)
+    // temporary while https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation/pull/3549 is not released.
+    // Should be released after 1.7.0. 
+    let patchScript = fileInfo Paths.Root <| Path.Combine("build", "patch-dotnet-auto-install.sh")
+    
+    let contents =
+        (File.ReadAllText patchScript.FullName)
+            .Replace("/open-telemetry/opentelemetry-dotnet-instrumentation/", "/elastic/elastic-otel-dotnet/")
+            .Replace("opentelemetry-dotnet-instrumentation", "elastic-dotnet-instrumentation")
+            
+    let elasticInstall = fileInfo distroFolder "elastic-dotnet-auto-install.sh"
+    
+    File.WriteAllText(elasticInstall.FullName, contents);
+    
+    ignore()
+    
+    
 /// moves artifacts from open-distribution to elastic-distribution and renames them to `staged-dotnet-instrumentation*`.
 /// staged meaning we haven't injected our opentelemetry dll into the zip yet,
 let stageArtifacts (assets:List<ReleaseAsset * FileInfo>) =
     let stagedZips =
         assets
         |> List.filter(fun (a, _) -> a.Name.EndsWith(".zip"))
+        |> List.filter(fun (a, _) -> not <| a.Name.EndsWith("nuget-packages.zip"))
         |> List.map(fun (z, f) ->
-            let stage = stageFile z
+            let stage = stageAsset z
             z, f.CopyTo(stage.FullName, true)
         )
     
+    let (otelScript, wrapperScript) = stageInstrumentationScript stagedZips
+    printfn $"Staged (%s{wrapperScript.Name}) calling into (%s{otelScript.Name} for repackaging)"
+        
     stagedZips |> List.iter (fun (asset, path) ->
         
         injectPluginFiles asset path "netstandard2.1" "net"
         if asset.Name.EndsWith("-windows.zip") then
             injectPluginFiles asset path "net462" "netfx"
+            
+        injectPluginScripts path otelScript wrapperScript
         
-        let distro = distroFile asset
+        let distro = distroAsset asset
         path.MoveTo(distro.FullName, true)
         distro.Refresh()
         
@@ -106,6 +190,7 @@ let redistribute (arguments:ParseResults<Build>) =
         printfn "Asset: %s" asset.Name
     )
     
+    stageInstallationBashScript()
     let staged = stageArtifacts assets
     ignore()
         

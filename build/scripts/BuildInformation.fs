@@ -14,7 +14,7 @@ open Proc.Fs
 open Fake.Tools.Git
 
 type Paths =
-    static member private Root =
+    static member Root =
         let mutable dir = DirectoryInfo(".")
         while dir.GetFiles("*.sln").Length = 0 do dir <- dir.Parent
         Environment.CurrentDirectory <- dir.FullName
