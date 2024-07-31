@@ -51,7 +51,6 @@ jobs:
         
       - name: Test
         run: build.sh test --test-suite=skip-e2e
-        shell: cmd
 
       # We still run the full release build on pull-requests this ensures packages are validated ahead of time
       - name: Release
