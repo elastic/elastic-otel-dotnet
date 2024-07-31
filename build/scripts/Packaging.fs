@@ -33,13 +33,13 @@ open Octokit
 let private otelAutoVersion = Software.OpenTelemetryAutoInstrumentationVersion;
 
 let private downloadFolder = Path.Combine(".artifacts", "otel-distribution", otelAutoVersion.AsString) |> Directory.CreateDirectory
-let private distroFolder = Path.Combine(".artifacts", "elastic-distribution", otelAutoVersion.AsString) |> Directory.CreateDirectory
+let private distroFolder = Path.Combine(".artifacts", "elastic-distribution") |> Directory.CreateDirectory
 
 let private fileInfo (directory: DirectoryInfo) file = Path.Combine(directory.FullName, file) |> FileInfo
 let private downloadFileInfo (file: string) = fileInfo downloadFolder file
 let private downloadAsset (asset: ReleaseAsset) = fileInfo downloadFolder asset.Name
 
-let private _stage (s: string) = s.Replace("opentelemetry", "stage").Replace("otel", "stage")
+let private _stage (s: string) = s.Replace("opentelemetry", "stage").Replace("otel", "stage").Replace("OpenTelemetry", "stage")
 let private stageFile (file: FileInfo) = fileInfo downloadFolder (file.Name |> _stage)
 let private stageAsset (asset: ReleaseAsset) = fileInfo downloadFolder (asset.Name |> _stage)
 
@@ -135,19 +135,42 @@ let stageInstallationBashScript () =
     let installScript = downloadFileInfo "otel-dotnet-auto-install.sh"
     let staged = installScript.CopyTo ((stageFile installScript).FullName, true)
     // temporary while https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation/pull/3549 is not released.
-    // Should be released after 1.7.0. 
+    // Should be released after 1.7.0.
+    // We should be able to read from `staged` instead after
     let patchScript = fileInfo Paths.Root <| Path.Combine("build", "patch-dotnet-auto-install.sh")
     
     let contents =
         (File.ReadAllText patchScript.FullName)
             .Replace("/open-telemetry/opentelemetry-dotnet-instrumentation/", "/elastic/elastic-otel-dotnet/")
             .Replace("opentelemetry-dotnet-instrumentation", "elastic-dotnet-instrumentation")
+            .Replace("v" + Software.OpenTelemetryAutoInstrumentationVersion.AsString, "v" + Software.Version.NormalizeToShorter())
             
-    let elasticInstall = fileInfo distroFolder "elastic-dotnet-auto-install.sh"
-    
-    File.WriteAllText(elasticInstall.FullName, contents);
-    
-    ignore()
+    let elasticInstall = distroFile installScript
+    File.WriteAllText(elasticInstall.FullName, contents)
+ 
+let stageInstallationPsScript () =
+    let installScript = downloadFileInfo "OpenTelemetry.DotNet.Auto.psm1"
+    let staged = installScript.CopyTo ((stageFile installScript).FullName, true)
+   
+    let envMarker = "\"OTEL_DOTNET_AUTO_HOME\"               = $OTEL_DOTNET_AUTO_HOME;"
+    let contents =
+        (File.ReadAllText staged.FullName)
+            .Replace("/open-telemetry/opentelemetry-dotnet-instrumentation/", "/elastic/elastic-otel-dotnet/")
+            .Replace("opentelemetry-dotnet-instrumentation", "elastic-dotnet-instrumentation")
+            .Replace("OpenTelemetry .NET Automatic Instrumentation", "Elastic Distribution for OpenTelemetry .NET")
+            .Replace("OpenTelemetry.Dotnet.Auto", "Elastic.OpenTelemetry.DotNet")
+            .Replace(envMarker,
+                     [
+                        envMarker
+                        "#Elastic Distribution"
+                        "\"OTEL_DOTNET_AUTO_PLUGINS\"            = \"Elastic.OpenTelemetry.AutoInstrumentationPlugin, Elastic.OpenTelemetry\""
+                     ]
+                     |> String.concat "\r\n        "
+            )
+            .Replace("v" + Software.OpenTelemetryAutoInstrumentationVersion.AsString, "v" + Software.Version.NormalizeToShorter())
+    let elasticInstall = distroFile installScript
+    //ensure we write our new module name
+    File.WriteAllText(elasticInstall.FullName.Replace("elastic.DotNet.Auto", "Elastic.OpenTelemetry.DotNet"), contents);
     
     
 /// moves artifacts from open-distribution to elastic-distribution and renames them to `staged-dotnet-instrumentation*`.
@@ -191,6 +214,7 @@ let redistribute (arguments:ParseResults<Build>) =
     )
     
     stageInstallationBashScript()
+    stageInstallationPsScript()
     let staged = stageArtifacts assets
     ignore()
         
