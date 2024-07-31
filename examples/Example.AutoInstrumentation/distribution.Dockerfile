@@ -23,13 +23,12 @@ RUN dotnet publish "${_PROJECT}.csproj" -c Release -a $TARGETARCH --no-restore  
 FROM build AS final
 
 COPY ".artifacts/elastic-distribution" /distro/elastic
-COPY ".artifacts/otel-distribution" /distro/otel
 
 COPY --from=build /app/example /app/example
 
 ENV OTEL_DOTNET_AUTO_HOME="/app/otel"
 # Use already downloaded release assets (call ./build.sh redistribute locally if you run this dockerfile manually)
-RUN DOWNLOAD_DIR="/distro/elastic/1.7.0" sh /distro/otel/1.7.0/otel-dotnet-auto-install.sh
+RUN DOWNLOAD_DIR="/distro/elastic" sh /distro/elastic/elastic-dotnet-auto-install.sh
 
 ENV OTEL_LOG_LEVEL=debug
 ENTRYPOINT ["sh", "/app/otel/instrument.sh", "dotnet", "/app/example/Example.AutoInstrumentation.dll"]

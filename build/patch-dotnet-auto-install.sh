@@ -71,4 +71,4 @@ else
 fi
 
 rm -rf "$OTEL_DOTNET_AUTO_HOME"
-unzip -q "$TMPFILE" -d "$OTEL_DOTNET_AUTO_HOME"
+unzip -q "$LOCAL_PATH" -d "$OTEL_DOTNET_AUTO_HOME"
