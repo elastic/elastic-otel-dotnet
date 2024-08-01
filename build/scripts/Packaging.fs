@@ -129,7 +129,7 @@ let stageInstrumentationScript (stagedZips:List<ReleaseAsset * FileInfo>) =
     let wrapperScript = downloadFileInfo "instrument.sh"
     let copyScript = Path.Combine("src", "Elastic.OpenTelemetry.AutoInstrumentation", "instrument.sh") |> FileInfo
     let script = copyScript.CopyTo(wrapperScript.FullName, true)
-    (stageVersion, script)
+    (stageScript, script)
 
 let stageInstallationBashScript () =
     let installScript = downloadFileInfo "otel-dotnet-auto-install.sh"
