@@ -19,7 +19,7 @@ public class PluginLoaderTests(ExampleApplicationContainer exampleApplicationCon
 		var output = exampleApplicationContainer.FailureTestOutput();
 		output.Should()
 			.NotBeNullOrWhiteSpace()
-			.And.Contain("Elastic Distribution for OpenTelemetry .NET:")
+			.And.Contain("Elastic Distribution of OpenTelemetry .NET:")
 			.And.Contain("ElasticOpenTelemetryBuilder initialized")
 			.And.Contain("Added 'Elastic.OpenTelemetry.Processors.ElasticCompatibilityProcessor'");
 

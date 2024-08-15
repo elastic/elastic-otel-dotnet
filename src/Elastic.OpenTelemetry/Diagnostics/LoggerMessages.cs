@@ -36,13 +36,13 @@ internal static partial class LoggerMessages
 	public static void LogAgentPreamble(this ILogger logger)
 	{
 		var process = Process.GetCurrentProcess();
-		logger.LogInformation("Elastic Distribution for OpenTelemetry .NET: {AgentInformationalVersion}", VersionHelper.InformationalVersion);
+		logger.LogInformation("Elastic Distribution of OpenTelemetry .NET: {AgentInformationalVersion}", VersionHelper.InformationalVersion);
 		if (logger is CompositeLogger distributionLogger)
 		{
 			if (distributionLogger.LogFileEnabled)
-				logger.LogInformation("Elastic Distribution for OpenTelemetry .NET, log file: {LogFilePath}", distributionLogger.LogFilePath);
+				logger.LogInformation("Elastic Distribution of OpenTelemetry .NET, log file: {LogFilePath}", distributionLogger.LogFilePath);
 			else
-				logger.LogInformation("Elastic Distribution for OpenTelemetry .NET, log file: <disabled>");
+				logger.LogInformation("Elastic Distribution of OpenTelemetry .NET, log file: <disabled>");
 		}
 
 		logger.LogInformation("Process ID: {ProcessId}", process.Id);

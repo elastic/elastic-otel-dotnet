@@ -4,6 +4,6 @@
 namespace Elastic.OpenTelemetry;
 
 /// <summary>
-/// A logical Elastic Distribution for OpenTelemetry .NET instance.
+/// A logical Elastic Distribution of OpenTelemetry .NET instance.
 /// </summary>
 public interface IInstrumentationLifetime : IDisposable, IAsyncDisposable;

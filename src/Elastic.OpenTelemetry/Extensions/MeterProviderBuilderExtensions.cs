@@ -14,7 +14,7 @@ namespace Elastic.OpenTelemetry.Extensions;
 /// </summary>
 public static class MeterProviderBuilderExtensions
 {
-	/// <summary> Use Elastic Distribution for OpenTelemetry .NET defaults for <see cref="MeterProviderBuilder"/> </summary>
+	/// <summary> Use Elastic Distribution of OpenTelemetry .NET defaults for <see cref="MeterProviderBuilder"/> </summary>
 	public static MeterProviderBuilder UseElasticDefaults(this MeterProviderBuilder builder, ILogger? logger = null)
 	{
 		logger ??= NullLogger.Instance;
