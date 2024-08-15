@@ -95,8 +95,8 @@ host-based applications like [worker services](https://learn.microsoft.com/en-us
 1. Inside the `Program.cs` file of the ASP.NET Core application, add the following two `using` directives:
 
     ```csharp
-    using OpenTelemetry;
-    using OpenTelemetry.Trace;
+using OpenTelemetry;
+using OpenTelemetry.Trace;
     ```
 
     The OpenTelemetry SDK provides extension methods on the `IServiceCollection` to enable the providers and configure the SDK. EDOT .NET overrides the default OpenTelemetry SDK registration, adding several opinionated defaults.
@@ -104,19 +104,19 @@ host-based applications like [worker services](https://learn.microsoft.com/en-us
 1. In the minimal API template, the `WebApplicationBuilder` exposes a `Services` property that can be used to register services with the dependency injection container. To enable tracing and metrics collection, ensure that the OpenTelemetry SDK is registered:
 
     ```csharp
-    var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(args);
 
-    builder.Services
-      // The `AddHttpClient` method registers the `IHttpClientFactory` service with
-      // the dependency injection container. This is NOT required to enable OpenTelemetry,
-      // but the example endpoint will use it to send an HTTP request.
-      .AddHttpClient()
-      // The `AddOpenTelemetry` method registers the OpenTelemetry SDK with the
-      // dependency injection container. When available, EDOT .NET will override
-      // this to add opinionated defaults.
-      .AddOpenTelemetry()
-        // Configure tracing to instrument requests handled by ASP.NET Core.
-        .WithTracing(t => t.AddAspNetCoreInstrumentation());
+builder.Services
+	// The `AddHttpClient` method registers the `IHttpClientFactory` service with
+	// the dependency injection container. This is NOT required to enable OpenTelemetry,
+	// but the example endpoint will use it to send an HTTP request.
+	.AddHttpClient()
+	// The `AddOpenTelemetry` method registers the OpenTelemetry SDK with the
+	// dependency injection container. When available, EDOT .NET will override
+	// this to add opinionated defaults.
+	.AddOpenTelemetry()
+	// Configure tracing to instrument requests handled by ASP.NET Core.
+	.WithTracing(t => t.AddAspNetCoreInstrumentation());
     ```
 
 With these limited changes to the `Program.cs` file, the application is now configured to use the
@@ -131,8 +131,8 @@ app.MapGet("/", async (IHttpClientFactory httpClientFactory) =>
 	using var client = httpClientFactory.CreateClient();
 
 	await Task.Delay(100);
-  // Using this URL will require two redirects, allowing us to
-  // see multiple spans in the trace.
+	// Using this URL will require two redirects, allowing us to
+	// see multiple spans in the trace.
 	var response = await client.GetAsync("http://elastic.co"); <1>
 	await Task.Delay(50);
 
@@ -173,8 +173,8 @@ In environments where an `IServiceCollection` is unavailable you may manually st
 
 ```csharp
 await using var session = new ElasticOpenTelemetryBuilder()
-    .WithTracing(b => b.AddSource(ActivitySourceName))
-    .Build();
+	.WithTracing(b => b.AddSource(ActivitySourceName))
+	.Build();
 ```
 
 This will setup instrumentation for as long as `session` is not disposed. We would generally expect the `session`
@@ -211,8 +211,8 @@ You can find the values of these variables in Kibana's APM tutorial. In Kibana:
     For example:
 
     ```sh
-    export OTEL_EXPORTER_OTLP_ENDPOINT=https://my-deployment.apm.us-west1.gcp.cloud.es.io
-    export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer P....l"
+export OTEL_EXPORTER_OTLP_ENDPOINT=https://my-deployment.apm.us-west1.gcp.cloud.es.io
+export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer P....l"
     ```
 1. Configure environment variables for the application either in `launchSettings.json` or in the environment where the application is running.
 1. Once configured, run the application and make a request to the root endpoint. A trace will be generated and exported to the OTLP endpoint.

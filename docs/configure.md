@@ -106,12 +106,12 @@ var services = new ServiceCollection();
 // Create an instance of `ElasticOpenTelemetryBuilderOptions`.
 var builderOptions = new ElasticOpenTelemetryBuilderOptions
 {
-  // Create an instance of `ElasticOpenTelemetryOptions` and configure
-  // the file log directory by setting the corresponding property.
+	// Create an instance of `ElasticOpenTelemetryOptions` and configure
+	// the file log directory by setting the corresponding property.
 	DistroOptions = new ElasticOpenTelemetryOptions
 	{
-    // This example sets the file log directory to `C:\Logs`
-    // which enables diagnostic file logging.
+	// This example sets the file log directory to `C:\Logs`
+	// which enables diagnostic file logging.
 		FileLogDirectory = "C:\\Logs",
 	}
 };
