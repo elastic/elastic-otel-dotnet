@@ -9,6 +9,8 @@ Assumptions we're comfortable making about the reader:
 
 # Configure
 
+Configure the Elastic Distribution of OpenTelemetry .NET (EDOT .NET) to send data to Elastic.
+
 <!-- ✅ How users set configuration options -->
 ## Configuration methods
 
@@ -17,7 +19,7 @@ including:
 
 * Setting [environment variables](#environment-variables)
 * Using the [`IConfiguration` integration](#iconfiguration-integration)
-* [Manually configuring](#manual-configuration) the Elastic distribution
+* [Manually configuring](#manual-configuration) EDOT .NET
 
 <!-- Order of precedence -->
 Configuration options set manually in the code take precedence over environment variables, and
@@ -26,18 +28,18 @@ environment variables take precedence over configuration options set using the `
 ### Environment variables
 
 <!-- ✅ What and why -->
-The distro can be configured using environment variables.
-This is a cross-platform way to configure the distro and is especially useful in containerized environments.
+EDOT .NET can be configured using environment variables.
+This is a cross-platform way to configure EDOT .NET and is especially useful in containerized environments.
 
 <!-- ✅ How -->
-Environment variables are read at startup and can be used to configure the Elastic distribution.
+Environment variables are read at startup and can be used to configure EDOT .NET.
 For details of the various options available and their corresponding environment variable names,
 see [Configuration options](#configuration-options)
 
 ### `IConfiguration` integration
 
 <!-- ✅ What and why -->
-In applications that use the "host" pattern, such as ASP.NET Core and worker service, the distro
+In applications that use the "host" pattern, such as ASP.NET Core and worker service, EDOT .NET
 can be configured using the `IConfiguration` integration.
 
 <!-- ✅ How -->
@@ -55,10 +57,10 @@ var currentConfig = builder.Configuration;
 
 By default, at this stage, the configuration will be populated from the default configuration sources,
 including the `appsettings.json` file(s) and command-line arguments. You may use these sources to define
-the configuration for the Elastic Distribution for OpenTelemetry .NET.
+the configuration for the Elastic Distribution of OpenTelemetry .NET.
 
 <!-- ✅ Example -->
-For example, you can define the configuration for the Elastic Distribution for OpenTelemetry .NET in the `appsettings.json` file:
+For example, you can define the configuration for the Elastic Distribution of OpenTelemetry .NET in the `appsettings.json` file:
 
 ```json
 {
@@ -74,7 +76,7 @@ For example, you can define the configuration for the Elastic Distribution for O
 > This example sets the file log directory to `C:\Logs` which enables diagnostic file logging.
 
 Configuration from the "Elastic:OpenTelemetry" section of the `IConfiguration` instance will be
-bound to the `ElasticOpenTelemetryOptions` instance used to configure the Elastic distribution.
+bound to the `ElasticOpenTelemetryOptions` instance used to configure EDOT .NET.
 
 To learn more about the Microsoft configuration system, see
 [Configuration in ASP.NET Core](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/configuration).
@@ -82,7 +84,7 @@ To learn more about the Microsoft configuration system, see
 ### Manual configuration
 
 <!-- ✅ What and why -->
-In all other scenarios, you can configure the distro manually in code.
+In all other scenarios, you can configure EDOT .NET manually in code.
 
 <!-- ✅ How -->
 Create an instance of `ElasticOpenTelemetryBuilderOptions` and pass it to the `ElasticOpenTelemetryBuilder`
@@ -90,7 +92,7 @@ constructor or an overload of the `AddElasticOpenTelemetry` extension method on 
 
 <!-- ✅ Example -->
 For example, in traditional console applications, you can configure the
-Elastic Distribution for OpenTelemetry .NET like this:
+Elastic Distribution of OpenTelemetry .NET like this:
 
 ```csharp
 using Elastic.OpenTelemetry;
@@ -115,7 +117,7 @@ var builderOptions = new ElasticOpenTelemetryBuilderOptions
 };
 
 // Pass the `ElasticOpenTelemetryBuilderOptions` instance to the
-// `ElasticOpenTelemetryBuilder` constructor to configure the distro.
+// `ElasticOpenTelemetryBuilder` constructor to configure EDOT .NET.
 await using var session = new ElasticOpenTelemetryBuilder(builderOptions)
 	.WithTracing(b => b.AddSource("MySource"))
 	.Build();
@@ -124,25 +126,25 @@ await using var session = new ElasticOpenTelemetryBuilder(builderOptions)
 <!-- ✅ List all available configuration options -->
 ## Configuration options
 
-Because the Elastic Distribution for OpenTelemetry .NET ("the distro") is an extension of the [OpenTelemetry .NET agent](https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation), it supports both:
+Because the Elastic Distribution of OpenTelemetry .NET (EDOT .NET) is an extension of the [OpenTelemetry .NET agent](https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation), it supports both:
 
 * General OpenTelemetry SDK configuration options
-* Elastic-specific configuration options that are only available when using the distro
+* Elastic-specific configuration options that are only available when using EDOT .NET
 
 ### OpenTelemetry SDK configuration options
 
-The distro supports all configuration options listed in the [OpenTelemetry General SDK Configuration documentation](https://opentelemetry.io/docs/languages/sdk-configuration/general/).
+EDOT .NET supports all configuration options listed in the [OpenTelemetry General SDK Configuration documentation](https://opentelemetry.io/docs/languages/sdk-configuration/general/).
 
 ### Elastic-specific configuration options
 
-The distro supports the following Elastic-specific options.
+EDOT .NET supports the following Elastic-specific options.
 
 #### `FileLogDirectory`
 
 * _Type_: String
 * _Default_: `string.Empty`
 
-A string specifying the directory where the Elastic Distribution for OpenTelemetry .NET will write diagnostic log files.
+A string specifying the directory where the Elastic Distribution of OpenTelemetry .NET will write diagnostic log files.
 When not provided, no file logging will occur. Each new .NET process will create a new log file in the
 specified directory.
 
@@ -156,7 +158,7 @@ specified directory.
 * _Type_: String
 * _Default_: `Information`
 
-Sets the logging level for the distribution.
+Sets the logging level for EDOT .NET.
 
 Valid options: `Critical`, `Error`, `Warning`, `Information`, `Debug`, `Trace` and `None` (`None` disables the logging).
 
@@ -170,7 +172,7 @@ Valid options: `Critical`, `Error`, `Warning`, `Information`, `Debug`, `Trace` a
 * _Type_: Bool
 * _Default_: `false`
 
-Allows the distribution to used with its defaults, but without enabling the export of telemetry data to
+Allows EDOT .NET to used with its defaults, but without enabling the export of telemetry data to
 an OTLP endpoint. This can be useful when you want to test applications without sending telemetry data.
 
 | Configuration method | Key |
@@ -184,21 +186,21 @@ an OTLP endpoint. This can be useful when you want to test applications without 
 * _Default_: `string.Empty`
 
 A comma-separated list of Elastic defaults to enable. This can be useful when you want to enable
-only some of the Elastic Distribution for OpenTelemetry .NET opinionated defaults.
+only some of the Elastic Distribution of OpenTelemetry .NET opinionated defaults.
 
 Valid options: `None`, `Traces`, `Metrics`, `Logs`, `All`.
 
 Except for the `None` option, all other options can be combined.
 
-When this setting is not configured or the value is `string.Empty`, all Elastic Distribution for OpenTelemetry .NET defaults will be enabled.
+When this setting is not configured or the value is `string.Empty`, all Elastic Distribution of OpenTelemetry .NET defaults will be enabled.
 
-When `None` is specified, no Elastic Distribution for OpenTelemetry .NET defaults will be enabled, and you will need to manually
-configure the OpenTelemetry SDK to enable collection of telemetry signals. In this mode, the Elastic distribution
+When `None` is specified, no Elastic Distribution of OpenTelemetry .NET defaults will be enabled, and you will need to manually
+configure the OpenTelemetry SDK to enable collection of telemetry signals. In this mode, EDOT .NET
 does not provide any opinionated defaults, nor register any processors, allowing you to start with the "vanilla"
 OpenTelemetry SDK configuration. You may then choose to configure the various providers and register processors
 as required.
 
-In all other cases, the Elastic Distribution for OpenTelemetry .NET will enable the specified defaults. For example, to enable only
+In all other cases, the Elastic Distribution of OpenTelemetry .NET will enable the specified defaults. For example, to enable only
 Elastic defaults only for tracing and metrics, set this value to `Traces,Metrics`.
 
 | Configuration method | Key |
@@ -238,7 +240,7 @@ export OTEL_EXPORTER_OTLP_HEADERS="Authorization=ApiKey TkpXUkx...dVZGQQ=="
 
 <!-- ✅ What is this -->
 <!-- ✅ Why use this -->
-[Secret tokens](https://www.elastic.co/guide/en/observability/current/apm-secret-token.html) are used to authorize requests to the APM Server. Both the distro and APM Server must be configured with the same secret token for the request to be accepted.
+[Secret tokens](https://www.elastic.co/guide/en/observability/current/apm-secret-token.html) are used to authorize requests to the APM Server. Both EDOT .NET and APM Server must be configured with the same secret token for the request to be accepted.
 
 <!-- ✅ How do you authenticate using this method? -->
 You can find the values of these variables in Kibana's APM tutorial.
