@@ -15,11 +15,11 @@ Assumptions we're comfortable making about the reader:
 >
 > We welcome your feedback! You can reach us by [opening a GitHub issue](https://github.com/elastic/elastic-otel-dotnet/issues) or starting a discussion thread on the [Elastic Discuss forum](https://discuss.elastic.co/tags/c/observability/apm/58/dotnet).
 
-This guide shows you how to use the Elastic Distribution for OpenTelemetry .NET ("the distro") to instrument your .NET application and send OpenTelemetry data to an Elastic Observability deployment.
+This guide shows you how to use the Elastic Distribution for OpenTelemetry .NET (the distro) to instrument your .NET application and send OpenTelemetry data to an Elastic Observability deployment.
 
-This doc will guide you through the minimal configuration options to get the Elastic distro set up in your application.
-You do _not_ need any existing experience with OpenTelemetry to set up the Elastic distro initially.
-If you need more control over your configuration after getting set up, you can learn more in the [OpenTelemetry SDK documentation](https://opentelemetry.io/docs/languages/net).
+**Already familiar with OpenTelemetry?** It's an explicit goal of this distribution to introduce _no new concepts_ outside those defined by the wider OpenTelemetry community.
+
+**New to OpenTelemetry?** This section will guide you through the _minimal_ configuration options to get EDOT Java set up in your application. You do _not_ need any existing experience with OpenTelemetry to set up EDOT Java initially. If you need more control over your configuration after getting set up, you can learn more in the [OpenTelemetry documentation](https://opentelemetry.io/docs/languages/net).
 
 > [!NOTE]
 > As an OpenTelemetry SDK, the distro supports sending data to any OpenTelemetry protocol (OTLP) endpoint ([OpenTelemetry Collector](https://opentelemetry.io/docs/collector/)), but this guide assumes you are sending data to Elastic.
@@ -48,11 +48,13 @@ Before getting started:
 To get started with the Elastic OpenTelemetry Distribution for .NET, add the `Elastic.OpenTelemetry` NuGet package reference to your project file:
 
 ```xml
-<PackageReference Include="Elastic.OpenTelemetry" Version="0.1.0-alpha.1" />
+<PackageReference Include="Elastic.OpenTelemetry" Version="<LATEST>" />
 ```
 
-After adding the package reference, you can start using the distro
-in your application.
+> [!NOTE]
+> Replace the `<LATEST>` placeholder with the latest available package from [NuGet.org](https://www.nuget.org/packages/Elastic.OpenTelemetry).
+
+After adding the package reference, you can start using the distro in your application.
 
 <!-- ✅ Any additional info related to installation -->
 > [!NOTE]
@@ -62,13 +64,15 @@ in your application.
 > The distro is designed to be easy to use and integrate into your applications. This includes applications that have previously used the OpenTelemetry SDK directly. In situations where the OpenTelemetry SDK is already used, the only required change is to add the `Elastic.OpenTelemetry` NuGet package to the project. Doing so will automatically switch to the opinionated configuration provided by the Elastic distro.
 
 <!-- ✅ Start-to-finish operation -->
-## Send data to Elastic from an ASP.NET Core application
+## Instrument your application
 
-The OpenTelemetry SDK and the distro provide extension methods to enable observability
-features in your application with a few lines of code.
+The OpenTelemetry SDK and the distro provide extension methods to enable observability features in your application with a few lines of code. Choose from:
 
-It's common to want to instrument ASP.NET Core applications based on the `Microsoft.Extensions.Hosting`
-libraries, which provide dependency injection via an `IServiceProvider`.
+* [**ASP.NET Core application**](#aspnet-core-application) for ASP.NET Core minimal API applications, other ASP.NET Core workloads and other host-based applications like [worker services](https://learn.microsoft.com/en-us/dotnet/core/extensions/workers).
+* [**`Microsoft.Extensions.Hosting`**](#microsoftextensionshosting) for console applications and services that are written against a builder that exposes an `IServiceCollection`.
+* [**Manual instrumentation**](#manual-instrumentation) for environments where an `IServiceCollection` is unavailable.
+
+### ASP.NET Core application
 
 If you want to instrument an ASP.NET Core minimal API application using the distro, follow the
 steps below. Similar steps can also be used to instrument other ASP.NET Core workloads and other
@@ -78,8 +82,6 @@ host-based applications like [worker services](https://learn.microsoft.com/en-us
 > The examples below assume your code uses the top-level statements feature introduced in C# 9.0 and the default choice for applications created using the latest templates.
 
 <!-- ✅ Any dependencies that need to be installed in addition to the distro -->
-### Add dependencies
-
 1. To take advantage of the OpenTelemetry SDK instrumentation for ASP.NET Core, add the following NuGet package to your project:
     ```xml
     <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.7.0" />
@@ -121,8 +123,6 @@ With these limited changes to the `Program.cs` file, the application is now conf
 OpenTelemetry SDK and the distro to collect traces and metrics, which are exported via the
 OpenTelemetry protocol (OTLP).
 
-### Add a sample endpoint
-
 To demonstrate the tracing capabilities, add a simple endpoint to the application:
 
 ```csharp
@@ -144,8 +144,50 @@ The distro will automatically enable the exporting of signals via the OTLP expor
 exporter requires that endpoint(s) are configured. A common mechanism for configuring
 endpoints is via environment variables.
 
+### `Microsoft.Extensions.Hosting`
+
+<!-- ✅ Any dependencies that need to be installed in addition to the distro -->
+For console applications, services, etc that are written against a builder that exposes an `IServiceCollection` you can install this package:
+
+```xml
+<PackageReference Include="Elastic.OpenTelemetry" Version="<LATEST>" />
+```
+
+> [!NOTE]
+> Replace the `<LATEST>` placeholder with the latest available package from [NuGet.org](https://www.nuget.org/packages/Elastic.OpenTelemetry).
+
+Ensure you call `AddOpenTelemetry` to enable OpenTelemetry just as you would when using OpenTelemetry directly. Our package intercepts this call to set up our defaults, but can be further build upon as per usual:
+
+```csharp
+var builder = Host.CreateApplicationBuilder(args);
+
+builder.Services.AddOpenTelemetry()
+	.ConfigureResource(r => r.AddService(serviceName: "MyService"))
+	.WithTracing(t => t.AddSource(Worker.ActivitySourceName).AddConsoleExporter())
+	.WithMetrics(m => m.AddMeter(Worker.MeterName).AddConsoleExporter());
+```
+
+### Manual instrumentation
+
+In environments where an `IServiceCollection` is unavailable you may manually start instrumenting by creating an instance of `ElasticOpenTelemetryBuilder`.
+
+```csharp
+await using var session = new ElasticOpenTelemetryBuilder()
+    .WithTracing(b => b.AddSource(ActivitySourceName))
+    .Build();
+```
+
+This will setup instrumentation for as long as `session` is not disposed. We would generally expect the `session`
+to live for the life of the application.
+
+`ElasticOpenTelemetryBuilder` is an implementation of [`IOpenTelemetryBuilder`](https://github.com/open-telemetry/opentelemetry-dotnet/blob/70657395b82ba00b8a1e848e8832b77dff94b6d2/src/OpenTelemetry.Api.ProviderBuilderExtensions/IOpenTelemetryBuilder.cs#L12).
+
+This is important to know because any instrumentation configuration is automatically exposed by the base
+OpenTelemetry package as extension methods on `IOpenTelemetryBuilder`. You will not lose functionality by
+using our builder.
+
 <!-- ✅ Provide _minimal_ configuration/setup -->
-### Configure the distro
+## Configure the distro
 
 To configure the distro, at a minimum you'll need the deployment's OTLP endpoint and
 authorization data to set the appropriate `OTLP_*` environment variables:

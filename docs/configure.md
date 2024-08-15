@@ -9,11 +9,6 @@ Assumptions we're comfortable making about the reader:
 
 # Configure
 
-> [!WARNING]
-> The Elastic Distribution for OpenTelemetry .NET is not yet recommended for production use. Functionality may be changed or removed in future releases. Alpha releases are not subject to the support SLA of official GA features.
->
-> We welcome your feedback! You can reach us by [opening a GitHub issue](https://github.com/elastic/elastic-otel-dotnet/issues) or starting a discussion thread on the [Elastic Discuss forum](https://discuss.elastic.co/tags/c/observability/apm/58/dotnet).
-
 <!-- ✅ How users set configuration options -->
 ## Configuration methods
 
@@ -218,9 +213,11 @@ When sending data to Elastic, there are two ways you can authenticate: using an 
 
 ### Use an APM agent key (API key)
 
-<!-- ✅ What is this? -->
-<!-- ✅ Why would someone use it? -->
-It is also possible to authenticate to an Elastic Observability endpoint using an [APM agent key](https://www.elastic.co/guide/en/observability/current/apm-api-key.html). APM agent keys are revocable, you can have more than one of them, and you can add or remove them without restarting APM Server.
+<!-- ✅ What and why -->
+[APM agent keys](https://www.elastic.co/guide/en/observability/current/apm-api-key.html) are
+used to authorize requests to an Elastic Observability endpoint.
+APM agent keys are revocable, you can have more than one of them, and
+you can add or remove them without restarting APM Server.
 
 <!-- ✅ How do you authenticate using this method? -->
 To create and manage APM agent keys in Kibana:
