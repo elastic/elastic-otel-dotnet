@@ -134,7 +134,7 @@ public class ElasticOpenTelemetryOptions
 	public string LogDirectoryDefault { get; }
 
 	/// <summary>
-	/// The output directory where the Elastic Distribution for OpenTelemetry .NET will write log files.
+	/// The output directory where the Elastic Distribution of OpenTelemetry .NET will write log files.
 	/// </summary>
 	/// <remarks>
 	/// When configured, a file log will be created in this directory with the name
@@ -192,7 +192,7 @@ public class ElasticOpenTelemetryOptions
 	}
 
 	/// <summary>
-	/// Allows flags to be set based of <see cref="Configuration.ElasticDefaults"/> to selectively opt in to Elastic Distribution for OpenTelemetry .NET features.
+	/// Allows flags to be set based of <see cref="Configuration.ElasticDefaults"/> to selectively opt in to Elastic Distribution of OpenTelemetry .NET features.
 	/// <para>Defaults to <see cref="ElasticDefaults.All"/></para>
 	/// </summary>
 	/// <remarks>
@@ -212,7 +212,7 @@ public class ElasticOpenTelemetryOptions
 	}
 
 	/// <summary>
-	/// Control which signals will be automatically enabled by the Elastic Distribution for OpenTelemetry .NET.
+	/// Control which signals will be automatically enabled by the Elastic Distribution of OpenTelemetry .NET.
 	/// <para>
 	/// This configuration respects the open telemetry environment configuration out of the box:
 	///	<list type="bullet">

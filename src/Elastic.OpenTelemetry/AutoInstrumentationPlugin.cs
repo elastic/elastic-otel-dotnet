@@ -14,7 +14,7 @@ using OpenTelemetry.Trace;
 namespace Elastic.OpenTelemetry;
 
 /// <summary>
-/// Elastic Distribution for OpenTelemetry .NET plugin for Auto Instrumentation.
+/// Elastic Distribution of OpenTelemetry .NET plugin for Auto Instrumentation.
 /// <para>Ensures all signals are rich enough to report to Elastic</para>
 /// </summary>
 // ReSharper disable once UnusedType.Global

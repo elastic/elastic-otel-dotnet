@@ -52,7 +52,7 @@ public class ElasticOpenTelemetryBuilder : IOpenTelemetryBuilder
 	public IServiceCollection Services { get; }
 
 	/// <summary>
-	/// Shared bootstrap routine for the Elastic Distribution for OpenTelemetry .NET.
+	/// Shared bootstrap routine for the Elastic Distribution of OpenTelemetry .NET.
 	/// Used to ensure auto instrumentation and manual instrumentation bootstrap the same way.
 	/// </summary>
 	public static (EventListener, ILogger) Bootstrap(ElasticOpenTelemetryBuilderOptions options)
