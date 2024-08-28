@@ -143,7 +143,7 @@ let stageInstallationBashScript () =
         (File.ReadAllText patchScript.FullName)
             .Replace("/open-telemetry/opentelemetry-dotnet-instrumentation/", "/elastic/elastic-otel-dotnet/")
             .Replace("opentelemetry-dotnet-instrumentation", "elastic-dotnet-instrumentation")
-            .Replace("v" + Software.OpenTelemetryAutoInstrumentationVersion.AsString, "v" + Software.Version.NormalizeToShorter())
+            .Replace("v" + Software.OpenTelemetryAutoInstrumentationVersion.AsString, Software.Version.NormalizeToShorter())
             
     let elasticInstall = distroFile installScript
     File.WriteAllText(elasticInstall.FullName, contents)
@@ -167,7 +167,7 @@ let stageInstallationPsScript () =
                      ]
                      |> String.concat "\r\n        "
             )
-            .Replace("v" + Software.OpenTelemetryAutoInstrumentationVersion.AsString, "v" + Software.Version.NormalizeToShorter())
+            .Replace("v" + Software.OpenTelemetryAutoInstrumentationVersion.AsString, Software.Version.NormalizeToShorter())
     let elasticInstall = distroFile installScript
     //ensure we write our new module name
     File.WriteAllText(elasticInstall.FullName.Replace("elastic.DotNet.Auto", "Elastic.OpenTelemetry.DotNet"), contents);
