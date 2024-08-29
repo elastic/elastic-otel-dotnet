@@ -66,7 +66,7 @@ For example, you can define the configuration for the Elastic Distribution of Op
 {
   "Elastic": {
     "OpenTelemetry": {
-      "FileLogDirectory": "C:\\Logs"
+      "LogDirectory": "C:\\Logs"
     }
   }
 }
@@ -139,7 +139,7 @@ EDOT .NET supports all configuration options listed in the [OpenTelemetry Genera
 
 EDOT .NET supports the following Elastic-specific options.
 
-#### `FileLogDirectory`
+#### `LogDirectory`
 
 * _Type_: String
 * _Default_: `string.Empty`
@@ -150,10 +150,10 @@ specified directory.
 
 | Configuration method | Key |
 |---|---|
-| Environment variable | `ELASTIC_OTEL_FILE_LOG_DIRECTORY` |
-| `IConfiguration` integration | `Elastic:OpenTelemetry:FileLogDirectory` |
+| Environment variable | `OTEL_DOTNET_AUTO_LOG_DIRECTORY` |
+| `IConfiguration` integration | `Elastic:OpenTelemetry:LogDirectory` |
 
-#### `FileLogLevel`
+#### `LogLevel`
 
 * _Type_: String
 * _Default_: `Information`
@@ -164,8 +164,8 @@ Valid options: `Critical`, `Error`, `Warning`, `Information`, `Debug`, `Trace` a
 
 | Configuration method | Key |
 |---|---|
-| Environment variable | `ELASTIC_OTEL_FILE_LOG_LEVEL` |
-| `IConfiguration` integration | `Elastic:OpenTelemetry:FileLogLevel` |
+| Environment variable | `OTEL_LOG_LEVEL` |
+| `IConfiguration` integration | `Elastic:OpenTelemetry:LogLevel` |
 
 #### `SkipOtlpExporter`
 
