@@ -39,27 +39,17 @@ jobs:
       
     - name: List distributions
       run: ls -al ${{ env.RELEASE_DISTRO }}
-    
+      
     - name: Generate build provenance (Distribution)
       uses: actions/attest-build-provenance@5e9cb68e95676991667494a6a4e59b8a2f13e1d0  # v1.3.3
       with:
         subject-path: "${{ github.workspace }}/${{ env.RELEASE_DISTRO }}"
-        
+
     - name: Generate build provenance (Packages)
       uses: actions/attest-build-provenance@5e9cb68e95676991667494a6a4e59b8a2f13e1d0  # v1.3.3
       with:
         subject-path: "${{ github.workspace }}/${{ env.RELEASE_PACKAGES }}"
-        
-    - name: Attach Distribution to release
-      if: ${{ github.event_name == 'release' }}
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: gh release upload ${{ github.ref_name }} ${{ env.RELEASE_DISTRO }}
 
-    - name: Release to Nuget (only for release events)
-      if: ${{ github.event_name == 'release' }}
-      run: dotnet nuget push '${{ env.RELEASE_PACKAGES }}' -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate --no-symbols
-      
     - name: Log in to the Elastic Container registry
       uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
       with:
@@ -79,7 +69,7 @@ jobs:
           type=semver,pattern={{version}},value=${{ steps.bootstrap.outputs.agent-version }}
           # "edge" Docker tag on git push to default branch
           type=edge
-
+          
     - name: Build and Push Profiler Docker Image
       id: docker-push
       continue-on-error: true # continue for now until we see it working in action
@@ -101,6 +91,16 @@ jobs:
         subject-digest: ${{ steps.docker-push.outputs.digest }}
         push-to-registry: true
 
+    - name: Attach Distribution to release
+      if: ${{ github.event_name == 'release' }}
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: gh release upload ${{ github.ref_name }} ${{ env.RELEASE_DISTRO }}
+
+    - name: Release to Nuget (only for release events)
+      if: ${{ github.event_name == 'release' }}
+      run: dotnet nuget push '${{ env.RELEASE_PACKAGES }}' -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate --no-symbols
+    
     - if: ${{ success() && github.event_name == 'release' }}
       uses: elastic/oblt-actions/slack/send@v1.12.1
       with:
