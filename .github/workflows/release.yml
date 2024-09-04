@@ -26,6 +26,8 @@ jobs:
     outputs:
       agent-version: ${{ steps.bootstrap.outputs.agent-version }}
       major-version: ${{ steps.bootstrap.outputs.major-version }}
+    env:
+      DOCKER_IMAGE_NAME: "docker.elastic.co/observability/elastic-otel-dotnet"
     steps:
     - uses: actions/checkout@v4
     - name: Bootstrap Action Workspace
@@ -37,17 +39,62 @@ jobs:
       
     - name: List distributions
       run: ls -al ${{ env.RELEASE_DISTRO }}
-    
+      
     - name: Generate build provenance (Distribution)
       uses: actions/attest-build-provenance@5e9cb68e95676991667494a6a4e59b8a2f13e1d0  # v1.3.3
       with:
         subject-path: "${{ github.workspace }}/${{ env.RELEASE_DISTRO }}"
-        
+
     - name: Generate build provenance (Packages)
       uses: actions/attest-build-provenance@5e9cb68e95676991667494a6a4e59b8a2f13e1d0  # v1.3.3
       with:
         subject-path: "${{ github.workspace }}/${{ env.RELEASE_PACKAGES }}"
-        
+
+    - name: Log in to the Elastic Container registry
+      uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
+      with:
+        registry: ${{ secrets.ELASTIC_DOCKER_REGISTRY }}
+        username: ${{ secrets.ELASTIC_DOCKER_USERNAME }}
+        password: ${{ secrets.ELASTIC_DOCKER_PASSWORD }}
+
+    - name: Extract metadata (tags, labels)
+      id: docker-meta
+      uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81  # v5.5.1
+      with:
+        images: ${{ env.DOCKER_IMAGE_NAME }}
+        flavor: |
+          latest=auto
+        tags: |
+          # "1.2.3" and "latest" Docker tags on push of git tag "v1.2.3"
+          type=semver,pattern={{version}},value=${{ steps.bootstrap.outputs.agent-version }}
+          # "edge" Docker tag on git push to default branch
+          type=edge
+        labels: |
+          org.opencontainers.image.title=elastic-otel-dotnet
+          org.opencontainers.image.description=Elastic Distribution of OpenTelemetry .NET
+          org.opencontainers.image.vendor=Elastic
+          
+    - name: Build and Push Profiler Docker Image
+      id: docker-push
+      continue-on-error: true # continue for now until we see it working in action
+      uses: docker/build-push-action@5176d81f87c23d6fc96624dfdbcd9f3830bbe445  # v6.5.0
+      with:
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        context: .
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.docker-meta.outputs.tags }}
+        labels: ${{ steps.docker-meta.outputs.labels }}
+
+    - name: Attest image
+      uses: actions/attest-build-provenance@5e9cb68e95676991667494a6a4e59b8a2f13e1d0  # v1.3.3
+      continue-on-error: true # continue for now until we see it working in action
+      with:
+        subject-name: ${{ env.DOCKER_IMAGE_NAME }}
+        subject-digest: ${{ steps.docker-push.outputs.digest }}
+        push-to-registry: true
+
     - name: Attach Distribution to release
       if: ${{ github.event_name == 'release' }}
       env:
@@ -57,7 +104,7 @@ jobs:
     - name: Release to Nuget (only for release events)
       if: ${{ github.event_name == 'release' }}
       run: dotnet nuget push '${{ env.RELEASE_PACKAGES }}' -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate --no-symbols
-
+    
     - if: ${{ success() && github.event_name == 'release' }}
       uses: elastic/oblt-actions/slack/send@v1.12.1
       with:
