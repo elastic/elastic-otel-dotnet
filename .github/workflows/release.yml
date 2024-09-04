@@ -69,6 +69,10 @@ jobs:
           type=semver,pattern={{version}},value=${{ steps.bootstrap.outputs.agent-version }}
           # "edge" Docker tag on git push to default branch
           type=edge
+        labels: |
+          org.opencontainers.image.title=elastic-otel-dotnet
+          org.opencontainers.image.description=Elastic Distribution of OpenTelemetry .NET
+          org.opencontainers.image.vendor=Elastic
           
     - name: Build and Push Profiler Docker Image
       id: docker-push
