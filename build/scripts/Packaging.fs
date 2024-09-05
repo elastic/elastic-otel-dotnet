@@ -147,6 +147,11 @@ let stageInstallationBashScript () =
             
     let elasticInstall = distroFile installScript
     File.WriteAllText(elasticInstall.FullName, contents)
+    let permissions =
+        UnixFileMode.UserRead ||| UnixFileMode.UserWrite ||| UnixFileMode.UserExecute
+        ||| UnixFileMode.GroupRead ||| UnixFileMode.GroupWrite ||| UnixFileMode.GroupExecute
+        ||| UnixFileMode.OtherRead ||| UnixFileMode.OtherWrite ||| UnixFileMode.OtherExecute
+    File.SetUnixFileMode(elasticInstall.FullName, permissions);
  
 let stageInstallationPsScript () =
     let installScript = downloadFileInfo "OpenTelemetry.DotNet.Auto.psm1"
