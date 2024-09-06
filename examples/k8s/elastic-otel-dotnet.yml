@@ -30,10 +30,6 @@ spec:
       - name: OTEL_LOG_LEVEL
         value: "info"
       - name: ELASTIC_OTEL_LOG_TARGETS
-        value: "file;stdout"
-      - name: OTEL_DOTNET_AUTO_LOG_DIRECTORY
-        value: "/otel-auto-instrumentation-dotnet"
-      - name: OTEL_DOTNET_AUTO_RULE_ENGINE_ENABLED
-        value: "false"
+        value: "stdout"
 
 
