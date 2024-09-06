@@ -8,12 +8,17 @@ FROM busybox as downloader
 
 WORKDIR /autoinstrumentation
 
+COPY ".artifacts/elastic-distribution/elastic-dotnet-instrumentation-linux-glibc-arm64.zip" .
 COPY ".artifacts/elastic-distribution/elastic-dotnet-instrumentation-linux-glibc-x64.zip" .
+COPY ".artifacts/elastic-distribution/elastic-dotnet-instrumentation-linux-musl-arm64.zip" .
 COPY ".artifacts/elastic-distribution/elastic-dotnet-instrumentation-linux-musl-x64.zip" .
 
 RUN unzip elastic-dotnet-instrumentation-linux-glibc-x64.zip &&\
+    unzip elastic-dotnet-instrumentation-linux-glibc-arm64.zip "linux-arm64/*" -d .&&\
     unzip elastic-dotnet-instrumentation-linux-musl-x64.zip "linux-musl-x64/*" -d . &&\
-    rm elastic-dotnet-instrumentation-linux-glibc-x64.zip elastic-dotnet-instrumentation-linux-musl-x64.zip &&\
+    unzip elastic-dotnet-instrumentation-linux-musl-arm64.zip "linux-musl-arm64/*" -d . &&\
+    unzip elastic-dotnet-instrumentation-linux-glibc-arm64.zip "store/arm64/*" -d .&&\
+    rm elastic-dotnet-instrumentation-*.zip &&\
     chmod -R go+r .
 
 FROM busybox
