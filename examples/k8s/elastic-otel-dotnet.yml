@@ -1,0 +1,39 @@
+apiVersion: opentelemetry.io/v1alpha1
+kind: Instrumentation
+metadata:
+  name: elastic-otel-dotnet
+  namespace: my-dotnet-application
+spec:
+  env:
+    - name: OTEL_EXPORTER_OTLP_ENDPOINT
+      valueFrom:
+        secretKeyRef:
+          name: elastic-otel
+          key: endpoint
+  exporter:
+    endpoint: $OTEL_EXPORTER_OTLP_ENDPOINT
+  propagators:
+    - tracecontext
+    - baggage
+    - b3
+  sampler:
+    type: parentbased_traceidratio
+    argument: "1.0"
+  dotnet:
+    image: docker.elastic.co/observability/elastic-otel-dotnet:edge
+    env:
+      - name: OTEL_EXPORTER_OTLP_HEADERS
+        valueFrom:
+          secretKeyRef:
+            name: elastic-otel
+            key: apiKey
+      - name: OTEL_LOG_LEVEL
+        value: "info"
+      - name: ELASTIC_OTEL_LOG_TARGETS
+        value: "file;stdout"
+      - name: OTEL_DOTNET_AUTO_LOG_DIRECTORY
+        value: "/otel-auto-instrumentation-dotnet"
+      - name: OTEL_DOTNET_AUTO_RULE_ENGINE_ENABLED
+        value: "false"
+
+

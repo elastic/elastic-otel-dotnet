@@ -47,6 +47,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoInstrumentation.Integra
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Elastic.OpenTelemetry.AutoInstrumentation", "src\Elastic.OpenTelemetry.AutoInstrumentation\Elastic.OpenTelemetry.AutoInstrumentation.csproj", "{B1CA9165-89D9-4D6E-AFEF-5434A8D8A672}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "k8s", "k8s", "{21E61166-2640-4E38-8108-1BA510C07110}"
+	ProjectSection(SolutionItems) = preProject
+		examples\k8s\elastic-otel-dotnet.yml = examples\k8s\elastic-otel-dotnet.yml
+		examples\k8s\my-dotnet-application.yml = examples\k8s\my-dotnet-application.yml
+		examples\k8s\README.md = examples\k8s\README.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -130,6 +137,7 @@ Global
 		{F3AA76EC-C7D8-42DA-947D-4376B6562772} = {4E95C87B-655B-4BC3-8F2A-DF06B7AAB7E9}
 		{782E4DC1-8186-4BAC-B2F4-89E6DF22A4DD} = {AAD39891-0B70-47FA-A212-43E1AAE5DF56}
 		{B1CA9165-89D9-4D6E-AFEF-5434A8D8A672} = {E622CFF2-C6C4-40FB-BE42-7C4F2B38B75A}
+		{21E61166-2640-4E38-8108-1BA510C07110} = {4E95C87B-655B-4BC3-8F2A-DF06B7AAB7E9}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {573B2B5F-8CBB-4D52-A55A-4E65E282AAFB}
