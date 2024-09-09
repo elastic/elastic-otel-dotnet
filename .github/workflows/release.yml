@@ -41,17 +41,17 @@ jobs:
       run: ls -al ${{ env.RELEASE_DISTRO }}
       
     - name: Generate build provenance (Distribution)
-      uses: actions/attest-build-provenance@5e9cb68e95676991667494a6a4e59b8a2f13e1d0  # v1.3.3
+      uses: actions/attest-build-provenance@1c608d11d69870c2092266b3f9a6f3abbf17002c  # v1.4.3
       with:
         subject-path: "${{ github.workspace }}/${{ env.RELEASE_DISTRO }}"
 
     - name: Generate build provenance (Packages)
-      uses: actions/attest-build-provenance@5e9cb68e95676991667494a6a4e59b8a2f13e1d0  # v1.3.3
+      uses: actions/attest-build-provenance@1c608d11d69870c2092266b3f9a6f3abbf17002c  # v1.4.3
       with:
         subject-path: "${{ github.workspace }}/${{ env.RELEASE_PACKAGES }}"
         
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@aa33708b10e362ff993539393ff100fa93ed6a27 # v3.5.0
+      uses: docker/setup-buildx-action@988b5a0280414f521da01fcc63a27aeeb4b104db # v3.6.1
 
     - name: Log in to the Elastic Container registry
       uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
@@ -80,7 +80,7 @@ jobs:
     - name: Build and Push Profiler Docker Image
       id: docker-push
       continue-on-error: true # continue for now until we see it working in action
-      uses: docker/build-push-action@5176d81f87c23d6fc96624dfdbcd9f3830bbe445  # v6.5.0
+      uses: docker/build-push-action@5cd11c3a4ced054e52742c5fd54dca954e0edd85  # v6.7.0
       with:
         cache-from: type=gha
         cache-to: type=gha,mode=max
@@ -91,7 +91,7 @@ jobs:
         labels: ${{ steps.docker-meta.outputs.labels }}
 
     - name: Attest image
-      uses: actions/attest-build-provenance@5e9cb68e95676991667494a6a4e59b8a2f13e1d0  # v1.3.3
+      uses: actions/attest-build-provenance@1c608d11d69870c2092266b3f9a6f3abbf17002c  # v1.4.3
       continue-on-error: true # continue for now until we see it working in action
       with:
         subject-name: ${{ env.DOCKER_IMAGE_NAME }}
@@ -109,7 +109,7 @@ jobs:
       run: dotnet nuget push '${{ env.RELEASE_PACKAGES }}' -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate --no-symbols
     
     - if: ${{ success() && github.event_name == 'release' }}
-      uses: elastic/oblt-actions/slack/send@v1.12.1
+      uses: elastic/oblt-actions/slack/send@v1.13.0
       with:
         bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
         channel-id: ${{ env.SLACK_CHANNEL }}
@@ -119,7 +119,7 @@ jobs:
           Release URL: (<https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}|${{ github.ref_name }}>)
 
     - if: ${{ failure() && github.event_name == 'release' }}
-      uses: elastic/oblt-actions/slack/send@v1.12.1
+      uses: elastic/oblt-actions/slack/send@v1.13.0
       with:
         bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
         channel-id: ${{ env.SLACK_CHANNEL }}
