@@ -74,7 +74,7 @@ public sealed class ElasticCompatibilityProcessorTests : IDisposable
 	{
 		const string scheme = "https";
 		const string path = "/my/path";
-		const string query = "q=OpenTelemetry";
+		const string query = "?q=OpenTelemetry";
 
 		var activity = _activitySource.CreateActivity("test", ActivityKind.Server)!;
 
@@ -87,7 +87,7 @@ public sealed class ElasticCompatibilityProcessorTests : IDisposable
 
 		// We can test with Tags (rather than TagObjects) here as we know these are string values
 		activity.Tags.Single(t => t.Key == TraceSemanticConventions.HttpScheme).Value.Should().Be(scheme);
-		activity.Tags.Single(t => t.Key == TraceSemanticConventions.HttpTarget).Value.Should().Be($"{path}?{query}");
+		activity.Tags.Single(t => t.Key == TraceSemanticConventions.HttpTarget).Value.Should().Be($"{path}{query}");
 	}
 
 	public void Dispose()

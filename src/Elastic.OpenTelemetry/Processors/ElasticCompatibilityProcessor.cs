@@ -88,7 +88,7 @@ public class ElasticCompatibilityProcessor(ILogger logger) : BaseProcessor<Activ
 				var target = urlPath;
 
 				if (urlQuery is not null)
-					target += $"?{urlQuery}";
+					target += urlQuery;
 
 				SetStringAttribute(HttpTarget, target);
 			}
