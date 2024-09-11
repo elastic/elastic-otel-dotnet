@@ -16,7 +16,7 @@ kubectl create secret generic elastic-otel -my-dotnet-ns \
   "--from-literal=apiKey=Authorization=Bearer <api_key>"
 ```
 
-next create an `Instrumentation` resource by creating an [`elastic-otel-dotnet.yml`](elastic-otel-dotnet.yml) file.
+Next create an `Instrumentation` resource by creating an [`elastic-otel-dotnet.yml`](elastic-otel-dotnet.yml) file.
 
 Then apply it to create it in our namespace
 
@@ -39,7 +39,7 @@ metadata:
     instrumentation.opentelemetry.io/inject-dotnet: elastic-otel-dotnet
 ```
 
-we can now create our pod containing our dotnet image.
+We can now create our pod containing our dotnet image.
 
 To add your containerized image create a new `my-dotnet-application.yml` file
 
@@ -76,7 +76,7 @@ It should print the Elastic Distribution of OpenTelemetry .NET preamble
 [2024-09-06 18:49:36.011][00001][------][Information]  Elastic Distribution of OpenTelemetry .NET: 1.0.0-alpha.6.1
 ```
 
-TIP: you can expose this pod locally to your host using:
+TIP: You can expose this pod locally to your host using:
 
 ```bash
 kubectl port-forward -n my-dotnet-ns pods/my-dotnet-application 8081:8080
@@ -107,7 +107,7 @@ spec:
       name: asp-net-example
 ```
 
-NOTE: make sure `imagePullPolicy` is set to `Never`
+NOTE: Make sure `imagePullPolicy` is set to `Never`
 
 
 ### Debug deployments 
