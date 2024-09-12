@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-dotnet-application
+  namespace: my-dotnet-application
+  labels:
+    app: my-dotnet-application
+spec:
+  containers:
+    - image: asp-net-example:latest
+      imagePullPolicy: Never
+      name: asp-net-example
