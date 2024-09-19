@@ -40,11 +40,24 @@ jobs:
         id: bootstrap
         uses: ./.github/workflows/bootstrap
 
-      - uses: elastic/oblt-actions/google/auth@v1.13.0
+      - uses: elastic/oblt-actions/google/auth@v1
 
-      - uses: elastic/oblt-actions/oblt-cli/cluster-credentials@v1.13.0
+      - name: Get token
+        id: get_token
+        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
         with:
-          github-token: ${{ secrets.OBLT_CLI_GITHUB_TOKEN }}
+          app_id: ${{ secrets.OBS_AUTOMATION_APP_ID }}
+          private_key: ${{ secrets.OBS_AUTOMATION_APP_PEM }}
+          permissions: >-
+            {
+              "contents": "read"
+            }
+          repositories: >-
+            ["observability-test-environments"]
+
+      - uses: elastic/oblt-actions/oblt-cli/cluster-credentials@v1
+        with:
+          github-token: ${{ steps.get_token.outputs.token }}
           cluster-name:  ${{ env.SERVERLESS_PROJECT }}
 
       - uses: google-github-actions/get-secretmanager-secrets@95a0b09b8348ef3d02c68c6ba5662a037e78d713 # v2.1.4
