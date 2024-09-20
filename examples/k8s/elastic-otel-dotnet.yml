@@ -2,7 +2,6 @@ apiVersion: opentelemetry.io/v1alpha1
 kind: Instrumentation
 metadata:
   name: elastic-otel-dotnet
-  namespace: my-dotnet-application
 spec:
   env:
     - name: OTEL_EXPORTER_OTLP_ENDPOINT
