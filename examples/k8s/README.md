@@ -11,7 +11,7 @@ kubectl create namespace my-dotnet-ns
 Next up we'll set our Elastic Cloud endpoint and key as k8s secrets.
 
 ```bash
-kubectl create secret generic elastic-otel -my-dotnet-ns \
+kubectl create secret generic elastic-otel -n my-dotnet-ns \
   "--from-literal=endpoint=<cloud_endpoint>" \
   "--from-literal=apiKey=Authorization=Bearer <api_key>"
 ```
@@ -48,7 +48,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: my-dotnet-application
-  namespace: my-dotnet-application
+  namespace: my-dotnet-ns
   labels:
     app: my-dotnet-application
 spec:
