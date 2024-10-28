@@ -76,7 +76,7 @@ public static class ResourceBuilderExtensions
 	internal static ResourceBuilder AddDistroAttributes(this ResourceBuilder builder) =>
 		builder.AddAttributes(new Dictionary<string, object>
 		{
-			{ ResourceSemanticConventions.AttributeTelemetryDistroName, "elastic-dotnet" },
+			{ ResourceSemanticConventions.AttributeTelemetryDistroName, "elastic" },
 			{ ResourceSemanticConventions.AttributeTelemetryDistroVersion, VersionHelper.InformationalVersion }
 		});
 }
