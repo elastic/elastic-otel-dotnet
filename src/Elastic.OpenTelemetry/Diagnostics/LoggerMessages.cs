@@ -47,7 +47,7 @@ internal static partial class LoggerMessages
 
 		logger.LogInformation("Process ID: {ProcessId}", process.Id);
 		logger.LogInformation("Process name: {ProcessName}", process.ProcessName);
-#if NET6_0_OR_GREATER
+#if NET8_0_OR_GREATER
 		logger.LogInformation("Process path: {ProcessPath}", Environment.ProcessPath);
 #else
 		logger.LogInformation("Process path: {ProcessPath}", "<Unknown>");

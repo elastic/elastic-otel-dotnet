@@ -4,7 +4,6 @@
 
 using System.Diagnostics;
 using System.Diagnostics.Tracing;
-using System.Reflection;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Diagnostics;
 using Elastic.OpenTelemetry.Diagnostics.Logging;
@@ -16,9 +15,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
-using OpenTelemetry.Metrics;
-using OpenTelemetry.Trace;
-using static Elastic.OpenTelemetry.Configuration.ElasticOpenTelemetryOptions;
 
 namespace Elastic.OpenTelemetry;
 
@@ -169,10 +165,9 @@ internal static partial class LoggerMessages
 	[LoggerMessage(EventId = 2, Level = LogLevel.Information, Message = "No Elastic defaults were enabled.")]
 	public static partial void LogNoElasticDefaults(this ILogger logger);
 
-	[LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "ElasticOpenTelemetryBuilder {Signal} skipped, configured to be disabled")]
+	[LoggerMessage(EventId = 3, Level = LogLevel.Information, Message = "ElasticOpenTelemetryBuilder {Signal} skipped, configured to be disabled")]
 	public static partial void LogSignalDisabled(this ILogger logger, string signal);
 
-	[LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "Elastic defaults for {Signal} skipped, configured to be disabled")]
+	[LoggerMessage(EventId = 4, Level = LogLevel.Information, Message = "Elastic defaults for {Signal} skipped, configured to be disabled")]
 	public static partial void LogDefaultsDisabled(this ILogger logger, string signal);
-
 }

@@ -15,7 +15,7 @@ using System.Text;
 using Elastic.OpenTelemetry.SemanticConventions;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry.Resources;
-#if NETFRAMEWORK || NET6_0_OR_GREATER
+#if NETFRAMEWORK || NET8_0_OR_GREATER
 using Microsoft.Win32;
 #endif
 
@@ -145,7 +145,7 @@ internal sealed class HostDetector : IResourceDetector
 	// this type only exists in .NET 5+
 	private string? GetMachineIdWindows()
 	{
-#if NETFRAMEWORK || NET6_0_OR_GREATER
+#if NETFRAMEWORK || NET8_0_OR_GREATER
 		try
 		{
 			using var subKey = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Cryptography", false);

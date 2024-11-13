@@ -12,7 +12,9 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
 // ReSharper disable once CheckNamespace
+#pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace Microsoft.Extensions.Hosting;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 public static class Extensions
 {
@@ -30,7 +32,7 @@ public static class Extensions
 			http.AddStandardResilienceHandler();
 
 			// Turn on service discovery by default
-			http.UseServiceDiscovery();
+			http.AddServiceDiscovery();
 		});
 
 		return builder;

@@ -1,4 +1,4 @@
-ARG OTEL_VERSION=1.7.0
+ARG OTEL_VERSION=1.9.0
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG TARGETPLATFORM
 ARG TARGETARCH
@@ -18,7 +18,6 @@ COPY .git .git
 COPY examples/${_PROJECT} examples/${_PROJECT}
 WORKDIR "/work/examples/${_PROJECT}"
 RUN dotnet publish "${_PROJECT}.csproj" -c Release -a $TARGETARCH --no-restore  -o /app/example
-
 
 FROM build AS final
 

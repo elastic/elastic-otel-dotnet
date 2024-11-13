@@ -76,7 +76,7 @@ let private runTests suite _ =
         
     
     let settingsArg = ["-s"; "tests/.runsettings"]
-    let tfmArgs = if OS.Current = OS.Windows then [] else ["-f"; "net8.0"]
+    let tfmArgs = if OS.Current = OS.Windows then [] else ["-f"; "net9.0"]
     exec {
         env (Map ["TEST_SUITE", suite.SuitName])
         run "dotnet" (
@@ -128,13 +128,13 @@ let private generateApiChanges _ =
     nugetPackages
     |> Seq.iter(fun p ->
         let outputFile = Path.Combine(output, $"breaking-changes-%s{p}.md")
-        let tfm = "net8.0"
+        let tfm = "net9.0"
         let args =
             [
                 "assembly-differ"
                 $"previous-nuget|%s{p}|%s{currentVersion}|%s{tfm}";
                 //$"directory|.artifacts/bin/%s{p}/release/%s{tfm}";
-                $"directory|.artifacts/bin/%s{p}/release_net8.0";
+                $"directory|.artifacts/bin/%s{p}/release_net9.0";
                 "-a"; "true"; "--target"; p; "-f"; "github-comment"; "--output"; outputFile
             ]
         exec { run "dotnet" args }
