@@ -15,7 +15,7 @@ namespace Elastic.OpenTelemetry.Extensions;
 public static class MeterProviderBuilderExtensions
 {
 	/// <summary> Use Elastic Distribution of OpenTelemetry .NET defaults for <see cref="MeterProviderBuilder"/> </summary>
-	public static MeterProviderBuilder UseElasticDefaults(this MeterProviderBuilder builder, ILogger? logger = null)
+	public static MeterProviderBuilder UseElasticDefaults(this MeterProviderBuilder builder, bool skipOtlp = false, ILogger? logger = null)
 	{
 		logger ??= NullLogger.Instance;
 
@@ -23,6 +23,9 @@ public static class MeterProviderBuilderExtensions
 			.AddProcessInstrumentation()
 			.AddRuntimeInstrumentation()
 			.AddHttpClientInstrumentation();
+
+		if (!skipOtlp)
+			builder.AddOtlpExporter();
 
 		logger.LogConfiguredSignalProvider(nameof(Metrics), nameof(MeterProviderBuilder));
 
