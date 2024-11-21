@@ -172,7 +172,7 @@ Valid options: `Critical`, `Error`, `Warning`, `Information`, `Debug`, `Trace` a
 * _Type_: Bool
 * _Default_: `false`
 
-Allows EDOT .NET to used with its defaults, but without enabling the export of telemetry data to
+Allows EDOT .NET to be used with its defaults, but without enabling the export of telemetry data to
 an OTLP endpoint. This can be useful when you want to test applications without sending telemetry data.
 
 | Configuration method | Key |
