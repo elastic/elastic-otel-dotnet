@@ -1,4 +1,4 @@
-﻿ARG OTEL_VERSION=1.7.0
+ARG OTEL_VERSION=1.9.0
 FROM mcr.microsoft.com/dotnet/runtime:8.0 AS base
 ARG TARGETPLATFORM
 ARG TARGETARCH
@@ -18,7 +18,6 @@ ADD https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation/relea
 RUN chmod +x otel-dotnet-auto-install.sh
 RUN OTEL_DOTNET_AUTO_HOME="/app/otel" sh otel-dotnet-auto-install.sh
 
-
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build_example
 ENV _PROJECT="Example.AutoInstrumentation"
 ENV _PROJECTPATH="${_PROJECT}/${_PROJECT}.csproj"
@@ -33,7 +32,7 @@ RUN dotnet build "${_PROJECT}.csproj" -c Release -o /app/build_example
 FROM build_example AS publish_example
 RUN dotnet publish "Example.AutoInstrumentation.csproj" -c Release -o /app/example /p:UseAppHost=false
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build_distro
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build_distro
 ENV _PROJECT="Elastic.OpenTelemetry"
 ENV _PROJECTPATH="${_PROJECT}/${_PROJECT}.csproj"
 WORKDIR /work
@@ -67,6 +66,7 @@ ENV OTEL_DOTNET_AUTO_LOG_DIRECTORY=/app/logs
 ENV ELASTIC_OTEL_LOG_TARGETS=stdout
 
 ENV OTEL_DOTNET_AUTO_HOME="/app/otel"
+ENV OTEL_DOTNET_AUTO_LOGGER="console"
 ENV DOTNET_ADDITIONAL_DEPS="/app/otel/AdditionalDeps"
 ENV DOTNET_SHARED_STORE="/app/otel/store"
 ENV DOTNET_STARTUP_HOOKS="/app/otel/net/OpenTelemetry.AutoInstrumentation.StartupHook.dll"

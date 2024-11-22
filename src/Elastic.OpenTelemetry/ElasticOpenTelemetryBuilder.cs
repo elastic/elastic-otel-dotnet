@@ -170,5 +170,4 @@ internal static partial class LoggerMessages
 
 	[LoggerMessage(EventId = 4, Level = LogLevel.Information, Message = "Elastic defaults for {Signal} skipped, configured to be disabled")]
 	public static partial void LogDefaultsDisabled(this ILogger logger, string signal);
-
 }

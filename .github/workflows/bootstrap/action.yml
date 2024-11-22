@@ -39,10 +39,6 @@ runs:
       with:
         global-json-file: ./global.json
 
-    - name: Install Aspire workload
-      shell: bash
-      run: dotnet workload install aspire
-
     - id: dotnet
       shell: bash
       run: |
@@ -53,6 +49,7 @@ runs:
         echo "AGENT_VERSION=${AGENT_VERSION}" >> $GITHUB_ENV
         echo "agent-version=${AGENT_VERSION}" >> $GITHUB_OUTPUT
         echo "major-version=$(echo ${AGENT_VERSION} | cut -d"." -f1)" >> $GITHUB_OUTPUT
+        dotnet --version
 
     # Setup git config
     - uses: elastic/oblt-actions/git/setup@v1

@@ -134,13 +134,8 @@ let stageInstrumentationScript (stagedZips:List<ReleaseAsset * FileInfo>) =
 let stageInstallationBashScript () =
     let installScript = downloadFileInfo "otel-dotnet-auto-install.sh"
     let staged = installScript.CopyTo ((stageFile installScript).FullName, true)
-    // temporary while https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation/pull/3549 is not released.
-    // Should be released after 1.7.0.
-    // We should be able to read from `staged` instead after
-    let patchScript = fileInfo Paths.Root <| Path.Combine("build", "patch-dotnet-auto-install.sh")
-    
     let contents =
-        (File.ReadAllText patchScript.FullName)
+        (File.ReadAllText staged.FullName)
             .Replace("/open-telemetry/opentelemetry-dotnet-instrumentation/", "/elastic/elastic-otel-dotnet/")
             .Replace("opentelemetry-dotnet-instrumentation", "elastic-dotnet-instrumentation")
             .Replace("v" + Software.OpenTelemetryAutoInstrumentationVersion.AsString, Software.Version.NormalizeToShorter())
