@@ -23,6 +23,8 @@ public class AutoInstrumentationPlugin
 	private readonly ILogger _logger;
 	private readonly EventListener _eventListener;
 
+	private readonly bool _skipOtlp;
+
 	/// <inheritdoc cref="AutoInstrumentationPlugin"/>
 	public AutoInstrumentationPlugin()
 	{
@@ -31,6 +33,11 @@ public class AutoInstrumentationPlugin
 
 		_logger = logger;
 		_eventListener = eventListener;
+
+		var skipOtlpString = Environment.GetEnvironmentVariable("ELASTIC_OTEL_SKIP_OTLP_EXPORTER");
+
+		if (skipOtlpString is not null && bool.TryParse(skipOtlpString, out var skipOtlp))
+			_skipOtlp = skipOtlp;
 	}
 
 	/// To access TracerProvider right after TracerProviderBuilder.Build() is executed.
@@ -45,8 +52,7 @@ public class AutoInstrumentationPlugin
 
 	/// To configure tracing SDK before Auto Instrumentation configured SDK
 	public TracerProviderBuilder BeforeConfigureTracerProvider(TracerProviderBuilder builder) =>
-		builder.UseElasticDefaults(_logger);
-
+		builder.UseElasticDefaults(_skipOtlp, _logger);
 
 	/// To configure tracing SDK after Auto Instrumentation configured SDK
 	public TracerProviderBuilder AfterConfigureTracerProvider(TracerProviderBuilder builder) =>
@@ -54,12 +60,11 @@ public class AutoInstrumentationPlugin
 
 	/// To configure metrics SDK before Auto Instrumentation configured SDK
 	public MeterProviderBuilder BeforeConfigureMeterProvider(MeterProviderBuilder builder) =>
-		builder.UseElasticDefaults(_logger);
+		builder.UseElasticDefaults(_skipOtlp, _logger);
 
 	/// To configure metrics SDK after Auto Instrumentation configured SDK
 	public MeterProviderBuilder AfterConfigureMeterProvider(MeterProviderBuilder builder) =>
 		builder;
-
 
 	/// To configure logs SDK (the method name is the same as for other logs options)
 	public void ConfigureLogsOptions(OpenTelemetryLoggerOptions options) =>
