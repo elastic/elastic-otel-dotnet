@@ -24,7 +24,7 @@ concurrency:
 
 env:
   # (keep_serverless-staging-oblt, keep_serverless-qa-oblt or serverless-production-oblt)
-  SERVERLESS_PROJECT: serverless-production-oblt
+  SERVERLESS_PROJECT: keep_serverless-qa-oblt
 
 # NOTE: if you add a new job and it's a mandatory check then
 #       update e2e-docs.yml
@@ -64,8 +64,8 @@ jobs:
         with:
           export_to_environment: true
           secrets: |-
-            E2E__BROWSEREMAIL:elastic-observability/elastic-cloud-observability-team-pro-username
-            E2E__BROWSERPASSWORD:elastic-observability/elastic-cloud-observability-team-pro-password
+            E2E__BROWSEREMAIL:elastic-observability/elastic-cloud-observability-team-qa-username
+            E2E__BROWSERPASSWORD:elastic-observability/elastic-cloud-observability-team-qa-password
 
       - name: End-to-end tests
         run: ./build.sh test --test-suite=e2e
