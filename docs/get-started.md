@@ -84,7 +84,7 @@ host-based applications like [worker services](https://learn.microsoft.com/en-us
 <!-- ✅ Any dependencies that need to be installed in addition to EDOT .NET -->
 1. To take advantage of the OpenTelemetry SDK instrumentation for ASP.NET Core, add the following NuGet package to your project:
     ```xml
-    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.7.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="<LATEST>" />
     ```
 
     This package includes instrumentation to collect traces for requests handled by ASP.NET Core endpoints.
