@@ -50,7 +50,6 @@ public class ExampleApplicationContainer : IPartitionLifetime
 			.WithLogger(ConsoleLogger.Instance)
 			.WithOutputConsumer(_output)
 			.Build();
-
 	}
 
 	public async Task InitializeAsync()

@@ -73,10 +73,12 @@ let private runTests suite _ =
         | Integration -> [ "--filter"; "FullyQualifiedName~.IntegrationTests" ]
         | E2E -> [ "--filter"; "FullyQualifiedName~.EndToEndTests" ]
         | Skip_E2E -> [ "--filter"; "FullyQualifiedName!~.EndToEndTests" ]
-        
-    
+
     let settingsArg = ["-s"; "tests/.runsettings"]
-    let tfmArgs = if OS.Current = OS.Windows then [] else ["-f"; "net8.0"]
+    let tfmArgs = 
+      if OS.Current = Windows then [] 
+      elif suite.Equals(E2E) then ["-f"; "net8.0"]
+      else ["-f"; "net9.0"]
     exec {
         env (Map ["TEST_SUITE", suite.SuitName])
         run "dotnet" (
@@ -87,7 +89,7 @@ let private runTests suite _ =
             @ ["--"; "RunConfiguration.CollectSourceInformation=true"]
         )
     }
-    
+
 let private test (arguments:ParseResults<Build>) =
     let arg = arguments.TryGetResult Test_Suite
     match arg with

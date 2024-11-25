@@ -11,7 +11,6 @@ namespace Elastic.OpenTelemetry.AutoInstrumentation.IntegrationTests;
 
 public class PluginLoaderTests(ExampleApplicationContainer exampleApplicationContainer) : IPartitionFixture<ExampleApplicationContainer>
 {
-
 	[NotWindowsCiFact]
 	public async Task ObserveDistributionPluginLoad()
 	{
@@ -22,9 +21,7 @@ public class PluginLoaderTests(ExampleApplicationContainer exampleApplicationCon
 			.And.Contain("Elastic Distribution of OpenTelemetry .NET:")
 			.And.Contain("ElasticOpenTelemetryBuilder initialized")
 			.And.Contain("Added 'Elastic.OpenTelemetry.Processors.ElasticCompatibilityProcessor'");
-
 	}
-
 }
 
 public class NotWindowsCiFact : FactAttribute

@@ -23,7 +23,7 @@ public class ApmUIBrowserContext : IAsyncLifetime
 		// https://{instance}.kb.us-east-1.aws.elastic.cloud/app/apm/services?comparisonEnabled=true&environment=ENVIRONMENT_ALL&rangeFrom=now-15m&rangeTo=now&offset=1d
 		var endpoint = configuration["E2E:Endpoint"]?.Trim() ?? string.Empty;
 		var newBase = endpoint.Replace(".apm.", ".kb.");
-		KibanaAppUri = new Uri(new Uri(newBase), "app/apm");
+		KibanaAppUri = new Uri($"{newBase}/app/apm");
 	}
 
 	public Uri KibanaAppUri { get; }
@@ -63,7 +63,6 @@ public class ApmUIBrowserContext : IAsyncLifetime
 
 	public string? StorageState { get; set; }
 
-
 	public async Task<IPage> NewProfiledPage(string testName)
 	{
 		var page = await Browser.NewPageAsync(new() { StorageState = StorageState });
@@ -78,7 +77,6 @@ public class ApmUIBrowserContext : IAsyncLifetime
 		return page;
 	}
 
-
 	public async Task<IPage> OpenApmLandingPage(string testName)
 	{
 		var page = await NewProfiledPage(testName);
@@ -88,17 +86,17 @@ public class ApmUIBrowserContext : IAsyncLifetime
 
 	public async Task WaitForServiceOnOverview(IPage page)
 	{
-
 		var timeout = (float)TimeSpan.FromSeconds(30).TotalMilliseconds;
 
 		var servicesHeader = page.GetByRole(AriaRole.Heading, new() { Name = "Services" });
 		await servicesHeader.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = timeout });
 
-		//service.name : dotnet-e2e-*
-		var queryBar = page.GetByRole(AriaRole.Textbox, new() { Name = "Start typing to search and filter the APM page" });
-		await queryBar.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = timeout });
+		Console.WriteLine($"Search for service name: {_serviceName}");
 
-		await queryBar.FillAsync($"service.name: {_serviceName}");
+		//service.name : dotnet-e2e-*
+		var queryBar = page.GetByRole(AriaRole.Searchbox, new() { Name = "Search services by name" });
+		await queryBar.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = timeout });
+		await queryBar.FillAsync(_serviceName);
 		await queryBar.PressAsync("Enter");
 
 		Exception? observed = null;
@@ -115,6 +113,8 @@ public class ApmUIBrowserContext : IAsyncLifetime
 			}
 			catch (Exception e)
 			{
+				await page.ScreenshotAsync(new() { Path = $"squibble{i}.jpeg", FullPage = true });
+
 				observed ??= e;
 				await page.ReloadAsync();
 			}
