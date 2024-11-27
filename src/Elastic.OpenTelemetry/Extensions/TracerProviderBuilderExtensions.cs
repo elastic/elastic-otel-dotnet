@@ -48,6 +48,8 @@ public static class TracerProviderBuilderExtensions
 			.AddHttpClientInstrumentation()
 			.AddGrpcClientInstrumentation()
 			.AddEntityFrameworkCoreInstrumentation()
+			.AddElasticsearchClientInstrumentation()
+			.AddSqlClientInstrumentation()
 			.AddSource("Elastic.Transport")
 			.AddElasticProcessors(logger);
 
