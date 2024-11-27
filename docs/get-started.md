@@ -211,8 +211,8 @@ You can find the values of these variables in Kibana's APM tutorial. In Kibana:
     For example:
 
     ```sh
-export OTEL_EXPORTER_OTLP_ENDPOINT=https://my-deployment.apm.us-west1.gcp.cloud.es.io
-export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer P....l"
+    export OTEL_EXPORTER_OTLP_ENDPOINT=https://my-deployment.apm.us-west1.gcp.cloud.es.io
+    export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer P....l"
     ```
 1. Configure environment variables for the application either in `launchSettings.json` or in the environment where the application is running.
 1. Once configured, run the application and make a request to the root endpoint. A trace will be generated and exported to the OTLP endpoint.
