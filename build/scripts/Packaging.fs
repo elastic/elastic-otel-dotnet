@@ -80,7 +80,7 @@ let downloadArtifacts (_:ParseResults<Build>) =
             async {
                 Console.WriteLine($"Retrieving {asset.Name}");
                 let! fileData = httpClient.GetByteArrayAsync(asset.BrowserDownloadUrl) |> Async.AwaitTask
-                Console.WriteLine($"Saveing %i{fileData.Length} bytes to {f.FullName}")
+                Console.WriteLine($"Saving %i{fileData.Length} bytes to {f.FullName}")
                 File.WriteAllBytes(f.FullName, fileData)
                 f.Refresh()
             } |> Async.RunSynchronously

@@ -52,7 +52,7 @@ public class AutoInstrumentationPlugin
 
 	/// To configure tracing SDK before Auto Instrumentation configured SDK
 	public TracerProviderBuilder BeforeConfigureTracerProvider(TracerProviderBuilder builder) =>
-		builder.UseElasticDefaults(_skipOtlp, _logger);
+		builder.UseAutoInstrumentationElasticDefaults(_skipOtlp, _logger);
 
 	/// To configure tracing SDK after Auto Instrumentation configured SDK
 	public TracerProviderBuilder AfterConfigureTracerProvider(TracerProviderBuilder builder) =>
