@@ -78,5 +78,5 @@ jobs:
         if: always()
         with:
           name: playwright-traces
-          path: .artifacts/playwright-traces/*-screenshot.jpeg
+          path: .artifacts/playwright-traces/*
           retention-days: 1

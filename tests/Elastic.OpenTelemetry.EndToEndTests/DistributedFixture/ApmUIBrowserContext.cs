@@ -14,11 +14,16 @@ public class ApmUIBrowserContext : IAsyncLifetime
 {
 	private readonly IConfigurationRoot _configuration;
 	private readonly string _serviceName;
+	private readonly string _playwrightScreenshotsDir;
+	private readonly List<string> _output;
 
-	public ApmUIBrowserContext(IConfigurationRoot configuration, string serviceName)
+	public ApmUIBrowserContext(IConfigurationRoot configuration, string serviceName, string playwrightScreenshotsDir, List<string> output)
 	{
 		_configuration = configuration;
 		_serviceName = serviceName;
+		_playwrightScreenshotsDir = playwrightScreenshotsDir;
+		_output = output;
+
 		//"https://{instance}.apm.us-east-1.aws.elastic.cloud:443"
 		// https://{instance}.kb.us-east-1.aws.elastic.cloud/app/apm/services?comparisonEnabled=true&environment=ENVIRONMENT_ALL&rangeFrom=now-15m&rangeTo=now&offset=1d
 		var endpoint = configuration["E2E:Endpoint"]?.Trim() ?? string.Empty;
@@ -84,6 +89,12 @@ public class ApmUIBrowserContext : IAsyncLifetime
 		return page;
 	}
 
+	private void Log(string message)
+	{
+		Console.WriteLine(message);
+		_output.Add(message);
+	}
+
 	public async Task WaitForServiceOnOverview(IPage page)
 	{
 		var timeout = (float)TimeSpan.FromSeconds(30).TotalMilliseconds;
@@ -91,7 +102,9 @@ public class ApmUIBrowserContext : IAsyncLifetime
 		var servicesHeader = page.GetByRole(AriaRole.Heading, new() { Name = "Services" });
 		await servicesHeader.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = timeout });
 
-		Console.WriteLine($"Search for service name: {_serviceName}");
+		await page.ScreenshotAsync(new() { Path = Path.Join(_playwrightScreenshotsDir, "services-loaded.jpeg"), FullPage = true });
+
+		Log($"Search for service name: {_serviceName}");
 
 		//service.name : dotnet-e2e-*
 		var queryBar = page.GetByRole(AriaRole.Searchbox, new() { Name = "Search services by name" });
@@ -99,10 +112,12 @@ public class ApmUIBrowserContext : IAsyncLifetime
 		await queryBar.FillAsync(_serviceName);
 		await queryBar.PressAsync("Enter");
 
+		await page.ScreenshotAsync(new() { Path = Path.Join(_playwrightScreenshotsDir, "filter-services.jpeg"), FullPage = true });
+
 		Exception? observed = null;
 
 		var refreshTimeout = (float)TimeSpan.FromSeconds(5).TotalMilliseconds;
-		for (var i = 0; i < 10; i++)
+		for (var i = 0; i < 20; i++)
 		{
 			try
 			{
@@ -113,10 +128,7 @@ public class ApmUIBrowserContext : IAsyncLifetime
 			}
 			catch (Exception e)
 			{
-				await page.ScreenshotAsync(new() { Path = $"squibble{i}.jpeg", FullPage = true });
-
 				observed ??= e;
-				await page.ReloadAsync();
 			}
 			finally
 			{
@@ -125,30 +137,31 @@ public class ApmUIBrowserContext : IAsyncLifetime
 		}
 		if (observed != null)
 			throw observed; //TODO proper rethrow with stack
-
 	}
 
 	private int _unnamedTests;
 	public async Task StopTrace(IPage page, bool success, [CallerMemberName] string? testName = null)
 	{
 		testName ??= $"unknown_test_{_unnamedTests++}";
-		//only dump trace zip of test name is provided.
+
+		//only dump trace zip if tests failed
 		if (success)
+		{
 			await page.Context.Tracing.StopAsync(new());
+		}
 		else
 		{
 			var root = DotNetRunApplication.GetSolutionRoot();
 			var zip = Path.Combine(root.FullName, ".artifacts", "playwright-traces", $"{testName}.zip");
 			await page.Context.Tracing.StopAsync(new() { Path = zip });
 
-			using var archive = ZipFile.OpenRead(zip);
-			var entries = archive.Entries.Where(e => e.FullName.StartsWith("resources") && e.FullName.EndsWith(".jpeg")).ToList();
-			var lastScreenshot = entries.MaxBy(e => e.LastWriteTime);
-			lastScreenshot?.ExtractToFile(Path.Combine(root.FullName, ".artifacts", "playwright-traces", $"{testName}-screenshot.jpeg"));
+			//using var archive = ZipFile.OpenRead(zip);
+			//var entries = archive.Entries.Where(e => e.FullName.StartsWith("resources") && e.FullName.EndsWith(".jpeg")).ToList();
+			//var lastScreenshot = entries.MaxBy(e => e.LastWriteTime);
+			//lastScreenshot?.ExtractToFile(Path.Combine(root.FullName, ".artifacts", "playwright-traces", $"{testName}-screenshot.jpeg"));
 		}
 		await page.CloseAsync();
 	}
-
 
 	public async Task DisposeAsync()
 	{
