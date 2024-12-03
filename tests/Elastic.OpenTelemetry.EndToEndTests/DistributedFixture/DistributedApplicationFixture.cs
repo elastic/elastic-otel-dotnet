@@ -6,7 +6,9 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Configuration;
+using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Nullean.Xunit.Partitions.Sdk;
+using Xunit.Abstractions;
 
 namespace Elastic.OpenTelemetry.EndToEndTests.DistributedFixture;
 
@@ -18,11 +20,14 @@ public class DistributedApplicationFixture : IPartitionLifetime
 
 	public bool Started => AspNetApplication.ProcessId.HasValue;
 
+	public string PlaywrightScreenshotsDirectory { get; } = Path.Combine(DotNetRunApplication.GetSolutionRoot().FullName, ".artifacts", "playwright-traces", "screenshots");
+
 	private readonly List<string> _output = [];
 
 	public int? MaxConcurrency => null;
 
 	private ApmUIBrowserContext? _apmUI;
+
 	public ApmUIBrowserContext ApmUI
 	{
 		get => _apmUI ??
@@ -42,11 +47,7 @@ public class DistributedApplicationFixture : IPartitionLifetime
 	private static string ShaForCurrentTicks()
 	{
 		var buffer = Encoding.UTF8.GetBytes(DateTime.UtcNow.Ticks.ToString(DateTimeFormatInfo.InvariantInfo));
-
-		return BitConverter.ToString(SHA1.Create().ComputeHash(buffer))
-			.Replace("-", "")
-			.ToLowerInvariant()
-			.Substring(0, 12);
+		return Convert.ToHexStringLower(SHA1.HashData(buffer)).Substring(0, 12);
 	}
 
 	public string FailureTestOutput()
@@ -64,6 +65,18 @@ public class DistributedApplicationFixture : IPartitionLifetime
 		var messages = string.Join(Environment.NewLine, _output.Concat(logLines));
 		return messages;
 
+	}
+
+	public void WriteFailureTestOutput(ITestOutputHelper testOutputHelper)
+	{
+		foreach (var line in _output)
+			testOutputHelper.WriteLine(line);
+
+		DotNetRunApplication.IterateOverLog(s =>
+		{
+			Console.WriteLine(s);
+			testOutputHelper.WriteLine(s);
+		});
 	}
 
 	public async Task DisposeAsync()
@@ -91,7 +104,7 @@ public class DistributedApplicationFixture : IPartitionLifetime
 
 		Log("Started ASP.NET application");
 
-		ApmUI = new ApmUIBrowserContext(configuration, ServiceName);
+		ApmUI = new ApmUIBrowserContext(configuration, ServiceName, PlaywrightScreenshotsDirectory, _output);
 
 		Log("Started UI Browser context");
 

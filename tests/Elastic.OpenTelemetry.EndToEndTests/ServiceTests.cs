@@ -34,7 +34,6 @@ public class EndToEndTests(ITestOutputHelper output, DistributedApplicationFixtu
 			.ToBeVisibleAsync(new() { Timeout = timeout });
 	}
 
-
 	public async Task InitializeAsync() => _page = await fixture.ApmUI.NewProfiledPage(_testName);
 
 	public async Task DisposeAsync()
@@ -45,6 +44,6 @@ public class EndToEndTests(ITestOutputHelper output, DistributedApplicationFixtu
 		if (success)
 			return;
 
-		DotNetRunApplication.IterateOverLog(Output.WriteLine);
+		fixture.WriteFailureTestOutput(Output);
 	}
 }

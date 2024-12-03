@@ -48,6 +48,23 @@ public static class TracerProviderBuilderExtensions
 			.AddHttpClientInstrumentation()
 			.AddGrpcClientInstrumentation()
 			.AddEntityFrameworkCoreInstrumentation()
+			.AddElasticsearchClientInstrumentation()
+			.AddSqlClientInstrumentation()
+			.AddSource("Elastic.Transport")
+			.AddElasticProcessors(logger);
+
+		if (!skipOtlp)
+			builder.AddOtlpExporter();
+
+		logger.LogConfiguredSignalProvider(nameof(Traces), nameof(TracerProviderBuilder));
+		return builder;
+	}
+
+	internal static TracerProviderBuilder UseAutoInstrumentationElasticDefaults(this TracerProviderBuilder builder, bool skipOtlp = false, ILogger? logger = null)
+	{
+		logger ??= NullLogger.Instance;
+
+		builder
 			.AddSource("Elastic.Transport")
 			.AddElasticProcessors(logger);
 
