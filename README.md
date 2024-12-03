@@ -36,8 +36,8 @@ NuGet package to your project. This can be achieved by adding the package refere
 
 ## Read the docs
 
-* [Get started](./get-started.md)
-* [Configuration](./configure.md)
+* [Get started](./docs/get-started.md)
+* [Configuration](./docs/configure.md)
 
 <!-- ## Getting started
 
