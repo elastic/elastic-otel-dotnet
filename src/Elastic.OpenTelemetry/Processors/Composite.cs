@@ -3,8 +3,7 @@
 // See the LICENSE file in the project root for more information
 namespace Elastic.OpenTelemetry.Processors;
 
-// TODO - Consider a struct, but consider if this would get copied too much
-internal class Composite
+internal sealed class Composite
 {
 	/// <summary>
 	/// A string value indicating which compression strategy was used. The valid values are `exact_match` and `same_kind`
@@ -19,5 +18,10 @@ internal class Composite
 	/// <summary>
 	/// Sum of the durations of all compressed spans this composite span represents in milliseconds.
 	/// </summary>
-	public double DurationSum { get; set; }
+	public long DurationSum { get; set; }
+
+	/// <summary>
+	/// TODO
+	/// </summary>
+	public string? ActivityName { get; set; }
 }

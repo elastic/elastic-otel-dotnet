@@ -17,7 +17,6 @@ namespace Elastic.OpenTelemetry.Tests.Configuration;
 
 public class EnabledSignalsConfigurationTest(ITestOutputHelper output)
 {
-
 	[Theory]
 	[ClassData(typeof(SignalsAsStringInConfigurationData))]
 	public void ParsesFromConfiguration(string optionValue, Action<Signals> asserts)
