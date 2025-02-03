@@ -3,13 +3,15 @@
 // See the LICENSE file in the project root for more information
 
 using System.Diagnostics;
+using Elastic.OpenTelemetry.Core;
 using Elastic.OpenTelemetry.SemanticConventions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using OpenTelemetry.ResourceDetectors.Host;
 using OpenTelemetry.Resources;
 
-namespace Elastic.OpenTelemetry.Extensions;
+#pragma warning disable IDE0130 // Namespace does not match folder structure
+namespace OpenTelemetry;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
 /// Extension methods for <see cref="ResourceBuilder"/>.
@@ -65,15 +67,14 @@ public static class ResourceBuilderExtensions
 				{ ResourceSemanticConventions.AttributeServiceInstanceId, InstanceId }
 			})
 			.AddTelemetrySdk()
-			.AddDistroAttributes()
-			.AddEnvironmentVariableDetector();
-
-		builder.AddDetector(new HostDetector(logger));
+			.AddElasticDistroAttributes()
+			.AddEnvironmentVariableDetector()
+			.AddHostDetector();
 
 		return builder;
 	}
 
-	internal static ResourceBuilder AddDistroAttributes(this ResourceBuilder builder) =>
+	internal static ResourceBuilder AddElasticDistroAttributes(this ResourceBuilder builder) =>
 		builder.AddAttributes(new Dictionary<string, object>
 		{
 			{ ResourceSemanticConventions.AttributeTelemetryDistroName, "elastic" },
