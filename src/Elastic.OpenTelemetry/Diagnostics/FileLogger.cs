@@ -8,7 +8,7 @@ using System.Threading.Channels;
 using Elastic.OpenTelemetry.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace Elastic.OpenTelemetry.Diagnostics.Logging;
+namespace Elastic.OpenTelemetry.Diagnostics;
 
 internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 {
@@ -29,41 +29,62 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 
 	private readonly LoggerExternalScopeProvider _scopeProvider;
 
-	public FileLogger(ElasticOpenTelemetryOptions options)
+	public FileLogger(CompositeElasticOpenTelemetryOptions options)
 	{
 		_scopeProvider = new LoggerExternalScopeProvider();
 		_configuredLogLevel = options.LogLevel;
+
 		FileLoggingEnabled = options.GlobalLogEnabled && options.LogTargets.HasFlag(LogTargets.File);
 
 		if (!FileLoggingEnabled)
 			return;
 
-		var process = Process.GetCurrentProcess();
-		// When ordered by filename, we get see logs from the same process grouped, then ordered by oldest to newest, then the PID for that instance
-		var logFileName = $"{process.ProcessName}_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{process.Id}.instrumentation.log";
-
-		var logDirectory = options.LogDirectory;
-		LogFilePath = Path.Combine(logDirectory, logFileName);
-
-		if (!Directory.Exists(logDirectory))
-			Directory.CreateDirectory(logDirectory);
-
-		//StreamWriter.Dispose disposes underlying stream too
-		var stream = new FileStream(LogFilePath, FileMode.OpenOrCreate, FileAccess.Write);
-		_streamWriter = new StreamWriter(stream, Encoding.UTF8);
-
-		WritingTask = Task.Run(async () =>
+		try
 		{
-			while (await _channel.Reader.WaitToReadAsync().ConfigureAwait(false) && !_disposing)
-				while (_channel.Reader.TryRead(out var logLine) && !_disposing)
-					await _streamWriter.WriteLineAsync(logLine).ConfigureAwait(false);
+			var process = Process.GetCurrentProcess();
 
-			_syncDisposeWaitHandle.Set();
-		});
+			// When ordered by filename, we see logs from the same process grouped, then ordered by oldest to newest, then the PID for that instance
+			var logFileName = $"{process.ProcessName}_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{process.Id}.instrumentation.log";
+			var logDirectory = options.LogDirectory;
 
-		_streamWriter.AutoFlush = true; // Ensure we don't lose logs by not flushing to the file.
+			LogFilePath = Path.Combine(logDirectory, logFileName);
 
-		FileLoggingEnabled = true;
+			if (!Directory.Exists(logDirectory))
+				Directory.CreateDirectory(logDirectory);
+
+			//StreamWriter.Dispose disposes underlying stream too
+			var stream = new FileStream(LogFilePath, FileMode.OpenOrCreate, FileAccess.Write);
+
+			_streamWriter = new StreamWriter(stream, Encoding.UTF8);
+
+			WritingTask = Task.Run(async () =>
+			{
+				while (await _channel.Reader.WaitToReadAsync().ConfigureAwait(false) && !_disposing)
+					while (_channel.Reader.TryRead(out var logLine) && !_disposing)
+						await _streamWriter.WriteLineAsync(logLine).ConfigureAwait(false);
+
+				_syncDisposeWaitHandle.Set();
+			});
+
+			_streamWriter.AutoFlush = true; // Ensure we don't lose logs by not flushing to the file.
+
+			if (options?.AdditionalLogger is not null)
+				options?.AdditionalLogger.LogInformation("File logging for EDOT .NET enabled. Logs are being written to '{LogFilePath}'", LogFilePath);
+			else
+				Console.Out.WriteLine($"File logging for EDOT .NET enabled. Logs are being written to '{LogFilePath}'");
+
+			return;
+		}
+		catch (Exception ex)
+		{
+			if (options?.AdditionalLogger is not null)
+				options?.AdditionalLogger.LogError(ex, "Failed to set up file logging due to exception: {ExceptionMessage}.", ex.Message);
+			else
+				Console.Error.WriteLine($"Failed to set up file logging due to exception: {ex.Message}.");
+		}
+
+		// If we fall through the `try` block, consider file logging disabled.
+		FileLoggingEnabled = false;
 	}
 
 	public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
@@ -93,7 +114,7 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 
 	public void Dispose()
 	{
-		//tag that we are running a dispose this allows running tasks and spin waits to short circuit
+		// Tag that we are running a dispose. This allows running tasks and spin waits to short circuit
 		_disposing = true;
 		_channel.Writer.TryComplete();
 
@@ -104,7 +125,7 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 
 	public async ValueTask DisposeAsync()
 	{
-		//tag that we are running a dispose this allows running tasks and spin waits to short circuit
+		// Tag that we are running a dispose. This allows running tasks and spin waits to short circuit
 		_disposing = true;
 
 		_channel.Writer.TryComplete();

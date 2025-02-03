@@ -3,7 +3,7 @@
 // See the LICENSE file in the project root for more information
 
 using System.Diagnostics.Tracing;
-using Elastic.OpenTelemetry.Diagnostics.Logging;
+using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using static Elastic.OpenTelemetry.Configuration.Parsers.SharedParsers;

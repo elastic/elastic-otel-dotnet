@@ -6,7 +6,7 @@ using System.Diagnostics;
 using System.Text;
 using Microsoft.Extensions.Logging;
 
-namespace Elastic.OpenTelemetry.Diagnostics.Logging;
+namespace Elastic.OpenTelemetry.Diagnostics;
 
 internal static class LogFormatter
 {
@@ -28,11 +28,19 @@ internal static class LogFormatter
 
 		var builder = StringBuilderCache.Acquire();
 
+		// Force exceptions to be written as errors
+		if (exception is not null)
+			logLevel = LogLevel.Error;
+
 		WriteLogPrefix(managedThreadId, dateTime, logLevel, builder, spanId ?? activity?.SpanId.ToHexString() ?? string.Empty);
 		var message = formatter(state, exception);
 		builder.Append(message);
 
-		//todo force Exception to be written as error
+		if (eventId != default)
+			if (!string.IsNullOrEmpty(eventId.Name))
+				builder.Append(" {{EventId: " + eventId.Id + ", EventName: " + eventId.Name + "}}");
+			else
+				builder.Append(" {{EventId: " + eventId.Id + "}}");
 
 		if (activity is not null)
 		{
@@ -92,5 +100,4 @@ internal static class LogFormatter
 		for (var i = 0; i < padding; i++)
 			builder.Append(' ');
 	}
-
 }

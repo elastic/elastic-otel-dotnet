@@ -4,7 +4,7 @@
 
 using Microsoft.Extensions.Logging;
 
-namespace Elastic.OpenTelemetry.Diagnostics.Logging;
+namespace Elastic.OpenTelemetry.Diagnostics;
 
 internal static class LogLevelHelpers
 {

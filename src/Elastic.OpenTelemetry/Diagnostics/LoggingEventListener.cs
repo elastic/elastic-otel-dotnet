@@ -6,48 +6,43 @@ using System.Diagnostics.Tracing;
 using System.Text;
 using System.Text.RegularExpressions;
 using Elastic.OpenTelemetry.Configuration;
-using Elastic.OpenTelemetry.Diagnostics.Logging;
 using Microsoft.Extensions.Logging;
 
 namespace Elastic.OpenTelemetry.Diagnostics;
 
+/// <summary>
+/// Enables logging of OpenTelemetry-SDK event source events.
+/// </summary>
 internal sealed
 #if NET8_0_OR_GREATER
 	partial
 #endif
-	class LoggingEventListener : EventListener, IAsyncDisposable
+	class LoggingEventListener(ILogger logger, CompositeElasticOpenTelemetryOptions options) : EventListener, IAsyncDisposable
 {
 	public const string OpenTelemetrySdkEventSourceNamePrefix = "OpenTelemetry-";
 
-	private readonly ILogger _logger;
-	private readonly EventLevel _eventLevel;
+	private readonly ILogger _logger = logger;
+	private readonly EventLevel _eventLevel = options.EventLogLevel;
 
 	private const string TraceParentRegularExpressionString = "^\\d{2}-[a-f0-9]{32}-[a-f0-9]{16}-\\d{2}$";
 #if NET8_0_OR_GREATER
 	[GeneratedRegex(TraceParentRegularExpressionString)]
 	private static partial Regex TraceParentRegex();
 #else
-	private static readonly Regex _traceParentRegex = new(TraceParentRegularExpressionString);
-	private static Regex TraceParentRegex() => _traceParentRegex;
+	private static readonly Regex TraceParentRegexExpression = new(TraceParentRegularExpressionString);
+	private static Regex TraceParentRegex() => TraceParentRegexExpression;
 #endif
-
-	public LoggingEventListener(ILogger logger, ElasticOpenTelemetryOptions options)
-	{
-		_logger = logger;
-		_eventLevel = options.EventLogLevel;
-
-	}
 
 	public override void Dispose()
 	{
 		if (_logger is IDisposable d)
 			d.Dispose();
+
 		base.Dispose();
 	}
 
 	public ValueTask DisposeAsync() =>
 		_logger is IAsyncDisposable d ? d.DisposeAsync() : default;
-
 
 	protected override void OnEventSourceCreated(EventSource eventSource)
 	{

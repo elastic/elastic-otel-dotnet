@@ -3,25 +3,26 @@
 // See the LICENSE file in the project root for more information
 
 using Elastic.OpenTelemetry.Configuration;
+using Elastic.OpenTelemetry.Core;
 using Microsoft.Extensions.Logging;
 
-namespace Elastic.OpenTelemetry.Diagnostics.Logging;
+namespace Elastic.OpenTelemetry.Diagnostics;
 
 /// <summary>
-/// A composite logger for use inside the distribution which logs to the <see cref="Logging.FileLogger"/>
+/// A composite logger for use inside the distribution which logs to the <see cref="Diagnostics.FileLogger"/>
 /// and optionally an additional <see cref="ILogger"/>.
 /// </summary>
 /// <remarks>
-/// If disposed, triggers disposal of the <see cref="Logging.FileLogger"/>.
+/// If disposed, triggers disposal of the <see cref="Diagnostics.FileLogger"/>.
 /// </remarks>
-internal sealed class CompositeLogger(ElasticOpenTelemetryBuilderOptions options) : IDisposable, IAsyncDisposable, ILogger
+internal sealed class CompositeLogger(CompositeElasticOpenTelemetryOptions options) : IDisposable, IAsyncDisposable, ILogger
 {
 	public const string LogCategory = "Elastic.OpenTelemetry";
 
-	public FileLogger FileLogger { get; } = new(options.DistroOptions);
-	public StandardOutLogger ConsoleLogger { get; } = new(options.DistroOptions);
+	public FileLogger FileLogger { get; } = new(options);
+	public StandardOutLogger ConsoleLogger { get; } = new(options);
 
-	private ILogger? _additionalLogger = options.Logger;
+	private ILogger? _additionalLogger = options.AdditionalLogger;
 	private bool _isDisposed;
 
 	public void Dispose()
@@ -51,19 +52,29 @@ internal sealed class CompositeLogger(ElasticOpenTelemetryBuilderOptions options
 		if (ConsoleLogger.IsEnabled(logLevel))
 			ConsoleLogger.Log(logLevel, eventId, state, exception, formatter);
 
-		if (_additionalLogger == null)
-			return;
-
-		if (_additionalLogger.IsEnabled(logLevel))
+		if (_additionalLogger is not null && _additionalLogger.IsEnabled(logLevel))
 			_additionalLogger.Log(logLevel, eventId, state, exception, formatter);
 	}
 
 	public bool LogFileEnabled => FileLogger.FileLoggingEnabled;
+
 	public string LogFilePath => FileLogger.LogFilePath ?? string.Empty;
 
-	public void SetAdditionalLogger(ILogger? logger) => _additionalLogger ??= logger;
+	public void SetAdditionalLogger(ILogger logger, SdkActivationMethod activationMethod, ElasticOpenTelemetryComponents components)
+	{
+		if (HasAdditionalLogger)
+			return;
 
-	public bool IsEnabled(LogLevel logLevel) => ConsoleLogger.IsEnabled(logLevel) || FileLogger.IsEnabled(logLevel) || (_additionalLogger?.IsEnabled(logLevel) ?? false);
+		components.Logger.LogInformation("Added additional ILogger to composite logger.");
+
+		_additionalLogger = logger;
+		_additionalLogger.LogDistroPreamble(activationMethod, components);
+	}
+
+	internal bool HasAdditionalLogger => _additionalLogger is not null;
+
+	public bool IsEnabled(LogLevel logLevel) =>
+		ConsoleLogger.IsEnabled(logLevel) || FileLogger.IsEnabled(logLevel) || (_additionalLogger?.IsEnabled(logLevel) ?? false);
 
 	public IDisposable BeginScope<TState>(TState state) where TState : notnull =>
 		new CompositeDisposable(FileLogger.BeginScope(state), _additionalLogger?.BeginScope(state));

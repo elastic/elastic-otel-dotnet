@@ -3,7 +3,7 @@
 // See the LICENSE file in the project root for more information
 using System.Reflection;
 
-namespace Elastic.OpenTelemetry;
+namespace Elastic.OpenTelemetry.Core;
 
 internal static class VersionHelper
 {
