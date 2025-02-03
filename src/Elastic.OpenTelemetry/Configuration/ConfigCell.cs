@@ -18,11 +18,3 @@ internal class ConfigCell<T>(string key, T value)
 
 	public override string ToString() => $"{Key}: '{Value}' from [{Source}]";
 }
-internal enum ConfigSource
-{
-	Default, // Default value assigned within this class
-	Environment, // Loaded from an environment variable
-				 // ReSharper disable once InconsistentNaming
-	IConfiguration, // Bound from an IConfiguration instance
-	Property // Set via property initializer
-}

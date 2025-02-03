@@ -32,8 +32,8 @@ internal class EnvironmentParser(IDictionary environmentVariables)
 			if (enabled.HasValue)
 				opted = true;
 		}
-		return (opted, instrumentations);
 
+		return (opted, instrumentations);
 	}
 
 	internal (bool, HashSet<TraceInstrumentation>) EnabledTraceInstrumentations(bool allEnabled) =>
@@ -49,8 +49,7 @@ internal class EnvironmentParser(IDictionary environmentVariables)
 		ConfigCell<Signals?> signalsCell,
 		ConfigCell<TraceInstrumentations> tracingCell,
 		ConfigCell<MetricInstrumentations> metricsCell,
-		ConfigCell<LogInstrumentations> loggingCell
-	)
+		ConfigCell<LogInstrumentations> loggingCell)
 	{
 		var allEnabled = BoolParser(GetSafeEnvironmentVariable(OTEL_DOTNET_AUTO_INSTRUMENTATION_ENABLED));
 		var defaultSignals = allEnabled.HasValue
@@ -67,7 +66,6 @@ internal class EnvironmentParser(IDictionary environmentVariables)
 		var (optedTraces, traceInstrumentations) = EnabledTraceInstrumentations(traceEnabled);
 		if (optedTraces)
 			tracingCell.Assign(new TraceInstrumentations(traceInstrumentations), ConfigSource.Environment);
-
 
 		var metricEnabled = Configured(metrics);
 		var (optedMetrics, metricInstrumentations) = EnabledMetricInstrumentations(metricEnabled);
@@ -98,8 +96,8 @@ internal class EnvironmentParser(IDictionary environmentVariables)
 
 		if (logs.HasValue || traces.HasValue || traces.HasValue || allEnabled.HasValue)
 			signalsCell.Assign(signals, ConfigSource.Environment);
+
 		if (optedLogs || optedMetrics || optedTraces)
 			signalsCell.Assign(signals, ConfigSource.Environment);
-
 	}
 }

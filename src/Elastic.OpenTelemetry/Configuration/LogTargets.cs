@@ -10,14 +10,17 @@ namespace Elastic.OpenTelemetry.Configuration;
 [Flags]
 public enum LogTargets
 {
-
-	/// <summary>No global logging </summary>
+	/// <summary>
+	/// No global logging.
+	/// </summary>
 	None,
+
 	/// <summary>
 	/// Enable file logging. Use <see cref="ElasticOpenTelemetryOptions.LogLevel"/>
-	/// and <see cref="ElasticOpenTelemetryOptions.LogDirectoryDefault"/> to set any values other than the defaults
+	/// and <see cref="ElasticOpenTelemetryOptions.LogDirectory"/> to set any values other than the defaults.
 	/// </summary>
 	File = 1 << 0, //1
+
 	/// <summary>
 	/// Write to standard out, useful in scenarios where file logging might not be an option or harder to set up.
 	/// <para>e.g. containers, k8s, etc.</para>
