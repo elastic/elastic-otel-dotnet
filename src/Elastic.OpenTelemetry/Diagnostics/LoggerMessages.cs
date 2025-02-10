@@ -58,6 +58,9 @@ internal static partial class LoggerMessages
 	[LoggerMessage(EventId = 12, Level = LogLevel.Debug, Message = "Added '{MeterName}' meter to '{BuilderTypeName}'.")]
 	public static partial void LogMeterAdded(this ILogger logger, string meterName, string builderTypeName);
 
+	[LoggerMessage(EventId = 13, Level = LogLevel.Error, Message = "Unable to configure {BuilderTypeName} with EDOT .NET logging defaults.")]
+	public static partial void UnableToConfigureLoggingDefaultsError(this ILogger logger, string builderTypeName);
+
 	public static void LogDistroPreamble(this ILogger logger, SdkActivationMethod activationMethod, ElasticOpenTelemetryComponents components)
 	{
 		// This occurs once per initialisation, so we don't use `LoggerMessage`s.

@@ -16,7 +16,7 @@ internal static class SignalBuilder
 		string methodName,
 		string builderName,
 		T builder,
-		GlobalProviderBuilderState globalBuilderState,
+		GlobalProviderBuilderState globalProviderBuilderState,
 		CompositeElasticOpenTelemetryOptions? options,
 		IServiceCollection? services,
 		Action<T, CompositeElasticOpenTelemetryOptions, ElasticOpenTelemetryComponents> configure,
@@ -24,7 +24,7 @@ internal static class SignalBuilder
 	{
 		components = null;
 
-		var callCount = globalBuilderState.IncrementUseElasticDefaults();
+		var callCount = globalProviderBuilderState.IncrementUseElasticDefaults();
 
 		var existingStateFound = true;
 
