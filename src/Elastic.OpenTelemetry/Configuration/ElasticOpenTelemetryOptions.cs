@@ -2,9 +2,12 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using Elastic.OpenTelemetry.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace Elastic.OpenTelemetry.Configuration;
+#pragma warning disable IDE0130 // Namespace does not match folder structure
+namespace Elastic.OpenTelemetry;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
 /// Defines options which can be used to finely-tune the behaviour of the Elastic

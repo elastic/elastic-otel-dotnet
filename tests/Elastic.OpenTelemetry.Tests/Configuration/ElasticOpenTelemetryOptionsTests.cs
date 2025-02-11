@@ -17,7 +17,7 @@ namespace Elastic.OpenTelemetry.Tests.Configuration;
 
 public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 {
-	private const int ExpectedLogsLength = 8;
+	private const int ExpectedLogsLength = 7;
 
 	[Fact]
 	public void DefaultCtor_SetsExpectedDefaults_WhenNoEnvironmentVariablesAreConfigured()

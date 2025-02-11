@@ -12,6 +12,7 @@ using Elastic.OpenTelemetry.Instrumentation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Elastic.OpenTelemetry.Core;
+using Elastic.OpenTelemetry;
 
 // Matching namespace with MeterProviderBuilder
 #pragma warning disable IDE0130 // Namespace does not match folder structure

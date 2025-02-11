@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information
 
 using System.Runtime.CompilerServices;
+using Elastic.OpenTelemetry;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Core;
 using Elastic.OpenTelemetry.Diagnostics;

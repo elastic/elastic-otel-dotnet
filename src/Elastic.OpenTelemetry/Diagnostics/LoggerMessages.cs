@@ -12,28 +12,31 @@ namespace Elastic.OpenTelemetry.Diagnostics;
 
 internal static partial class LoggerMessages
 {
-	[LoggerMessage(EventId = 1, EventName = "Bootstapped", Level = LogLevel.Information, Message = "Elastic OpenTelemetry bootstrap invoked {newline}{StackTrace}", SkipEnabledCheck = true)]
+	[LoggerMessage(EventId = 1, EventName = "Bootstapped", Level = LogLevel.Information, Message = "Elastic OpenTelemetry bootstrap invoked. {newline}{StackTrace}", SkipEnabledCheck = true)]
 	public static partial void LogElasticOpenTelemetryBootstrapped(this ILogger logger, string newline, StackTrace stackTrace);
 
 	[LoggerMessage(EventId = 2, EventName = "SharedComponentsCreated", Level = LogLevel.Debug, Message = "Shared components created.")]
 	public static partial void LogSharedComponentsCreated(this ILogger logger);
 
-	[LoggerMessage(EventId = 3, EventName = "SharedComponentsReused", Level = LogLevel.Debug, Message = "Reusing existing shared components {newline}{StackTrace}", SkipEnabledCheck = true)]
+	[LoggerMessage(EventId = 3, EventName = "SharedComponentsReused", Level = LogLevel.Debug, Message = "Reusing existing shared components. {newline}{StackTrace}", SkipEnabledCheck = true)]
 	public static partial void LogSharedComponentsReused(this ILogger logger, string newline, StackTrace stackTrace);
 
-	[LoggerMessage(EventId = 4, EventName = "ServiceCollectionComponentsReused", Level = LogLevel.Debug, Message = "Reusing existing components on IServiceCollection {newline}{StackTrace}")]
+	[LoggerMessage(EventId = 4, EventName = "SharedComponentsNotReused", Level = LogLevel.Debug, Message = "Unable to reuse existing shared components as the provided `CompositeElasticOpenTelemetryOptions` differ. {newline}{StackTrace}", SkipEnabledCheck = true)]
+	public static partial void LogSharedComponentsNotReused(this ILogger logger, string newline, StackTrace stackTrace);
+
+	[LoggerMessage(EventId = 5, EventName = "ServiceCollectionComponentsReused", Level = LogLevel.Debug, Message = "Reusing existing components on IServiceCollection. {newline}{StackTrace}")]
 	public static partial void LogComponentsReused(this ILogger logger, string newline, StackTrace stackTrace);
 
-	[LoggerMessage(EventId = 5, EventName = "ConfiguredSignalProvider", Level = LogLevel.Debug, Message = "Configured EDOT defaults for {Signal} via the {Provider}.")]
+	[LoggerMessage(EventId = 6, EventName = "ConfiguredSignalProvider", Level = LogLevel.Debug, Message = "Configured EDOT defaults for {Signal} via the {Provider}.")]
 	public static partial void LogConfiguredSignalProvider(this ILogger logger, string signal, string provider);
 
-	[LoggerMessage(EventId = 6, EventName = "SkippingOtlpExporter", Level = LogLevel.Information, Message = "Skipping OTLP exporter for {Signal} based on the provided `ElasticOpenTelemetryOptions` via the {Provider}.")]
+	[LoggerMessage(EventId = 7, EventName = "SkippingOtlpExporter", Level = LogLevel.Information, Message = "Skipping OTLP exporter for {Signal} based on the provided `ElasticOpenTelemetryOptions` via the {Provider}.")]
 	public static partial void LogSkippingOtlpExporter(this ILogger logger, string signal, string provider);
 
-	[LoggerMessage(EventId = 7, EventName = "LocatedInstrumentationAssembly", Level = LogLevel.Information, Message = "Located {AssemblyFilename} in {Path}.")]
+	[LoggerMessage(EventId = 8, EventName = "LocatedInstrumentationAssembly", Level = LogLevel.Information, Message = "Located {AssemblyFilename} in {Path}.")]
 	public static partial void LogLocatedInstrumentationAssembly(this ILogger logger, string assemblyFilename, string path);
 
-	[LoggerMessage(EventId = 8, EventName = "AddedInstrumentation", Level = LogLevel.Information, Message = "Added {InstrumentationName} to {Provider}.")]
+	[LoggerMessage(EventId = 9, EventName = "AddedInstrumentation", Level = LogLevel.Information, Message = "Added {InstrumentationName} to {Provider}.")]
 	public static partial void LogAddedInstrumentation(this ILogger logger, string instrumentationName, string provider);
 
 	// We explictly reuse the same event ID and this is the same log message, but with different types for the structured data

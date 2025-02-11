@@ -94,21 +94,33 @@ internal static class ElasticOpenTelemetry
 			}
 
 			// When no IServiceCollection is provided we attempt to avoid bootstrapping more than
-			// once. The first call into Boostrap wins and thereafter the same components are reused.
+			// once. The first call into Bootstrap wins and thereafter the same components are reused.
 			if (TryGetSharedComponents(SharedComponents, stackTrace, out var shared))
 			{
-				components = shared;
-				return shared.BootstrapInfo;
+				// We compare whether the options (values) equal those from the shared components. If the
+				// values of the options differ, we will not reuse the shared components.
+				if (shared.Options.Equals(options))
+				{
+					components = shared;
+					components.Logger.LogSharedComponentsReused(Environment.NewLine, stackTrace);
+					return shared.BootstrapInfo;
+				}
+
+				bootstrapInfo = new BootstrapInfo(activationMethod, stackTrace);
+				components = CreateComponents(bootstrapInfo, options, stackTrace);
+				components.Logger.LogSharedComponentsNotReused(Environment.NewLine, new StackTrace(true));
+				return bootstrapInfo;
 			}
 
 			using (var scope = Lock.EnterScope())
 			{
-				if (TryGetSharedComponents(SharedComponents, stackTrace, out shared))
+				if (TryGetSharedComponents(SharedComponents, stackTrace, out shared) && shared.Options.Equals(options))
 				{
 					components = shared;
 					return shared.BootstrapInfo;
 				}
 
+				// If we get this far, we've been unable to get the shared components
 				bootstrapInfo = new BootstrapInfo(activationMethod, stackTrace);
 				components = SharedComponents = CreateComponents(bootstrapInfo, options, stackTrace);
 				return bootstrapInfo;
@@ -144,7 +156,6 @@ internal static class ElasticOpenTelemetry
 			if (components is null)
 				return false;
 
-			components.Logger.LogSharedComponentsReused(Environment.NewLine, stackTrace);
 			sharedComponents = components;
 
 			return true;

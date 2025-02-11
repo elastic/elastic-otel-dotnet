@@ -239,6 +239,41 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 		init => _logging.Assign(value, ConfigSource.Property);
 	}
 
+    public override bool Equals(object? obj)
+    {
+        if (obj is not CompositeElasticOpenTelemetryOptions other)
+            return false;
+
+        return LogDirectory == other.LogDirectory &&
+               LogLevel == other.LogLevel &&
+               LogTargets == other.LogTargets &&
+               SkipOtlpExporter == other.SkipOtlpExporter &&
+               Signals == other.Signals &&
+               Tracing.SetEquals(other.Tracing) &&
+			   Metrics.SetEquals(other.Metrics) &&
+			   Logging.SetEquals(other.Logging) &&
+               ReferenceEquals(AdditionalLogger, other.AdditionalLogger);
+    }
+
+    public override int GetHashCode()
+    {
+#if NET462 || NETSTANDARD2_0
+        return LogDirectory.GetHashCode()
+			^ LogLevel.GetHashCode()
+			^ LogTargets.GetHashCode()
+			^ SkipOtlpExporter.GetHashCode()
+			^ Signals.GetHashCode()
+			^ Tracing.GetHashCode()
+			^ Metrics.GetHashCode()
+			^ Logging.GetHashCode()
+			^ (AdditionalLogger?.GetHashCode() ?? 0);
+#else
+		var hash1 = HashCode.Combine(LogDirectory, LogLevel, LogTargets, SkipOtlpExporter);
+		var hash2 = HashCode.Combine(Signals, Tracing, Metrics, Logging, AdditionalLogger);
+		return HashCode.Combine(hash1, hash2);
+#endif
+	}
+
 	private void SetFromEnvironment<T>(string key, ConfigCell<T> field, Func<string?, T?> parser)
 	{
 		var value = parser(GetSafeEnvironmentVariable(key));
