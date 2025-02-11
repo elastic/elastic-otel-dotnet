@@ -6,9 +6,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Logging;
 using OpenTelemetry;
-using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
 // ReSharper disable once CheckNamespace
@@ -38,20 +36,8 @@ public static class Extensions
 
 	public static IHostApplicationBuilder ConfigureOpenTelemetry(this IHostApplicationBuilder builder)
 	{
-		builder.Logging.AddOpenTelemetry(logging =>
-		{
-			logging.IncludeFormattedMessage = true;
-			logging.IncludeScopes = true;
-		});
-
 		builder.Services.AddElasticOpenTelemetry(builder.Configuration)
-			.WithMetrics(metrics =>
-			{
-				metrics.AddAspNetCoreInstrumentation()
-					.AddHttpClientInstrumentation()
-					.AddProcessInstrumentation()
-					.AddRuntimeInstrumentation();
-			})
+			.WithMetrics()
 			.WithTracing(tracing =>
 			{
 				if (builder.Environment.IsDevelopment())
@@ -59,10 +45,6 @@ public static class Extensions
 					// We want to view all traces in development
 					tracing.SetSampler(new AlwaysOnSampler());
 				}
-
-				tracing.AddAspNetCoreInstrumentation()
-					.AddGrpcClientInstrumentation()
-					.AddHttpClientInstrumentation();
 			});
 
 		builder.AddOpenTelemetryExporters();
@@ -86,8 +68,8 @@ public static class Extensions
 		// Uncomment the following lines to enable the Azure Monitor exporter (requires the Azure.Monitor.OpenTelemetry.AspNetCore package)
 		//if (!string.IsNullOrEmpty(builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]))
 		//{
-		//    builder.Services.AddOpenTelemetry()
-		//       .UseAzureMonitor();
+		    //builder.Services.AddOpenTelemetry()
+		    //   .UseAzureMonitor();
 		//}
 		builder;
 
