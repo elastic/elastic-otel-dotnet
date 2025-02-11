@@ -4,16 +4,21 @@
 
 namespace Elastic.OpenTelemetry.Core;
 
+/// <summary>
+/// Used to store bootstrap information and a single component instance that will later be
+/// tracked per builder (OpenTelemetryBuilder, TracerProviderBuilder, MeterProviderBuilder
+/// or LoggerProviderBuilder) instance.
+/// </summary>
 internal sealed class BuilderState(
 	BootstrapInfo bootstrapInfo,
-	ElasticOpenTelemetryComponents? components,
+	ElasticOpenTelemetryComponents components,
 	Guid? instanceIdentifier = null)
 {
 	private int _useElasticDefaultsCounter;
 
 	public BootstrapInfo BootstrapInfo { get; } = bootstrapInfo;
 
-	public ElasticOpenTelemetryComponents? Components { get; } = components;
+	public ElasticOpenTelemetryComponents Components { get; } = components;
 
 	public Guid InstanceIdentifier { get; } = instanceIdentifier ?? Guid.NewGuid();
 

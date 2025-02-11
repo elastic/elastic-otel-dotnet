@@ -23,26 +23,26 @@ internal static class ElasticOpenTelemetry
 
 	private static readonly Lock Lock = new();
 
-	internal static BootstrapInfo TryBootstrap(out ElasticOpenTelemetryComponents? components) =>
+	internal static BootstrapInfo TryBootstrap(out ElasticOpenTelemetryComponents components) =>
 		TryBootstrap(SdkActivationMethod.NuGet, CompositeElasticOpenTelemetryOptions.DefaultOptions, null, out components);
 
-	internal static BootstrapInfo TryBootstrap(SdkActivationMethod activationMethod, out ElasticOpenTelemetryComponents? components) =>
+	internal static BootstrapInfo TryBootstrap(SdkActivationMethod activationMethod, out ElasticOpenTelemetryComponents components) =>
 		TryBootstrap(activationMethod, CompositeElasticOpenTelemetryOptions.DefaultOptions, null, out components);
 
 	internal static BootstrapInfo TryBootstrap(
 		CompositeElasticOpenTelemetryOptions options,
-		out ElasticOpenTelemetryComponents? components) =>
+		out ElasticOpenTelemetryComponents components) =>
 			TryBootstrap(SdkActivationMethod.NuGet, options, null, out components);
 
 	internal static BootstrapInfo TryBootstrap(
 		IServiceCollection? services,
-		out ElasticOpenTelemetryComponents? components) =>
+		out ElasticOpenTelemetryComponents components) =>
 			TryBootstrap(SdkActivationMethod.NuGet, CompositeElasticOpenTelemetryOptions.DefaultOptions, services, out components);
 
 	internal static BootstrapInfo TryBootstrap(
 		CompositeElasticOpenTelemetryOptions options,
 		IServiceCollection? services,
-		out ElasticOpenTelemetryComponents? components) =>
+		out ElasticOpenTelemetryComponents components) =>
 			TryBootstrap(SdkActivationMethod.NuGet, options, services, out components);
 
 	/// <summary>
@@ -54,9 +54,8 @@ internal static class ElasticOpenTelemetry
 		SdkActivationMethod activationMethod,
 		CompositeElasticOpenTelemetryOptions options,
 		IServiceCollection? services,
-		out ElasticOpenTelemetryComponents? components)
+		out ElasticOpenTelemetryComponents components)
 	{
-		components = null;
 		BootstrapInfo? bootstrapInfo = null;
 
 		try
@@ -64,7 +63,10 @@ internal static class ElasticOpenTelemetry
 			// If an IServiceCollection is provided, we attempt to access any existing
 			// components to reuse them.
 			if (TryGetExistingComponents(services, out var existingComponents))
+			{
+				components = existingComponents;
 				return existingComponents.BootstrapInfo;
+			}
 
 			// We only expect this to be allocated a handful of times, generally once.
 			var stackTrace = new StackTrace(true);
@@ -76,7 +78,10 @@ internal static class ElasticOpenTelemetry
 				using (var scope = Lock.EnterScope())
 				{
 					if (TryGetExistingComponents(services, out existingComponents))
+					{
+						components = existingComponents;
 						return existingComponents.BootstrapInfo;
+					}
 
 					bootstrapInfo = new BootstrapInfo(activationMethod, stackTrace);
 					components = CreateComponents(bootstrapInfo, options, stackTrace);
@@ -91,12 +96,18 @@ internal static class ElasticOpenTelemetry
 			// When no IServiceCollection is provided we attempt to avoid bootstrapping more than
 			// once. The first call into Boostrap wins and thereafter the same components are reused.
 			if (TryGetSharedComponents(SharedComponents, stackTrace, out var shared))
+			{
+				components = shared;
 				return shared.BootstrapInfo;
+			}
 
 			using (var scope = Lock.EnterScope())
 			{
 				if (TryGetSharedComponents(SharedComponents, stackTrace, out shared))
+				{
+					components = shared;
 					return shared.BootstrapInfo;
+				}
 
 				bootstrapInfo = new BootstrapInfo(activationMethod, stackTrace);
 				components = SharedComponents = CreateComponents(bootstrapInfo, options, stackTrace);
@@ -106,7 +117,10 @@ internal static class ElasticOpenTelemetry
 		catch (Exception ex)
 		{
 			options.AdditionalLogger?.LogCritical(ex, "Unable to bootstrap the Elastic Distribution of OpenTelemetry .NET SDK.");
-			return new(activationMethod, ex);
+			bootstrapInfo = new(activationMethod, ex);
+			components = ElasticOpenTelemetryComponents.CreateDefault(bootstrapInfo);
+
+			return bootstrapInfo;
 		}
 
 		static bool TryGetExistingComponents(IServiceCollection? services, [NotNullWhen(true)] out ElasticOpenTelemetryComponents? components)

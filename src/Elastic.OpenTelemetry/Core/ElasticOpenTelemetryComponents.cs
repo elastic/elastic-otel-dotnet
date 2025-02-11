@@ -26,6 +26,15 @@ internal sealed class ElasticOpenTelemetryComponents(
 			Logger.SetAdditionalLogger(logger, activationMethod, this);
 	}
 
+	// This is used as a rare fallback should an exception occur during bootstrapping
+	internal static ElasticOpenTelemetryComponents CreateDefault(BootstrapInfo bootstrapInfo)
+	{
+		var options = CompositeElasticOpenTelemetryOptions.DefaultOptions;
+		var logger = new CompositeLogger(options);
+		var eventListener = new LoggingEventListener(logger, options);
+		return new(bootstrapInfo, logger, eventListener, options);
+	}
+
 	public void Dispose()
 	{
 		Logger.Dispose();

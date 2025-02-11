@@ -21,6 +21,13 @@ namespace OpenTelemetry.Logs;
 /// </summary>
 public static class LoggingProviderBuilderExtensions
 {
+	/// <summary>
+	/// Used to track the number of times any overload of `UseElasticDefaults` is invoked on a
+	/// `LoggingProviderBuilder`. Generally, we expect one builder to be used per application,
+	/// and for it to be configured once. By tracking the total count of invocations, we can
+	/// log scenarios where the consumer may have inadvertently misconfigured OpenTelemetry in
+	/// their application.
+	/// </summary>
 	private static readonly GlobalProviderBuilderState GlobalLoggerProviderBuilderState = new();
 
 	/// <summary>
@@ -94,7 +101,7 @@ public static class LoggingProviderBuilderExtensions
 
 		try
 		{
-			if (!SignalBuilder.Configure(nameof(UseElasticDefaults), nameof(LoggerProviderBuilder), builder,
+			if (!SignalBuilder.ConfigureBuilder(nameof(UseElasticDefaults), nameof(LoggerProviderBuilder), builder,
 				GlobalLoggerProviderBuilderState, options, services, ConfigureBuilder, ref components))
 			{
 				logger = components?.Logger ?? options?.AdditionalLogger; // Update with ref-returned components
@@ -110,11 +117,11 @@ public static class LoggingProviderBuilderExtensions
 
 		return builder;
 
-		static void ConfigureBuilder(LoggerProviderBuilder builder, CompositeElasticOpenTelemetryOptions options, ElasticOpenTelemetryComponents components)
+		static void ConfigureBuilder(LoggerProviderBuilder builder, ElasticOpenTelemetryComponents components)
 		{
 			builder.ConfigureResource(r => r.AddElasticDistroAttributes());
 
-			if (options.SkipOtlpExporter || components.Options.SkipOtlpExporter)
+			if (components.Options.SkipOtlpExporter || components.Options.SkipOtlpExporter)
 			{
 				components.Logger.LogSkippingOtlpExporter(nameof(Signals.Logs), nameof(LoggerProviderBuilder));
 			}

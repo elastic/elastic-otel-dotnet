@@ -135,7 +135,7 @@ public static class MeterProviderBuilderExtensions
 	{
 		try
 		{
-			if (!SignalBuilder.Configure(nameof(UseElasticDefaults), nameof(MeterProviderBuilder), builder,
+			if (!SignalBuilder.ConfigureBuilder(nameof(UseElasticDefaults), nameof(MeterProviderBuilder), builder,
 				GlobalMeterProviderBuilderState, options, services, ConfigureBuilder, ref components))
 			{
 				var logger = components?.Logger ?? options?.AdditionalLogger;
@@ -151,7 +151,7 @@ public static class MeterProviderBuilderExtensions
 
 		return builder;
 
-		static void ConfigureBuilder(MeterProviderBuilder builder, CompositeElasticOpenTelemetryOptions options, ElasticOpenTelemetryComponents components)
+		static void ConfigureBuilder(MeterProviderBuilder builder, ElasticOpenTelemetryComponents components)
 		{
 			builder.ConfigureResource(r => r.AddElasticDistroAttributes());
 
@@ -162,7 +162,7 @@ public static class MeterProviderBuilderExtensions
 			// see https://github.com/elastic/elastic-otel-dotnet/issues/198
 			AddInstrumentationViaReflection(builder, components.Logger);
 
-			if (options.SkipOtlpExporter || components.Options.SkipOtlpExporter)
+			if (components.Options.SkipOtlpExporter || components.Options.SkipOtlpExporter)
 			{
 				components.Logger.LogSkippingOtlpExporter(nameof(Signals.Traces), nameof(MeterProviderBuilder));
 			}

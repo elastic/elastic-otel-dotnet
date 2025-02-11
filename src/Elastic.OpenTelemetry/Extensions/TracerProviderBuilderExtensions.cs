@@ -126,7 +126,7 @@ public static class TracerProviderBuilderExtensions
 	{
 		try
 		{
-			if (!SignalBuilder.Configure(nameof(UseElasticDefaults), nameof(TracerProviderBuilder), builder,
+			if (!SignalBuilder.ConfigureBuilder(nameof(UseElasticDefaults), nameof(TracerProviderBuilder), builder,
 				GlobalTracerProviderBuilderState, options, services, ConfigureBuilder, ref components))
 			{
 				var logger = components?.Logger ?? options?.AdditionalLogger;
@@ -142,7 +142,7 @@ public static class TracerProviderBuilderExtensions
 
 		return builder;
 
-		static void ConfigureBuilder(TracerProviderBuilder builder, CompositeElasticOpenTelemetryOptions options, ElasticOpenTelemetryComponents components)
+		static void ConfigureBuilder(TracerProviderBuilder builder, ElasticOpenTelemetryComponents components)
 		{
 			builder.ConfigureResource(r => r.AddElasticDistroAttributes());
 
@@ -157,9 +157,9 @@ public static class TracerProviderBuilderExtensions
 			// see https://github.com/elastic/elastic-otel-dotnet/issues/198
 			AddInstrumentationViaReflection(builder, components.Logger);
 
-			AddElasticProcessorsCore(builder, options, components);
+			AddElasticProcessorsCore(builder, components);
 			
-			if (options.SkipOtlpExporter || components.Options.SkipOtlpExporter)
+			if (components.Options.SkipOtlpExporter || components.Options.SkipOtlpExporter)
 			{
 				components.Logger.LogSkippingOtlpExporter(nameof(Signals.Traces), nameof(TracerProviderBuilder));
 			}
@@ -242,7 +242,7 @@ public static class TracerProviderBuilderExtensions
 			builder
 				.ConfigureResource(r => r.AddElasticDistroAttributes())
 				.AddSource("Elastic.Transport")
-				.AddElasticProcessorsCore(null, components);
+				.AddElasticProcessorsCore(components);
 
 			if (components.Options.SkipOtlpExporter)
 			{
@@ -275,16 +275,17 @@ public static class TracerProviderBuilderExtensions
 	/// processors should be added.</param>
 	/// <returns>The <see cref="TracerProviderBuilder"/> for chaining.</returns>
 	public static TracerProviderBuilder AddElasticProcessors(this TracerProviderBuilder builder) =>
-		AddElasticProcessorsCore(builder, null, null);
+		AddElasticProcessorsCore(builder, null);
 
 	private static TracerProviderBuilder AddElasticProcessorsCore(
 		this TracerProviderBuilder builder,
-		CompositeElasticOpenTelemetryOptions? options,
 		ElasticOpenTelemetryComponents? components)
 	{
+		var options = components?.Options ?? CompositeElasticOpenTelemetryOptions.DefaultOptions;
+
 		try
 		{
-			if (!SignalBuilder.Configure(nameof(UseElasticDefaults), nameof(TracerProviderBuilder), builder,
+			if (!SignalBuilder.ConfigureBuilder(nameof(UseElasticDefaults), nameof(TracerProviderBuilder), builder,
 				GlobalTracerProviderBuilderState, options, null, ConfigureBuilder, ref components))
 			{
 				var logger = components?.Logger ?? options?.AdditionalLogger;
@@ -300,7 +301,7 @@ public static class TracerProviderBuilderExtensions
 
 		return builder;
 
-		static void ConfigureBuilder(TracerProviderBuilder builder, CompositeElasticOpenTelemetryOptions options, ElasticOpenTelemetryComponents components)
+		static void ConfigureBuilder(TracerProviderBuilder builder, ElasticOpenTelemetryComponents components)
 		{
 			builder.LogAndAddProcessor(new ElasticCompatibilityProcessor(components.Logger), components.Logger);
 		}

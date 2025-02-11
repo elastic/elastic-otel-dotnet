@@ -14,7 +14,7 @@ public class GlobalLogConfigurationTests
 	[Fact]
 	public void Check_Defaults()
 	{
-		var config = new ElasticOpenTelemetryOptions(new Hashtable());
+		var config = new CompositeElasticOpenTelemetryOptions(new Hashtable());
 		config.GlobalLogEnabled.Should().BeFalse();
 		config.LogLevel.Should().Be(LogLevel.Warning);
 		config.LogDirectory.Should().Be(config.LogDirectoryDefault);
@@ -29,7 +29,7 @@ public class GlobalLogConfigurationTests
 	[InlineData(ELASTIC_OTEL_LOG_TARGETS, "file")]
 	public void CheckActivation(string environmentVariable, string value)
 	{
-		var config = new ElasticOpenTelemetryOptions(new Hashtable { { environmentVariable, value } });
+		var config = new CompositeElasticOpenTelemetryOptions(new Hashtable { { environmentVariable, value } });
 		config.GlobalLogEnabled.Should().BeTrue();
 		config.LogTargets.Should().Be(LogTargets.File);
 	}
@@ -42,7 +42,7 @@ public class GlobalLogConfigurationTests
 	[InlineData(ELASTIC_OTEL_LOG_TARGETS, "none")]
 	public void CheckDeactivation(string environmentVariable, string value)
 	{
-		var config = new ElasticOpenTelemetryOptions(new Hashtable
+		var config = new CompositeElasticOpenTelemetryOptions(new Hashtable
 		{
 			{ OTEL_DOTNET_AUTO_LOG_DIRECTORY, "" },
 			{ environmentVariable, value }
@@ -59,7 +59,7 @@ public class GlobalLogConfigurationTests
 	[InlineData(OTEL_LOG_LEVEL, "None")]
 	public void CheckNonActivation(string environmentVariable, string value)
 	{
-		var config = new ElasticOpenTelemetryOptions(new Hashtable { { environmentVariable, value } });
+		var config = new CompositeElasticOpenTelemetryOptions(new Hashtable { { environmentVariable, value } });
 		config.GlobalLogEnabled.Should().BeFalse();
 	}
 
@@ -157,14 +157,14 @@ public class GlobalLogConfigurationTests
 		if (!string.IsNullOrWhiteSpace(logTargetsEnvValue))
 			env.Add(ELASTIC_OTEL_LOG_TARGETS, logTargetsEnvValue);
 
-		var config = new ElasticOpenTelemetryOptions(env);
+		var config = new CompositeElasticOpenTelemetryOptions(env);
 		config.GlobalLogEnabled.Should().Be(globalLogging);
 		config.LogTargets.Should().Be(targets);
 	}
 
-	private static ElasticOpenTelemetryOptions CreateConfig(string key, string? envVarValue)
+	private static CompositeElasticOpenTelemetryOptions CreateConfig(string key, string? envVarValue)
 	{
 		var environment = new Hashtable { { key, envVarValue } };
-		return new ElasticOpenTelemetryOptions(environment);
+		return new CompositeElasticOpenTelemetryOptions(environment);
 	}
 }

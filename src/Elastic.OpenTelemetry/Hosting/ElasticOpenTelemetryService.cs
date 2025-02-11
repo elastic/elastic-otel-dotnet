@@ -22,7 +22,7 @@ internal sealed class ElasticOpenTelemetryService(IServiceProvider serviceProvid
 
 		_components = serviceProvider.GetService<ElasticOpenTelemetryComponents>();
 		
-		if (bootstrapInfo is not null && bootstrapInfo.Success && _components is not null && logger is not null)
+		if (bootstrapInfo is not null && bootstrapInfo.Succeeded && _components is not null && logger is not null)
 		{
 			_components.SetAdditionalLogger(logger, bootstrapInfo.ActivationMethod);
 		}

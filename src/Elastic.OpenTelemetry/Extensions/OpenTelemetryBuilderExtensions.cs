@@ -128,7 +128,7 @@ public static class OpenTelemetryBuilderExtensions
 		Debug.Assert(bootstrapInfo is not null, "BootstrapInfo should not be null after successful bootstrap.");
 		Debug.Assert(components is not null, "Components should not be null after successful bootstrap.");
 
-		if (!bootstrapInfo.Success)
+		if (!bootstrapInfo.Succeeded)
 		{
 			options?.AdditionalLogger?.LogError("Unable to bootstrap EDOT.");
 			ElasticOpenTelemetry.BuilderStateTable.Remove(builder);

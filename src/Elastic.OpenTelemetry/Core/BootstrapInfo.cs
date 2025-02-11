@@ -21,5 +21,7 @@ internal sealed class BootstrapInfo(SdkActivationMethod activationMethod, StackT
 
 	public Exception? Exception { get; } = exception;
 
-	public bool Success => Exception is null;
+	public bool Succeeded => Exception is null;
+
+	public bool Failed => !Succeeded;
 }

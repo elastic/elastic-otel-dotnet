@@ -29,7 +29,7 @@ public class AutoInstrumentationPlugin
 
 		_bootstrapInfo = GetBootstrapInfo(out var components);
 
-		if (!_bootstrapInfo.Success)
+		if (!_bootstrapInfo.Succeeded)
 		{
 			var errorMessage = $"Unable to bootstrap EDOT .NET due to {_bootstrapInfo.Exception!.Message}";
 
@@ -75,7 +75,7 @@ public class AutoInstrumentationPlugin
 	/// To configure tracing SDK before Auto Instrumentation configured SDK.
 	/// </summary>
 	public TracerProviderBuilder BeforeConfigureTracerProvider(TracerProviderBuilder builder) =>
-		!_bootstrapInfo.Success || _components is null
+		!_bootstrapInfo.Succeeded || _components is null
 			? builder
 			: builder.UseAutoInstrumentationElasticDefaults(_components);
 
@@ -83,7 +83,7 @@ public class AutoInstrumentationPlugin
 	/// To configure metrics SDK before Auto Instrumentation configured SDK.
 	/// /// </summary>
 	public MeterProviderBuilder BeforeConfigureMeterProvider(MeterProviderBuilder builder) =>
-		!_bootstrapInfo.Success || _components is null
+		!_bootstrapInfo.Succeeded || _components is null
 			? builder
 			: builder.UseElasticDefaults(_components);
 
@@ -92,7 +92,7 @@ public class AutoInstrumentationPlugin
 	/// </summary>
 	public void ConfigureLogsOptions(OpenTelemetryLoggerOptions options)
 	{
-		if (_bootstrapInfo.Success && _components is not null)
+		if (_bootstrapInfo.Succeeded && _components is not null)
 			options.UseElasticDefaults(_components.Logger);
 	}
 
@@ -100,7 +100,7 @@ public class AutoInstrumentationPlugin
 	/// To configure Resource.
 	/// </summary>
 	public ResourceBuilder ConfigureResource(ResourceBuilder builder) =>
-		!_bootstrapInfo.Success || _components is null
+		!_bootstrapInfo.Succeeded || _components is null
 			? builder
 			: builder.AddElasticDistroAttributes();
 }
