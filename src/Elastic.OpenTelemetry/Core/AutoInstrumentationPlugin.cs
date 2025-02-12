@@ -11,7 +11,9 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
+#pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace Elastic.OpenTelemetry;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
 /// Elastic Distribution of OpenTelemetry .NET plugin for Auto Instrumentation.
