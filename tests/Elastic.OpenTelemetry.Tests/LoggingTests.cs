@@ -4,8 +4,8 @@
 
 using System.Text.RegularExpressions;
 using OpenTelemetry;
-using Xunit.Abstractions;
 using OpenTelemetry.Metrics;
+using Xunit.Abstractions;
 
 namespace Elastic.OpenTelemetry.Tests;
 

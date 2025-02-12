@@ -4,11 +4,11 @@
 
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Core;
+using Elastic.OpenTelemetry.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenTelemetry;
 using Xunit.Abstractions;
-using Elastic.OpenTelemetry.Hosting;
 
 namespace Elastic.OpenTelemetry.Tests;
 

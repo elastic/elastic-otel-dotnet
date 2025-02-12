@@ -36,7 +36,7 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 
 	private readonly ConfigCell<string?> _logDirectory = new(nameof(LogDirectory), null);
 	private readonly ConfigCell<LogTargets?> _logTargets = new(nameof(LogTargets), null);
-	
+
 	private readonly ConfigCell<LogLevel?> _logLevel = new(nameof(LogLevel), LogLevel.Warning);
 	private readonly ConfigCell<bool?> _skipOtlpExporter = new(nameof(SkipOtlpExporter), false);
 	private readonly ConfigCell<bool?> _runningInContainer = new(nameof(_runningInContainer), false);
@@ -239,26 +239,26 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 		init => _logging.Assign(value, ConfigSource.Property);
 	}
 
-    public override bool Equals(object? obj)
-    {
-        if (obj is not CompositeElasticOpenTelemetryOptions other)
-            return false;
+	public override bool Equals(object? obj)
+	{
+		if (obj is not CompositeElasticOpenTelemetryOptions other)
+			return false;
 
-        return LogDirectory == other.LogDirectory &&
-               LogLevel == other.LogLevel &&
-               LogTargets == other.LogTargets &&
-               SkipOtlpExporter == other.SkipOtlpExporter &&
-               Signals == other.Signals &&
-               Tracing.SetEquals(other.Tracing) &&
+		return LogDirectory == other.LogDirectory &&
+			   LogLevel == other.LogLevel &&
+			   LogTargets == other.LogTargets &&
+			   SkipOtlpExporter == other.SkipOtlpExporter &&
+			   Signals == other.Signals &&
+			   Tracing.SetEquals(other.Tracing) &&
 			   Metrics.SetEquals(other.Metrics) &&
 			   Logging.SetEquals(other.Logging) &&
-               ReferenceEquals(AdditionalLogger, other.AdditionalLogger);
-    }
+			   ReferenceEquals(AdditionalLogger, other.AdditionalLogger);
+	}
 
-    public override int GetHashCode()
-    {
+	public override int GetHashCode()
+	{
 #if NET462 || NETSTANDARD2_0
-        return LogDirectory.GetHashCode()
+		return LogDirectory.GetHashCode()
 			^ LogLevel.GetHashCode()
 			^ LogTargets.GetHashCode()
 			^ SkipOtlpExporter.GetHashCode()

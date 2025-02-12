@@ -34,6 +34,6 @@ public class AutoInstrumentationPluginTests
 			return new(SdkActivationMethod.NuGet, new Exception(ExceptionMessage));
 		}
 
-		public string GetErrorText() => _textWriter.ToString(); 
+		public string GetErrorText() => _textWriter.ToString();
 	}
 }

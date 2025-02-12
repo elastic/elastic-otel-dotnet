@@ -159,7 +159,7 @@ public static class TracerProviderBuilderExtensions
 			AddInstrumentationViaReflection(builder, components.Logger);
 
 			AddElasticProcessorsCore(builder, components);
-			
+
 			if (components.Options.SkipOtlpExporter || components.Options.SkipOtlpExporter)
 			{
 				components.Logger.LogSkippingOtlpExporter(nameof(Signals.Traces), nameof(TracerProviderBuilder));

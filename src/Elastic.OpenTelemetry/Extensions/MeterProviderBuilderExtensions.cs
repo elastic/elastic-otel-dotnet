@@ -3,16 +3,16 @@
 // See the LICENSE file in the project root for more information
 
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
-using Elastic.OpenTelemetry.Configuration;
-using Elastic.OpenTelemetry.Diagnostics;
-using Microsoft.Extensions.Logging;
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using Elastic.OpenTelemetry;
+using Elastic.OpenTelemetry.Configuration;
+using Elastic.OpenTelemetry.Core;
+using Elastic.OpenTelemetry.Diagnostics;
 using Elastic.OpenTelemetry.Instrumentation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Elastic.OpenTelemetry.Core;
-using Elastic.OpenTelemetry;
+using Microsoft.Extensions.Logging;
 
 // Matching namespace with MeterProviderBuilder
 #pragma warning disable IDE0130 // Namespace does not match folder structure

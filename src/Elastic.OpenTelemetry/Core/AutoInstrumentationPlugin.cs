@@ -2,14 +2,14 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using System.Diagnostics;
 using Elastic.OpenTelemetry.Configuration;
+using Elastic.OpenTelemetry.Core;
+using OpenTelemetry;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-using OpenTelemetry;
-using System.Diagnostics;
-using Elastic.OpenTelemetry.Core;
 
 namespace Elastic.OpenTelemetry;
 

@@ -2,11 +2,11 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
-using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using Elastic.OpenTelemetry.Configuration;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Elastic.OpenTelemetry.Core;
 
@@ -93,7 +93,7 @@ internal static class SignalBuilder
 		return state.BootstrapInfo.Succeeded;
 
 		static BuilderState CreateState(T builder, string builderName, IServiceCollection? services,
-			[NotNull]ref CompositeElasticOpenTelemetryOptions? options, ref bool existingStateFound)
+			[NotNull] ref CompositeElasticOpenTelemetryOptions? options, ref bool existingStateFound)
 		{
 			existingStateFound = false;
 
