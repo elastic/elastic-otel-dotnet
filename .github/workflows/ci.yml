@@ -53,7 +53,6 @@ jobs:
         
       - name: Unit Tests
         run: ./build.sh test --test-suite=unit # For now, we limit to unit tests only, until we have a better way to run integration tests only for autoinstrumentation builds
-        shell: cmd
 
   # We still run the full release build on pull-requests this ensures packages are validated ahead of time
   release-build:
