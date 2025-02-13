@@ -40,7 +40,21 @@ public static class MeterProviderBuilderExtensions
 			Filename = "OpenTelemetry.Instrumentation.AspNetCore.dll",
 			FullyQualifiedType = "OpenTelemetry.Metrics.AspNetCoreInstrumentationMeterProviderBuilderExtensions",
 			InstrumentationMethod = "AddAspNetCoreInstrumentation"
-		}
+		},
+#if NET9_0_OR_GREATER
+		// On .NET 9, we add the `System.Net.Http` source for native instrumentation, rather than referencing
+		// the contrib instrumentation. However, if the consuming application has their own reference to
+		// `OpenTelemetry.Instrumentation.Http`, then we use that since it signals the consumer prefers the
+		// contrib instrumentation. Therefore, on .NET 9+ targets, we attempt to dynamically load the contrib
+		// instrumentation, when available.
+		new()
+		{
+			Name = "Http",
+			Filename = "OpenTelemetry.Instrumentation.Http.dll",
+			FullyQualifiedType = "OpenTelemetry.Metrics.HttpClientInstrumentationMeterProviderBuilderExtensions",
+			InstrumentationMethod = "AddHttpClientInstrumentation"
+		},
+#endif
 	];
 
 	/// <summary>
@@ -156,8 +170,41 @@ public static class MeterProviderBuilderExtensions
 		{
 			builder.ConfigureResource(r => r.AddElasticDistroAttributes());
 
-			AddWithLogging(builder, components.Logger, "HttpClient", b => b.AddHttpClientInstrumentation());
+#if NET9_0_OR_GREATER
+			try
+			{
+				// This first check determines whether OpenTelemetry.Instrumentation.Http.dll is present, in which case,
+				// it will be registered on the builder via reflection. If it's not present, we can safely add the native
+				// source which is OTel compliant since .NET 9.
+				var assemblyLocation = Path.GetDirectoryName(typeof(ElasticOpenTelemetry).Assembly.Location);
+				if (assemblyLocation is not null)
+				{
+					var assemblyPath = Path.Combine(assemblyLocation, "OpenTelemetry.Instrumentation.Http.dll");
+
+					if (!File.Exists(assemblyPath))
+					{
+						AddWithLogging(builder, components.Logger, "Http (via native instrumentation)", b => b.AddMeter("System.Net.Http"));
+					}
+					else
+					{
+						components.Logger.LogHttpInstrumentationFound(assemblyPath, "metric");
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				components.Logger.LogError(ex, "An exception occurred while checking for the presence of `OpenTelemetry.Instrumentation.Http.dll`.");
+			}
+#else
+			AddWithLogging(builder, components.Logger, "Http (via contrib instrumentation)", b => b.AddHttpClientInstrumentation());
+#endif
+
 			AddWithLogging(builder, components.Logger, "Process", b => b.AddProcessInstrumentation());
+#if NET9_0_OR_GREATER
+			AddWithLogging(builder, components.Logger, "Runtime", b => b.AddMeter("System.Runtime"));
+#else
+			AddWithLogging(builder, components.Logger, "Runtime", b => b.AddRuntimeInstrumentation());
+#endif
 
 			// TODO - Guard this behind runtime checks e.g. RuntimeFeature.IsDynamicCodeSupported to support AoT users.
 			// see https://github.com/elastic/elastic-otel-dotnet/issues/198

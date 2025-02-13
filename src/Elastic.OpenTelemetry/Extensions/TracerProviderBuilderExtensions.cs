@@ -43,7 +43,21 @@ public static class TracerProviderBuilderExtensions
 			Filename = "OpenTelemetry.Instrumentation.AspNetCore.dll",
 			FullyQualifiedType = "OpenTelemetry.Trace.AspNetCoreInstrumentationTracerProviderBuilderExtensions",
 			InstrumentationMethod = "AddAspNetCoreInstrumentation"
-		}
+		},
+#if NET9_0_OR_GREATER
+		// On .NET 9, we add the `System.Net.Http` source for native instrumentation, rather than referencing
+		// the contrib instrumentation. However, if the consuming application has their own reference to
+		// `OpenTelemetry.Instrumentation.Http`, then we use that since it signals the consumer prefers the
+		// contrib instrumentation. Therefore, on .NET 9+ targets, we attempt to dynamically load the contrib
+		// instrumentation, when available.
+		new()
+		{
+			Name = "Http",
+			Filename = "OpenTelemetry.Instrumentation.Http.dll",
+			FullyQualifiedType = "OpenTelemetry.Trace.HttpClientInstrumentationTracerProviderBuilderExtensions",
+			InstrumentationMethod = "AddHttpClientInstrumentation"
+		},
+#endif
 	];
 
 	/// <summary>
@@ -147,7 +161,35 @@ public static class TracerProviderBuilderExtensions
 		{
 			builder.ConfigureResource(r => r.AddElasticDistroAttributes());
 
-			AddWithLogging(builder, components.Logger, "HttpClient", b => b.AddHttpClientInstrumentation());
+#if NET9_0_OR_GREATER
+			try
+			{
+				// This first check determines whether OpenTelemetry.Instrumentation.Http.dll is present, in which case,
+				// it will be registered on the builder via reflection. If it's not present, we can safely add the native
+				// source which is OTel compliant since .NET 9.
+				var assemblyLocation = Path.GetDirectoryName(typeof(ElasticOpenTelemetry).Assembly.Location);
+				if (assemblyLocation is not null)
+				{
+					var assemblyPath = Path.Combine(assemblyLocation, "OpenTelemetry.Instrumentation.Http.dll");
+
+					if (!File.Exists(assemblyPath))
+					{
+						AddWithLogging(builder, components.Logger, "Http (via native instrumentation)", b => b.AddSource("System.Net.Http"));
+					}
+					else
+					{
+						components.Logger.LogHttpInstrumentationFound(assemblyPath, "trace");
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				components.Logger.LogError(ex, "An exception occurred while checking for the presence of `OpenTelemetry.Instrumentation.Http.dll`.");
+			}
+#else
+			AddWithLogging(builder, components.Logger, "Http (via contrib instrumentation)", b => b.AddHttpClientInstrumentation());
+#endif
+
 			AddWithLogging(builder, components.Logger, "GrpcClient", b => b.AddGrpcClientInstrumentation());
 			AddWithLogging(builder, components.Logger, "EntityFrameworkCore", b => b.AddEntityFrameworkCoreInstrumentation());
 			AddWithLogging(builder, components.Logger, "NEST", b => b.AddElasticsearchClientInstrumentation());
@@ -192,9 +234,9 @@ public static class TracerProviderBuilderExtensions
 						AddInstrumentationLibraryViaReflection(builder, logger, assemblyLocation, assembly);
 				}
 			}
-			catch
+			catch (Exception ex)
 			{
-				// TODO - Logging
+				logger.LogError(ex, "An exception occurred while adding instrumentation via reflection.");
 			}
 		}
 
@@ -207,7 +249,7 @@ public static class TracerProviderBuilderExtensions
 			try
 			{
 				var assemblyPath = Path.Combine(assemblyLocation, info.Filename);
-				if (File.Exists(Path.Combine(assemblyLocation, info.Filename)))
+				if (File.Exists(assemblyPath))
 				{
 					logger.LogLocatedInstrumentationAssembly(info.Filename, assemblyLocation);
 
