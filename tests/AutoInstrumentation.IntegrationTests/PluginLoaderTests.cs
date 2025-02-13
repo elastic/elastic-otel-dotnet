@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information
 
 using System.Runtime.InteropServices;
-using FluentAssertions;
 using Nullean.Xunit.Partitions.Sdk;
 using Xunit;
 
@@ -15,12 +14,13 @@ public class PluginLoaderTests(ExampleApplicationContainer exampleApplicationCon
 	public async Task ObserveDistributionPluginLoad()
 	{
 		await Task.Delay(TimeSpan.FromSeconds(3));
+
 		var output = exampleApplicationContainer.FailureTestOutput();
-		output.Should()
-			.NotBeNullOrWhiteSpace()
-			.And.Contain("Elastic Distribution of OpenTelemetry .NET:")
-			.And.Contain("ElasticOpenTelemetryBuilder initialized")
-			.And.Contain("Added 'Elastic.OpenTelemetry.Processors.ElasticCompatibilityProcessor'");
+
+		Assert.False(string.IsNullOrWhiteSpace(output));
+		Assert.Contains("Elastic Distribution of OpenTelemetry (EDOT) .NET:", output);
+		Assert.Contains("ElasticOpenTelemetryBuilder initialized", output);
+		Assert.Contains("Added 'Elastic.OpenTelemetry.Processors.ElasticCompatibilityProcessor'", output);
 	}
 }
 

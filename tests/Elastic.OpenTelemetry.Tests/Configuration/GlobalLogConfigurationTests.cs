@@ -15,10 +15,11 @@ public class GlobalLogConfigurationTests
 	public void Check_Defaults()
 	{
 		var config = new CompositeElasticOpenTelemetryOptions(new Hashtable());
-		config.GlobalLogEnabled.Should().BeFalse();
-		config.LogLevel.Should().Be(LogLevel.Warning);
-		config.LogDirectory.Should().Be(config.LogDirectoryDefault);
-		config.LogTargets.Should().Be(LogTargets.None);
+
+		Assert.False(config.GlobalLogEnabled);
+		Assert.Equal(LogLevel.Warning, config.LogLevel);
+		Assert.Equal(config.LogDirectoryDefault, config.LogDirectory);
+		Assert.Equal(LogTargets.None, config.LogTargets);
 	}
 
 	//
@@ -30,8 +31,9 @@ public class GlobalLogConfigurationTests
 	public void CheckActivation(string environmentVariable, string value)
 	{
 		var config = new CompositeElasticOpenTelemetryOptions(new Hashtable { { environmentVariable, value } });
-		config.GlobalLogEnabled.Should().BeTrue();
-		config.LogTargets.Should().Be(LogTargets.File);
+
+		Assert.True(config.GlobalLogEnabled);
+		Assert.Equal(LogTargets.File, config.LogTargets);
 	}
 
 	//
@@ -47,8 +49,9 @@ public class GlobalLogConfigurationTests
 			{ OTEL_DOTNET_AUTO_LOG_DIRECTORY, "" },
 			{ environmentVariable, value }
 		});
-		config.GlobalLogEnabled.Should().BeFalse();
-		config.LogTargets.Should().Be(LogTargets.None);
+
+		Assert.False(config.GlobalLogEnabled);
+		Assert.Equal(LogTargets.None, config.LogTargets);
 	}
 
 	[Theory]
@@ -60,7 +63,7 @@ public class GlobalLogConfigurationTests
 	public void CheckNonActivation(string environmentVariable, string value)
 	{
 		var config = new CompositeElasticOpenTelemetryOptions(new Hashtable { { environmentVariable, value } });
-		config.GlobalLogEnabled.Should().BeFalse();
+		Assert.False(config.GlobalLogEnabled);
 	}
 
 	[Theory]
@@ -80,8 +83,9 @@ public class GlobalLogConfigurationTests
 		static void Check(string key, string envVarValue, LogLevel level, bool enabled)
 		{
 			var config = CreateConfig(key, envVarValue);
-			config.LogLevel.Should().Be(level, "{0}", key);
-			config.GlobalLogEnabled.Should().Be(enabled, "{0}", key);
+
+			Assert.Equal(enabled, config.GlobalLogEnabled);
+			Assert.Equal(level, config.LogLevel);
 		}
 	}
 
@@ -98,7 +102,7 @@ public class GlobalLogConfigurationTests
 		static void Check(string key, string? envVarValue)
 		{
 			var config = CreateConfig(key, envVarValue);
-			config.LogLevel.Should().Be(LogLevel.Warning, "{0}", key);
+			Assert.Equal(LogLevel.Warning, config.LogLevel);
 		}
 	}
 
@@ -111,7 +115,7 @@ public class GlobalLogConfigurationTests
 		static void Check(string key, string envVarValue)
 		{
 			var config = CreateConfig(key, envVarValue);
-			config.LogDirectory.Should().StartWith("/foo/bar", "{0}", key);
+			Assert.StartsWith("/foo/bar", config.LogDirectory);
 		}
 	}
 
@@ -137,7 +141,7 @@ public class GlobalLogConfigurationTests
 		static void Check(string key, string? envVarValue, LogTargets? targets)
 		{
 			var config = CreateConfig(key, envVarValue);
-			config.LogTargets.Should().Be(targets, "{0}", key);
+			Assert.Equal(targets, config.LogTargets);
 		}
 	}
 
@@ -158,8 +162,9 @@ public class GlobalLogConfigurationTests
 			env.Add(ELASTIC_OTEL_LOG_TARGETS, logTargetsEnvValue);
 
 		var config = new CompositeElasticOpenTelemetryOptions(env);
-		config.GlobalLogEnabled.Should().Be(globalLogging);
-		config.LogTargets.Should().Be(targets);
+
+		Assert.Equal(globalLogging, config.GlobalLogEnabled);
+		Assert.Equal(targets, config.LogTargets);
 	}
 
 	private static CompositeElasticOpenTelemetryOptions CreateConfig(string key, string? envVarValue)

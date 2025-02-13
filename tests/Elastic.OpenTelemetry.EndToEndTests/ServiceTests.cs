@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information
 
 using Elastic.OpenTelemetry.EndToEndTests.DistributedFixture;
-using FluentAssertions;
 using Microsoft.Playwright;
 using Nullean.Xunit.Partitions.Sdk;
 using Xunit;
@@ -20,7 +19,7 @@ public class EndToEndTests(ITestOutputHelper output, DistributedApplicationFixtu
 	private IPage _page = null!;
 
 	[Fact]
-	public void EnsureApplicationWasStarted() => fixture.Started.Should().BeTrue();
+	public void EnsureApplicationWasStarted() => Assert.True(fixture.Started);
 
 	[Fact]
 	public async Task LatencyShowsAGraph()

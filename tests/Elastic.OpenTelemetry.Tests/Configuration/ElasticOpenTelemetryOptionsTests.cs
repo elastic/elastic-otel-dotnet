@@ -29,20 +29,22 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 			{ ELASTIC_OTEL_SKIP_OTLP_EXPORTER, null },
 		});
 
-		sut.GlobalLogEnabled.Should().Be(false);
-		// these default to null because any other value would enable file logging
-		sut.LogDirectory.Should().Be(sut.LogDirectoryDefault);
-		sut.LogLevel.Should().Be(LogLevel.Warning);
+		Assert.False(sut.GlobalLogEnabled);
 
-		sut.SkipOtlpExporter.Should().Be(false);
+		// these default to null because any other value would enable file logging
+		Assert.Equal(sut.LogDirectoryDefault, sut.LogDirectory);
+		Assert.Equal(LogLevel.Warning, sut.LogLevel);
+
+		Assert.False(sut.SkipOtlpExporter);
 
 		var logger = new TestLogger(output);
 
 		sut.LogConfigSources(logger);
 
-		logger.Messages.Count.Should().Be(ExpectedLogsLength);
+		Assert.Equal(ExpectedLogsLength, logger.Messages.Count);
+
 		foreach (var message in logger.Messages)
-			message.Should().EndWith("from [Default]");
+			Assert.EndsWith("from [Default]", message);
 	}
 
 	[Fact]
@@ -58,18 +60,17 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 			{ ELASTIC_OTEL_SKIP_OTLP_EXPORTER, "true" },
 		});
 
-		sut.LogDirectory.Should().Be(fileLogDirectory);
-		sut.LogLevel.Should().Be(ToLogLevel(fileLogLevel));
-		sut.SkipOtlpExporter.Should().Be(true);
+		Assert.Equal(fileLogDirectory, sut.LogDirectory);
+		Assert.Equal(ToLogLevel(fileLogLevel), sut.LogLevel);
+		Assert.True(sut.SkipOtlpExporter);
 
 		var logger = new TestLogger(output);
 
 		sut.LogConfigSources(logger);
 
-		logger.Messages.Should()
-			.Contain(s => s.EndsWith("from [Environment]"))
-			.And.Contain(s => s.EndsWith("from [Default]"))
-			.And.NotContain(s => s.EndsWith("from [IConfiguration]"));
+		Assert.Contains(logger.Messages, s => s.EndsWith("from [Environment]"));
+		Assert.Contains(logger.Messages, s => s.EndsWith("from [Default]"));
+		Assert.DoesNotContain(logger.Messages, s => s.EndsWith("from [IConfiguration]"));
 	}
 
 	[Fact]
@@ -104,21 +105,21 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		var sut = new CompositeElasticOpenTelemetryOptions(config, new Hashtable());
 
-		sut.LogDirectory.Should().Be(@"C:\Temp");
-		sut.LogLevel.Should().Be(ToLogLevel(fileLogLevel));
-		sut.SkipOtlpExporter.Should().Be(true);
-		sut.EventLogLevel.Should().Be(EventLevel.Warning);
-		sut.LogLevel.Should().Be(LogLevel.Critical);
+		Assert.Equal(@"C:\Temp", sut.LogDirectory);
+		Assert.Equal(ToLogLevel(fileLogLevel), sut.LogLevel);
+		Assert.True(sut.SkipOtlpExporter);
+		Assert.Equal(EventLevel.Warning, sut.EventLogLevel);
+		Assert.Equal(LogLevel.Critical, sut.LogLevel);
 
 		var logger = new TestLogger(output);
 
 		sut.LogConfigSources(logger);
 
-		logger.Messages.Count.Should().Be(ExpectedLogsLength);
-		logger.Messages.Should()
-			.Contain(s => s.EndsWith("from [IConfiguration]"))
-			.And.Contain(s => s.EndsWith("from [Default]"))
-			.And.NotContain(s => s.EndsWith("from [Environment]"));
+		Assert.Equal(ExpectedLogsLength, logger.Messages.Count);
+
+		Assert.Contains(logger.Messages, s => s.EndsWith("from [IConfiguration]"));
+		Assert.Contains(logger.Messages, s => s.EndsWith("from [Default]"));
+		Assert.DoesNotContain(logger.Messages, s => s.EndsWith("from [Environment]"));
 	}
 
 	[Fact]
@@ -151,20 +152,19 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		var sut = new CompositeElasticOpenTelemetryOptions(config, new Hashtable());
 
-		sut.LogDirectory.Should().Be(@"C:\Temp");
-		sut.LogLevel.Should().Be(ToLogLevel(loggingSectionLogLevel));
-		sut.SkipOtlpExporter.Should().Be(true);
-		sut.LogLevel.Should().Be(LogLevel.Warning);
-		sut.EventLogLevel.Should().Be(EventLevel.Warning);
+		Assert.Equal(@"C:\Temp", sut.LogDirectory);
+		Assert.Equal(ToLogLevel(loggingSectionLogLevel), sut.LogLevel);
+		Assert.True(sut.SkipOtlpExporter);
+		Assert.Equal(EventLevel.Warning, sut.EventLogLevel);
+		Assert.Equal(LogLevel.Warning, sut.LogLevel);
 
 		var logger = new TestLogger(output);
 
 		sut.LogConfigSources(logger);
 
-		logger.Messages.Should()
-			.Contain(s => s.EndsWith("from [IConfiguration]"))
-			.And.Contain(s => s.EndsWith("from [Default]"))
-			.And.NotContain(s => s.EndsWith("from [Environment]"));
+		Assert.Contains(logger.Messages, s => s.EndsWith("from [IConfiguration]"));
+		Assert.Contains(logger.Messages, s => s.EndsWith("from [Default]"));
+		Assert.DoesNotContain(logger.Messages, s => s.EndsWith("from [Environment]"));
 	}
 
 	[Fact]
@@ -196,19 +196,18 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		var sut = new CompositeElasticOpenTelemetryOptions(config, new Hashtable());
 
-		sut.LogDirectory.Should().Be(@"C:\Temp");
-		sut.LogLevel.Should().Be(ToLogLevel(loggingSectionDefaultLogLevel));
-		sut.SkipOtlpExporter.Should().Be(true);
-		sut.EventLogLevel.Should().Be(EventLevel.Informational);
+		Assert.Equal(@"C:\Temp", sut.LogDirectory);
+		Assert.Equal(ToLogLevel(loggingSectionDefaultLogLevel), sut.LogLevel);
+		Assert.True(sut.SkipOtlpExporter);
+		Assert.Equal(EventLevel.Informational, sut.EventLogLevel);
 
 		var logger = new TestLogger(output);
 
 		sut.LogConfigSources(logger);
 
-		logger.Messages.Should()
-			.Contain(s => s.EndsWith("from [IConfiguration]"))
-			.And.Contain(s => s.EndsWith("from [Default]"))
-			.And.NotContain(s => s.EndsWith("from [Environment]"));
+		Assert.Contains(logger.Messages, s => s.EndsWith("from [IConfiguration]"));
+		Assert.Contains(logger.Messages, s => s.EndsWith("from [Default]"));
+		Assert.DoesNotContain(logger.Messages, s => s.EndsWith("from [Environment]"));
 	}
 
 	[Fact]
@@ -241,9 +240,10 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 			{ ELASTIC_OTEL_SKIP_OTLP_EXPORTER, "true" },
 		});
 
-		sut.LogDirectory.Should().Be(fileLogDirectory);
-		sut.LogLevel.Should().Be(ToLogLevel(fileLogLevel));
-		sut.SkipOtlpExporter.Should().Be(true);
+		Assert.Equal(fileLogDirectory, sut.LogDirectory);
+		Assert.Equal(ToLogLevel(fileLogLevel), sut.LogLevel);
+		Assert.True(sut.SkipOtlpExporter);
+
 	}
 
 	[Fact]
@@ -264,17 +264,16 @@ public sealed class ElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 			SkipOtlpExporter = false,
 		};
 
-		sut.LogDirectory.Should().Be(fileLogDirectory);
-		sut.LogLevel.Should().Be(ToLogLevel(fileLogLevel));
-		sut.SkipOtlpExporter.Should().Be(false);
+		Assert.Equal(fileLogDirectory, sut.LogDirectory);
+		Assert.Equal(ToLogLevel(fileLogLevel), sut.LogLevel);
+		Assert.False(sut.SkipOtlpExporter);
 
 		var logger = new TestLogger(output);
 
 		sut.LogConfigSources(logger);
 
-		logger.Messages.Should()
-			.Contain(s => s.EndsWith("from [Property]"))
-			.And.Contain(s => s.EndsWith("from [Default]"))
-			.And.NotContain(s => s.EndsWith("from [Environment]"));
+		Assert.Contains(logger.Messages, s => s.EndsWith("from [Property]"));
+		Assert.Contains(logger.Messages, s => s.EndsWith("from [Default]"));
+		Assert.DoesNotContain(logger.Messages, s => s.EndsWith("from [Environment]"));
 	}
 }
