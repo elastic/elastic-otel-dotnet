@@ -3,13 +3,12 @@
 // See the LICENSE file in the project root for more information
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Elastic.OpenTelemetry.Extensions;
 using OpenTelemetry;
 
 namespace Elastic.OpenTelemetry.Processors;
 
 /// <summary> A processor that can mark spans as compressed/composite </summary>
-public class SpanCompressionProcessor : BaseProcessor<Activity>
+internal sealed class SpanCompressionProcessor : BaseProcessor<Activity>
 {
 	private readonly ConditionalWeakTable<Activity, Activity> _compressionBuffer = new();
 

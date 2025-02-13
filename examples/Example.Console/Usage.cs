@@ -3,8 +3,6 @@
 // See the LICENSE file in the project root for more information
 
 using System.Diagnostics;
-using Elastic.OpenTelemetry;
-using Elastic.OpenTelemetry.Extensions;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -21,45 +19,50 @@ internal static class Usage
 	{
 		// NOTE: This sample assumes ENV VARs have been set to configure the Endpoint and Authorization header.
 
-		// Build an instrumentation session by creating an ElasticOpenTelemetryBuilder.
-		// The application will be instrumented until the session is disposed.
-		await using var session = new ElasticOpenTelemetryBuilder()
-			.WithTracing(b => b.AddSource(ActivitySourceName))
-			.Build();
+		//// Build an instrumentation session by creating an ElasticOpenTelemetryBuilder.
+		//// The application will be instrumented until the session is disposed.
+		//await using var session = new ElasticOpenTelemetryBuilder()
+		//	.WithTracing(b => b.AddSource(ActivitySourceName))
+		//	.Build();
 
-		await using var session2 = new ElasticOpenTelemetryBuilder().Build();
+		//await using var session2 = new ElasticOpenTelemetryBuilder().Build();
 
-		// This example adds the application activity source and fully customises the resource
-		await using var session3 = new ElasticOpenTelemetryBuilder()
-			.WithTracing(b => b
-				.AddSource(ActivitySourceName)
-				.ConfigureResource(r => r.Clear().AddService("CustomServiceName", serviceVersion: "2.2.2")))
-			.Build();
+		//// This example adds the application activity source and fully customises the resource
+		//await using var session3 = new ElasticOpenTelemetryBuilder()
+		//	.WithTracing(b => b
+		//		.AddSource(ActivitySourceName)
+		//		.ConfigureResource(r => r.Clear().AddService("CustomServiceName", serviceVersion: "2.2.2")))
+		//	.Build();
 
-		await using var session4 = new ElasticOpenTelemetryBuilder()
-			.WithTracing(t => t
-				.ConfigureResource(rb => rb.AddService("TracerProviderBuilder", "3.3.3"))
-				.AddRedisInstrumentation() // This can currently only be achieved using this overload or adding Elastic processors to the TPB (as below)
-				.AddSource(ActivitySourceName)
-				.AddConsoleExporter()
-			)
-			.WithTracing(tpb => tpb
-				.ConfigureResource(rb => rb.AddService("TracerProviderBuilder", "3.3.3"))
-				.AddRedisInstrumentation() // This can currently only be achieved using this overload or adding Elastic processors to the TPB (as below)
-				.AddSource(ActivitySourceName)
-				.AddConsoleExporter())
-			.Build();
+		//await using var session4 = new ElasticOpenTelemetryBuilder()
+		//	.WithTracing(t => t
+		//		.ConfigureResource(rb => rb.AddService("TracerProviderBuilder", "3.3.3"))
+		//		.AddRedisInstrumentation() // This can currently only be achieved using this overload or adding Elastic processors to the TPB (as below)
+		//		.AddSource(ActivitySourceName)
+		//		.AddConsoleExporter()
+		//	)
+		//	.WithTracing(tpb => tpb
+		//		.ConfigureResource(rb => rb.AddService("TracerProviderBuilder", "3.3.3"))
+		//		.AddRedisInstrumentation() // This can currently only be achieved using this overload or adding Elastic processors to the TPB (as below)
+		//		.AddSource(ActivitySourceName)
+		//		.AddConsoleExporter())
+		//	.Build();
 
-		//This is the most flexible approach for a consumer as they can include our processor(s) and exporter(s)
-		using var tracerProvider = Sdk.CreateTracerProviderBuilder()
-			.AddSource(ActivitySourceName)
-			.ConfigureResource(resource =>
-				resource.AddService(
-				  serviceName: "OtelSdkApp",
-				  serviceVersion: "1.0.0"))
-			.AddConsoleExporter()
-			.AddElasticProcessors()
-			.Build();
+		using var sdk = OpenTelemetrySdk.Create(builder => builder
+			.WithElasticMetrics()
+			.WithElasticMetrics()
+			.ConfigureResource(resource => resource.AddService("MyCustomServiceName")));
+
+		//This is the most flexible approach for a consumer as they can include our processor(s)
+		//using var tracerProvider = Sdk.CreateTracerProviderBuilder()
+		//	.AddSource(ActivitySourceName)
+		//	.ConfigureResource(resource =>
+		//		resource.AddService(
+		//		  serviceName: "OtelSdkApp",
+		//		  serviceVersion: "1.0.0"))
+		//	.AddConsoleExporter()
+		//	.AddElasticProcessors()
+		//	.Build();
 
 		await DoStuffAsync();
 

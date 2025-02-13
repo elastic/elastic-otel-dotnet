@@ -5,6 +5,7 @@
 using System.Diagnostics;
 using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using OpenTelemetry;
 using static Elastic.OpenTelemetry.SemanticConventions.TraceSemanticConventions;
 
@@ -19,9 +20,9 @@ namespace Elastic.OpenTelemetry.Processors;
 /// </para>
 /// </summary>
 /// <param name="logger"></param>
-public class ElasticCompatibilityProcessor(ILogger logger) : BaseProcessor<Activity>
+public sealed class ElasticCompatibilityProcessor(ILogger? logger) : BaseProcessor<Activity>
 {
-	private readonly ILogger _logger = logger;
+	private readonly ILogger _logger = logger ?? NullLogger.Instance;
 
 	/// <inheritdoc />
 	public override void OnEnd(Activity activity)

@@ -10,7 +10,7 @@ using OpenTelemetry.Trace;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-builder.Services.AddOpenTelemetry()
+builder.Services.AddElasticOpenTelemetry()
 	.ConfigureResource(r => r.AddService(serviceName: "MyService"))
 	.WithTracing(t => t.AddSource(Worker.ActivitySourceName).AddConsoleExporter())
 	.WithMetrics(m => m.AddMeter(Worker.MeterName).AddConsoleExporter());

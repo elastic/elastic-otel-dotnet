@@ -75,7 +75,6 @@ with
             | Skip_Dirty_Check -> "Skip the clean checkout check that guards the release/publish targets"
             | Test_Suite _ -> "Specify the test suite to run, defaults to all"
 
-            
     member this.StepName =
         match FSharpValue.GetUnionFields(this, typeof<Build>) with
         | case, _ -> case.Name.ToLowerInvariant()

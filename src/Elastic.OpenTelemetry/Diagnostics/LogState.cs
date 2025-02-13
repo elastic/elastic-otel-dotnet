@@ -5,7 +5,7 @@
 using System.Collections;
 using System.Diagnostics;
 
-namespace Elastic.OpenTelemetry.Diagnostics.Logging;
+namespace Elastic.OpenTelemetry.Diagnostics;
 
 internal class LogState : IReadOnlyList<KeyValuePair<string, object?>>
 {

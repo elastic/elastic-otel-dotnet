@@ -27,7 +27,13 @@ jobs:
       - run: 'echo "Not required for docs"'
 
   # dummy steps that allow to bypass those mandatory checks for tests
-  build:
+  test-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - run: 'echo "Not required for docs"'
+
+  # dummy steps that allow to bypass those mandatory checks for tests
+  release-build:
     runs-on: ubuntu-latest
     steps:
       - run: 'echo "Not required for docs"'

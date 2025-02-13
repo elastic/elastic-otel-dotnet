@@ -5,7 +5,9 @@ using System.Diagnostics;
 
 using Elastic.OpenTelemetry.Processors;
 
-namespace Elastic.OpenTelemetry.Extensions;
+#pragma warning disable IDE0130 // Namespace does not match folder structure
+namespace Elastic.OpenTelemetry;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 internal static class ActivityExtensions
 {
@@ -68,19 +70,13 @@ internal static class ActivityExtensions
 		return true;
 	}
 
-	private static bool TryToCompressComposite(this Activity buffered, Activity sibling, Composite composite)
-	{
-		switch (composite.CompressionStrategy)
+	private static bool TryToCompressComposite(this Activity buffered, Activity sibling, Composite composite) =>
+		composite.CompressionStrategy switch
 		{
-			case "exact_match":
-				return buffered.IsSameKind(sibling) && buffered.OperationName == sibling.OperationName; // && sibling.Duration <= Configuration.SpanCompressionExactMatchMaxDuration;
-
-			case "same_kind":
-				return buffered.IsSameKind(sibling); // && sibling.Duration <= Configuration.SpanCompressionSameKindMaxDuration;
-		}
-
-		return false;
-	}
+			"exact_match" => buffered.IsSameKind(sibling) && buffered.OperationName == sibling.OperationName,// && sibling.Duration <= Configuration.SpanCompressionExactMatchMaxDuration;
+			"same_kind" => buffered.IsSameKind(sibling),// && sibling.Duration <= Configuration.SpanCompressionSameKindMaxDuration;
+			_ => false,
+		};
 
 	// TODO - Further implementation if possible
 	private static bool IsSameKind(this Activity current, Activity other) =>

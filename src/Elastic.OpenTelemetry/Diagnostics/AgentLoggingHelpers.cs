@@ -5,11 +5,18 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 
-namespace Elastic.OpenTelemetry.Diagnostics.Logging;
+namespace Elastic.OpenTelemetry.Diagnostics;
 
 internal static class AgentLoggingHelpers
 {
-	public static void WriteLogLine(this ILogger logger, Activity? activity, int managedThreadId, DateTime dateTime, LogLevel logLevel, string logLine, string? spanId)
+	public static void WriteLogLine(
+		this ILogger logger,
+		Activity? activity,
+		int managedThreadId,
+		DateTime dateTime,
+		LogLevel logLevel,
+		string logLine,
+		string? spanId)
 	{
 		var state = new LogState
 		{
@@ -18,6 +25,7 @@ internal static class AgentLoggingHelpers
 			DateTime = dateTime,
 			SpanId = spanId
 		};
+
 		logger.Log(logLevel, 0, state, null, (_, _) => logLine);
 	}
 }

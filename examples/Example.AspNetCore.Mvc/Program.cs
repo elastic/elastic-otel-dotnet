@@ -2,18 +2,29 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
-using Example.AspNetCore.Mvc.Controllers;
 using OpenTelemetry;
+using OpenTelemetry.Resources;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.AddServiceDefaults();
+using var loggerFactory = LoggerFactory.Create(loggingBuilder => loggingBuilder
+	.SetMinimumLevel(LogLevel.Trace)
+	.AddConsole());
+
+var logger = loggerFactory.CreateLogger("OpenTelemetry");
 
 // Add services to the container.
 builder.Services
 	.AddHttpClient()
 	.AddOpenTelemetry()
-		.WithTracing(t => t.AddSource(HomeController.ActivitySourceName));
+	.ConfigureResource(r => r.AddService("MyNewService1"))
+	.WithElasticDefaults(builder.Configuration);
+
+builder.Services.AddOpenTelemetry()
+	.ConfigureResource(r => r.AddService("MyNewService2"))
+	.WithElasticDefaults(builder.Configuration);
+
+//OpenTelemetrySdk.Create(b => b.WithElasticDefaults(builder.Configuration));
 
 builder.Services
 	.AddControllersWithViews();

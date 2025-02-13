@@ -28,6 +28,7 @@ env:
 #       update ci-docs.yml
 jobs:
   test-windows:
+    name: Windows Tests
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,11 +37,12 @@ jobs:
         id: bootstrap
         uses: ./.github/workflows/bootstrap
 
-      - name: Test
-        run: build.bat test --test-suite=skip-e2e
+      - name: Unit Tests
+        run: build.bat test --test-suite=unit
         shell: cmd
 
-  build:
+  test-linux:
+    name: Linux Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -49,9 +51,19 @@ jobs:
         id: bootstrap
         uses: ./.github/workflows/bootstrap
         
-      - name: Test
-        run: ./build.sh test --test-suite=skip-e2e
+      - name: Unit Tests
+        run: ./build.sh test --test-suite=unit # For now, we limit to unit tests only, until we have a better way to run integration tests only for autoinstrumentation builds
 
-      # We still run the full release build on pull-requests this ensures packages are validated ahead of time
+  # We still run the full release build on pull-requests this ensures packages are validated ahead of time
+  release-build:
+    name: Release Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bootstrap Action Workspace
+        id: bootstrap
+        uses: ./.github/workflows/bootstrap
+
       - name: Release
         run: ./build.sh release -c

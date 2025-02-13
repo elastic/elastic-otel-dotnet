@@ -6,8 +6,8 @@ using OpenTelemetry;
 
 namespace Elastic.OpenTelemetry.Processors;
 
-/// <summary> A processor that includes stack trace information of long running span </summary>
-public class StackTraceProcessor : BaseProcessor<Activity>
+/// <summary> A processor that includes stack trace information of long running spans.</summary>
+internal sealed class StackTraceProcessor : BaseProcessor<Activity>
 {
 	/// <inheritdoc cref="OnStart"/>
 	public override void OnStart(Activity data)

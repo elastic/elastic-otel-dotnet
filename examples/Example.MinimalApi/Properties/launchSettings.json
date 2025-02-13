@@ -28,7 +28,9 @@
       "applicationUrl": "https://localhost:7140;http://localhost:5146",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "OTEL_RESOURCE_ATTRIBUTES": "service.name=minimal-api-example"
+        "OTEL_RESOURCE_ATTRIBUTES": "service.name=minimal-api-example",
+        "OTEL_EXPORTER_OTLP_ENDPOINT": "https://opentelemetry-playground-adbd73.apm.eu-west-1.aws.elastic.cloud:443",
+        "OTEL_EXPORTER_OTLP_HEADERS": "Authorization=ApiKey cVY3d3NKTUJXcWZFRWJwb2xURjA6bmNrZ0JiQ29SRWlEdUM1dzVORGYwZw=="
       }
     },
     "IIS Express": {
