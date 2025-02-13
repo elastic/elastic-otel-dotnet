@@ -37,7 +37,6 @@ internal static class SignalBuilder
 		// code in this particular case by shortcutting and returning early.
 		if (options is not null && components is not null)
 		{
-			ValidateGlobalCallCount(methodName, builderName, options, components, callCount);
 			configure(builder, components);
 			return true;
 		}

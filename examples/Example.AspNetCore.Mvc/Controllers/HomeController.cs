@@ -14,9 +14,11 @@ public class HomeController(IHttpClientFactory httpClientFactory) : Controller
 	public const string ActivitySourceName = "CustomActivitySource";
 	private static readonly ActivitySource ActivitySource = new(ActivitySourceName, "1.0.0");
 
+	private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
+
 	public async Task<IActionResult> Index()
 	{
-		using var client = httpClientFactory.CreateClient();
+		using var client = _httpClientFactory.CreateClient();
 
 		// ReSharper disable once ExplicitCallerInfoArgument
 		using var activity = ActivitySource.StartActivity("DoingStuff", ActivityKind.Internal);

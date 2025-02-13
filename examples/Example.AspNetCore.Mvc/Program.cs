@@ -16,13 +16,12 @@ var logger = loggerFactory.CreateLogger("OpenTelemetry");
 // Add services to the container.
 builder.Services
 	.AddHttpClient()
-	.AddOpenTelemetry()
-	.ConfigureResource(r => r.AddService("MyNewService1"))
-	.WithElasticDefaults(builder.Configuration);
+	.AddElasticOpenTelemetry(builder.Configuration, logger)
+	.ConfigureResource(r => r.AddService("MyNewService1"));
 
-builder.Services.AddOpenTelemetry()
-	.ConfigureResource(r => r.AddService("MyNewService2"))
-	.WithElasticDefaults(builder.Configuration);
+//builder.Services.AddOpenTelemetry()
+//	.ConfigureResource(r => r.AddService("MyNewService2"))
+//	.WithElasticDefaults(builder.Configuration);
 
 //OpenTelemetrySdk.Create(b => b.WithElasticDefaults(builder.Configuration));
 
