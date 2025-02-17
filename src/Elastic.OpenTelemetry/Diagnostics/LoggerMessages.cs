@@ -39,6 +39,10 @@ internal static partial class LoggerMessages
 	[LoggerMessage(EventId = 9, EventName = "AddedInstrumentation", Level = LogLevel.Information, Message = "Added {InstrumentationName} to {Provider}.")]
 	public static partial void LogAddedInstrumentation(this ILogger logger, string instrumentationName, string provider);
 
+	[LoggerMessage(EventId = 10, EventName = "HttpInstrumentationFound", Level = LogLevel.Information, Message = "The HTTP instrumentation library was located at '{AssemblyPath}'. " +
+		"Skipping adding native {InstrumentationType} instrumentation from the 'System.Net.Http' ActivitySource.")]
+	public static partial void LogHttpInstrumentationFound(this ILogger logger, string assemblyPath, string instrumentationType);
+
 	// We explictly reuse the same event ID and this is the same log message, but with different types for the structured data
 	[LoggerMessage(EventId = 9, Level = LogLevel.Debug, Message = "{ProcessorName} found `{AttributeName}` attribute with value '{AttributeValue}' on the span.")]
 	internal static partial void FoundTag(this ILogger logger, string processorName, string attributeName, string attributeValue);
