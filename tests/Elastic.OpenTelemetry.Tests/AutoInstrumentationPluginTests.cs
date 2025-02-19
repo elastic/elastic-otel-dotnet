@@ -16,8 +16,8 @@ public class AutoInstrumentationPluginTests
 
 		var error = sut.GetErrorText();
 
-		error.Should().StartWith("Unable to bootstrap EDOT .NET due to");
-		error.Should().Contain(TestableAutoInstrumentationPlugin.ExceptionMessage);
+		Assert.StartsWith("Unable to bootstrap EDOT .NET due to", error);
+		Assert.Contains(TestableAutoInstrumentationPlugin.ExceptionMessage, error);
 	}
 
 	private class TestableAutoInstrumentationPlugin : AutoInstrumentationPlugin

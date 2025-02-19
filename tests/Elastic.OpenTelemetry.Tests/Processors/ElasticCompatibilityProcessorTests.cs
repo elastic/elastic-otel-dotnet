@@ -44,10 +44,10 @@ public sealed class ElasticCompatibilityProcessorTests : IDisposable
 		sut.OnEnd(activity);
 
 		// We can test with Tags (rather than TagObjects) here as we know these are string values
-		activity.Tags.Single(t => t.Key == TraceSemanticConventions.NetHostName).Value.Should().Be(hostName);
+		Assert.Equal(hostName, activity.Tags.Single(t => t.Key == TraceSemanticConventions.NetHostName).Value);
 
-		activity.TagObjects.Single(t => t.Key == TraceSemanticConventions.NetHostPort).Value
-			.Should().BeOfType<int>().Subject.Should().Be(port);
+		var netHostPort = Assert.IsType<int>(activity.TagObjects.Single(t => t.Key == TraceSemanticConventions.NetHostPort).Value);
+		Assert.Equal(port, netHostPort);
 	}
 
 	[Fact]
@@ -65,8 +65,8 @@ public sealed class ElasticCompatibilityProcessorTests : IDisposable
 		sut.OnEnd(activity);
 
 		// We can test with Tags (rather than TagObjects) here as we know these are string values
-		activity.Tags.Single(t => t.Key == TraceSemanticConventions.HttpScheme).Value.Should().Be(scheme);
-		activity.Tags.Single(t => t.Key == TraceSemanticConventions.HttpTarget).Value.Should().Be(path);
+		Assert.Equal(scheme, activity.Tags.Single(t => t.Key == TraceSemanticConventions.HttpScheme).Value);
+		Assert.Equal(path, activity.Tags.Single(t => t.Key == TraceSemanticConventions.HttpTarget).Value);
 	}
 
 	[Fact]
@@ -86,8 +86,8 @@ public sealed class ElasticCompatibilityProcessorTests : IDisposable
 		sut.OnEnd(activity);
 
 		// We can test with Tags (rather than TagObjects) here as we know these are string values
-		activity.Tags.Single(t => t.Key == TraceSemanticConventions.HttpScheme).Value.Should().Be(scheme);
-		activity.Tags.Single(t => t.Key == TraceSemanticConventions.HttpTarget).Value.Should().Be($"{path}{query}");
+		Assert.Equal(scheme, activity.Tags.Single(t => t.Key == TraceSemanticConventions.HttpScheme).Value);
+		Assert.Equal($"{path}{query}", activity.Tags.Single(t => t.Key == TraceSemanticConventions.HttpTarget).Value);
 	}
 
 	public void Dispose()

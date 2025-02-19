@@ -4,7 +4,6 @@
 
 using Elastic.OpenTelemetry.EndToEndTests;
 using Elastic.OpenTelemetry.EndToEndTests.DistributedFixture;
-using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Nullean.Xunit.Partitions;
 using Xunit;
@@ -29,19 +28,15 @@ public class EndToEndOptions : PartitionOptions
 		if (testSuite == null || (
 				!testSuite.Equals("e2e", StringComparison.InvariantCultureIgnoreCase)
 				&& !testSuite.Equals("all", StringComparison.InvariantCultureIgnoreCase))
-			)
+		)
 			return;
 
 		try
 		{
-			configuration["E2E:Endpoint"].Should()
-				.NotBeNullOrWhiteSpace("Missing E2E:Endpoint configuration");
-			configuration["E2E:Authorization"].Should()
-				.NotBeNullOrWhiteSpace("Missing E2E:Authorization configuration");
-			configuration["E2E:BrowserEmail"].Should()
-				.NotBeNullOrWhiteSpace("Missing E2E:BrowserEmail configuration");
-			configuration["E2E:BrowserPassword"].Should()
-				.NotBeNullOrWhiteSpace("Missing E2E:BrowserPassword configuration");
+			Assert.False(string.IsNullOrWhiteSpace(configuration["E2E:Endpoint"]), userMessage: "Missing E2E:Endpoint configuration");
+			Assert.False(string.IsNullOrWhiteSpace(configuration["E2E:Authorization"]), userMessage: "Missing E2E:Authorization configuration");
+			Assert.False(string.IsNullOrWhiteSpace(configuration["E2E:BrowserEmail"]), userMessage: "Missing E2E:BrowserEmail configuration");
+			Assert.False(string.IsNullOrWhiteSpace(configuration["E2E:BrowserPassword"]), userMessage: "Missing E2E:BrowserPassword configuration");
 		}
 		catch (Exception e)
 		{
