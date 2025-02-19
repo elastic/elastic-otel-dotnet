@@ -2,7 +2,6 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry.Extensions;
@@ -247,28 +246,36 @@ internal sealed class SpanCompressionProcessor(ILogger logger) : BaseProcessor<A
 			compressionBuffer.SetCustomProperty("Composite", null);
 		}
 
-		using var newActivity = compressionBuffer.Source.StartActivity(activityName, compressionBuffer.Kind, activity.Context,
+		var newActivity = compressionBuffer.Source.StartActivity(activityName, compressionBuffer.Kind, compressionBuffer.Parent?.Context ?? default,
 			compressionBuffer.TagObjects, compressionBuffer.Links, compressionBuffer.StartTimeUtc);
 
+		if (newActivity is null)
+		{
+			// TODO - Log error
+			return;
+		}
+
 		foreach (var @event in compressionBuffer.Events)
-			newActivity?.AddEvent(@event);
+			newActivity.AddEvent(@event);
 
 		foreach (var baggage in compressionBuffer.Baggage)
-			newActivity?.AddBaggage(baggage.Key, baggage.Value);
+			newActivity.AddBaggage(baggage.Key, baggage.Value);
 
 		foreach (var tag in compressionBuffer.TagObjects)
-			newActivity?.AddTag(tag.Key, tag.Value);
+			newActivity.AddTag(tag.Key, tag.Value);
 
-		newActivity?.SetCustomProperty("SkipCompression", true);
+		newActivity.SetCustomProperty("SkipCompression", true);
 
 		if (compressionStrategy is not null)
 		{
-			newActivity?.SetTag("elastic.span_compression.strategy", compressionStrategy);
-			newActivity?.SetTag("elastic.span_compression.count", compressionCount);
-			newActivity?.SetTag("elastic.span_compression.duration", compressionDuration);
+			newActivity.SetTag("elastic.span_compression.strategy", compressionStrategy);
+			newActivity.SetTag("elastic.span_compression.count", compressionCount);
+			newActivity.SetTag("elastic.span_compression.duration", compressionDuration);
 		}
 
-		newActivity?.SetEndTime(compressionBuffer.StartTimeUtc.Add(compressionBuffer.Duration));
-		newActivity?.Stop();
+		newActivity.ActivityTraceFlags = ActivityTraceFlags.Recorded;
+
+		newActivity.SetEndTime(compressionBuffer.StartTimeUtc.Add(compressionBuffer.Duration));
+		newActivity.Stop();
 	}
 }
