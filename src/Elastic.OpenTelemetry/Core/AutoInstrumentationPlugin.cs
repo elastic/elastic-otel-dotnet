@@ -87,7 +87,7 @@ public class AutoInstrumentationPlugin
 	public MeterProviderBuilder BeforeConfigureMeterProvider(MeterProviderBuilder builder) =>
 		!_bootstrapInfo.Succeeded || _components is null
 			? builder
-			: builder.UseElasticDefaults(_components);
+			: builder.UseAutoInstrumentationElasticDefaults(_components);
 
 	/// <summary>
 	/// To configure logs SDK (the method name is the same as for other logs options).

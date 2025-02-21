@@ -4,7 +4,6 @@
 
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry;
 using Elastic.OpenTelemetry.Configuration;
@@ -30,11 +29,25 @@ public static class TracerProviderBuilderExtensions
 {
 	private static readonly GlobalProviderBuilderState GlobalTracerProviderBuilderState = new();
 
-	// Note: This is defined as a static method and allocates the array each time.
-	// This is intentional, as we expect this to be invoked once (or worst case, few times).
-	// After initialisation, the array is no longer required and can be reclaimed by the GC.
-	// This is likley to be overall more efficient for the common scenario as we don't keep
-	// an object alive for the lifetime of the application.
+	// Notes:
+
+	// - This is defined as a static method and allocates the array each time.
+	//   This is intentional, as we expect this to be invoked once (or worst case, few times).
+	//   After initialisation, the array is no longer required and can be reclaimed by the GC.
+	//   This is likley to be overall more efficient for the common scenario as we don't keep
+	//   an object alive for the lifetime of the application.
+	
+	// - It is IMPORTANT that we evaluate each instrumentation we add via reflection to ensure
+	//   that duplicate registration is non-breaking. For example, calls to `AddAspNetCoreInstrumentation`
+	//   are not idempotent and will result in multiple listeners being registered which also
+	//   causes filters, etc. to run multiple times. For the built in components, this adds
+	//   overhead, but doesn't duplicate spans, as the instrumentation enriches, but does not
+	//   create activities. However, for any other instrumentation, we'd need to check on the
+	//   implementation to ensure we don't duplicate spans if we call the AddXyz method in
+	//   addition to the consumer. We will also document the libraries we scan for and recommend
+	//   that consumers do not manually add the instrumentation that we will add automatically.
+	//   Further enhancements may include an analyser or switching to source generators to
+	//   conditionally add instrumentation libraries.
 	private static InstrumentationAssemblyInfo[] GetReflectionInstrumentationAssemblies() =>
 	[
 		new()
@@ -44,6 +57,7 @@ public static class TracerProviderBuilderExtensions
 			FullyQualifiedType = "OpenTelemetry.Trace.AspNetCoreInstrumentationTracerProviderBuilderExtensions",
 			InstrumentationMethod = "AddAspNetCoreInstrumentation"
 		},
+
 #if NET9_0_OR_GREATER
 		// On .NET 9, we add the `System.Net.Http` source for native instrumentation, rather than referencing
 		// the contrib instrumentation. However, if the consuming application has their own reference to
@@ -52,12 +66,20 @@ public static class TracerProviderBuilderExtensions
 		// instrumentation, when available.
 		new()
 		{
-			Name = "Http",
+			Name = "HTTP",
 			Filename = "OpenTelemetry.Instrumentation.Http.dll",
 			FullyQualifiedType = "OpenTelemetry.Trace.HttpClientInstrumentationTracerProviderBuilderExtensions",
 			InstrumentationMethod = "AddHttpClientInstrumentation"
 		},
 #endif
+
+		new()
+		{
+			Name = "NEST",
+			Filename = "OpenTelemetry.Instrumentation.ElasticsearchClient.dll",
+			FullyQualifiedType = "OpenTelemetry.Trace.TracerProviderBuilderExtensions",
+			InstrumentationMethod = "AddElasticsearchClientInstrumentation"
+		},
 	];
 
 	/// <summary>
@@ -68,30 +90,56 @@ public static class TracerProviderBuilderExtensions
 	/// has been called previously as that automatically adds the .
 	/// </remarks>
 	/// <param name="builder">The <see cref="TracerProviderBuilder"/> to configure.</param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
 	/// <returns>The <see cref="TracerProviderBuilder"/> for chaining configuration.</returns>
-	public static TracerProviderBuilder UseElasticDefaults(this TracerProviderBuilder builder) =>
-		UseElasticDefaultsCore(builder, null, null);
+	public static TracerProviderBuilder UseElasticDefaults(this TracerProviderBuilder builder)
+	{
+#if NET
+        ArgumentNullException.ThrowIfNull(builder);
+#else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+#endif
+
+		return UseElasticDefaultsCore(builder, null, null);
+	}
 
 	/// <summary>
 	/// <inheritdoc cref="UseElasticDefaults(TracerProviderBuilder)" />
 	/// </summary>
 	/// <param name="builder"><inheritdoc cref="UseElasticDefaults(TracerProviderBuilder)" path="/param[@name='builder']"/></param>
 	/// <param name="skipOtlpExporter">When registering Elastic defaults, skip automatic registration of the OTLP exporter for traces.</param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
 	/// <returns><inheritdoc cref="UseElasticDefaults(TracerProviderBuilder)" /></returns>
-	public static TracerProviderBuilder UseElasticDefaults(this TracerProviderBuilder builder, bool skipOtlpExporter) =>
-		UseElasticDefaultsCore(builder, skipOtlpExporter ? CompositeElasticOpenTelemetryOptions.SkipOtlpOptions : null, null);
+	public static TracerProviderBuilder UseElasticDefaults(this TracerProviderBuilder builder, bool skipOtlpExporter)
+	{
+#if NET
+        ArgumentNullException.ThrowIfNull(builder);
+#else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+#endif
+
+		return UseElasticDefaultsCore(builder, skipOtlpExporter ? CompositeElasticOpenTelemetryOptions.SkipOtlpOptions : null, null);
+	}
 
 	/// <summary>
 	/// <inheritdoc cref="UseElasticDefaults(TracerProviderBuilder)" />
 	/// </summary>
 	/// <param name="builder"><inheritdoc cref="UseElasticDefaults(TracerProviderBuilder)" path="/param[@name='builder']"/></param>
 	/// <param name="options"><see cref="ElasticOpenTelemetryOptions"/> used to configure the Elastic Distribution of OpenTelemetry (EDOT) for .NET.</param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="options"/> is null.</exception>
 	/// <returns><inheritdoc cref="UseElasticDefaults(TracerProviderBuilder)" /></returns>
 	public static TracerProviderBuilder UseElasticDefaults(this TracerProviderBuilder builder, ElasticOpenTelemetryOptions options)
 	{
 #if NET
+		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(options);
 #else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+
 		if (options is null)
 			throw new ArgumentNullException(nameof(options));
 #endif
@@ -104,16 +152,22 @@ public static class TracerProviderBuilderExtensions
 	/// </summary>
 	/// <param name="builder"><inheritdoc cref="UseElasticDefaults(TracerProviderBuilder)" path="/param[@name='builder']"/></param>
 	/// <param name="configuration">An <see cref="IConfiguration"/> instance from which to load the OpenTelemetry SDK options.</param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configuration"/> is null.</exception>
 	/// <returns><inheritdoc cref="UseElasticDefaults(TracerProviderBuilder)" /></returns>
 	public static TracerProviderBuilder UseElasticDefaults(this TracerProviderBuilder builder, IConfiguration configuration)
 	{
 #if NET
+		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(configuration);
 #else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+
 		if (configuration is null)
 			throw new ArgumentNullException(nameof(configuration));
 #endif
-		return UseElasticDefaultsCore(builder, new(configuration), null);
+		return UseElasticDefaultsCore(builder, new(configuration));
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -131,78 +185,92 @@ public static class TracerProviderBuilderExtensions
 	internal static TracerProviderBuilder UseElasticDefaults(this TracerProviderBuilder builder, ElasticOpenTelemetryComponents components, IServiceCollection? services) =>
 		UseElasticDefaultsCore(builder, components.Options, components, services);
 
-	[RequiresDynamicCode("Requires reflection for dynamic assembly loading and instrumentation activation.")]
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private static TracerProviderBuilder UseElasticDefaultsCore(
 		TracerProviderBuilder builder,
 		CompositeElasticOpenTelemetryOptions? options,
-		ElasticOpenTelemetryComponents? components,
+		ElasticOpenTelemetryComponents? components = null,
 		IServiceCollection? services = null)
 	{
+		const string providerBuilderName = nameof(MeterProviderBuilder);
+
+		var logger = SignalBuilder.GetLogger(components, options);
+
+		// If the signal is disabled via configuration we skip any potential bootstrapping.
+		if (!SignalBuilder.IsSignalEnabled(components, options, Signals.Traces, providerBuilderName, logger))
+			return builder;
+
 		try
 		{
-			if (!SignalBuilder.ConfigureBuilder(nameof(UseElasticDefaults), nameof(TracerProviderBuilder), builder,
+			if (!SignalBuilder.ConfigureBuilder(nameof(UseElasticDefaults), providerBuilderName, builder,
 				GlobalTracerProviderBuilderState, options, services, ConfigureBuilder, ref components))
 			{
-				var logger = components?.Logger ?? options?.AdditionalLogger;
-				logger?.LogError("Unable to configure {Builder} with Elastic defaults.", nameof(TracerProviderBuilder));
+				logger = SignalBuilder.GetLogger(components, options); // Update the logger we should use from the ref-returned components.
+				logger.UnableToConfigureLoggingDefaultsError(providerBuilderName);
 				return builder;
 			}
 		}
 		catch (Exception ex)
 		{
-			var exceptionLogger = components is not null ? components.Logger : options?.AdditionalLogger;
-			exceptionLogger?.LogError(ex, "Failed to fully register EDOT .NET tracer defaults for {Provider}.", nameof(TracerProviderBuilder));
+			logger?.LogError(ex, "Failed to fully register EDOT .NET tracer defaults for {ProviderBuilderType}.", providerBuilderName);
 		}
 
 		return builder;
 
+		[UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026", Justification = "The calls to `AddSqlClientInstrumentation` and `AssemblyScanning.AddInstrumentationViaReflection` " +
+			"are guarded by a RuntimeFeature.IsDynamicCodeSupported` check and therefore this method is safe to call in AoT scenarios.")]
 		static void ConfigureBuilder(TracerProviderBuilder builder, ElasticOpenTelemetryComponents components)
 		{
 			builder.ConfigureResource(r => r.AddElasticDistroAttributes());
 
 #if NET9_0_OR_GREATER
-			try
-			{
-				// This first check determines whether OpenTelemetry.Instrumentation.Http.dll is present, in which case,
-				// it will be registered on the builder via reflection. If it's not present, we can safely add the native
-				// source which is OTel compliant since .NET 9.
-				var assemblyLocation = Path.GetDirectoryName(typeof(ElasticOpenTelemetry).Assembly.Location);
-				if (assemblyLocation is not null)
-				{
-					var assemblyPath = Path.Combine(assemblyLocation, "OpenTelemetry.Instrumentation.Http.dll");
+			// This first check determines whether OpenTelemetry.Instrumentation.Http.dll is present, in which case,
+			// it will be registered on the builder via reflection (except for AoT scenarios) or may be manually registered
+			// by the consumer. If it's not present, we can safely add the native source which is OTel compliant since .NET 9.
 
-					if (!File.Exists(assemblyPath))
-					{
-						AddWithLogging(builder, components.Logger, "Http (via native instrumentation)", b => b.AddSource("System.Net.Http"));
-					}
-					else
-					{
-						components.Logger.LogHttpInstrumentationFound(assemblyPath, "trace");
-					}
+			// Since .NET 9, the native activity source for HTTP instrumentation is OTel compliant and the recommended
+			// way to observe HTTP instrumentation. The following code checks for conditions where we will add the native
+			// source to the builder.
+			var assemblyLocation = Path.GetDirectoryName(AppContext.BaseDirectory);
+			if (!string.IsNullOrEmpty(assemblyLocation))
+			{
+				var assemblyPath = Path.Combine(assemblyLocation, "OpenTelemetry.Instrumentation.Http.dll");
+
+				// When dynamic code is not supported (AoT scenarios) we add the .NET 9 native activity source for HTTP instrumentation
+				// because it won't have already been loaded via our reflection-based assembly scanning. We also add that native source
+				// when we cannot find the instrumentation assembly at all, in which case, it certainly is not being used.
+				if (!RuntimeFeature.IsDynamicCodeSupported || !File.Exists(assemblyPath))
+				{
+					AddWithLogging(builder, components.Logger, "HTTP (via native instrumentation)", b => b.AddSource("System.Net.Http"));
+				}
+				else
+				{
+					components.Logger.LogHttpInstrumentationFound(assemblyPath, "trace");
 				}
 			}
-			catch (Exception ex)
-			{
-				components.Logger.LogError(ex, "An exception occurred while checking for the presence of `OpenTelemetry.Instrumentation.Http.dll`.");
-			}
 #else
-			AddWithLogging(builder, components.Logger, "Http (via contrib instrumentation)", b => b.AddHttpClientInstrumentation());
+			AddWithLogging(builder, components.Logger, "HTTP (via contrib instrumentation)", b => b.AddHttpClientInstrumentation());
 #endif
 
 			AddWithLogging(builder, components.Logger, "GrpcClient", b => b.AddGrpcClientInstrumentation());
-			AddWithLogging(builder, components.Logger, "EntityFrameworkCore", b => b.AddEntityFrameworkCoreInstrumentation());
-			AddWithLogging(builder, components.Logger, "NEST", b => b.AddElasticsearchClientInstrumentation());
-			AddWithLogging(builder, components.Logger, "SqlClient", b => b.AddSqlClientInstrumentation());
 			AddWithLogging(builder, components.Logger, "ElasticTransport", b => b.AddSource("Elastic.Transport"));
 
-			// TODO - Guard this behind runtime checks e.g. RuntimeFeature.IsDynamicCodeSupported to support AoT users.
-			// see https://github.com/elastic/elastic-otel-dotnet/issues/198
-			AddInstrumentationViaReflection(builder, components.Logger);
+			// NOTE: Despite them having no dependencies. We cannot add the OpenTelemetry.Instrumentation.ElasticsearchClient or
+			// OpenTelemetry.Instrumentation.EntityFrameworkCore instrumentations here, as including the package references causes
+			// trimming warnings. We can still add them via reflection.
+
+#if NET8_0_OR_GREATER
+			if (RuntimeFeature.IsDynamicCodeSupported)
+#endif
+			{
+				// This instrumentation is not supported for AoT scenarios.
+				AddWithLogging(builder, components.Logger, "SqlClient", b => b.AddSqlClientInstrumentation());
+
+				SignalBuilder.AddInstrumentationViaReflection(builder, components.Logger, GetReflectionInstrumentationAssemblies());
+			}
 
 			AddElasticProcessorsCore(builder, components);
 
-			if (components.Options.SkipOtlpExporter || components.Options.SkipOtlpExporter)
+			if (components.Options.SkipOtlpExporter)
 			{
 				components.Logger.LogSkippingOtlpExporter(nameof(Signals.Traces), nameof(TracerProviderBuilder));
 			}
@@ -214,61 +282,11 @@ public static class TracerProviderBuilderExtensions
 			components.Logger.LogConfiguredSignalProvider(nameof(Signals.Traces), nameof(TracerProviderBuilder));
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static void AddWithLogging(TracerProviderBuilder builder, ILogger logger, string name, Action<TracerProviderBuilder> add)
 		{
 			add.Invoke(builder);
 			logger.LogAddedInstrumentation(name, nameof(TracerProviderBuilder));
-		}
-
-		static void AddInstrumentationViaReflection(TracerProviderBuilder builder, ILogger logger)
-		{
-			try
-			{
-				// This section is in its own try/catch because we don't want failures in the reflection-based
-				// registration to prevent completion of registering the more general defaults we apply.
-
-				var assemblyLocation = Path.GetDirectoryName(typeof(ElasticOpenTelemetry).Assembly.Location);
-				if (assemblyLocation is not null)
-				{
-					foreach (var assembly in GetReflectionInstrumentationAssemblies())
-						AddInstrumentationLibraryViaReflection(builder, logger, assemblyLocation, assembly);
-				}
-			}
-			catch (Exception ex)
-			{
-				logger.LogError(ex, "An exception occurred while adding instrumentation via reflection.");
-			}
-		}
-
-		static void AddInstrumentationLibraryViaReflection(
-			TracerProviderBuilder builder,
-			ILogger logger,
-			string assemblyLocation,
-			in InstrumentationAssemblyInfo info)
-		{
-			try
-			{
-				var assemblyPath = Path.Combine(assemblyLocation, info.Filename);
-				if (File.Exists(assemblyPath))
-				{
-					logger.LogLocatedInstrumentationAssembly(info.Filename, assemblyLocation);
-
-					var assembly = Assembly.LoadFrom(assemblyPath);
-					var type = assembly?.GetType(info.FullyQualifiedType);
-					var method = type?.GetMethod(info.InstrumentationMethod, BindingFlags.Static | BindingFlags.Public,
-						Type.DefaultBinder, [typeof(TracerProviderBuilder)], null);
-
-					if (method is not null)
-					{
-						logger.LogAddedInstrumentation(info.Name, nameof(TracerProviderBuilder));
-						method.Invoke(null, [builder]);
-					}
-				}
-			}
-			catch (Exception ex)
-			{
-				logger.LogError(ex, "Failed to dynamically enable {InstrumentationName} on {Provider}.", info.Name, nameof(TracerProviderBuilder));
-			}
 		}
 	}
 
@@ -316,9 +334,19 @@ public static class TracerProviderBuilderExtensions
 	/// </remarks>
 	/// <param name="builder">The <see cref="TracerProviderBuilder"/> where the Elastic trace
 	/// processors should be added.</param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
 	/// <returns>The <see cref="TracerProviderBuilder"/> for chaining.</returns>
-	public static TracerProviderBuilder AddElasticProcessors(this TracerProviderBuilder builder) =>
-		AddElasticProcessorsCore(builder, null);
+	public static TracerProviderBuilder AddElasticProcessors(this TracerProviderBuilder builder)
+	{
+#if NET
+		ArgumentNullException.ThrowIfNull(builder);
+#else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+#endif
+
+		return AddElasticProcessorsCore(builder, null);
+	}
 
 	private static TracerProviderBuilder AddElasticProcessorsCore(
 		this TracerProviderBuilder builder,
@@ -344,12 +372,14 @@ public static class TracerProviderBuilderExtensions
 
 		return builder;
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static void ConfigureBuilder(TracerProviderBuilder builder, ElasticOpenTelemetryComponents components)
 		{
 			builder.LogAndAddProcessor(new ElasticCompatibilityProcessor(components.Logger), components.Logger);
 		}
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private static TracerProviderBuilder LogAndAddProcessor(this TracerProviderBuilder builder, BaseProcessor<Activity> processor, ILogger logger)
 	{
 		builder.AddProcessor(processor);

@@ -2,11 +2,8 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
-using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Core;
 using Elastic.OpenTelemetry.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using OpenTelemetry;
 using Xunit.Abstractions;
 
@@ -14,6 +11,8 @@ namespace Elastic.OpenTelemetry.Tests;
 
 public class ServiceCollectionTests(ITestOutputHelper output)
 {
+	private readonly ITestOutputHelper _output = output;
+
 	[Fact]
 	public async Task ServiceCollection_AddOpenTelemetry_IsSafeToCallMultipleTimes()
 	{
@@ -28,7 +27,7 @@ public class ServiceCollectionTests(ITestOutputHelper output)
 			var options = new ElasticOpenTelemetryOptions()
 			{
 				SkipOtlpExporter = true,
-				AdditionalLogger = new TestLogger(output)
+				AdditionalLogger = new TestLogger(_output)
 			};
 
 			s.AddElasticOpenTelemetry(options)
@@ -69,7 +68,7 @@ public class ServiceCollectionTests(ITestOutputHelper output)
 			var options = new ElasticOpenTelemetryOptions()
 			{
 				SkipOtlpExporter = true,
-				AdditionalLogger = new TestLogger(output)
+				AdditionalLogger = new TestLogger(_output)
 			};
 
 			s.AddElasticOpenTelemetry(options)
@@ -97,7 +96,7 @@ public class ServiceCollectionTests(ITestOutputHelper output)
 	}
 
 	[Fact]
-	public void ServiceCollectionAddElasticOpenTelemetry_ReturnsSameComponents_WhenCalledMultipleTimes()
+	public void AddElasticOpenTelemetry_ReturnsSameComponents_WhenCalledMultipleTimes()
 	{
 		// Ensure that when AddElasticOpenTelemetry is called multiple times on the same IServiceCollection,
 		// a single instance of the components is registered, as we expect those to be cached per IServiceCollection.

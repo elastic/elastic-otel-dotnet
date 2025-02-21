@@ -10,6 +10,7 @@ using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 // Matching namespace with LoggerProviderBuilder
 #pragma warning disable IDE0130 // Namespace does not match folder structure
@@ -98,22 +99,28 @@ public static class LoggingProviderBuilderExtensions
 		ElasticOpenTelemetryComponents? components,
 		IServiceCollection? services = null)
 	{
-		var logger = components?.Logger ?? options?.AdditionalLogger;
+		const string providerBuilderName = nameof(LoggerProviderBuilder);
+
+		var logger = SignalBuilder.GetLogger(components, options);
+
+		// If the signal is disabled via configuration we skip any potential bootstrapping.
+		if (!SignalBuilder.IsSignalEnabled(components, options, Signals.Logs, providerBuilderName, logger))
+			return builder;
 
 		try
 		{
-			if (!SignalBuilder.ConfigureBuilder(nameof(UseElasticDefaults), nameof(LoggerProviderBuilder), builder,
+			if (!SignalBuilder.ConfigureBuilder(nameof(UseElasticDefaults), providerBuilderName, builder,
 				GlobalLoggerProviderBuilderState, options, services, ConfigureBuilder, ref components))
 			{
-				logger = components?.Logger ?? options?.AdditionalLogger; // Update with ref-returned components
-				logger?.UnableToConfigureLoggingDefaultsError(nameof(LoggerProviderBuilder));
+				logger = components?.Logger ?? options?.AdditionalLogger ?? NullLogger.Instance; // Update the logger we should use from the ref-returned components.
+				logger.UnableToConfigureLoggingDefaultsError(providerBuilderName);
 				return builder;
 			}
 		}
 		catch (Exception ex)
 		{
 			// NOTE: Not using LoggerMessage as we want to pass the exception. As this should be rare, performance isn't critical here.
-			logger?.LogError(ex, "Failed to fully register EDOT .NET logging defaults for {Provider}.", nameof(LoggerProviderBuilder));
+			logger.LogError(ex, "Failed to fully register EDOT .NET logging defaults for {ProviderBuilderType}.", providerBuilderName);
 		}
 
 		return builder;
@@ -122,7 +129,7 @@ public static class LoggingProviderBuilderExtensions
 		{
 			builder.ConfigureResource(r => r.AddElasticDistroAttributes());
 
-			if (components.Options.SkipOtlpExporter || components.Options.SkipOtlpExporter)
+			if (components.Options.SkipOtlpExporter)
 			{
 				components.Logger.LogSkippingOtlpExporter(nameof(Signals.Logs), nameof(LoggerProviderBuilder));
 			}

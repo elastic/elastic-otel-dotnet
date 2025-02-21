@@ -2,8 +2,8 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry;
 using Elastic.OpenTelemetry.Configuration;
@@ -13,6 +13,8 @@ using Elastic.OpenTelemetry.Instrumentation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using OpenTelemetry.Trace;
 
 // Matching namespace with MeterProviderBuilder
 #pragma warning disable IDE0130 // Namespace does not match folder structure
@@ -140,28 +142,35 @@ public static class MeterProviderBuilderExtensions
 		IServiceCollection serviceCollection) =>
 			UseElasticDefaultsCore(builder, null, null, serviceCollection);
 
-	[RequiresDynamicCode("Requires reflection for dynamic assembly loading and instrumentation activation.")]
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	[UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026", Justification = "The calls to `AddSqlClientInstrumentation` and `AssemblyScanning.AddInstrumentationViaReflection` " +
+			"are guarded by a RuntimeFeature.IsDynamicCodeSupported` check and therefore this method is safe to call in AoT scenarios.")]
 	internal static MeterProviderBuilder UseElasticDefaultsCore(
 		this MeterProviderBuilder builder,
 		CompositeElasticOpenTelemetryOptions? options,
 		ElasticOpenTelemetryComponents? components,
 		IServiceCollection? services = null)
 	{
+		const string providerBuilderName = nameof(MeterProviderBuilder);
+
+		var logger = SignalBuilder.GetLogger(components, options);
+
+		// If the signal is disabled via configuration we skip any potential bootstrapping.
+		if (!SignalBuilder.IsSignalEnabled(components, options, Signals.Metrics, providerBuilderName, logger))
+			return builder;
+
 		try
 		{
-			if (!SignalBuilder.ConfigureBuilder(nameof(UseElasticDefaults), nameof(MeterProviderBuilder), builder,
+			if (!SignalBuilder.ConfigureBuilder(nameof(UseElasticDefaults), providerBuilderName, builder,
 				GlobalMeterProviderBuilderState, options, services, ConfigureBuilder, ref components))
 			{
-				var logger = components?.Logger ?? options?.AdditionalLogger;
-				logger?.LogError("Unable to configure {Builder} with Elastic defaults.", nameof(MeterProviderBuilder));
+				logger = components?.Logger ?? options?.AdditionalLogger ?? NullLogger.Instance; // Update the logger we should use from the ref-returned components.
+				logger.UnableToConfigureLoggingDefaultsError(providerBuilderName);
 				return builder;
 			}
 		}
 		catch (Exception ex)
 		{
-			var exceptionLogger = components is not null ? components.Logger : options?.AdditionalLogger;
-			exceptionLogger?.LogError(ex, "Failed to fully register EDOT .NET meter defaults for {Provider}.", nameof(MeterProviderBuilder));
+			logger.LogError(ex, "Failed to fully register EDOT .NET meter defaults for {ProviderBuilderType}.", providerBuilderName);
 		}
 
 		return builder;
@@ -176,7 +185,7 @@ public static class MeterProviderBuilderExtensions
 				// This first check determines whether OpenTelemetry.Instrumentation.Http.dll is present, in which case,
 				// it will be registered on the builder via reflection. If it's not present, we can safely add the native
 				// source which is OTel compliant since .NET 9.
-				var assemblyLocation = Path.GetDirectoryName(typeof(ElasticOpenTelemetry).Assembly.Location);
+				var assemblyLocation = Path.GetDirectoryName(AppContext.BaseDirectory);
 				if (assemblyLocation is not null)
 				{
 					var assemblyPath = Path.Combine(assemblyLocation, "OpenTelemetry.Instrumentation.Http.dll");
@@ -206,11 +215,14 @@ public static class MeterProviderBuilderExtensions
 			AddWithLogging(builder, components.Logger, "Runtime", b => b.AddRuntimeInstrumentation());
 #endif
 
-			// TODO - Guard this behind runtime checks e.g. RuntimeFeature.IsDynamicCodeSupported to support AoT users.
-			// see https://github.com/elastic/elastic-otel-dotnet/issues/198
-			AddInstrumentationViaReflection(builder, components.Logger);
+#if NET8_0_OR_GREATER
+			if (RuntimeFeature.IsDynamicCodeSupported)
+#endif
+			{
+				SignalBuilder.AddInstrumentationViaReflection(builder, components.Logger, GetReflectionInstrumentationAssemblies());
+			}
 
-			if (components.Options.SkipOtlpExporter || components.Options.SkipOtlpExporter)
+			if (components.Options.SkipOtlpExporter)
 			{
 				components.Logger.LogSkippingOtlpExporter(nameof(Signals.Traces), nameof(MeterProviderBuilder));
 			}
@@ -222,66 +234,44 @@ public static class MeterProviderBuilderExtensions
 			components.Logger.LogConfiguredSignalProvider(nameof(Signals.Logs), nameof(MeterProviderBuilder));
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static void AddWithLogging(MeterProviderBuilder builder, ILogger logger, string name, Action<MeterProviderBuilder> add)
 		{
 			add.Invoke(builder);
 			logger.LogAddedInstrumentation(name, nameof(MeterProviderBuilder));
 		}
+	}
 
-		static void AddInstrumentationViaReflection(MeterProviderBuilder builder, ILogger logger)
+	// We use a different method here to ensure we don't cause a crash depending on instrumentation libraries which are not present.
+	// We can't assume that any DLLs are available besides OpenTelemetry.dll, which auto-instrumentation includes.
+	// The auto instrumentation enables a set of default instrumentation of it's own, so we rely on that.
+	// In the future, we can assess if we should copy instrumentation DLLs into the autoinstrumentation zip file and enable them.
+	internal static MeterProviderBuilder UseAutoInstrumentationElasticDefaults(this MeterProviderBuilder builder, ElasticOpenTelemetryComponents components)
+	{
+		Debug.Assert(components is not null, "Components should not be null when invoked from the auto instrumentation.");
+
+		try
 		{
-			try
-			{
-				// This section is in its own try/catch because we don't want failures in the reflection-based
-				// registration to prevent completion of registering the more general defaults we apply.
+			builder.ConfigureResource(r => r.AddElasticDistroAttributes());
 
-				var assemblyLocation = Path.GetDirectoryName(typeof(ElasticOpenTelemetry).Assembly.Location);
-				if (assemblyLocation is not null)
-				{
-					foreach (var assembly in GetReflectionInstrumentationAssemblies())
-						AddInstrumentationLibraryViaReflection(builder, logger, assemblyLocation, assembly);
-				}
-			}
-			catch
+			if (components.Options.SkipOtlpExporter)
 			{
-				// TODO - Logging
+				components.Logger.LogSkippingOtlpExporter(nameof(Signals.Traces), nameof(TracerProviderBuilder));
 			}
+			else
+			{
+				builder.AddOtlpExporter();
+			}
+
+			components.Logger.LogConfiguredSignalProvider("Traces", nameof(TracerProviderBuilder));
+
+			return builder;
+		}
+		catch (Exception ex)
+		{
+			components?.Logger?.LogError(ex, "Failed to register EDOT defaults for meter auto-instrumentation to the {Provider}.", nameof(TracerProviderBuilder));
 		}
 
-		static void AddInstrumentationLibraryViaReflection(
-			MeterProviderBuilder builder,
-			ILogger logger,
-			string assemblyLocation,
-			in InstrumentationAssemblyInfo info)
-		{
-			try
-			{
-				var assemblyPath = Path.Combine(assemblyLocation, info.Filename);
-
-				if (File.Exists(Path.Combine(assemblyLocation, info.Filename)))
-				{
-					logger.LogLocatedInstrumentationAssembly(info.Filename, assemblyLocation);
-
-					var assembly = Assembly.LoadFrom(assemblyPath);
-					var type = assembly?.GetType(info.FullyQualifiedType);
-					var method = type?.GetMethod(info.InstrumentationMethod, BindingFlags.Static | BindingFlags.Public,
-						Type.DefaultBinder, [typeof(MeterProviderBuilder)], null);
-
-					if (method is not null)
-					{
-						logger.LogAddedInstrumentation(info.Name, nameof(MeterProviderBuilder));
-						method.Invoke(null, [builder]);
-					}
-					else
-					{
-						logger.LogWarning("Unable to invoke {TypeName}.{Method} on {AssemblyPath}.", info.FullyQualifiedType, info.InstrumentationMethod, assemblyPath);
-					}
-				}
-			}
-			catch (Exception ex)
-			{
-				logger.LogError(ex, "Failed to dynamically enable {InstrumentationName} on {Provider}.", info.Name, nameof(MeterProviderBuilder));
-			}
-		}
+		return builder;
 	}
 }
