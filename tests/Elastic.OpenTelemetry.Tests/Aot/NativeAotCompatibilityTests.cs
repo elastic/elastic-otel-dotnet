@@ -11,11 +11,13 @@ namespace Elastic.OpenTelemetry.Tests.Aot
 	{
 		private readonly ITestOutputHelper _output = output;
 
+// Just testing on one platform for now to speed up tests
+#if NET9_0
 		[Fact]
 		public async Task CanPublishAotApp()
 		{
 			var workingDir = Environment.CurrentDirectory;
-			var indexOfSolutionFolder = workingDir.AsSpan().IndexOf("elastic-otel-dotnet");
+			var indexOfSolutionFolder = workingDir.AsSpan().LastIndexOf("elastic-otel-dotnet");
 			workingDir = workingDir.AsSpan().Slice(0, indexOfSolutionFolder + "elastic-otel-dotnet".Length).ToString();
 			workingDir = Path.Combine(workingDir, "examples", "Example.AspNetCore.WebApiAot");
 
@@ -59,5 +61,6 @@ namespace Elastic.OpenTelemetry.Tests.Aot
 
 			Assert.Equal(0, dotnetPublishProcess.ExitCode);
 		}
+#endif
 	}
 }
