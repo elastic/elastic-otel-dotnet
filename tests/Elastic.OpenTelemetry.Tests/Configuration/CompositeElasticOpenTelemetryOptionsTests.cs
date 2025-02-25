@@ -3,10 +3,10 @@
 // See the LICENSE file in the project root for more information
 
 using System.Collections;
+using System.Diagnostics.Tracing;
 using System.Text;
 using Elastic.OpenTelemetry.Configuration;
 using Xunit.Abstractions;
-using System.Diagnostics.Tracing;
 using static Elastic.OpenTelemetry.Configuration.EnvironmentVariables;
 using static Elastic.OpenTelemetry.Diagnostics.LogLevelHelpers;
 
