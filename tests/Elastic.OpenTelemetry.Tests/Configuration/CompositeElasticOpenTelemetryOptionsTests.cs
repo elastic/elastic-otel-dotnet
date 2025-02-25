@@ -69,9 +69,9 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		sut.LogConfigSources(logger);
 
-		Assert.Contains(logger.Messages, s => s.EndsWith("from [Environment]"));
-		Assert.Contains(logger.Messages, s => s.EndsWith("from [Default]"));
-		Assert.DoesNotContain(logger.Messages, s => s.EndsWith("from [IConfiguration]"));
+		Assert.Contains(logger.Messages, s => s.EndsWith("from [Environment]", StringComparison.Ordinal));
+		Assert.Contains(logger.Messages, s => s.EndsWith("from [Default]", StringComparison.Ordinal));
+		Assert.DoesNotContain(logger.Messages, s => s.EndsWith("from [IConfiguration]", StringComparison.Ordinal));
 	}
 
 	[Fact]
@@ -120,9 +120,9 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		Assert.Equal(ExpectedLogsLength, logger.Messages.Count);
 
-		Assert.Contains(logger.Messages, s => s.EndsWith("from [IConfiguration]"));
-		Assert.Contains(logger.Messages, s => s.EndsWith("from [Default]"));
-		Assert.DoesNotContain(logger.Messages, s => s.EndsWith("from [Environment]"));
+		Assert.Contains(logger.Messages, s => s.EndsWith("from [IConfiguration]", StringComparison.Ordinal));
+		Assert.Contains(logger.Messages, s => s.EndsWith("from [Default]", StringComparison.Ordinal));
+		Assert.DoesNotContain(logger.Messages, s => s.EndsWith("from [Environment]", StringComparison.Ordinal));
 	}
 
 	[Fact]
@@ -165,9 +165,9 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		sut.LogConfigSources(logger);
 
-		Assert.Contains(logger.Messages, s => s.EndsWith("from [IConfiguration]"));
-		Assert.Contains(logger.Messages, s => s.EndsWith("from [Default]"));
-		Assert.DoesNotContain(logger.Messages, s => s.EndsWith("from [Environment]"));
+		Assert.Contains(logger.Messages, s => s.EndsWith("from [IConfiguration]", StringComparison.Ordinal));
+		Assert.Contains(logger.Messages, s => s.EndsWith("from [Default]", StringComparison.Ordinal));
+		Assert.DoesNotContain(logger.Messages, s => s.EndsWith("from [Environment]", StringComparison.Ordinal));
 	}
 
 	[Fact]
@@ -208,9 +208,9 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		sut.LogConfigSources(logger);
 
-		Assert.Contains(logger.Messages, s => s.EndsWith("from [IConfiguration]"));
-		Assert.Contains(logger.Messages, s => s.EndsWith("from [Default]"));
-		Assert.DoesNotContain(logger.Messages, s => s.EndsWith("from [Environment]"));
+		Assert.Contains(logger.Messages, s => s.EndsWith("from [IConfiguration]", StringComparison.Ordinal));
+		Assert.Contains(logger.Messages, s => s.EndsWith("from [Default]", StringComparison.Ordinal));
+		Assert.DoesNotContain(logger.Messages, s => s.EndsWith("from [Environment]", StringComparison.Ordinal));
 	}
 
 	[Fact]
@@ -280,9 +280,9 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		sut.LogConfigSources(logger);
 
-		Assert.Contains(logger.Messages, s => s.EndsWith("from [Property]"));
-		Assert.Contains(logger.Messages, s => s.EndsWith("from [Default]"));
-		Assert.DoesNotContain(logger.Messages, s => s.EndsWith("from [Environment]"));
+		Assert.Contains(logger.Messages, s => s.EndsWith("from [Property]", StringComparison.Ordinal));
+		Assert.Contains(logger.Messages, s => s.EndsWith("from [Default]", StringComparison.Ordinal));
+		Assert.DoesNotContain(logger.Messages, s => s.EndsWith("from [Environment]", StringComparison.Ordinal));
 	}
 
 	[Fact]

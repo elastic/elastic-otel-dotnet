@@ -2,6 +2,8 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+// Just testing on one platform for now to speed up tests
+#if NET9_0
 using System.Runtime.InteropServices;
 using Xunit.Abstractions;
 
@@ -11,8 +13,6 @@ namespace Elastic.OpenTelemetry.Tests.Aot
 	{
 		private readonly ITestOutputHelper _output = output;
 
-// Just testing on one platform for now to speed up tests
-#if NET9_0
 		[Fact]
 		public async Task CanPublishAotApp()
 		{
@@ -61,6 +61,6 @@ namespace Elastic.OpenTelemetry.Tests.Aot
 
 			Assert.Equal(0, dotnetPublishProcess.ExitCode);
 		}
-#endif
 	}
 }
+#endif
