@@ -17,6 +17,8 @@
   <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0' OR '$(TargetFramework)' == 'net9.0'">
     <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
     <IsAotCompatible>true</IsAotCompatible>
+    <SuppressTrimAnalysisWarnings>false</SuppressTrimAnalysisWarnings>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
   </PropertyGroup>
 
   <PropertyGroup Condition="$(TargetFramework.StartsWith('netstandard2.0')) OR $(TargetFramework.StartsWith('net4'))">

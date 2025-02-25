@@ -2,6 +2,7 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
@@ -34,9 +35,8 @@ todosApi.MapGet("/{id}", (int id) =>
 
 app.Run();
 
+[SuppressMessage("Design", "CA1050:Declare types in namespaces")]
 public record Todo(int Id, string? Title, DateOnly? DueBy = null, bool IsComplete = false);
 
 [JsonSerializable(typeof(Todo[]))]
-internal partial class AppJsonSerializerContext : JsonSerializerContext
-{
-}
+internal partial class AppJsonSerializerContext : JsonSerializerContext;

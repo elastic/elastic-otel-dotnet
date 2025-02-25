@@ -2,6 +2,7 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Tracing;
 using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.Configuration;
@@ -10,6 +11,8 @@ using static Elastic.OpenTelemetry.Configuration.Parsers.SharedParsers;
 
 namespace Elastic.OpenTelemetry.Configuration.Parsers;
 
+[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2026:RequiresUnreferencedCode", Justification = "Manually verified")]
+[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL3050:RequiresDynamicCode", Justification = "Manually verified")]
 internal class ConfigurationParser
 {
 	private readonly IConfiguration _configuration;
