@@ -17,6 +17,7 @@ internal class ConfigurationParser
 
 	internal string? LoggingSectionLogLevel { get; }
 
+	#pragma warning disable format
 	public ConfigurationParser(IConfiguration configuration)
 	{
 		_configuration = configuration;
@@ -29,6 +30,7 @@ internal class ConfigurationParser
 		if (string.IsNullOrEmpty(LoggingSectionLogLevel))
 			LoggingSectionLogLevel = configuration.GetValue<string>("Logging:LogLevel:Default");
 	}
+	#pragma warning restore format
 
 	private static void SetFromConfiguration<T>(IConfiguration configuration, ConfigCell<T> cell, Func<string, T?> parser)
 	{
