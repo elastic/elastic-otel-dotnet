@@ -39,6 +39,7 @@ internal class ConfigurationParser
 		var lookup = configuration.GetValue<string>($"{ConfigurationSection}:{cell.Key}");
 		if (lookup is null)
 			return;
+
 		var parsed = parser(lookup);
 		if (parsed is null)
 			return;
@@ -87,4 +88,7 @@ internal class ConfigurationParser
 
 	public void ParseSkipOtlpExporter(ConfigCell<bool?> skipOtlpExporter) =>
 		SetFromConfiguration(_configuration, skipOtlpExporter, BoolParser);
+
+	public void ParseSkipInstrumentationAssemblyScanning(ConfigCell<bool?> skipInstrumentationAssemblyScanning) =>
+		SetFromConfiguration(_configuration, skipInstrumentationAssemblyScanning, BoolParser);
 }

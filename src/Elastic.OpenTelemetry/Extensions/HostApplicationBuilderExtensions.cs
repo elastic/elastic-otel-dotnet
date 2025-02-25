@@ -43,27 +43,28 @@ public static class HostApplicationBuilderExtensions
 			throw new ArgumentNullException(nameof(serviceName));
 #endif
 
-		return AddElasticOpenTelemetry(builder, r => r.AddService(serviceName));
+		return AddElasticOpenTelemetry(builder, r => r.ConfigureResource(r => r.AddService(serviceName)));
 	}
 
 	/// <summary>
 	/// <inheritdoc cref="AddElasticOpenTelemetry(IHostApplicationBuilder)" />
 	/// </summary>
 	/// <param name="builder"><inheritdoc cref="AddElasticOpenTelemetry(IHostApplicationBuilder)" path="/param[@name='builder']"/></param>
-	/// <param name="configureResource"><see cref="ResourceBuilder"/> configuration action.</param>
+	/// <param name="configure"><see cref="IOpenTelemetryBuilder"/> configuration action.</param>
 	/// <returns><inheritdoc cref="AddElasticOpenTelemetry(IHostApplicationBuilder)" /></returns>
-	public static IHostApplicationBuilder AddElasticOpenTelemetry(this IHostApplicationBuilder builder, Action<ResourceBuilder> configureResource)
+	public static IHostApplicationBuilder AddElasticOpenTelemetry(this IHostApplicationBuilder builder, Action<IOpenTelemetryBuilder> configure)
 	{
 #if NET
-		ArgumentNullException.ThrowIfNull(configureResource);
+		ArgumentNullException.ThrowIfNull(configure);
 #else
-		if (configureResource is null)
-			throw new ArgumentNullException(nameof(configureResource));
+		if (configure is null)
+			throw new ArgumentNullException(nameof(configure));
 #endif
 
-		builder.Services
-			.AddElasticOpenTelemetry(builder.Configuration)
-			.ConfigureResource(configureResource);
+		var otelBuilder = builder.Services
+			.AddElasticOpenTelemetry(builder.Configuration);
+
+		configure.Invoke(otelBuilder);
 
 		return builder;
 	}

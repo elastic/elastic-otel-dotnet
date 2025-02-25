@@ -1,0 +1,11 @@
+@Example.AspNetCore.WebApiAot_HostAddress = http://localhost:5283
+
+GET {{Example.AspNetCore.WebApiAot_HostAddress}}/todos/
+Accept: application/json
+
+###
+
+GET {{Example.AspNetCore.WebApiAot_HostAddress}}/todos/1
+Accept: application/json
+
+###

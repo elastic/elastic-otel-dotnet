@@ -39,6 +39,7 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 
 	private readonly ConfigCell<LogLevel?> _logLevel = new(nameof(LogLevel), LogLevel.Warning);
 	private readonly ConfigCell<bool?> _skipOtlpExporter = new(nameof(SkipOtlpExporter), false);
+	private readonly ConfigCell<bool?> _skipInstrumentationAssemblyScanning = new(nameof(SkipInstrumentationAssemblyScanning), false);
 	private readonly ConfigCell<bool?> _runningInContainer = new(nameof(_runningInContainer), false);
 
 	private readonly ConfigCell<Signals?> _signals = new(nameof(Signals), Signals.All);
@@ -69,6 +70,7 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 		SetFromEnvironment(OTEL_LOG_LEVEL, _logLevel, LogLevelParser);
 		SetFromEnvironment(ELASTIC_OTEL_LOG_TARGETS, _logTargets, LogTargetsParser);
 		SetFromEnvironment(ELASTIC_OTEL_SKIP_OTLP_EXPORTER, _skipOtlpExporter, BoolParser);
+		SetFromEnvironment(ELASTIC_OTEL_SKIP_ASSEMBLY_SCANNING, _skipInstrumentationAssemblyScanning, BoolParser);
 
 		var parser = new EnvironmentParser(_environmentVariables);
 		parser.ParseInstrumentationVariables(_signals, _tracing, _metrics, _logging);
@@ -86,6 +88,7 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 		parser.ParseLogTargets(_logTargets);
 		parser.ParseLogLevel(_logLevel, ref _eventLevel);
 		parser.ParseSkipOtlpExporter(_skipOtlpExporter);
+		parser.ParseSkipInstrumentationAssemblyScanning(_skipInstrumentationAssemblyScanning);
 	}
 
 	internal CompositeElasticOpenTelemetryOptions(ElasticOpenTelemetryOptions options)
@@ -190,6 +193,13 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 	{
 		get => _skipOtlpExporter.Value ?? false;
 		init => _skipOtlpExporter.Assign(value, ConfigSource.Property);
+	}
+
+	/// <inheritdoc cref="ElasticOpenTelemetryOptions.SkipInstrumentationAssemblyScanning"/>
+	public bool SkipInstrumentationAssemblyScanning
+	{
+		get => _skipInstrumentationAssemblyScanning.Value ?? false;
+		init => _skipInstrumentationAssemblyScanning.Assign(value, ConfigSource.Property);
 	}
 
 	public ILogger? AdditionalLogger { get; internal set; }
