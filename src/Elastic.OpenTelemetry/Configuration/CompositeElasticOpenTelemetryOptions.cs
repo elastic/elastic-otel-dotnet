@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information
 
 using System.Collections;
+using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Tracing;
 using System.Runtime.InteropServices;
 using Elastic.OpenTelemetry.Configuration.Instrumentations;
@@ -76,6 +77,8 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 		parser.ParseInstrumentationVariables(_signals, _tracing, _metrics, _logging);
 	}
 
+	[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2026:RequiresUnreferencedCode", Justification = "Manually verified")]
+	[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL3050:RequiresDynamicCode", Justification = "Manually verified")]
 	internal CompositeElasticOpenTelemetryOptions(IConfiguration? configuration, IDictionary? environmentVariables = null)
 		: this(environmentVariables)
 	{

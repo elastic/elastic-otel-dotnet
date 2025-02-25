@@ -9,10 +9,10 @@ using ProcNet;
 
 namespace Elastic.OpenTelemetry.EndToEndTests.DistributedFixture;
 
-public abstract class DotNetRunApplication
+public abstract partial class DotNetRunApplication
 {
 	private static readonly DirectoryInfo CurrentDirectory = new FileInfo(Assembly.GetExecutingAssembly().Location).Directory!;
-	private static readonly Regex ProcessIdMatch = new(@"^\s*Process Id (?<processid>\d+)");
+	private static readonly Regex ProcessIdMatch = ProcessIdMatchRegex();
 
 	public static readonly DirectoryInfo Root = GetSolutionRoot();
 	public static readonly DirectoryInfo LogDirectory = new(Path.Combine(Root.FullName, ".artifacts", "tests"));
@@ -114,4 +114,7 @@ public abstract class DotNetRunApplication
 			_app.SendControlC(ProcessId.Value);
 		_app.Dispose();
 	}
+
+	[GeneratedRegex(@"^\s*Process Id (?<processid>\d+)")]
+	private static partial Regex ProcessIdMatchRegex();
 }
