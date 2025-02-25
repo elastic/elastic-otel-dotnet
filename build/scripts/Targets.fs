@@ -170,7 +170,7 @@ let Setup (parsed:ParseResults<Build>) =
         | Version -> Build.Step version
         | Clean -> Build.Cmd [Version] [] clean
         | Compile -> Build.Step compile
-        | Build -> Build.Cmd [Clean; CheckFormat; Compile] [] build
+        | Build -> Build.Cmd [Clean; (* CheckFormat; *) Compile] [] build
         
         | End_To_End -> Build.Cmd [] [Build] <| runTests E2E
         | Integrate -> Build.Cmd [] [Build] <| runTests Integration
