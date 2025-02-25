@@ -8,8 +8,6 @@
     <PublishAot>true</PublishAot>
     <UserSecretsId>205c18a1-356e-4e59-b15f-2a297cb8d4b8</UserSecretsId>
     <EnableRequestDelegateGenerator>true</EnableRequestDelegateGenerator>
-    <InterceptorsPreviewNamespaces>$(InterceptorsPreviewNamespaces);Microsoft.AspNetCore.Http.Generated</InterceptorsPreviewNamespaces>
-    <InterceptorsNamespaces>$(InterceptorsPreviewNamespaces);Microsoft.AspNetCore.Http.Generated</InterceptorsNamespaces>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
