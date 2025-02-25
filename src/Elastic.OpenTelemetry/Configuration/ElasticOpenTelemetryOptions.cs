@@ -39,6 +39,9 @@ public class ElasticOpenTelemetryOptions
 	/// <item><term>Debug</term><description>Rich debugging and development.</description></item>
 	/// <item><term>Trace</term><description>Contain the most detailed messages.</description></item>
 	/// </list>
+	/// <para>
+	/// When unset, this defaults to <b>Warning</b>.
+	/// </para>
 	/// </remarks>
 	public LogLevel? LogLevel { get; init; }
 
@@ -48,8 +51,9 @@ public class ElasticOpenTelemetryOptions
 	public LogTargets? LogTargets { get; init; }
 
 	/// <summary>
-	/// Stops Elastic Distribution of OpenTelemetry .NET from registering OLTP exporters, useful for testing scenarios.
+	/// Skips registration of OLTP exporters by the Elastic Distribution of OpenTelemetry .NET.
 	/// </summary>
+	/// <remarks>When unset, this defaults to <c>false</c>.</remarks>
 	public bool? SkipOtlpExporter { get; init; }
 
 	/// <summary>
@@ -62,4 +66,10 @@ public class ElasticOpenTelemetryOptions
 	/// to which logs will be written.
 	/// </summary>
 	public ILoggerFactory? AdditionalLoggerFactory { get; init; }
+
+	/// <summary>
+	/// Skips automatic registration of instrumentation libraries via assembly scanning by the Elastic Distribution of OpenTelemetry .NET.
+	/// </summary>
+	/// <remarks>When unset, this defaults to <c>false</c>.</remarks>
+	public bool? SkipInstrumentationAssemblyScanning { get; init; }
 }

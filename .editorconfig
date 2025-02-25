@@ -193,7 +193,12 @@ resharper_redundant_case_label_highlighting=do_not_show
 resharper_redundant_argument_default_value_highlighting=do_not_show
 resharper_explicit_caller_info_argument_highlighting=hint
 
-dotnet_diagnostic.IDE0057.severity = none
+dotnet_diagnostic.IL3050.severity = error
+dotnet_diagnostic.IL2026.severity = error
+
+[examples/Example.AspNetCore.WebApiAot/*.cs]
+dotnet_diagnostic.IL3050.severity = none
+dotnet_diagnostic.IL2026.severity = none
 
 [*.{sh,bat,ps1}]
 trim_trailing_whitespace=true

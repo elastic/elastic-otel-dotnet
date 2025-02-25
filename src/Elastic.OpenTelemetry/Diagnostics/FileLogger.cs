@@ -69,9 +69,9 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 			_streamWriter.AutoFlush = true; // Ensure we don't lose logs by not flushing to the file.
 
 			if (options?.AdditionalLogger is not null)
-				options?.AdditionalLogger.LogInformation("File logging for EDOT .NET enabled. Logs are being written to '{LogFilePath}'", LogFilePath);
+				options?.AdditionalLogger.LogInformation("File logging for EDOT .NET enabled. Logs are being written to '{LogFilePath}'.", LogFilePath);
 			else
-				Console.Out.WriteLine($"File logging for EDOT .NET enabled. Logs are being written to '{LogFilePath}'");
+				Console.Out.WriteLine($"File logging for EDOT .NET enabled. Logs are being written to '{LogFilePath}'.");
 
 			return;
 		}

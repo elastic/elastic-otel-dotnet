@@ -6,6 +6,7 @@ using System.Diagnostics;
 using Elastic.OpenTelemetry;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Core;
+using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics;
@@ -86,7 +87,16 @@ public static class OpenTelemetryBuilderExtensions
 		this IOpenTelemetryBuilder builder,
 		CompositeElasticOpenTelemetryOptions options)
 	{
-		var usingExistingState = true; // Will be set to false, if we later create state for this builder.
+		// If for some reason `WithElasticDefaults` is invoked with the `Signals` option set to
+		// none, we skip bootstrapping entirely. We log this as a warning since it's best to
+		// simply not call `WithElasticDefaults` in this scenario and may indicate a misconfiguration.
+		if (options.Signals == Signals.None)
+		{
+			options.AdditionalLogger?.LogSkippingBootstrapWarning();
+			return builder;
+		}
+
+		var usingExistingState = true; // Will be set to false if we later create state for this builder.
 
 		// Attempt to load existing state if any Elastic extension methods on this builder have been called
 		// previously. This allows reuse of existing components, and ensures we bootstrap once per builder.
@@ -111,16 +121,16 @@ public static class OpenTelemetryBuilderExtensions
 
 		if (builderState.UseElasticDefaultsCounter > 1)
 		{
-			// TODO - Log warning
+			// TODO - Log warning - https://github.com/elastic/elastic-otel-dotnet/issues/216
 		}
 		else if (callCount > 1)
 		{
-			// TODO - Log warning
+			// TODO - Log warning - https://github.com/elastic/elastic-otel-dotnet/issues/216
 		}
 
 		if (!usingExistingState)
 		{
-			// TODO - Log
+			// TODO - Log - https://github.com/elastic/elastic-otel-dotnet/issues/216
 		}
 
 		var bootstrapInfo = builderState.BootstrapInfo;
@@ -136,9 +146,32 @@ public static class OpenTelemetryBuilderExtensions
 			return builder;
 		}
 
-		builder.WithLogging(b => b.UseElasticDefaults(components, builder.Services));
-		builder.WithMetrics(b => b.UseElasticDefaults(components, builder.Services));
-		builder.WithTracing(b => b.UseElasticDefaults(components, builder.Services));
+		if (options.Signals.HasFlagFast(Signals.Traces))
+		{
+			builder.WithTracing(b => b.UseElasticDefaults(components, builder.Services));
+		}
+		else
+		{
+			components.Logger.LogSignalDisabled(Signals.Traces.ToString().ToLower());
+		}
+
+		if (options.Signals.HasFlagFast(Signals.Metrics))
+		{
+			builder.WithMetrics(b => b.UseElasticDefaults(components, builder.Services));
+		}
+		else
+		{
+			components.Logger.LogSignalDisabled(Signals.Metrics.ToString().ToLower());
+		}
+
+		if (options.Signals.HasFlagFast(Signals.Logs))
+		{
+			builder.WithLogging(b => b.UseElasticDefaults(components, builder.Services));
+		}
+		else
+		{
+			components.Logger.LogSignalDisabled(Signals.Logs.ToString().ToLower());
+		}
 
 		return builder;
 	}

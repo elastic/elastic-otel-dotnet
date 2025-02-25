@@ -2,6 +2,7 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Tracing;
 using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.Configuration;
@@ -10,6 +11,8 @@ using static Elastic.OpenTelemetry.Configuration.Parsers.SharedParsers;
 
 namespace Elastic.OpenTelemetry.Configuration.Parsers;
 
+[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2026:RequiresUnreferencedCode", Justification = "Manually verified")]
+[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL3050:RequiresDynamicCode", Justification = "Manually verified")]
 internal class ConfigurationParser
 {
 	private readonly IConfiguration _configuration;
@@ -39,6 +42,7 @@ internal class ConfigurationParser
 		var lookup = configuration.GetValue<string>($"{ConfigurationSection}:{cell.Key}");
 		if (lookup is null)
 			return;
+
 		var parsed = parser(lookup);
 		if (parsed is null)
 			return;
@@ -87,4 +91,7 @@ internal class ConfigurationParser
 
 	public void ParseSkipOtlpExporter(ConfigCell<bool?> skipOtlpExporter) =>
 		SetFromConfiguration(_configuration, skipOtlpExporter, BoolParser);
+
+	public void ParseSkipInstrumentationAssemblyScanning(ConfigCell<bool?> skipInstrumentationAssemblyScanning) =>
+		SetFromConfiguration(_configuration, skipInstrumentationAssemblyScanning, BoolParser);
 }

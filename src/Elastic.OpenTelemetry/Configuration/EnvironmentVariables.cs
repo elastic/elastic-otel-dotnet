@@ -9,6 +9,7 @@ internal static class EnvironmentVariables
 	// ReSharper disable InconsistentNaming
 	// ReSharper disable IdentifierTypo
 	public const string ELASTIC_OTEL_SKIP_OTLP_EXPORTER = nameof(ELASTIC_OTEL_SKIP_OTLP_EXPORTER);
+	public const string ELASTIC_OTEL_SKIP_ASSEMBLY_SCANNING = nameof(ELASTIC_OTEL_SKIP_ASSEMBLY_SCANNING);
 	public const string ELASTIC_OTEL_LOG_TARGETS = nameof(ELASTIC_OTEL_LOG_TARGETS);
 
 	public const string OTEL_DOTNET_AUTO_LOG_DIRECTORY = nameof(OTEL_DOTNET_AUTO_LOG_DIRECTORY);
