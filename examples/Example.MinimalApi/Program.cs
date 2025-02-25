@@ -3,7 +3,7 @@
 // See the LICENSE file in the project root for more information
 
 using System.Diagnostics;
-using Example.Api;
+using Example.MinimalApi;
 using OpenTelemetry;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -27,7 +27,7 @@ app.MapGet("/", (IHttpClientFactory httpClientFactory, ILoggerFactory loggerFact
 
 app.Run();
 
-namespace Example.Api
+namespace Example.MinimalApi
 {
 	internal static class Api
 	{

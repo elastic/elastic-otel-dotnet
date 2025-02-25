@@ -45,7 +45,9 @@ public static class ResourceBuilderExtensions
 	public static ResourceBuilder UseElasticDefaults(this ResourceBuilder builder, ILogger? logger = null)
 	{
 		// ReSharper disable once RedundantAssignment
+#pragma warning disable IDE0059 // Unnecessary assignment of a value
 		logger ??= NullLogger.Instance;
+#pragma warning restore IDE0059 // Unnecessary assignment of a value
 		var defaultServiceName = "unknown_service";
 
 		try
