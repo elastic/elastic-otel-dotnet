@@ -21,7 +21,7 @@ public static class OpenTelemetryLoggerOptionsExtensions
 	/// <summary>
 	/// Ensures Elastic Distribution of OpenTelemetry (EDOT) options are set for <see cref="OpenTelemetryLoggerOptions"/>
 	/// </summary>
-	public static void UseElasticDefaults(this OpenTelemetryLoggerOptions options, ILogger? logger = null)
+	public static void WithElasticDefaults(this OpenTelemetryLoggerOptions options, ILogger? logger = null)
 	{
 		logger ??= NullLogger.Instance;
 		options.IncludeFormattedMessage = true;

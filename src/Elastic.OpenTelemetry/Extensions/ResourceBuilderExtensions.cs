@@ -42,7 +42,7 @@ public static class ResourceBuilderExtensions
 	/// <param name="builder">A <see cref="ResourceBuilder"/> that will be configured with Elastic defaults.</param>
 	/// <param name="logger">Optionally provide a logger to log to</param>
 	/// <returns>The <see cref="ResourceBuilder"/> for chaining calls.</returns>
-	public static ResourceBuilder UseElasticDefaults(this ResourceBuilder builder, ILogger? logger = null)
+	public static ResourceBuilder WithElasticDefaults(this ResourceBuilder builder, ILogger? logger = null)
 	{
 		// ReSharper disable once RedundantAssignment
 #pragma warning disable IDE0059 // Unnecessary assignment of a value

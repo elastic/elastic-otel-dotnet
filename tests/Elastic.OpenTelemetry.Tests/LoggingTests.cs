@@ -38,7 +38,7 @@ public partial class LoggingTests(ITestOutputHelper output)
 		var options = new ElasticOpenTelemetryOptions { AdditionalLogger = logger, SkipOtlpExporter = true };
 
 		using var tracerProvider = Sdk.CreateTracerProviderBuilder()
-			.UseElasticDefaults(options)
+			.WithElasticDefaults(options)
 			.ConfigureResource(rb => rb.AddService("Test", "1.0.0"))
 			.AddInMemoryExporter([])
 			.Build();
@@ -53,7 +53,7 @@ public partial class LoggingTests(ITestOutputHelper output)
 		var options = new ElasticOpenTelemetryOptions { AdditionalLogger = logger, SkipOtlpExporter = true };
 
 		using var tracerProvider = Sdk.CreateMeterProviderBuilder()
-			.UseElasticDefaults(options)
+			.WithElasticDefaults(options)
 			.ConfigureResource(rb => rb.AddService("Test", "1.0.0"))
 			.AddInMemoryExporter(new List<Metric>())
 			.Build();
@@ -68,7 +68,7 @@ public partial class LoggingTests(ITestOutputHelper output)
 		var options = new ElasticOpenTelemetryOptions { AdditionalLogger = logger, SkipOtlpExporter = true };
 
 		using var tracerProvider = Sdk.CreateTracerProviderBuilder()
-			.UseElasticDefaults(options)
+			.WithElasticDefaults(options)
 			.ConfigureResource(rb => rb.AddService("Test", "1.0.0"))
 			.AddInMemoryExporter([])
 			.Build();
@@ -76,7 +76,7 @@ public partial class LoggingTests(ITestOutputHelper output)
 		Assert.Single(logger.Messages, m => EdotPreamble().IsMatch(m));
 
 		using var meterProvider = Sdk.CreateMeterProviderBuilder()
-			.UseElasticDefaults(options)
+			.WithElasticDefaults(options)
 			.ConfigureResource(rb => rb.AddService("Test", "1.0.0"))
 			.AddInMemoryExporter(new List<Metric>())
 			.Build();

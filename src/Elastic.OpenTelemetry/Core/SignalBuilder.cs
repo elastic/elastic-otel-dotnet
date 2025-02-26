@@ -56,7 +56,7 @@ internal static class SignalBuilder
 		Action<T, ElasticOpenTelemetryComponents> configure,
 		[NotNullWhen(true)] ref ElasticOpenTelemetryComponents? components) where T : class
 	{
-		var callCount = globalProviderBuilderState.IncrementUseElasticDefaults();
+		var callCount = globalProviderBuilderState.IncrementWithElasticDefaults();
 
 		// If we are provided with options and components, we can avoid attempting to bootstrap again.
 		// This scenario occurs if for example `AddElasticOpenTelemetry` is called multipled times
@@ -91,17 +91,17 @@ internal static class SignalBuilder
 		// This allows us to track the number of times a specific instance of a builder is configured.
 		// We expect each builder to be configured at most once and log a warning if multiple invocations
 		// are detected.
-		state.IncrementUseElasticDefaults();
+		state.IncrementWithElasticDefaults();
 
-		if (state.UseElasticDefaultsCounter > 1)
-			components.Logger.LogWarning("The `{MethodName}` method has been called {UseElasticDefaultsCount} " +
+		if (state.WithElasticDefaultsCounter > 1)
+			components.Logger.LogWarning("The `{MethodName}` method has been called {WithElasticDefaultsCount} " +
 				"times on the same `{BuilderType}` (instance: {BuilderInstanceId}). This method is " +
 				"expected to be invoked a maximum of one time.", methodName,
-				state.UseElasticDefaultsCounter, builderName, state.InstanceIdentifier);
+				state.WithElasticDefaultsCounter, builderName, state.InstanceIdentifier);
 
 		if (existingStateFound && state.BootstrapInfo.Succeeded)
 		{
-			// If `UseElasticDefaults` is invoked more than once on the same builder instance,
+			// If `WithElasticDefaults` is invoked more than once on the same builder instance,
 			// we reuse the same components and skip the configure action.
 
 			components.Logger.LogTrace("Existing components have been found for the current {Builder} " +
@@ -156,7 +156,7 @@ internal static class SignalBuilder
 			if (callCount > 1)
 			{
 				var logger = components is not null ? components.Logger : options?.AdditionalLogger;
-				logger?.LogWarning("The `{MethodName}` method has been called {UseElasticDefaultsCount} " +
+				logger?.LogWarning("The `{MethodName}` method has been called {WithElasticDefaultsCount} " +
 					"times across all {Builder} instances. This method is generally expected to be invoked " +
 					"once. Consider reviewing the usage at the callsite(s).", methodName,
 					callCount, builderName);

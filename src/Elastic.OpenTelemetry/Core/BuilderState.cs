@@ -22,8 +22,8 @@ internal sealed class BuilderState(
 
 	public Guid InstanceIdentifier { get; } = instanceIdentifier ?? Guid.NewGuid();
 
-	public void IncrementUseElasticDefaults() =>
+	public void IncrementWithElasticDefaults() =>
 		Interlocked.Increment(ref _useElasticDefaultsCounter);
 
-	public int UseElasticDefaultsCounter => _useElasticDefaultsCounter;
+	public int WithElasticDefaultsCounter => _useElasticDefaultsCounter;
 }

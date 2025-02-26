@@ -6,7 +6,7 @@ namespace Elastic.OpenTelemetry.Core;
 
 /// <summary>
 /// Each XyzProviderBuilder (e.g. TracerProviderBuilder) uses a shared instance
-/// of this to track the number of calls made to their `UseElasticDefaults` methods.
+/// of this to track the number of calls made to their `WithElasticDefaults` methods.
 /// Generally, we expect only a single call. While we don't prohibit multiple calls,
 /// by tracking the actual number, we can ensure we log this to enhance diagnostics
 /// and support later on.
@@ -15,8 +15,8 @@ internal sealed class GlobalProviderBuilderState
 {
 	private int _useElasticDefaultsCounter;
 
-	public int IncrementUseElasticDefaults() =>
+	public int IncrementWithElasticDefaults() =>
 		Interlocked.Increment(ref _useElasticDefaultsCounter);
 
-	public int UseElasticDefaultsCounter => _useElasticDefaultsCounter;
+	public int WithElasticDefaultsCounter => _useElasticDefaultsCounter;
 }
