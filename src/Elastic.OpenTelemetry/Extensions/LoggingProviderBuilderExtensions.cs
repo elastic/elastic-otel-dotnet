@@ -24,7 +24,7 @@ namespace OpenTelemetry.Logs;
 public static class LoggingProviderBuilderExtensions
 {
 	/// <summary>
-	/// Used to track the number of times any overload of `UseElasticDefaults` is invoked on a
+	/// Used to track the number of times any overload of `WithElasticDefaults` is invoked on a
 	/// `LoggingProviderBuilder`. Generally, we expect one builder to be used per application,
 	/// and for it to be configured once. By tracking the total count of invocations, we can
 	/// log scenarios where the consumer may have inadvertently misconfigured OpenTelemetry in
@@ -37,25 +37,25 @@ public static class LoggingProviderBuilderExtensions
 	/// </summary>
 	/// <param name="builder">The <see cref="LoggerProviderBuilder"/> to configure.</param>
 	/// <returns>The <see cref="LoggerProviderBuilder"/> for chaining configuration.</returns>
-	public static LoggerProviderBuilder UseElasticDefaults(this LoggerProviderBuilder builder) =>
-		UseElasticDefaultsCore(builder, null, null);
+	public static LoggerProviderBuilder WithElasticDefaults(this LoggerProviderBuilder builder) =>
+		WithElasticDefaultsCore(builder, null, null);
 
 	/// <summary>
-	/// <inheritdoc cref="UseElasticDefaults(LoggerProviderBuilder)" />
+	/// <inheritdoc cref="WithElasticDefaults(LoggerProviderBuilder)" />
 	/// </summary>
-	/// <param name="builder"><inheritdoc cref="UseElasticDefaults(LoggerProviderBuilder)" path="/param[@name='builder']"/></param>
+	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(LoggerProviderBuilder)" path="/param[@name='builder']"/></param>
 	/// <param name="skipOtlpExporter">When registering Elastic defaults, skip automatic registration of the OTLP exporter for logging.</param>
-	/// <returns><inheritdoc cref="UseElasticDefaults(LoggerProviderBuilder)" /></returns>
-	public static LoggerProviderBuilder UseElasticDefaults(this LoggerProviderBuilder builder, bool skipOtlpExporter) =>
-		UseElasticDefaultsCore(builder, skipOtlpExporter ? CompositeElasticOpenTelemetryOptions.SkipOtlpOptions : CompositeElasticOpenTelemetryOptions.DefaultOptions, null);
+	/// <returns><inheritdoc cref="WithElasticDefaults(LoggerProviderBuilder)" /></returns>
+	public static LoggerProviderBuilder WithElasticDefaults(this LoggerProviderBuilder builder, bool skipOtlpExporter) =>
+		WithElasticDefaultsCore(builder, skipOtlpExporter ? CompositeElasticOpenTelemetryOptions.SkipOtlpOptions : CompositeElasticOpenTelemetryOptions.DefaultOptions, null);
 
 	/// <summary>
-	/// <inheritdoc cref="UseElasticDefaults(LoggerProviderBuilder)" />
+	/// <inheritdoc cref="WithElasticDefaults(LoggerProviderBuilder)" />
 	/// </summary>
-	/// <param name="builder"><inheritdoc cref="UseElasticDefaults(LoggerProviderBuilder)" path="/param[@name='builder']"/></param>
+	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(LoggerProviderBuilder)" path="/param[@name='builder']"/></param>
 	/// <param name="options"><see cref="ElasticOpenTelemetryOptions"/> used to configure the Elastic Distribution of OpenTelemetry (EDOT) for .NET.</param>
-	/// <returns><inheritdoc cref="UseElasticDefaults(LoggerProviderBuilder)" /></returns>
-	public static LoggerProviderBuilder UseElasticDefaults(this LoggerProviderBuilder builder, ElasticOpenTelemetryOptions options)
+	/// <returns><inheritdoc cref="WithElasticDefaults(LoggerProviderBuilder)" /></returns>
+	public static LoggerProviderBuilder WithElasticDefaults(this LoggerProviderBuilder builder, ElasticOpenTelemetryOptions options)
 	{
 #if NET
 		ArgumentNullException.ThrowIfNull(options);
@@ -64,16 +64,16 @@ public static class LoggingProviderBuilderExtensions
 			throw new ArgumentNullException(nameof(options));
 #endif
 
-		return UseElasticDefaultsCore(builder, new(options), null);
+		return WithElasticDefaultsCore(builder, new(options), null);
 	}
 
 	/// <summary>
-	/// <inheritdoc cref="UseElasticDefaults(LoggerProviderBuilder)" />
+	/// <inheritdoc cref="WithElasticDefaults(LoggerProviderBuilder)" />
 	/// </summary>
-	/// <param name="builder"><inheritdoc cref="UseElasticDefaults(LoggerProviderBuilder)" path="/param[@name='builder']"/></param>
+	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(LoggerProviderBuilder)" path="/param[@name='builder']"/></param>
 	/// <param name="configuration">An <see cref="IConfiguration"/> instance from which to load the OpenTelemetry SDK options.</param>
-	/// <returns><inheritdoc cref="UseElasticDefaults(LoggerProviderBuilder)" /></returns>
-	public static LoggerProviderBuilder UseElasticDefaults(this LoggerProviderBuilder builder, IConfiguration configuration)
+	/// <returns><inheritdoc cref="WithElasticDefaults(LoggerProviderBuilder)" /></returns>
+	public static LoggerProviderBuilder WithElasticDefaults(this LoggerProviderBuilder builder, IConfiguration configuration)
 	{
 #if NET
 		ArgumentNullException.ThrowIfNull(configuration);
@@ -81,19 +81,19 @@ public static class LoggingProviderBuilderExtensions
 		if (configuration is null)
 			throw new ArgumentNullException(nameof(configuration));
 #endif
-		return UseElasticDefaultsCore(builder, new(configuration), null);
+		return WithElasticDefaultsCore(builder, new(configuration), null);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal static LoggerProviderBuilder UseElasticDefaults(this LoggerProviderBuilder builder, ElasticOpenTelemetryComponents components) =>
-		UseElasticDefaultsCore(builder, components.Options, components);
+	internal static LoggerProviderBuilder WithElasticDefaults(this LoggerProviderBuilder builder, ElasticOpenTelemetryComponents components) =>
+		WithElasticDefaultsCore(builder, components.Options, components);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal static LoggerProviderBuilder UseElasticDefaults(this LoggerProviderBuilder builder, ElasticOpenTelemetryComponents components, IServiceCollection? services) =>
-		UseElasticDefaultsCore(builder, components.Options, components, services);
+	internal static LoggerProviderBuilder WithElasticDefaults(this LoggerProviderBuilder builder, ElasticOpenTelemetryComponents components, IServiceCollection? services) =>
+		WithElasticDefaultsCore(builder, components.Options, components, services);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal static LoggerProviderBuilder UseElasticDefaultsCore(
+	internal static LoggerProviderBuilder WithElasticDefaultsCore(
 		this LoggerProviderBuilder builder,
 		CompositeElasticOpenTelemetryOptions? options,
 		ElasticOpenTelemetryComponents? components,
@@ -109,7 +109,7 @@ public static class LoggingProviderBuilderExtensions
 
 		try
 		{
-			if (!SignalBuilder.ConfigureBuilder(nameof(UseElasticDefaults), providerBuilderName, builder,
+			if (!SignalBuilder.ConfigureBuilder(nameof(WithElasticDefaults), providerBuilderName, builder,
 				GlobalLoggerProviderBuilderState, options, services, ConfigureBuilder, ref components))
 			{
 				logger = components?.Logger ?? options?.AdditionalLogger ?? NullLogger.Instance; // Update the logger we should use from the ref-returned components.

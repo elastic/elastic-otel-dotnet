@@ -38,26 +38,26 @@ public static class MeterProviderBuilderExtensions
 	/// </remarks>
 	/// <param name="builder">The <see cref="MeterProviderBuilder"/> to configure.</param>
 	/// <returns>The <see cref="MeterProviderBuilder"/> for chaining configuration.</returns>
-	public static MeterProviderBuilder UseElasticDefaults(this MeterProviderBuilder builder) =>
-		UseElasticDefaultsCore(builder, null, null);
+	public static MeterProviderBuilder WithElasticDefaults(this MeterProviderBuilder builder) =>
+		WithElasticDefaultsCore(builder, null, null);
 
 	/// <summary>
-	/// <inheritdoc cref="UseElasticDefaults(MeterProviderBuilder)" />
+	/// <inheritdoc cref="WithElasticDefaults(MeterProviderBuilder)" />
 	/// </summary>
-	/// <remarks><inheritdoc cref="UseElasticDefaults(MeterProviderBuilder)" /></remarks>
-	/// <param name="builder"><inheritdoc cref="UseElasticDefaults(MeterProviderBuilder)" path="/param[@name='builder']"/></param>
+	/// <remarks><inheritdoc cref="WithElasticDefaults(MeterProviderBuilder)" /></remarks>
+	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(MeterProviderBuilder)" path="/param[@name='builder']"/></param>
 	/// <param name="skipOtlpExporter">When registering Elastic defaults, skip automatic registration of the OTLP exporter for metrics.</param>
-	/// <returns><inheritdoc cref="UseElasticDefaults(MeterProviderBuilder)" /></returns>
-	public static MeterProviderBuilder UseElasticDefaults(this MeterProviderBuilder builder, bool skipOtlpExporter) =>
-		UseElasticDefaultsCore(builder, skipOtlpExporter ? CompositeElasticOpenTelemetryOptions.SkipOtlpOptions : null, null);
+	/// <returns><inheritdoc cref="WithElasticDefaults(MeterProviderBuilder)" /></returns>
+	public static MeterProviderBuilder WithElasticDefaults(this MeterProviderBuilder builder, bool skipOtlpExporter) =>
+		WithElasticDefaultsCore(builder, skipOtlpExporter ? CompositeElasticOpenTelemetryOptions.SkipOtlpOptions : null, null);
 
 	/// <summary>
-	/// <inheritdoc cref="UseElasticDefaults(MeterProviderBuilder)" />
+	/// <inheritdoc cref="WithElasticDefaults(MeterProviderBuilder)" />
 	/// </summary>
-	/// <param name="builder"><inheritdoc cref="UseElasticDefaults(MeterProviderBuilder)" path="/param[@name='builder']"/></param>
+	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(MeterProviderBuilder)" path="/param[@name='builder']"/></param>
 	/// <param name="options"><see cref="ElasticOpenTelemetryOptions"/> used to configure the Elastic Distribution of OpenTelemetry (EDOT) for .NET.</param>
-	/// <returns><inheritdoc cref="UseElasticDefaults(MeterProviderBuilder)" /></returns>
-	public static MeterProviderBuilder UseElasticDefaults(this MeterProviderBuilder builder, ElasticOpenTelemetryOptions options)
+	/// <returns><inheritdoc cref="WithElasticDefaults(MeterProviderBuilder)" /></returns>
+	public static MeterProviderBuilder WithElasticDefaults(this MeterProviderBuilder builder, ElasticOpenTelemetryOptions options)
 	{
 #if NET
 		ArgumentNullException.ThrowIfNull(options);
@@ -66,17 +66,17 @@ public static class MeterProviderBuilderExtensions
 			throw new ArgumentNullException(nameof(options));
 #endif
 
-		return UseElasticDefaultsCore(builder, new(options), null);
+		return WithElasticDefaultsCore(builder, new(options), null);
 	}
 
 	/// <summary>
-	/// <inheritdoc cref="UseElasticDefaults(MeterProviderBuilder)" />
+	/// <inheritdoc cref="WithElasticDefaults(MeterProviderBuilder)" />
 	/// </summary>
-	/// <param name="builder"><inheritdoc cref="UseElasticDefaults(MeterProviderBuilder)" path="/param[@name='builder']"/></param>
+	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(MeterProviderBuilder)" path="/param[@name='builder']"/></param>
 	/// <param name="configuration">An <see cref="IConfiguration"/> instance from which to load the Elastic Distribution of
 	/// OpenTelemetry (EDOT) options.</param>
-	/// <returns><inheritdoc cref="UseElasticDefaults(MeterProviderBuilder)" /></returns>
-	public static MeterProviderBuilder UseElasticDefaults(this MeterProviderBuilder builder, IConfiguration configuration)
+	/// <returns><inheritdoc cref="WithElasticDefaults(MeterProviderBuilder)" /></returns>
+	public static MeterProviderBuilder WithElasticDefaults(this MeterProviderBuilder builder, IConfiguration configuration)
 	{
 #if NET
 		ArgumentNullException.ThrowIfNull(configuration);
@@ -84,38 +84,38 @@ public static class MeterProviderBuilderExtensions
 		if (configuration is null)
 			throw new ArgumentNullException(nameof(configuration));
 #endif
-		return UseElasticDefaultsCore(builder, new(configuration), null);
+		return WithElasticDefaultsCore(builder, new(configuration), null);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal static MeterProviderBuilder UseElasticDefaults(
+	internal static MeterProviderBuilder WithElasticDefaults(
 		this MeterProviderBuilder builder,
 		ElasticOpenTelemetryComponents components) =>
-			UseElasticDefaultsCore(builder, components.Options, components, null);
+			WithElasticDefaultsCore(builder, components.Options, components, null);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal static MeterProviderBuilder UseElasticDefaults(
+	internal static MeterProviderBuilder WithElasticDefaults(
 		this MeterProviderBuilder builder,
 		ElasticOpenTelemetryComponents components,
 		IServiceCollection serviceCollection) =>
-			UseElasticDefaultsCore(builder, components.Options, components, serviceCollection);
+			WithElasticDefaultsCore(builder, components.Options, components, serviceCollection);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal static MeterProviderBuilder UseElasticDefaults(
+	internal static MeterProviderBuilder WithElasticDefaults(
 		this MeterProviderBuilder builder,
 		IConfiguration configuration,
 		IServiceCollection serviceCollection) =>
-			UseElasticDefaultsCore(builder, new(configuration), null, serviceCollection);
+			WithElasticDefaultsCore(builder, new(configuration), null, serviceCollection);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal static MeterProviderBuilder UseElasticDefaults(
+	internal static MeterProviderBuilder WithElasticDefaults(
 		this MeterProviderBuilder builder,
 		IServiceCollection serviceCollection) =>
-			UseElasticDefaultsCore(builder, null, null, serviceCollection);
+			WithElasticDefaultsCore(builder, null, null, serviceCollection);
 
 	[UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026", Justification = "The calls to `AddSqlClientInstrumentation` and `AssemblyScanning.AddInstrumentationViaReflection` " +
 			"are guarded by a RuntimeFeature.IsDynamicCodeSupported` check and therefore this method is safe to call in AoT scenarios.")]
-	internal static MeterProviderBuilder UseElasticDefaultsCore(
+	internal static MeterProviderBuilder WithElasticDefaultsCore(
 		this MeterProviderBuilder builder,
 		CompositeElasticOpenTelemetryOptions? options,
 		ElasticOpenTelemetryComponents? components,
@@ -131,7 +131,7 @@ public static class MeterProviderBuilderExtensions
 
 		try
 		{
-			if (!SignalBuilder.ConfigureBuilder(nameof(UseElasticDefaults), providerBuilderName, builder,
+			if (!SignalBuilder.ConfigureBuilder(nameof(WithElasticDefaults), providerBuilderName, builder,
 				GlobalMeterProviderBuilderState, options, services, ConfigureBuilder, ref components))
 			{
 				logger = components?.Logger ?? options?.AdditionalLogger ?? NullLogger.Instance; // Update the logger we should use from the ref-returned components.

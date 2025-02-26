@@ -39,7 +39,7 @@ public static class TracerProviderBuilderExtensions
 	/// <param name="builder">The <see cref="TracerProviderBuilder"/> to configure.</param>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
 	/// <returns>The <see cref="TracerProviderBuilder"/> for chaining configuration.</returns>
-	public static TracerProviderBuilder UseElasticDefaults(this TracerProviderBuilder builder)
+	public static TracerProviderBuilder WithElasticDefaults(this TracerProviderBuilder builder)
 	{
 #if NET
         ArgumentNullException.ThrowIfNull(builder);
@@ -48,17 +48,17 @@ public static class TracerProviderBuilderExtensions
 			throw new ArgumentNullException(nameof(builder));
 #endif
 
-		return UseElasticDefaultsCore(builder, null, null);
+		return WithElasticDefaultsCore(builder, null, null);
 	}
 
 	/// <summary>
-	/// <inheritdoc cref="UseElasticDefaults(TracerProviderBuilder)" />
+	/// <inheritdoc cref="WithElasticDefaults(TracerProviderBuilder)" />
 	/// </summary>
-	/// <param name="builder"><inheritdoc cref="UseElasticDefaults(TracerProviderBuilder)" path="/param[@name='builder']"/></param>
+	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(TracerProviderBuilder)" path="/param[@name='builder']"/></param>
 	/// <param name="skipOtlpExporter">When registering Elastic defaults, skip automatic registration of the OTLP exporter for traces.</param>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
-	/// <returns><inheritdoc cref="UseElasticDefaults(TracerProviderBuilder)" /></returns>
-	public static TracerProviderBuilder UseElasticDefaults(this TracerProviderBuilder builder, bool skipOtlpExporter)
+	/// <returns><inheritdoc cref="WithElasticDefaults(TracerProviderBuilder)" /></returns>
+	public static TracerProviderBuilder WithElasticDefaults(this TracerProviderBuilder builder, bool skipOtlpExporter)
 	{
 #if NET
         ArgumentNullException.ThrowIfNull(builder);
@@ -67,18 +67,18 @@ public static class TracerProviderBuilderExtensions
 			throw new ArgumentNullException(nameof(builder));
 #endif
 
-		return UseElasticDefaultsCore(builder, skipOtlpExporter ? CompositeElasticOpenTelemetryOptions.SkipOtlpOptions : null, null);
+		return WithElasticDefaultsCore(builder, skipOtlpExporter ? CompositeElasticOpenTelemetryOptions.SkipOtlpOptions : null, null);
 	}
 
 	/// <summary>
-	/// <inheritdoc cref="UseElasticDefaults(TracerProviderBuilder)" />
+	/// <inheritdoc cref="WithElasticDefaults(TracerProviderBuilder)" />
 	/// </summary>
-	/// <param name="builder"><inheritdoc cref="UseElasticDefaults(TracerProviderBuilder)" path="/param[@name='builder']"/></param>
+	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(TracerProviderBuilder)" path="/param[@name='builder']"/></param>
 	/// <param name="options"><see cref="ElasticOpenTelemetryOptions"/> used to configure the Elastic Distribution of OpenTelemetry (EDOT) for .NET.</param>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="options"/> is null.</exception>
-	/// <returns><inheritdoc cref="UseElasticDefaults(TracerProviderBuilder)" /></returns>
-	public static TracerProviderBuilder UseElasticDefaults(this TracerProviderBuilder builder, ElasticOpenTelemetryOptions options)
+	/// <returns><inheritdoc cref="WithElasticDefaults(TracerProviderBuilder)" /></returns>
+	public static TracerProviderBuilder WithElasticDefaults(this TracerProviderBuilder builder, ElasticOpenTelemetryOptions options)
 	{
 #if NET
 		ArgumentNullException.ThrowIfNull(builder);
@@ -91,18 +91,18 @@ public static class TracerProviderBuilderExtensions
 			throw new ArgumentNullException(nameof(options));
 #endif
 
-		return UseElasticDefaultsCore(builder, new(options), null);
+		return WithElasticDefaultsCore(builder, new(options), null);
 	}
 
 	/// <summary>
-	/// <inheritdoc cref="UseElasticDefaults(TracerProviderBuilder)" />
+	/// <inheritdoc cref="WithElasticDefaults(TracerProviderBuilder)" />
 	/// </summary>
-	/// <param name="builder"><inheritdoc cref="UseElasticDefaults(TracerProviderBuilder)" path="/param[@name='builder']"/></param>
+	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(TracerProviderBuilder)" path="/param[@name='builder']"/></param>
 	/// <param name="configuration">An <see cref="IConfiguration"/> instance from which to load the OpenTelemetry SDK options.</param>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configuration"/> is null.</exception>
-	/// <returns><inheritdoc cref="UseElasticDefaults(TracerProviderBuilder)" /></returns>
-	public static TracerProviderBuilder UseElasticDefaults(this TracerProviderBuilder builder, IConfiguration configuration)
+	/// <returns><inheritdoc cref="WithElasticDefaults(TracerProviderBuilder)" /></returns>
+	public static TracerProviderBuilder WithElasticDefaults(this TracerProviderBuilder builder, IConfiguration configuration)
 	{
 #if NET
 		ArgumentNullException.ThrowIfNull(builder);
@@ -114,25 +114,25 @@ public static class TracerProviderBuilderExtensions
 		if (configuration is null)
 			throw new ArgumentNullException(nameof(configuration));
 #endif
-		return UseElasticDefaultsCore(builder, new(configuration));
+		return WithElasticDefaultsCore(builder, new(configuration));
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal static TracerProviderBuilder UseElasticDefaults(this TracerProviderBuilder builder, ElasticOpenTelemetryComponents components) =>
-		UseElasticDefaultsCore(builder, components.Options, components);
+	internal static TracerProviderBuilder WithElasticDefaults(this TracerProviderBuilder builder, ElasticOpenTelemetryComponents components) =>
+		WithElasticDefaultsCore(builder, components.Options, components);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal static TracerProviderBuilder UseElasticDefaults(
+	internal static TracerProviderBuilder WithElasticDefaults(
 		this TracerProviderBuilder builder,
 		IConfiguration configuration,
 		IServiceCollection serviceCollection) =>
-			UseElasticDefaultsCore(builder, new(configuration), null, serviceCollection);
+			WithElasticDefaultsCore(builder, new(configuration), null, serviceCollection);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal static TracerProviderBuilder UseElasticDefaults(this TracerProviderBuilder builder, ElasticOpenTelemetryComponents components, IServiceCollection? services) =>
-		UseElasticDefaultsCore(builder, components.Options, components, services);
+	internal static TracerProviderBuilder WithElasticDefaults(this TracerProviderBuilder builder, ElasticOpenTelemetryComponents components, IServiceCollection? services) =>
+		WithElasticDefaultsCore(builder, components.Options, components, services);
 
-	private static TracerProviderBuilder UseElasticDefaultsCore(
+	private static TracerProviderBuilder WithElasticDefaultsCore(
 		TracerProviderBuilder builder,
 		CompositeElasticOpenTelemetryOptions? options,
 		ElasticOpenTelemetryComponents? components = null,
@@ -148,7 +148,7 @@ public static class TracerProviderBuilderExtensions
 
 		try
 		{
-			if (!SignalBuilder.ConfigureBuilder(nameof(UseElasticDefaults), providerBuilderName, builder,
+			if (!SignalBuilder.ConfigureBuilder(nameof(WithElasticDefaults), providerBuilderName, builder,
 				GlobalTracerProviderBuilderState, options, services, ConfigureBuilder, ref components))
 			{
 				logger = SignalBuilder.GetLogger(components, options); // Update the logger we should use from the ref-returned components.
@@ -265,7 +265,7 @@ public static class TracerProviderBuilderExtensions
 	/// Include Elastic trace processors for best compatibility with Elastic Observability.
 	/// </summary>
 	/// <remarks>
-	/// It is not neccessary to call this method if `UseElasticDefaults` has already been called.
+	/// It is not neccessary to call this method if `WithElasticDefaults` has already been called.
 	/// </remarks>
 	/// <param name="builder">The <see cref="TracerProviderBuilder"/> where the Elastic trace
 	/// processors should be added.</param>
@@ -291,7 +291,7 @@ public static class TracerProviderBuilderExtensions
 
 		try
 		{
-			if (!SignalBuilder.ConfigureBuilder(nameof(UseElasticDefaults), nameof(TracerProviderBuilder), builder,
+			if (!SignalBuilder.ConfigureBuilder(nameof(WithElasticDefaults), nameof(TracerProviderBuilder), builder,
 				GlobalTracerProviderBuilderState, options, null, ConfigureBuilder, ref components))
 			{
 				var logger = components?.Logger ?? options?.AdditionalLogger;

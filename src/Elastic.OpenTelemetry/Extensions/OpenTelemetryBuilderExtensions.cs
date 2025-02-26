@@ -115,11 +115,11 @@ public static class OpenTelemetryBuilderExtensions
 			return builderState;
 		});
 
-		builderState.IncrementUseElasticDefaults();
+		builderState.IncrementWithElasticDefaults();
 
 		var callCount = Interlocked.Increment(ref WithElasticDefaultsCallCounter);
 
-		if (builderState.UseElasticDefaultsCounter > 1)
+		if (builderState.WithElasticDefaultsCounter > 1)
 		{
 			// TODO - Log warning - https://github.com/elastic/elastic-otel-dotnet/issues/216
 		}
@@ -148,7 +148,7 @@ public static class OpenTelemetryBuilderExtensions
 
 		if (options.Signals.HasFlagFast(Signals.Traces))
 		{
-			builder.WithTracing(b => b.UseElasticDefaults(components, builder.Services));
+			builder.WithTracing(b => b.WithElasticDefaults(components, builder.Services));
 		}
 		else
 		{
@@ -157,7 +157,7 @@ public static class OpenTelemetryBuilderExtensions
 
 		if (options.Signals.HasFlagFast(Signals.Metrics))
 		{
-			builder.WithMetrics(b => b.UseElasticDefaults(components, builder.Services));
+			builder.WithMetrics(b => b.WithElasticDefaults(components, builder.Services));
 		}
 		else
 		{
@@ -166,7 +166,7 @@ public static class OpenTelemetryBuilderExtensions
 
 		if (options.Signals.HasFlagFast(Signals.Logs))
 		{
-			builder.WithLogging(b => b.UseElasticDefaults(components, builder.Services));
+			builder.WithLogging(b => b.WithElasticDefaults(components, builder.Services));
 		}
 		else
 		{
@@ -194,7 +194,7 @@ public static class OpenTelemetryBuilderExtensions
 	/// <returns>The supplied <see cref="IOpenTelemetryBuilder"/> for chaining
 	/// calls.</returns>
 	public static IOpenTelemetryBuilder WithElasticLogging(this IOpenTelemetryBuilder builder) =>
-		builder.WithLogging(lpb => lpb.UseElasticDefaults());
+		builder.WithLogging(lpb => lpb.WithElasticDefaults());
 
 	/// <summary>
 	/// <inheritdoc cref="WithElasticLogging(IOpenTelemetryBuilder)" />
@@ -214,7 +214,7 @@ public static class OpenTelemetryBuilderExtensions
 
 		return builder.WithLogging(lpb =>
 			{
-				lpb.UseElasticDefaults();
+				lpb.WithElasticDefaults();
 				configure?.Invoke(lpb);
 			});
 	}
@@ -237,7 +237,7 @@ public static class OpenTelemetryBuilderExtensions
 	/// <returns>The supplied <see cref="IOpenTelemetryBuilder"/> for chaining
 	/// calls.</returns>
 	public static IOpenTelemetryBuilder WithElasticMetrics(this IOpenTelemetryBuilder builder) =>
-		builder.WithMetrics(mpb => mpb.UseElasticDefaults());
+		builder.WithMetrics(mpb => mpb.WithElasticDefaults());
 
 	/// <summary>
 	/// <inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder)" />
@@ -256,7 +256,7 @@ public static class OpenTelemetryBuilderExtensions
 			throw new ArgumentNullException(nameof(configuration));
 #endif
 
-		return builder.WithMetrics(mpb => mpb.UseElasticDefaults(configuration, builder.Services));
+		return builder.WithMetrics(mpb => mpb.WithElasticDefaults(configuration, builder.Services));
 	}
 
 	/// <summary>
@@ -277,7 +277,7 @@ public static class OpenTelemetryBuilderExtensions
 
 		return builder.WithMetrics(mpb =>
 			{
-				mpb.UseElasticDefaults(builder.Services);
+				mpb.WithElasticDefaults(builder.Services);
 				configure?.Invoke(mpb);
 			});
 	}
@@ -310,7 +310,7 @@ public static class OpenTelemetryBuilderExtensions
 
 		return builder.WithMetrics(mpb =>
 			{
-				mpb.UseElasticDefaults(configuration, builder.Services);
+				mpb.WithElasticDefaults(configuration, builder.Services);
 				configure?.Invoke(mpb);
 			});
 	}
@@ -326,7 +326,7 @@ public static class OpenTelemetryBuilderExtensions
 	/// </remarks>
 	/// <returns>The supplied <see cref="IOpenTelemetryBuilder"/> for chaining calls.</returns>
 	public static IOpenTelemetryBuilder WithElasticTracing(this IOpenTelemetryBuilder builder) =>
-		builder.WithTracing(m => m.UseElasticDefaults());
+		builder.WithTracing(m => m.WithElasticDefaults());
 
 	/// <summary>
 	/// <inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder)" />
@@ -345,7 +345,7 @@ public static class OpenTelemetryBuilderExtensions
 			throw new ArgumentNullException(nameof(configuration));
 #endif
 
-		return builder.WithTracing(tpb => tpb.UseElasticDefaults(configuration, builder.Services));
+		return builder.WithTracing(tpb => tpb.WithElasticDefaults(configuration, builder.Services));
 	}
 
 	/// <summary>
@@ -366,7 +366,7 @@ public static class OpenTelemetryBuilderExtensions
 
 		return builder.WithTracing(tpb =>
 			{
-				tpb.UseElasticDefaults();
+				tpb.WithElasticDefaults();
 				configure?.Invoke(tpb);
 			});
 	}
@@ -399,7 +399,7 @@ public static class OpenTelemetryBuilderExtensions
 
 		return builder.WithTracing(tpb =>
 		{
-			tpb.UseElasticDefaults(configuration, builder.Services);
+			tpb.WithElasticDefaults(configuration, builder.Services);
 			configure?.Invoke(tpb);
 		});
 	}

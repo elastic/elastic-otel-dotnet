@@ -95,7 +95,7 @@ public class AutoInstrumentationPlugin
 	public void ConfigureLogsOptions(OpenTelemetryLoggerOptions options)
 	{
 		if (_bootstrapInfo.Succeeded && _components is not null)
-			options.UseElasticDefaults(_components.Logger);
+			options.WithElasticDefaults(_components.Logger);
 	}
 
 	/// <summary>
