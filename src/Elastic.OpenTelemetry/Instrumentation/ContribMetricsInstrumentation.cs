@@ -83,13 +83,5 @@ internal static class ContribMetricsInstrumentation
 			InstrumentationMethod = "AddHttpClientInstrumentation"
 		},
 #endif
-
-		new()
-		{
-			Name = "Process",
-			Filename = "OpenTelemetry.Instrumentation.Process.dll",
-			FullyQualifiedType = "OpenTelemetry.Metrics.MeterProviderBuilderExtensions",
-			InstrumentationMethod = "AddProcessInstrumentation"
-		},
 	];
 }

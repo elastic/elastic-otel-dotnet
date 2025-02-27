@@ -2,15 +2,12 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
-using OpenTelemetry;
-using OpenTelemetry.Trace;
-
 var builder = WebApplication.CreateBuilder(args);
 
+builder.AddElasticOpenTelemetry();
+
 builder.Services
-	.AddHttpClient()
-	.AddElasticOpenTelemetry()
-		.WithTracing(t => t.AddAspNetCoreInstrumentation()); // This is redundant but used in manual testing for now
+	.AddHttpClient();
 
 builder.Services
 	.AddControllersWithViews();

@@ -136,7 +136,7 @@ let private generateApiChanges _ =
                 "assembly-differ"
                 $"previous-nuget|%s{p}|%s{currentVersion}|%s{tfm}";
                 //$"directory|.artifacts/bin/%s{p}/release/%s{tfm}";
-                $"directory|.artifacts/bin/%s{p}/release_net8.0";
+                $"directory|.artifacts/bin/%s{p}/release_net9.0";
                 "-a"; "true"; "--target"; p; "-f"; "github-comment"; "--output"; outputFile
             ]
         exec { run "dotnet" args }

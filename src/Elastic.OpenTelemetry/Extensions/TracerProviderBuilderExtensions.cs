@@ -14,7 +14,9 @@ using Elastic.OpenTelemetry.Processors;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 
 // Matching namespace with MeterProviderBuilder
 #pragma warning disable IDE0130 // Namespace does not match folder structure
@@ -22,7 +24,7 @@ namespace OpenTelemetry.Trace;
 #pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
-/// Extension methods for <see cref="TracerProviderBuilder"/> used to register
+/// Provides extension methods on the <see cref="TracerProviderBuilder"/> used to register
 /// the Elastic Distribution of OpenTelemetry (EDOT) defaults.
 /// </summary>
 public static class TracerProviderBuilderExtensions
@@ -48,7 +50,7 @@ public static class TracerProviderBuilderExtensions
 			throw new ArgumentNullException(nameof(builder));
 #endif
 
-		return WithElasticDefaultsCore(builder, null, null);
+		return WithElasticDefaultsCore(builder, null, null, null);
 	}
 
 	/// <summary>
@@ -67,7 +69,7 @@ public static class TracerProviderBuilderExtensions
 			throw new ArgumentNullException(nameof(builder));
 #endif
 
-		return WithElasticDefaultsCore(builder, skipOtlpExporter ? CompositeElasticOpenTelemetryOptions.SkipOtlpOptions : null, null);
+		return WithElasticDefaultsCore(builder, skipOtlpExporter ? CompositeElasticOpenTelemetryOptions.SkipOtlpOptions : null, null, null);
 	}
 
 	/// <summary>
@@ -91,7 +93,7 @@ public static class TracerProviderBuilderExtensions
 			throw new ArgumentNullException(nameof(options));
 #endif
 
-		return WithElasticDefaultsCore(builder, new(options), null);
+		return WithElasticDefaultsCore(builder, new(options), null, null);
 	}
 
 	/// <summary>
@@ -114,12 +116,12 @@ public static class TracerProviderBuilderExtensions
 		if (configuration is null)
 			throw new ArgumentNullException(nameof(configuration));
 #endif
-		return WithElasticDefaultsCore(builder, new(configuration));
+		return WithElasticDefaultsCore(builder, new(configuration), null, null);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	internal static TracerProviderBuilder WithElasticDefaults(this TracerProviderBuilder builder, ElasticOpenTelemetryComponents components) =>
-		WithElasticDefaultsCore(builder, components.Options, components);
+		WithElasticDefaultsCore(builder, components.Options, components, null);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	internal static TracerProviderBuilder WithElasticDefaults(
@@ -135,10 +137,10 @@ public static class TracerProviderBuilderExtensions
 	private static TracerProviderBuilder WithElasticDefaultsCore(
 		TracerProviderBuilder builder,
 		CompositeElasticOpenTelemetryOptions? options,
-		ElasticOpenTelemetryComponents? components = null,
-		IServiceCollection? services = null)
+		ElasticOpenTelemetryComponents? components,
+		IServiceCollection? services)
 	{
-		const string providerBuilderName = nameof(MeterProviderBuilder);
+		const string providerBuilderName = nameof(TracerProviderBuilder);
 
 		var logger = SignalBuilder.GetLogger(components, options);
 
@@ -158,7 +160,7 @@ public static class TracerProviderBuilderExtensions
 		}
 		catch (Exception ex)
 		{
-			logger?.LogError(ex, "Failed to fully register EDOT .NET tracer defaults for {ProviderBuilderType}.", providerBuilderName);
+			logger?.LogError(new EventId(500, "TracerProviderBuilderDefaultsFailed"), ex, "Failed to fully register EDOT .NET tracer defaults on the TracerProviderBuilder.");
 		}
 
 		return builder;
@@ -167,12 +169,18 @@ public static class TracerProviderBuilderExtensions
 			"are guarded by a RuntimeFeature.IsDynamicCodeSupported` check and therefore this method is safe to call in AoT scenarios.")]
 		static void ConfigureBuilder(TracerProviderBuilder builder, ElasticOpenTelemetryComponents components)
 		{
-			builder.ConfigureResource(r => r.AddElasticDistroAttributes());
+			const string tracerProviderBuilderName = nameof(TracerProviderBuilder);
+
+			var builderId = builder.GetBuilderIdentifier();
+
+			components.Logger.LogConfiguringBuilder(tracerProviderBuilderName, builderId);
+
+			builder.ConfigureResource(r => r.WithElasticDefaults(components.Logger));
 
 #if NET9_0_OR_GREATER
 			if (SignalBuilder.InstrumentationAssemblyExists("OpenTelemetry.Instrumentation.Http.dll"))
 			{
-				components.Logger.LogHttpInstrumentationFound("trace");
+				components.Logger.LogHttpInstrumentationFound("trace", tracerProviderBuilderName, builderId);
 
 				if (!RuntimeFeature.IsDynamicCodeSupported)
 					components.Logger.LogWarning("The OpenTelemetry.Instrumentation.Http.dll was found alongside the executing assembly. " +
@@ -236,7 +244,7 @@ public static class TracerProviderBuilderExtensions
 		try
 		{
 			builder
-				.ConfigureResource(r => r.AddElasticDistroAttributes())
+				.ConfigureResource(r => r.WithElasticDefaults(logger: components.Logger))
 				.AddSource("Elastic.Transport")
 				.AddElasticProcessorsCore(components);
 
@@ -289,6 +297,9 @@ public static class TracerProviderBuilderExtensions
 	{
 		var options = components?.Options ?? CompositeElasticOpenTelemetryOptions.DefaultOptions;
 
+		if (components is null)
+			builder.ConfigureResource(r => r.WithElasticDefaults(NullLogger.Instance));
+
 		try
 		{
 			if (!SignalBuilder.ConfigureBuilder(nameof(WithElasticDefaults), nameof(TracerProviderBuilder), builder,
@@ -302,7 +313,7 @@ public static class TracerProviderBuilderExtensions
 		catch (Exception ex)
 		{
 			var exceptionLogger = components is not null ? components.Logger : options?.AdditionalLogger;
-			exceptionLogger?.LogError(ex, "Failed to fully register EDOT .NET tracer defaults for {Provider}.", nameof(TracerProviderBuilder));
+			exceptionLogger?.LogError(ex, "Failed to fully register EDOT .NET tracer processor for {Provider}.", nameof(TracerProviderBuilder));
 		}
 
 		return builder;
@@ -318,7 +329,10 @@ public static class TracerProviderBuilderExtensions
 	private static TracerProviderBuilder LogAndAddProcessor(this TracerProviderBuilder builder, BaseProcessor<Activity> processor, ILogger logger)
 	{
 		builder.AddProcessor(processor);
-		logger.LogProcessorAdded(processor.GetType().ToString(), builder.GetType().Name);
+
+		var builderId = builder.GetBuilderIdentifier();
+		logger.LogProcessorAdded(processor.GetType().ToString(), builder.GetType().Name, builderId);
+
 		return builder;
 	}
 }

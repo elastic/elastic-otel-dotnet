@@ -21,7 +21,7 @@ namespace OpenTelemetry;
 #pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
-/// Extension methods on <see cref="IOpenTelemetryBuilder"/> and <see cref="OpenTelemetryBuilder"/>
+/// Provides extension methods on the <see cref="IOpenTelemetryBuilder"/>
 /// used to register the Elastic Distribution of OpenTelemetry (EDOT) defaults.
 /// </summary>
 public static class OpenTelemetryBuilderExtensions
