@@ -10,7 +10,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Elastic.OpenTelemetry.Core;
 
 internal sealed class ElasticOpenTelemetryComponents(
-	BootstrapInfo bootstrapInfo,
 	CompositeLogger logger,
 	LoggingEventListener loggingEventListener,
 	CompositeElasticOpenTelemetryOptions options) : IDisposable, IAsyncDisposable
@@ -18,21 +17,11 @@ internal sealed class ElasticOpenTelemetryComponents(
 	public CompositeLogger Logger { get; } = logger;
 	public LoggingEventListener LoggingEventListener { get; } = loggingEventListener;
 	public CompositeElasticOpenTelemetryOptions Options { get; } = options;
-	public BootstrapInfo BootstrapInfo { get; } = bootstrapInfo;
 
-	internal void SetAdditionalLogger(ILogger? logger, SdkActivationMethod activationMethod)
+	internal void SetAdditionalLogger(ILogger logger, SdkActivationMethod activationMethod)
 	{
-		if (logger is not null && logger is not NullLogger)
+		if (logger is not NullLogger)
 			Logger.SetAdditionalLogger(logger, activationMethod, this);
-	}
-
-	// This is used as a rare fallback should an exception occur during bootstrapping
-	internal static ElasticOpenTelemetryComponents CreateDefault(BootstrapInfo bootstrapInfo)
-	{
-		var options = CompositeElasticOpenTelemetryOptions.DefaultOptions;
-		var logger = new CompositeLogger(options);
-		var eventListener = new LoggingEventListener(logger, options);
-		return new(bootstrapInfo, logger, eventListener, options);
 	}
 
 	public void Dispose()

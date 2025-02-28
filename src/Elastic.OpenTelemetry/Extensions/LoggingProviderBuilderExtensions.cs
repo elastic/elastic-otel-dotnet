@@ -9,9 +9,8 @@ using Elastic.OpenTelemetry.Core;
 using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 // Matching namespace with LoggerProviderBuilder
 #pragma warning disable IDE0130 // Namespace does not match folder structure
@@ -20,52 +19,76 @@ namespace OpenTelemetry.Logs;
 
 /// <summary>
 /// Provides extension methods on the <see cref="LoggerProviderBuilder"/> used to register
-/// the Elastic Distribution of OpenTelemetry (EDOT) defaults.
+/// the Elastic Distribution of OpenTelemetry (EDOT) .NET defaults.
 /// </summary>
 public static class LoggingProviderBuilderExtensions
 {
 	/// <summary>
-	/// Used to track the number of times any overload of `WithElasticDefaults` is invoked on a
-	/// `LoggingProviderBuilder`. Generally, we expect one builder to be used per application,
-	/// and for it to be configured once. By tracking the total count of invocations, we can
-	/// log scenarios where the consumer may have inadvertently misconfigured OpenTelemetry in
-	/// their application.
+	/// Used to track the number of times any variation of `WithElasticDefaults` is invoked by consuming
+	/// code acrosss all <see cref="LoggerProviderBuilder"/> instances. This allows us to warn about potenital
+	/// misconfigurations.
 	/// </summary>
-	private static readonly GlobalProviderBuilderState GlobalLoggerProviderBuilderState = new();
+	private static int WithElasticDefaultsCallCount;
 
 	/// <summary>
-	/// Use Elastic Distribution of OpenTelemetry (EDOT) defaults for <see cref="LoggerProviderBuilder"/>.
+	/// Use Elastic Distribution of OpenTelemetry (EDOT) .NET defaults for <see cref="LoggerProviderBuilder"/>.
 	/// </summary>
 	/// <param name="builder">The <see cref="LoggerProviderBuilder"/> to configure.</param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
 	/// <returns>The <see cref="LoggerProviderBuilder"/> for chaining configuration.</returns>
-	public static LoggerProviderBuilder WithElasticDefaults(this LoggerProviderBuilder builder) =>
-		WithElasticDefaultsCore(builder, null, null);
+	public static LoggerProviderBuilder WithElasticDefaults(this LoggerProviderBuilder builder)
+	{
+#if NET
+        ArgumentNullException.ThrowIfNull(builder);
+#else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+#endif
+
+		return WithElasticDefaultsCore(builder, null, null, null);
+	}
 
 	/// <summary>
 	/// <inheritdoc cref="WithElasticDefaults(LoggerProviderBuilder)" />
 	/// </summary>
 	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(LoggerProviderBuilder)" path="/param[@name='builder']"/></param>
 	/// <param name="skipOtlpExporter">When registering Elastic defaults, skip automatic registration of the OTLP exporter for logging.</param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
 	/// <returns><inheritdoc cref="WithElasticDefaults(LoggerProviderBuilder)" /></returns>
-	public static LoggerProviderBuilder WithElasticDefaults(this LoggerProviderBuilder builder, bool skipOtlpExporter) =>
-		WithElasticDefaultsCore(builder, skipOtlpExporter ? CompositeElasticOpenTelemetryOptions.SkipOtlpOptions : CompositeElasticOpenTelemetryOptions.DefaultOptions, null);
+	public static LoggerProviderBuilder WithElasticDefaults(this LoggerProviderBuilder builder, bool skipOtlpExporter)
+	{
+#if NET
+        ArgumentNullException.ThrowIfNull(builder);
+#else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+#endif
+
+		return WithElasticDefaultsCore(builder, skipOtlpExporter ? CompositeElasticOpenTelemetryOptions.SkipOtlpOptions : CompositeElasticOpenTelemetryOptions.DefaultOptions, null, null);
+	}
 
 	/// <summary>
 	/// <inheritdoc cref="WithElasticDefaults(LoggerProviderBuilder)" />
 	/// </summary>
 	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(LoggerProviderBuilder)" path="/param[@name='builder']"/></param>
-	/// <param name="options"><see cref="ElasticOpenTelemetryOptions"/> used to configure the Elastic Distribution of OpenTelemetry (EDOT) for .NET.</param>
+	/// <param name="options"><see cref="ElasticOpenTelemetryOptions"/> used to configure the Elastic Distribution of OpenTelemetry (EDOT) .NET.</param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="options"/> is null.</exception>
 	/// <returns><inheritdoc cref="WithElasticDefaults(LoggerProviderBuilder)" /></returns>
 	public static LoggerProviderBuilder WithElasticDefaults(this LoggerProviderBuilder builder, ElasticOpenTelemetryOptions options)
 	{
 #if NET
+		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(options);
 #else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+
 		if (options is null)
 			throw new ArgumentNullException(nameof(options));
 #endif
 
-		return WithElasticDefaultsCore(builder, new(options), null);
+		return WithElasticDefaultsCore(builder, new(options), null, null);
 	}
 
 	/// <summary>
@@ -73,21 +96,23 @@ public static class LoggingProviderBuilderExtensions
 	/// </summary>
 	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(LoggerProviderBuilder)" path="/param[@name='builder']"/></param>
 	/// <param name="configuration">An <see cref="IConfiguration"/> instance from which to load the OpenTelemetry SDK options.</param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configuration"/> is null.</exception>
 	/// <returns><inheritdoc cref="WithElasticDefaults(LoggerProviderBuilder)" /></returns>
 	public static LoggerProviderBuilder WithElasticDefaults(this LoggerProviderBuilder builder, IConfiguration configuration)
 	{
 #if NET
+		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(configuration);
 #else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+
 		if (configuration is null)
 			throw new ArgumentNullException(nameof(configuration));
 #endif
-		return WithElasticDefaultsCore(builder, new(configuration), null);
+		return WithElasticDefaultsCore(builder, new(configuration), null, null);
 	}
-
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal static LoggerProviderBuilder WithElasticDefaults(this LoggerProviderBuilder builder, ElasticOpenTelemetryComponents components) =>
-		WithElasticDefaultsCore(builder, components.Options, components);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	internal static LoggerProviderBuilder WithElasticDefaults(this LoggerProviderBuilder builder, ElasticOpenTelemetryComponents components, IServiceCollection? services) =>
@@ -98,48 +123,46 @@ public static class LoggingProviderBuilderExtensions
 		this LoggerProviderBuilder builder,
 		CompositeElasticOpenTelemetryOptions? options,
 		ElasticOpenTelemetryComponents? components,
-		IServiceCollection? services = null)
+		IServiceCollection? services)
 	{
-		const string providerBuilderName = nameof(LoggerProviderBuilder);
+		var callCount = Interlocked.Increment(ref WithElasticDefaultsCallCount);
 
-		var logger = SignalBuilder.GetLogger(components, options);
+		var logger = components?.Logger ?? options?.AdditionalLogger;
 
-		// If the signal is disabled via configuration we skip any potential bootstrapping.
-		if (!SignalBuilder.IsSignalEnabled(components, options, Signals.Logs, providerBuilderName, logger))
-			return builder;
+		if (logger is null && ElasticOpenTelemetry.BuilderStateTable.TryGetValue(builder, out var state))
+			logger = state.Components.Logger;
 
-		try
+		if (callCount > 1)
 		{
-			if (!SignalBuilder.ConfigureBuilder(nameof(WithElasticDefaults), providerBuilderName, builder,
-				GlobalLoggerProviderBuilderState, options, services, ConfigureBuilder, ref components))
-			{
-				logger = components?.Logger ?? options?.AdditionalLogger ?? NullLogger.Instance; // Update the logger we should use from the ref-returned components.
-				logger.UnableToConfigureLoggingDefaultsError(providerBuilderName);
-				return builder;
-			}
+			logger?.LogMultipleWithElasticDefaultsCallsWarning(callCount, nameof(LoggerProviderBuilder));
 		}
-		catch (Exception ex)
+		else
 		{
-			// NOTE: Not using LoggerMessage as we want to pass the exception. As this should be rare, performance isn't critical here.
-			logger.LogError(ex, "Failed to fully register EDOT .NET logging defaults for {ProviderBuilderType}.", providerBuilderName);
+			logger?.LogWithElasticDefaultsCallCount(callCount, nameof(LoggerProviderBuilder));
 		}
 
-		return builder;
+		return SignalBuilder.WithElasticDefaults(builder, Signals.Traces, options, components, services, ConfigureBuilder);
 
-		static void ConfigureBuilder(LoggerProviderBuilder builder, ElasticOpenTelemetryComponents components)
+		static void ConfigureBuilder(LoggerProviderBuilder builder, BuilderState builderState, IServiceCollection? services)
 		{
-			builder.ConfigureResource(r => r.WithElasticDefaults(components.Logger));
+			const string loggingProviderName = nameof(LoggerProviderBuilder);
+			var components = builderState.Components;
+			var logger = components.Logger;
+
+			logger.LogConfiguringBuilder(loggingProviderName, builderState.InstanceIdentifier);
+
+			builder.ConfigureResource(r => r.WithElasticDefaults(builderState, services));
 
 			if (components.Options.SkipOtlpExporter)
 			{
-				components.Logger.LogSkippingOtlpExporter(nameof(Signals.Logs), nameof(LoggerProviderBuilder));
+				logger.LogSkippingOtlpExporter(nameof(Signals.Logs), loggingProviderName, builderState.InstanceIdentifier);
 			}
 			else
 			{
 				builder.AddOtlpExporter();
 			}
 
-			components.Logger.LogConfiguredSignalProvider(nameof(Signals.Logs), nameof(LoggerProviderBuilder));
+			logger.LogConfiguredSignalProvider(nameof(Signals.Logs), loggingProviderName, builderState.InstanceIdentifier);
 		}
 	}
 }

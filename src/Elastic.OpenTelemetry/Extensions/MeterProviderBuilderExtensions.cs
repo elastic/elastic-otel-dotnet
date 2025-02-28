@@ -13,7 +13,8 @@ using Elastic.OpenTelemetry.Instrumentation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
@@ -24,11 +25,16 @@ namespace OpenTelemetry.Metrics;
 
 /// <summary>
 /// Provides extension methods on the <see cref="MeterProviderBuilder"/> used to register
-/// the Elastic Distribution of OpenTelemetry (EDOT) defaults.
+/// the Elastic Distribution of OpenTelemetry (EDOT) .NET defaults.
 /// </summary>
 public static class MeterProviderBuilderExtensions
 {
-	private static readonly GlobalProviderBuilderState GlobalMeterProviderBuilderState = new();
+	/// <summary>
+	/// Used to track the number of times any variation of `WithElasticDefaults` is invoked by consuming
+	/// code acrosss all <see cref="MeterProviderBuilder"/> instances. This allows us to warn about potenital
+	/// misconfigurations.
+	/// </summary>
+	private static int WithElasticDefaultsCallCount;
 
 	/// <summary>
 	/// Use Elastic Distribution of OpenTelemetry .NET defaults for <see cref="MeterProviderBuilder"/>.
@@ -38,9 +44,19 @@ public static class MeterProviderBuilderExtensions
 	/// has been called previously as that automatically adds the defaults for all signals.
 	/// </remarks>
 	/// <param name="builder">The <see cref="MeterProviderBuilder"/> to configure.</param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
 	/// <returns>The <see cref="MeterProviderBuilder"/> for chaining configuration.</returns>
-	public static MeterProviderBuilder WithElasticDefaults(this MeterProviderBuilder builder) =>
-		WithElasticDefaultsCore(builder, null, null);
+	public static MeterProviderBuilder WithElasticDefaults(this MeterProviderBuilder builder)
+	{
+#if NET
+		ArgumentNullException.ThrowIfNull(builder);
+#else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+#endif
+
+		return WithElasticDefaultsCore(builder, null, null, null);
+	}
 
 	/// <summary>
 	/// <inheritdoc cref="WithElasticDefaults(MeterProviderBuilder)" />
@@ -48,26 +64,42 @@ public static class MeterProviderBuilderExtensions
 	/// <remarks><inheritdoc cref="WithElasticDefaults(MeterProviderBuilder)" /></remarks>
 	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(MeterProviderBuilder)" path="/param[@name='builder']"/></param>
 	/// <param name="skipOtlpExporter">When registering Elastic defaults, skip automatic registration of the OTLP exporter for metrics.</param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
 	/// <returns><inheritdoc cref="WithElasticDefaults(MeterProviderBuilder)" /></returns>
-	public static MeterProviderBuilder WithElasticDefaults(this MeterProviderBuilder builder, bool skipOtlpExporter) =>
-		WithElasticDefaultsCore(builder, skipOtlpExporter ? CompositeElasticOpenTelemetryOptions.SkipOtlpOptions : null, null);
+	public static MeterProviderBuilder WithElasticDefaults(this MeterProviderBuilder builder, bool skipOtlpExporter)
+	{
+#if NET
+		ArgumentNullException.ThrowIfNull(builder);
+#else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+#endif
+
+		return WithElasticDefaultsCore(builder, skipOtlpExporter ? CompositeElasticOpenTelemetryOptions.SkipOtlpOptions : null, null, null);
+	}
 
 	/// <summary>
 	/// <inheritdoc cref="WithElasticDefaults(MeterProviderBuilder)" />
 	/// </summary>
 	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(MeterProviderBuilder)" path="/param[@name='builder']"/></param>
-	/// <param name="options"><see cref="ElasticOpenTelemetryOptions"/> used to configure the Elastic Distribution of OpenTelemetry (EDOT) for .NET.</param>
+	/// <param name="options"><see cref="ElasticOpenTelemetryOptions"/> used to configure the Elastic Distribution of OpenTelemetry (EDOT) .NET.</param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="options"/> is null.</exception>
 	/// <returns><inheritdoc cref="WithElasticDefaults(MeterProviderBuilder)" /></returns>
 	public static MeterProviderBuilder WithElasticDefaults(this MeterProviderBuilder builder, ElasticOpenTelemetryOptions options)
 	{
 #if NET
+		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(options);
 #else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+
 		if (options is null)
 			throw new ArgumentNullException(nameof(options));
 #endif
 
-		return WithElasticDefaultsCore(builder, new(options), null);
+		return WithElasticDefaultsCore(builder, new(options), null, null);
 	}
 
 	/// <summary>
@@ -75,24 +107,24 @@ public static class MeterProviderBuilderExtensions
 	/// </summary>
 	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(MeterProviderBuilder)" path="/param[@name='builder']"/></param>
 	/// <param name="configuration">An <see cref="IConfiguration"/> instance from which to load the Elastic Distribution of
-	/// OpenTelemetry (EDOT) options.</param>
+	/// OpenTelemetry (EDOT) .NET options.</param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configuration"/> is null.</exception>
 	/// <returns><inheritdoc cref="WithElasticDefaults(MeterProviderBuilder)" /></returns>
 	public static MeterProviderBuilder WithElasticDefaults(this MeterProviderBuilder builder, IConfiguration configuration)
 	{
 #if NET
+		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(configuration);
 #else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+
 		if (configuration is null)
 			throw new ArgumentNullException(nameof(configuration));
 #endif
-		return WithElasticDefaultsCore(builder, new(configuration), null);
+		return WithElasticDefaultsCore(builder, new(configuration), null, null);
 	}
-
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal static MeterProviderBuilder WithElasticDefaults(
-		this MeterProviderBuilder builder,
-		ElasticOpenTelemetryComponents components) =>
-			WithElasticDefaultsCore(builder, components.Options, components, null);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	internal static MeterProviderBuilder WithElasticDefaults(
@@ -120,45 +152,42 @@ public static class MeterProviderBuilderExtensions
 		this MeterProviderBuilder builder,
 		CompositeElasticOpenTelemetryOptions? options,
 		ElasticOpenTelemetryComponents? components,
-		IServiceCollection? services = null)
+		IServiceCollection? services)
 	{
-		const string providerBuilderName = nameof(MeterProviderBuilder);
+		var callCount = Interlocked.Increment(ref WithElasticDefaultsCallCount);
 
-		var logger = SignalBuilder.GetLogger(components, options);
+		var logger = components?.Logger ?? options?.AdditionalLogger;
 
-		// If the signal is disabled via configuration we skip any potential bootstrapping.
-		if (!SignalBuilder.IsSignalEnabled(components, options, Signals.Metrics, providerBuilderName, logger))
-			return builder;
+		if (logger is null && ElasticOpenTelemetry.BuilderStateTable.TryGetValue(builder, out var state))
+			logger = state.Components.Logger;
 
-		try
+		if (callCount > 1)
 		{
-			if (!SignalBuilder.ConfigureBuilder(nameof(WithElasticDefaults), providerBuilderName, builder,
-				GlobalMeterProviderBuilderState, options, services, ConfigureBuilder, ref components))
-			{
-				logger = components?.Logger ?? options?.AdditionalLogger ?? NullLogger.Instance; // Update the logger we should use from the ref-returned components.
-				logger.UnableToConfigureLoggingDefaultsError(providerBuilderName);
-				return builder;
-			}
+			logger?.LogMultipleWithElasticDefaultsCallsWarning(callCount, nameof(MeterProviderBuilder));
 		}
-		catch (Exception ex)
+		else
 		{
-			logger.LogError(ex, "Failed to fully register EDOT .NET meter defaults for {ProviderBuilderType}.", providerBuilderName);
+			logger?.LogWithElasticDefaultsCallCount(callCount, nameof(MeterProviderBuilder));
 		}
 
-		return builder;
+		return SignalBuilder.WithElasticDefaults(builder, Signals.Traces, options, components, services, ConfigureBuilder);
 
-		static void ConfigureBuilder(MeterProviderBuilder builder, ElasticOpenTelemetryComponents components)
+		static void ConfigureBuilder(MeterProviderBuilder builder, BuilderState builderState, IServiceCollection? services)
 		{
-			builder.ConfigureResource(r => r.WithElasticDefaults());
+			const string loggingProviderName = nameof(LoggerProviderBuilder);
+			var components = builderState.Components;
+			var logger = components.Logger;
 
-			var builderId = builder.GetBuilderIdentifier();
+			logger.LogConfiguringBuilder(loggingProviderName, builderState.InstanceIdentifier);
+
+			builder.ConfigureResource(r => r.WithElasticDefaults(builderState, services));
 
 #if NET9_0_OR_GREATER
 			// On .NET 9, the contrib HTTP instrumentation is no longer required. If the dependency exists,
 			// it will be registered via the reflection-based assembly scanning.
 			if (SignalBuilder.InstrumentationAssemblyExists("OpenTelemetry.Instrumentation.Http.dll"))
 			{
-				components.Logger.LogHttpInstrumentationFound("metric", nameof(MeterProviderBuilder), builderId);
+				logger.LogHttpInstrumentationFound("metric", nameof(MeterProviderBuilder), builderState.InstanceIdentifier);
 
 				// For native AOT scenarios, the reflection-based assembly scanning will not run.
 				// Therefore, we log a warning since no HTTP instrumentation will be automatically registered.
@@ -166,20 +195,20 @@ public static class MeterProviderBuilderExtensions
 				// remove the dependency so that the native .NET 9 HTTP instrumentation source will be added
 				// instead.
 				if (!RuntimeFeature.IsDynamicCodeSupported)
-					components.Logger.LogWarning("The OpenTelemetry.Instrumentation.Http.dll was found alongside the executing assembly. " +
+					logger.LogWarning("The OpenTelemetry.Instrumentation.Http.dll was found alongside the executing assembly. " +
 						"When using Native AOT publishing on .NET, the metric instrumentation is not registered automatically. Either register it manually, " +
 						"or remove the dependency so that the native `System.Net.Http` instrumentation (available in .NET 9) is observed instead.");
 			}
 			else
 			{
-				AddMeterWithLogging(builder, components.Logger, "System.Net.Http");
+				AddMeterWithLogging(builder, logger, "System.Net.Http", builderState.InstanceIdentifier);
 			}
 
 			// On .NET 9, the contrib runtime instrumentation is no longer required. If the dependency exists,
 			// it will be registered via the reflection-based assembly scanning.
 			if (SignalBuilder.InstrumentationAssemblyExists("OpenTelemetry.Instrumentation.Runtime.dll"))
 			{
-				components.Logger.LogRuntimeInstrumentationFound();
+				logger.LogRuntimeInstrumentationFound();
 
 				// For native AOT scenarios, the reflection-based assembly scanning will not run.
 				// Therefore, we log a warning since no runtime metric instrumentation will be automatically registered.
@@ -187,65 +216,66 @@ public static class MeterProviderBuilderExtensions
 				// remove the dependency so that the native .NET 9 runtime metric instrumentation source will be added
 				// instead.
 				if (!RuntimeFeature.IsDynamicCodeSupported)
-					components.Logger.LogWarning("The OpenTelemetry.Instrumentation.Runtime.dll was found alongside the executing assembly. " +
+					logger.LogWarning("The OpenTelemetry.Instrumentation.Runtime.dll was found alongside the executing assembly. " +
 						"When using Native AOT publishing on .NET, the metric instrumentation is not registered automatically. Either register it manually, " +
 						"or remove the dependency so that the native `System.Runtime` instrumentation (available in .NET 9) is observed instead.");
 			}
 			else
 			{
-				AddMeterWithLogging(builder, components.Logger, "System.Runtime");
+				AddMeterWithLogging(builder, logger, "System.Runtime", builderState.InstanceIdentifier);
 			}
 #else
-			AddWithLogging(builder, components.Logger, "HTTP (via contrib instrumentation)", b => b.AddHttpClientInstrumentation());
-			AddWithLogging(builder, components.Logger, "Runtime", b => b.AddRuntimeInstrumentation());
+			AddWithLogging(builder, logger, "HTTP", b => b.AddHttpClientInstrumentation(), builderState.InstanceIdentifier);
+			AddWithLogging(builder, logger, "Runtime", b => b.AddRuntimeInstrumentation(), builderState.InstanceIdentifier);
 #endif
 			// We explicity include this dependency and add it, since the current curated metric dashboard requires the memory metric.
-			AddWithLogging(builder, components.Logger, "Process", b => b.AddProcessInstrumentation());
+			AddWithLogging(builder, logger, "Process", b => b.AddProcessInstrumentation(), builderState.InstanceIdentifier);
 
 			if (SignalBuilder.InstrumentationAssemblyExists("OpenTelemetry.Instrumentation.AspNetCore.dll"))
 			{
-				AddMeterWithLogging(builder, components.Logger, "Microsoft.AspNetCore.Hosting");
-				AddMeterWithLogging(builder, components.Logger, "Microsoft.AspNetCore.Routing");
-				AddMeterWithLogging(builder, components.Logger, "Microsoft.AspNetCore.Diagnostics");
-				AddMeterWithLogging(builder, components.Logger, "Microsoft.AspNetCore.RateLimiting");
-				AddMeterWithLogging(builder, components.Logger, "Microsoft.AspNetCore.HeaderParsing");
-				AddMeterWithLogging(builder, components.Logger, "Microsoft.AspNetCore.Server.Kestrel");
-				AddMeterWithLogging(builder, components.Logger, "Microsoft.AspNetCore.Http.Connections");
+				AddMeterWithLogging(builder, logger, "Microsoft.AspNetCore.Hosting", builderState.InstanceIdentifier);
+				AddMeterWithLogging(builder, logger, "Microsoft.AspNetCore.Routing", builderState.InstanceIdentifier);
+				AddMeterWithLogging(builder, logger, "Microsoft.AspNetCore.Diagnostics", builderState.InstanceIdentifier);
+				AddMeterWithLogging(builder, logger, "Microsoft.AspNetCore.RateLimiting", builderState.InstanceIdentifier);
+				AddMeterWithLogging(builder, logger, "Microsoft.AspNetCore.HeaderParsing", builderState.InstanceIdentifier);
+				AddMeterWithLogging(builder, logger, "Microsoft.AspNetCore.Server.Kestrel", builderState.InstanceIdentifier);
+				AddMeterWithLogging(builder, logger, "Microsoft.AspNetCore.Http.Connections", builderState.InstanceIdentifier);
 			}
 
-			AddMeterWithLogging(builder, components.Logger, "System.Net.NameResolution");
+			AddMeterWithLogging(builder, logger, "System.Net.NameResolution", builderState.InstanceIdentifier);
 
 #if NET
 			if (RuntimeFeature.IsDynamicCodeSupported)
 #endif
 			{
-				SignalBuilder.AddInstrumentationViaReflection(builder, components, ContribMetricsInstrumentation.GetMetricsInstrumentationAssembliesInfo());
+				SignalBuilder.AddInstrumentationViaReflection(builder, builderState.Components,
+					ContribMetricsInstrumentation.GetMetricsInstrumentationAssembliesInfo(), builderState.InstanceIdentifier);
 			}
 
 			if (components.Options.SkipOtlpExporter)
 			{
-				components.Logger.LogSkippingOtlpExporter(nameof(Signals.Traces), nameof(MeterProviderBuilder));
+				logger.LogSkippingOtlpExporter(nameof(Signals.Traces), nameof(MeterProviderBuilder), builderState.InstanceIdentifier);
 			}
 			else
 			{
 				builder.AddOtlpExporter();
 			}
 
-			components.Logger.LogConfiguredSignalProvider(nameof(Signals.Logs), nameof(MeterProviderBuilder));
+			logger.LogConfiguredSignalProvider(nameof(Signals.Logs), nameof(MeterProviderBuilder), builderState.InstanceIdentifier);
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		static void AddMeterWithLogging(MeterProviderBuilder builder, ILogger logger, string meterName)
+		static void AddMeterWithLogging(MeterProviderBuilder builder, ILogger logger, string meterName, string builderIdentifier)
 		{
 			builder.AddMeter(meterName);
-			logger.LogMeterAdded(meterName, nameof(MeterProviderBuilder));
+			logger.LogMeterAdded(meterName, builderIdentifier);
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		static void AddWithLogging(MeterProviderBuilder builder, ILogger logger, string name, Action<MeterProviderBuilder> add)
+		static void AddWithLogging(MeterProviderBuilder builder, ILogger logger, string name, Action<MeterProviderBuilder> add, string builderIdentifier)
 		{
 			add.Invoke(builder);
-			logger.LogAddedInstrumentation(name, nameof(MeterProviderBuilder));
+			logger.LogAddedInstrumentation(name, nameof(MeterProviderBuilder), builderIdentifier);
 		}
 	}
 
@@ -259,24 +289,25 @@ public static class MeterProviderBuilderExtensions
 
 		try
 		{
-			builder.ConfigureResource(r => r.WithElasticDefaults(components.Logger));
+			builder.ConfigureResource(r => r.WithElasticDefaults(components, null));
 
 			if (components.Options.SkipOtlpExporter)
 			{
-				components.Logger.LogSkippingOtlpExporter(nameof(Signals.Traces), nameof(TracerProviderBuilder));
+				components.Logger.LogSkippingOtlpExporter(nameof(Signals.Metrics), nameof(MeterProviderBuilder), "<n/a>");
 			}
 			else
 			{
 				builder.AddOtlpExporter();
 			}
 
-			components.Logger.LogConfiguredSignalProvider("Traces", nameof(TracerProviderBuilder));
+			components.Logger.LogConfiguredSignalProvider(nameof(Signals.Metrics), nameof(MeterProviderBuilder), "<n/a>");
 
 			return builder;
 		}
 		catch (Exception ex)
 		{
-			components?.Logger?.LogError(ex, "Failed to register EDOT defaults for meter auto-instrumentation to the {Provider}.", nameof(TracerProviderBuilder));
+			components.Logger.LogError(new EventId(521, "AutoInstrumentationTracerFailure"), ex,
+				"Failed to register EDOT defaults for metrics auto-instrumentation to the MeterProviderBuilder.");
 		}
 
 		return builder;

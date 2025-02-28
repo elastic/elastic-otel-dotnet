@@ -57,6 +57,9 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 
 			_streamWriter = new StreamWriter(stream, Encoding.UTF8);
 
+			_streamWriter.WriteLine("DateTime (UTC)           Thread  SpanId  Level         Message");
+			_streamWriter.WriteLine();
+
 			WritingTask = Task.Run(async () =>
 			{
 				while (await _channel.Reader.WaitToReadAsync().ConfigureAwait(false) && !_disposing)
@@ -78,7 +81,7 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 		catch (Exception ex)
 		{
 			if (options?.AdditionalLogger is not null)
-				options?.AdditionalLogger.LogError(ex, "Failed to set up file logging due to exception: {ExceptionMessage}.", ex.Message);
+				options?.AdditionalLogger.LogError(new EventId(530, "FileLoggingFailure"), ex, "Failed to set up file logging due to exception: {ExceptionMessage}.", ex.Message);
 			else
 				Console.Error.WriteLine($"Failed to set up file logging due to exception: {ex.Message}.");
 		}

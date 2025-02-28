@@ -105,7 +105,7 @@ public sealed class ElasticCompatibilityProcessor(ILogger? logger) : BaseProcess
 		{
 			if (tag.Value is string value)
 			{
-				_logger.FoundTag(nameof(ElasticCompatibilityProcessor), tag.Key, value);
+				_logger.LogFoundTag(nameof(ElasticCompatibilityProcessor), tag.Key, value);
 				return value;
 			}
 
@@ -116,7 +116,7 @@ public sealed class ElasticCompatibilityProcessor(ILogger? logger) : BaseProcess
 		{
 			if (tag.Value is int value)
 			{
-				_logger.FoundTag(nameof(ElasticCompatibilityProcessor), tag.Key, value);
+				_logger.LogFoundTag(nameof(ElasticCompatibilityProcessor), tag.Key, value);
 				return value;
 			}
 
@@ -125,13 +125,13 @@ public sealed class ElasticCompatibilityProcessor(ILogger? logger) : BaseProcess
 
 		void SetStringAttribute(string attributeName, string value)
 		{
-			_logger.SetTag(nameof(ElasticCompatibilityProcessor), attributeName, value);
+			_logger.LogSetTag(nameof(ElasticCompatibilityProcessor), attributeName, value);
 			activity.SetTag(attributeName, value);
 		}
 
 		void SetIntAttribute(string attributeName, int value)
 		{
-			_logger.SetTag(nameof(ElasticCompatibilityProcessor), attributeName, value);
+			_logger.LogSetTag(nameof(ElasticCompatibilityProcessor), attributeName, value);
 			activity.SetTag(attributeName, value);
 		}
 	}

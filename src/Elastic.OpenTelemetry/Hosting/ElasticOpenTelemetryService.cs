@@ -6,9 +6,14 @@ using Elastic.OpenTelemetry.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Elastic.OpenTelemetry.Hosting;
 
+/// <summary>
+/// Used to attempt to attach an additional logger, typically in ASP.NET Core scenarios, so that logs
+/// are written to any configured destinations.
+/// </summary>
 internal sealed class ElasticOpenTelemetryService(IServiceProvider serviceProvider) : IHostedLifecycleService
 {
 	private ElasticOpenTelemetryComponents? _components;
@@ -16,16 +21,10 @@ internal sealed class ElasticOpenTelemetryService(IServiceProvider serviceProvid
 	public Task StartingAsync(CancellationToken cancellationToken)
 	{
 		var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
-		var logger = loggerFactory?.CreateElasticLogger();
-
-		var bootstrapInfo = serviceProvider.GetService<BootstrapInfo>();
+		var logger = loggerFactory?.CreateElasticLogger() ?? NullLogger.Instance;
 
 		_components = serviceProvider.GetService<ElasticOpenTelemetryComponents>();
-
-		if (bootstrapInfo is not null && bootstrapInfo.Succeeded && _components is not null && logger is not null)
-		{
-			_components.SetAdditionalLogger(logger, bootstrapInfo.ActivationMethod);
-		}
+		_components?.SetAdditionalLogger(logger, ElasticOpenTelemetry.ActivationMethod);
 
 		return Task.CompletedTask;
 	}

@@ -16,13 +16,13 @@ namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
 /// Extension methods for <see cref="IServiceCollection"/> used to register
-/// the Elastic Distribution of OpenTelemetry (EDOT) defaults.
+/// the Elastic Distribution of OpenTelemetry (EDOT) .NET defaults.
 /// </summary>
 public static class ServiceCollectionExtensions
 {
 	/// <summary>
 	/// Registers the OpenTelemetry SDK services with the provided <see cref="IServiceCollection"/> to include the
-	/// OpenTelemetry SDK in the application, configured with Elastic Distribution of OpenTelemetry (EDOT) defaults.
+	/// OpenTelemetry SDK in the application, configured with Elastic Distribution of OpenTelemetry (EDOT) .NET defaults.
 	/// </summary>
 	/// <param name="services">The <see cref="IServiceCollection"/> for adding services.</param>
 	/// <returns>
@@ -67,7 +67,7 @@ public static class ServiceCollectionExtensions
 	/// <param name="services"><inheritdoc cref="AddElasticOpenTelemetry(IServiceCollection)" path="/param[@name='services']"/></param>
 	/// <param name="configuration"><inheritdoc cref="AddElasticOpenTelemetry(IServiceCollection)" path="/param[@name='configuration']"/></param>
 	/// <param name="additionalLoggerFactory">
-	/// An <see cref="ILoggerFactory"/> that Elastic Distribution of OpenTelemetry (EDOT) can use to create an additional <see cref="ILogger"/>
+	/// An <see cref="ILoggerFactory"/> that Elastic Distribution of OpenTelemetry (EDOT) .NET can use to create an additional <see cref="ILogger"/>
 	/// used for diagnostic logging.
 	/// </param>
 	/// <returns><inheritdoc cref="AddElasticOpenTelemetry(IServiceCollection)"/></returns>
@@ -112,7 +112,7 @@ public static class ServiceCollectionExtensions
 	/// </summary>
 	/// <param name="services"><inheritdoc cref="AddElasticOpenTelemetry(IServiceCollection)" path="/param[@name='services']"/></param>
 	/// <param name="options">
-	/// The <see cref="CompositeElasticOpenTelemetryOptions"/> used to configure the Elastic Distribution of OpenTelemetry (EDOT) for .NET.
+	/// The <see cref="CompositeElasticOpenTelemetryOptions"/> used to configure the Elastic Distribution of OpenTelemetry (EDOT) .NET.
 	/// </param>
 	/// <returns><inheritdoc cref="AddElasticOpenTelemetry(IServiceCollection)"/></returns>
 	public static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection services, ElasticOpenTelemetryOptions options) =>

@@ -2,7 +2,6 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
-using System.Diagnostics;
 using Elastic.OpenTelemetry;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Core;
@@ -11,8 +10,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
 // Matching namespace with OpenTelemetryBuilder
@@ -22,25 +23,36 @@ namespace OpenTelemetry;
 
 /// <summary>
 /// Provides extension methods on the <see cref="IOpenTelemetryBuilder"/>
-/// used to register the Elastic Distribution of OpenTelemetry (EDOT) defaults.
+/// used to register the Elastic Distribution of OpenTelemetry (EDOT) .NET defaults.
 /// </summary>
 public static class OpenTelemetryBuilderExtensions
 {
 	/// <summary>
 	/// Used to track the number of times any variation of `WithElasticDefaults` is invoked by consuming
-	/// code, to allow us to warn about potenital misconfigurations.
+	/// code acrosss all <see cref="IOpenTelemetryBuilder"/> instances. This allows us to warn about potenital
+	/// misconfigurations.
 	/// </summary>
-	private static int WithElasticDefaultsCallCounter;
+	private static int WithElasticDefaultsCallCount;
 
 	/// <summary>
 	/// Enables collection of all signals using Elastic Distribution of OpenTelemetry .NET defaults.
 	/// </summary>
 	/// <param name="builder">The <see cref="IOpenTelemetryBuilder"/> being configured.</param>
 	/// <returns>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
 	/// The supplied <see cref="IOpenTelemetryBuilder"/> for chaining calls.
 	/// </returns>
-	public static IOpenTelemetryBuilder WithElasticDefaults(this IOpenTelemetryBuilder builder) =>
-		WithElasticDefaultsCore(builder, CompositeElasticOpenTelemetryOptions.DefaultOptions);
+	public static IOpenTelemetryBuilder WithElasticDefaults(this IOpenTelemetryBuilder builder)
+	{
+#if NET
+		ArgumentNullException.ThrowIfNull(builder);
+#else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+#endif
+
+		return WithElasticDefaultsCore(builder, CompositeElasticOpenTelemetryOptions.DefaultOptions);
+	}
 
 	/// <summary>
 	/// <inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder)" />
@@ -48,12 +60,18 @@ public static class OpenTelemetryBuilderExtensions
 	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder)" path="/param[@name='builder']"/></param>
 	/// <param name="configuration">An <see cref="IConfiguration"/> from which to attempt binding of Elastic Distribution of OpenTelemetry
 	/// (EDOT) options.</param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configuration"/> is null.</exception>
 	/// <returns><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder)"/></returns>
 	public static IOpenTelemetryBuilder WithElasticDefaults(this IOpenTelemetryBuilder builder, IConfiguration configuration)
 	{
-#if NET8_0_OR_GREATER
+#if NET
+		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(configuration);
 #else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+
 		if (configuration is null)
 			throw new ArgumentNullException(nameof(configuration));
 #endif
@@ -66,16 +84,22 @@ public static class OpenTelemetryBuilderExtensions
 	/// </summary>
 	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder)" path="/param[@name='builder']"/></param>
 	/// <param name="options">
-	/// An <see cref="ElasticOpenTelemetryOptions"/> instance used to configure the initial Elastic Distribution of OpenTelemetry (EDOT) defaults.
+	/// An <see cref="ElasticOpenTelemetryOptions"/> instance used to configure the initial Elastic Distribution of OpenTelemetry (EDOT) .NET defaults.
 	/// Note that only the first use for a given <see cref="IOpenTelemetryBuilder"/> instance applies the options. Subsequent builder methods may
 	/// accept <see cref="ElasticOpenTelemetryOptions"/> but those will not be reapplied.
 	/// </param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="options"/> is null.</exception>
 	/// <returns><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder)" /></returns>
 	public static IOpenTelemetryBuilder WithElasticDefaults(this IOpenTelemetryBuilder builder, ElasticOpenTelemetryOptions options)
 	{
-#if NET8_0_OR_GREATER
+#if NET
+		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(options);
 #else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+
 		if (options is null)
 			throw new ArgumentNullException(nameof(options));
 #endif
@@ -87,64 +111,35 @@ public static class OpenTelemetryBuilderExtensions
 		this IOpenTelemetryBuilder builder,
 		CompositeElasticOpenTelemetryOptions options)
 	{
+		var providerBuilderName = builder.GetType().Name;
+		var logger = options.AdditionalLogger ?? NullLogger.Instance;
+
+		var callCount = Interlocked.Increment(ref WithElasticDefaultsCallCount);
+
+		if (callCount > 1)
+		{
+			if (logger is NullLogger && ElasticOpenTelemetry.BuilderStateTable.TryGetValue(builder, out var state))
+				logger = state.Components.Logger;
+
+			logger.LogMultipleWithElasticDefaultsCallsWarning(callCount, nameof(IOpenTelemetryBuilder));
+		}
+
 		// If for some reason `WithElasticDefaults` is invoked with the `Signals` option set to
 		// none, we skip bootstrapping entirely. We log this as a warning since it's best to
-		// simply not call `WithElasticDefaults` in this scenario and may indicate a misconfiguration.
+		// simply not call `WithElasticDefaults` in this scenario and it may indicate a misconfiguration.
 		if (options.Signals == Signals.None)
 		{
-			options.AdditionalLogger?.LogSkippingBootstrapWarning();
+			logger.LogSkippingBootstrapWarning();
 			return builder;
 		}
 
-		var usingExistingState = true; // Will be set to false if we later create state for this builder.
+		return SignalBuilder.WithElasticDefaults(builder, options, null, builder.Services, ConfigureBuilder);
+	}
 
-		// Attempt to load existing state if any Elastic extension methods on this builder have been called
-		// previously. This allows reuse of existing components, and ensures we bootstrap once per builder.
-		// If the builder is linked to an existing IServiceCollection, then we boostrapping will return the
-		// same bootstrapped components, ensuring we also bootstrap once per IServiceCollection.
-
-		// We assign state to each instance of IOpenTelemetryBuilder, so that we can shortcut access to
-		// components on subsequent calls where we know bootstrapping has occurred. It also enables us to
-		// warn (via logs) when the same method on the same instance is invoked more than once, which is
-		// likely to be a user error.
-		var builderState = ElasticOpenTelemetry.BuilderStateTable.GetValue(builder, builder =>
-		{
-			var bootstrapInfo = ElasticOpenTelemetry.TryBootstrap(options, ((IOpenTelemetryBuilder)builder).Services, out var components);
-			var builderState = new BuilderState(bootstrapInfo, components);
-			usingExistingState = false;
-			return builderState;
-		});
-
-		builderState.IncrementWithElasticDefaults();
-
-		var callCount = Interlocked.Increment(ref WithElasticDefaultsCallCounter);
-
-		if (builderState.WithElasticDefaultsCounter > 1)
-		{
-			// TODO - Log warning - https://github.com/elastic/elastic-otel-dotnet/issues/216
-		}
-		else if (callCount > 1)
-		{
-			// TODO - Log warning - https://github.com/elastic/elastic-otel-dotnet/issues/216
-		}
-
-		if (!usingExistingState)
-		{
-			// TODO - Log - https://github.com/elastic/elastic-otel-dotnet/issues/216
-		}
-
-		var bootstrapInfo = builderState.BootstrapInfo;
+	private static void ConfigureBuilder(IOpenTelemetryBuilder builder, BuilderState builderState, IServiceCollection? services)
+	{
 		var components = builderState.Components;
-
-		Debug.Assert(bootstrapInfo is not null, "BootstrapInfo should not be null after successful bootstrap.");
-		Debug.Assert(components is not null, "Components should not be null after successful bootstrap.");
-
-		if (!bootstrapInfo.Succeeded)
-		{
-			options?.AdditionalLogger?.LogError("Unable to bootstrap EDOT.");
-			ElasticOpenTelemetry.BuilderStateTable.Remove(builder);
-			return builder;
-		}
+		var options = builderState.Components.Options;
 
 		if (options.Signals.HasFlagFast(Signals.Traces))
 		{
@@ -152,7 +147,8 @@ public static class OpenTelemetryBuilderExtensions
 		}
 		else
 		{
-			components.Logger.LogSignalDisabled(Signals.Traces.ToString().ToLower());
+			components.Logger.LogSignalDisabled(Signals.Traces.ToString().ToLower(),
+				nameof(IOpenTelemetryBuilder), builderState.InstanceIdentifier);
 		}
 
 		if (options.Signals.HasFlagFast(Signals.Metrics))
@@ -161,7 +157,8 @@ public static class OpenTelemetryBuilderExtensions
 		}
 		else
 		{
-			components.Logger.LogSignalDisabled(Signals.Metrics.ToString().ToLower());
+			components.Logger.LogSignalDisabled(Signals.Metrics.ToString().ToLower(),
+				nameof(IOpenTelemetryBuilder), builderState.InstanceIdentifier);
 		}
 
 		if (options.Signals.HasFlagFast(Signals.Logs))
@@ -170,14 +167,14 @@ public static class OpenTelemetryBuilderExtensions
 		}
 		else
 		{
-			components.Logger.LogSignalDisabled(Signals.Logs.ToString().ToLower());
+			components.Logger.LogSignalDisabled(Signals.Logs.ToString().ToLower(),
+				nameof(IOpenTelemetryBuilder), builderState.InstanceIdentifier);
 		}
-
-		return builder;
 	}
 
 	/// <summary>
-	/// Adds metric services into the <see cref="IOpenTelemetryBuilder"/> using Elastic Distribution of OpenTelemetry (EDOT) defaults.
+	/// Adds metric services into the <see cref="IOpenTelemetryBuilder"/> using Elastic Distribution of
+	/// OpenTelemetry (EDOT) .NET defaults.
 	/// </summary>
 	/// <param name="builder"><see cref="IOpenTelemetryBuilder"/>.</param>
 	/// <remarks>
@@ -191,10 +188,19 @@ public static class OpenTelemetryBuilderExtensions
 	/// cref="IServiceCollection"/>.</item>
 	/// </list>
 	/// </remarks>
-	/// <returns>The supplied <see cref="IOpenTelemetryBuilder"/> for chaining
-	/// calls.</returns>
-	public static IOpenTelemetryBuilder WithElasticLogging(this IOpenTelemetryBuilder builder) =>
-		builder.WithLogging(lpb => lpb.WithElasticDefaults());
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
+	/// <returns>The supplied <see cref="IOpenTelemetryBuilder"/> for chaining calls.</returns>
+	public static IOpenTelemetryBuilder WithElasticLogging(this IOpenTelemetryBuilder builder)
+	{
+#if NET
+		ArgumentNullException.ThrowIfNull(builder);
+#else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+#endif
+
+		return builder.WithLogging(lpb => lpb.WithElasticDefaults());
+	}
 
 	/// <summary>
 	/// <inheritdoc cref="WithElasticLogging(IOpenTelemetryBuilder)" />
@@ -202,12 +208,18 @@ public static class OpenTelemetryBuilderExtensions
 	/// <remarks><inheritdoc cref="WithElasticLogging(IOpenTelemetryBuilder)" path="/remarks"/></remarks>
 	/// <param name="builder"><inheritdoc cref="WithElasticLogging(IOpenTelemetryBuilder)" path="/param[@name='builder']"/></param>
 	/// <param name="configure"><see cref="LoggerProviderBuilder"/> configuration callback.</param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configure"/> is null.</exception>
 	/// <returns><inheritdoc cref="WithElasticLogging(IOpenTelemetryBuilder)" /></returns>
 	public static IOpenTelemetryBuilder WithElasticLogging(this IOpenTelemetryBuilder builder, Action<LoggerProviderBuilder> configure)
 	{
-#if NET8_0_OR_GREATER
+#if NET
+		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(configure);
 #else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+
 		if (configure is null)
 			throw new ArgumentNullException(nameof(configure));
 #endif
@@ -220,7 +232,7 @@ public static class OpenTelemetryBuilderExtensions
 	}
 
 	/// <summary>
-	/// Adds metric services into the <see cref="IOpenTelemetryBuilder"/> using Elastic Distribution of OpenTelemetry (EDOT) defaults.
+	/// Adds metric services into the <see cref="IOpenTelemetryBuilder"/> using Elastic Distribution of OpenTelemetry (EDOT) .NET defaults.
 	/// </summary>
 	/// <param name="builder"><see cref="IOpenTelemetryBuilder"/>.</param>
 	/// <remarks>
@@ -234,10 +246,19 @@ public static class OpenTelemetryBuilderExtensions
 	/// cref="IServiceCollection"/>.</item>
 	/// </list>
 	/// </remarks>
-	/// <returns>The supplied <see cref="IOpenTelemetryBuilder"/> for chaining
-	/// calls.</returns>
-	public static IOpenTelemetryBuilder WithElasticMetrics(this IOpenTelemetryBuilder builder) =>
-		builder.WithMetrics(mpb => mpb.WithElasticDefaults());
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
+	/// <returns>The supplied <see cref="IOpenTelemetryBuilder"/> for chaining calls.</returns>
+	public static IOpenTelemetryBuilder WithElasticMetrics(this IOpenTelemetryBuilder builder)
+	{
+#if NET
+		ArgumentNullException.ThrowIfNull(builder);
+#else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+#endif
+
+		return builder.WithMetrics(mpb => mpb.WithElasticDefaults());
+	}
 
 	/// <summary>
 	/// <inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder)" />
@@ -245,13 +266,19 @@ public static class OpenTelemetryBuilderExtensions
 	/// <remarks><inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder)" path="/remarks"/></remarks>
 	/// <param name="builder"><inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder)" path="/param[@name='builder']"/></param>
 	/// <param name="configuration">An <see cref="IConfiguration"/> instance from which to load the Elastic Distribution of
-	/// OpenTelemetry (EDOT) options.</param>
+	/// OpenTelemetry (EDOT) .NET options.</param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configuration"/> is null.</exception>
 	/// <returns><inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder)" /></returns>
 	public static IOpenTelemetryBuilder WithElasticMetrics(this IOpenTelemetryBuilder builder, IConfiguration configuration)
 	{
-#if NET8_0_OR_GREATER
+#if NET
+		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(configuration);
 #else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+
 		if (configuration is null)
 			throw new ArgumentNullException(nameof(configuration));
 #endif
@@ -265,12 +292,18 @@ public static class OpenTelemetryBuilderExtensions
 	/// <remarks><inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder)" path="/remarks"/></remarks>
 	/// <param name="builder"><inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder)" path="/param[@name='builder']"/></param>
 	/// <param name="configure"><see cref="MeterProviderBuilder"/> configuration callback.</param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configure"/> is null.</exception> 
 	/// <returns><inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder)" /></returns>
 	public static IOpenTelemetryBuilder WithElasticMetrics(this IOpenTelemetryBuilder builder, Action<MeterProviderBuilder> configure)
 	{
-#if NET8_0_OR_GREATER
+#if NET
+		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(configure);
 #else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+
 		if (configure is null)
 			throw new ArgumentNullException(nameof(configure));
 #endif
@@ -293,14 +326,21 @@ public static class OpenTelemetryBuilderExtensions
 	/// <param name="configure">
 	/// <inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder, Action{MeterProviderBuilder})" path="/param[@name='configure']"/>
 	/// </param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configuration"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configure"/> is null.</exception>
 	/// <returns><inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder)" /></returns>
 	public static IOpenTelemetryBuilder WithElasticMetrics(this IOpenTelemetryBuilder builder, IConfiguration configuration,
 		Action<MeterProviderBuilder> configure)
 	{
-#if NET8_0_OR_GREATER
+#if NET
+		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(configuration);
 		ArgumentNullException.ThrowIfNull(configure);
 #else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+
 		if (configuration is null)
 			throw new ArgumentNullException(nameof(configuration));
 
@@ -316,7 +356,7 @@ public static class OpenTelemetryBuilderExtensions
 	}
 
 	/// <summary>
-	/// Adds tracing services into the <see cref="IOpenTelemetryBuilder"/> using Elastic Distribution of OpenTelemetry (EDOT) defaults.
+	/// Adds tracing services into the <see cref="IOpenTelemetryBuilder"/> using Elastic Distribution of OpenTelemetry (EDOT) .NET defaults.
 	/// </summary>
 	/// <param name="builder"><see cref="IOpenTelemetryBuilder"/>.</param>
 	/// <remarks>
@@ -324,9 +364,19 @@ public static class OpenTelemetryBuilderExtensions
 	/// Only a single <see cref="TracerProvider"/> will be created for a given
 	/// <see cref="IServiceCollection"/>.
 	/// </remarks>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
 	/// <returns>The supplied <see cref="IOpenTelemetryBuilder"/> for chaining calls.</returns>
-	public static IOpenTelemetryBuilder WithElasticTracing(this IOpenTelemetryBuilder builder) =>
-		builder.WithTracing(m => m.WithElasticDefaults());
+	public static IOpenTelemetryBuilder WithElasticTracing(this IOpenTelemetryBuilder builder)
+	{
+#if NET
+		ArgumentNullException.ThrowIfNull(builder);
+#else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+#endif
+
+		return builder.WithTracing(m => m.WithElasticDefaults());
+	}
 
 	/// <summary>
 	/// <inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder)" />
@@ -334,13 +384,19 @@ public static class OpenTelemetryBuilderExtensions
 	/// <remarks><inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder)" path="/remarks"/></remarks>
 	/// <param name="builder"><inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder)" path="/param[@name='builder']"/></param>
 	/// <param name="configuration">An <see cref="IConfiguration"/> instance from which to load the Elastic Distribution of
-	/// OpenTelemetry (EDOT) options.</param>
+	/// OpenTelemetry (EDOT) .NET options.</param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configuration"/> is null.</exception>
 	/// <returns><inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder)" /></returns>
 	public static IOpenTelemetryBuilder WithElasticTracing(this IOpenTelemetryBuilder builder, IConfiguration configuration)
 	{
-#if NET8_0_OR_GREATER
+#if NET
+		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(configuration);
 #else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+
 		if (configuration is null)
 			throw new ArgumentNullException(nameof(configuration));
 #endif
@@ -354,12 +410,18 @@ public static class OpenTelemetryBuilderExtensions
 	/// <remarks><inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder)" path="/remarks"/></remarks>
 	/// <param name="builder"><inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder)" path="/param[@name='builder']"/></param>
 	/// <param name="configure"><see cref="TracerProviderBuilder"/> configuration callback.</param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configure"/> is null.</exception>
 	/// <returns><inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder)" /></returns>
 	public static IOpenTelemetryBuilder WithElasticTracing(this IOpenTelemetryBuilder builder, Action<TracerProviderBuilder> configure)
 	{
-#if NET8_0_OR_GREATER
+#if NET
+		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(configure);
 #else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+
 		if (configure is null)
 			throw new ArgumentNullException(nameof(configure));
 #endif
@@ -382,14 +444,21 @@ public static class OpenTelemetryBuilderExtensions
 	/// <param name="configure">
 	/// <inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder, Action{TracerProviderBuilder})" path="/param[@name='configure']"/>
 	/// </param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configuration"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configure"/> is null.</exception>
 	/// <returns><inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder)" /></returns>
 	public static IOpenTelemetryBuilder WithElasticTracing(this IOpenTelemetryBuilder builder, IConfiguration configuration,
 		Action<TracerProviderBuilder> configure)
 	{
-#if NET8_0_OR_GREATER
+#if NET
+		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(configuration);
 		ArgumentNullException.ThrowIfNull(configure);
 #else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+
 		if (configuration is null)
 			throw new ArgumentNullException(nameof(configuration));
 
