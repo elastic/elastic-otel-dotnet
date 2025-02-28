@@ -52,23 +52,8 @@ internal static class ResourceBuilderExtensions
 		"is guarded by a RuntimeFeature.IsDynamicCodeSupported` check and therefore this method is safe to call in AoT scenarios.")]
 	private static void ConfigureBuilder(ResourceBuilder builder, BuilderState builderState, IServiceCollection? services)
 	{
-		var defaultServiceName = "unknown_service";
-
-		try
-		{
-			var processName = Process.GetCurrentProcess().ProcessName;
-			if (!string.IsNullOrWhiteSpace(processName))
-				defaultServiceName = processName;
-		}
-		catch (Exception ex)
-		{
-			builderState.Components.Logger.LogError(new EventId(510, "GetCurrentProcessFailed"), ex, "An exception occurred when attempting to " +
-				"get determine the process name.");
-		}
-
 		var attributes = new Dictionary<string, object>
 		{
-			{ ResourceSemanticConventions.AttributeServiceName, defaultServiceName },
 			{ ResourceSemanticConventions.AttributeServiceInstanceId, ApplicationInstanceId },
 			{ ResourceSemanticConventions.AttributeTelemetryDistroName, "elastic" },
 			{ ResourceSemanticConventions.AttributeTelemetryDistroVersion, VersionHelper.InformationalVersion }
