@@ -104,5 +104,5 @@ public class AutoInstrumentationPlugin
 	public ResourceBuilder ConfigureResource(ResourceBuilder builder) =>
 		!_bootstrapInfo.Succeeded || _components is null
 			? builder
-			: builder.AddElasticDistroAttributes();
+			: builder.WithElasticDefaults();
 }

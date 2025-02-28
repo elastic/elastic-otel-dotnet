@@ -33,7 +33,7 @@ public partial class InstrumentationScanningTests(WebApplicationFactory<Program>
 	[GeneratedRegex(@"^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}\]\[\d{5}\]\[-*\]\[Debug\]\s+Added HTTP \(via native instrumentation\) to TracerProviderBuilder.*")]
 	private static partial Regex HttpTracerProviderBuilderRegex();
 
-	[GeneratedRegex(@"^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}\]\[\d{5}\]\[-*\]\[Debug\]\s+Added HTTP \(via native instrumentation\) to MeterProviderBuilder.*")]
+	[GeneratedRegex(@"^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}\]\[\d{5}\]\[-*\]\[Debug\]\s+Added 'System.Net.Http' meter to MeterProviderBuilder.*")]
 	private static partial Regex HttpMeterProviderBuilderRegex();
 #endif
 

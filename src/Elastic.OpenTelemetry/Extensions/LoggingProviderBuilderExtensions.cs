@@ -11,6 +11,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using OpenTelemetry.Resources;
 
 // Matching namespace with LoggerProviderBuilder
 #pragma warning disable IDE0130 // Namespace does not match folder structure
@@ -18,7 +19,7 @@ namespace OpenTelemetry.Logs;
 #pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
-/// Extension methods for <see cref="LoggerProviderBuilder"/> used to register
+/// Provides extension methods on the <see cref="LoggerProviderBuilder"/> used to register
 /// the Elastic Distribution of OpenTelemetry (EDOT) defaults.
 /// </summary>
 public static class LoggingProviderBuilderExtensions
@@ -127,7 +128,7 @@ public static class LoggingProviderBuilderExtensions
 
 		static void ConfigureBuilder(LoggerProviderBuilder builder, ElasticOpenTelemetryComponents components)
 		{
-			builder.ConfigureResource(r => r.AddElasticDistroAttributes());
+			builder.ConfigureResource(r => r.WithElasticDefaults(components.Logger));
 
 			if (components.Options.SkipOtlpExporter)
 			{

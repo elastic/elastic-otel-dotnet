@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
@@ -33,7 +33,7 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.Process" Version="0.5.0-beta.6" />
     <PackageReference Include="OpenTelemetry.Instrumentation.SqlClient" Version="1.9.0-beta.1" />
     <PackageReference Include="OpenTelemetry.Resources.Host" Version="1.11.0-beta.1" />
-    <PackageReference Include="Polyfill" Version="7.16.1" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
+    <PackageReference Include="Polyfill" Version="7.20.0" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
     <PackageReference Include="NetEscapades.EnumGenerators" Version="1.0.0-beta09" PrivateAssets="all" ExcludeAssets="runtime" />
   </ItemGroup>
 
@@ -42,8 +42,9 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' != 'net9.0'">
-    <PackageReference Include="System.Text.Json" Version="9.0.2" />
+    <!-- We skip this on .NET since we prefer to use the native instrumentation from the builtin Meter -->
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.11.0" />
+    <!-- We skip this on .NET since we prefer to use the native instrumentation from the builtin ActivitySource -->
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.11.0" />
   </ItemGroup>
   

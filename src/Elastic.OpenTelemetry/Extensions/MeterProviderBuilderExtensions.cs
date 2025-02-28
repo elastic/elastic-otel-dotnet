@@ -14,6 +14,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
 // Matching namespace with MeterProviderBuilder
@@ -22,7 +23,7 @@ namespace OpenTelemetry.Metrics;
 #pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
-/// Extension methods for <see cref="MeterProviderBuilder"/> used to register
+/// Provides extension methods on the <see cref="MeterProviderBuilder"/> used to register
 /// the Elastic Distribution of OpenTelemetry (EDOT) defaults.
 /// </summary>
 public static class MeterProviderBuilderExtensions
@@ -148,14 +149,16 @@ public static class MeterProviderBuilderExtensions
 
 		static void ConfigureBuilder(MeterProviderBuilder builder, ElasticOpenTelemetryComponents components)
 		{
-			builder.ConfigureResource(r => r.AddElasticDistroAttributes());
+			builder.ConfigureResource(r => r.WithElasticDefaults());
+
+			var builderId = builder.GetBuilderIdentifier();
 
 #if NET9_0_OR_GREATER
 			// On .NET 9, the contrib HTTP instrumentation is no longer required. If the dependency exists,
 			// it will be registered via the reflection-based assembly scanning.
 			if (SignalBuilder.InstrumentationAssemblyExists("OpenTelemetry.Instrumentation.Http.dll"))
 			{
-				components.Logger.LogHttpInstrumentationFound("metric");
+				components.Logger.LogHttpInstrumentationFound("metric", nameof(MeterProviderBuilder), builderId);
 
 				// For native AOT scenarios, the reflection-based assembly scanning will not run.
 				// Therefore, we log a warning since no HTTP instrumentation will be automatically registered.
@@ -169,7 +172,7 @@ public static class MeterProviderBuilderExtensions
 			}
 			else
 			{
-				AddWithLogging(builder, components.Logger, "HTTP (via native instrumentation)", b => b.AddMeter("System.Net.Http"));
+				AddMeterWithLogging(builder, components.Logger, "System.Net.Http");
 			}
 
 			// On .NET 9, the contrib runtime instrumentation is no longer required. If the dependency exists,
@@ -190,12 +193,27 @@ public static class MeterProviderBuilderExtensions
 			}
 			else
 			{
-				AddWithLogging(builder, components.Logger, "Runtime", b => b.AddMeter("System.Runtime"));
+				AddMeterWithLogging(builder, components.Logger, "System.Runtime");
 			}
 #else
 			AddWithLogging(builder, components.Logger, "HTTP (via contrib instrumentation)", b => b.AddHttpClientInstrumentation());
 			AddWithLogging(builder, components.Logger, "Runtime", b => b.AddRuntimeInstrumentation());
 #endif
+			// We explicity include this dependency and add it, since the current curated metric dashboard requires the memory metric.
+			AddWithLogging(builder, components.Logger, "Process", b => b.AddProcessInstrumentation());
+
+			if (SignalBuilder.InstrumentationAssemblyExists("OpenTelemetry.Instrumentation.AspNetCore.dll"))
+			{
+				AddMeterWithLogging(builder, components.Logger, "Microsoft.AspNetCore.Hosting");
+				AddMeterWithLogging(builder, components.Logger, "Microsoft.AspNetCore.Routing");
+				AddMeterWithLogging(builder, components.Logger, "Microsoft.AspNetCore.Diagnostics");
+				AddMeterWithLogging(builder, components.Logger, "Microsoft.AspNetCore.RateLimiting");
+				AddMeterWithLogging(builder, components.Logger, "Microsoft.AspNetCore.HeaderParsing");
+				AddMeterWithLogging(builder, components.Logger, "Microsoft.AspNetCore.Server.Kestrel");
+				AddMeterWithLogging(builder, components.Logger, "Microsoft.AspNetCore.Http.Connections");
+			}
+
+			AddMeterWithLogging(builder, components.Logger, "System.Net.NameResolution");
 
 #if NET
 			if (RuntimeFeature.IsDynamicCodeSupported)
@@ -217,6 +235,13 @@ public static class MeterProviderBuilderExtensions
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		static void AddMeterWithLogging(MeterProviderBuilder builder, ILogger logger, string meterName)
+		{
+			builder.AddMeter(meterName);
+			logger.LogMeterAdded(meterName, nameof(MeterProviderBuilder));
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static void AddWithLogging(MeterProviderBuilder builder, ILogger logger, string name, Action<MeterProviderBuilder> add)
 		{
 			add.Invoke(builder);
@@ -234,7 +259,7 @@ public static class MeterProviderBuilderExtensions
 
 		try
 		{
-			builder.ConfigureResource(r => r.AddElasticDistroAttributes());
+			builder.ConfigureResource(r => r.WithElasticDefaults(components.Logger));
 
 			if (components.Options.SkipOtlpExporter)
 			{

@@ -1,15 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
-        <TargetFrameworks>net8.0;net462</TargetFrameworks>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-      <IsPackable>True</IsPackable>
-    </PropertyGroup>
+  <PropertyGroup>
+    <TargetFrameworks>net462;net8.0;net9.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>True</IsPackable>
+  </PropertyGroup>
 
-    <ItemGroup>
-      <PackageReference Include="OpenTelemetry.AutoInstrumentation" Version="1.10.0" GeneratePathProperty="true" PrivateAssets="contentfiles" />
-    </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="OpenTelemetry.AutoInstrumentation" Version="1.10.0" GeneratePathProperty="true" PrivateAssets="contentfiles" />
+  </ItemGroup>
 
   <ItemGroup>
     <Content Remove="README.md" />
@@ -23,23 +23,22 @@
 
     <!-- ensure we remove the linked instrument.sh from base OpenTelemetry.AutoInstrumentation
           and link it as _instrument.sh since we manually copy it over in the prebuild event -->
-    
+
     <Content Update="instrument.sh" CopyToPublishDirectory="Never" CopyToOutputDirectory="Never" />
     <Content Remove="instrument.sh" />
     <Content Include="_instrument.sh" CopyToOutputDirectory="Always" CopyToPublishDirectory="Always" Pack="True" PackagePath="contentFiles/any/any/_instrument.sh" />
     <Content Include="instrument.sh" CopyToOutputDirectory="Always" CopyToPublishDirectory="Always" Pack="True" PackagePath="contentFiles/any/any/instrument.sh" />
 
     <Content Include="instrument.props" CopyToOutputDirectory="Always" CopyToPublishDirectory="Always" Pack="True" PackagePath="build/elastic.opentelemetry.autoinstrumentation.props" />
-
   </ItemGroup>
-  
+
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
     <!-- Copies the content files manually as physical files in the source repository -->
-    <!-- we manually repackage these as contentfiles (albeit renamed) --> 
+    <!-- we manually repackage these as contentfiles (albeit renamed) -->
     <Copy SourceFiles="$(PkgOpenTelemetry_AutoInstrumentation)/contentFiles/any/any/instrument.cmd" DestinationFiles="$(MSBuildThisFileDirectory)/_instrument.cmd" />
     <Copy SourceFiles="$(PkgOpenTelemetry_AutoInstrumentation)/contentFiles/any/any/instrument.sh" DestinationFiles="$(MSBuildThisFileDirectory)/_instrument.sh" />
   </Target>
-  
+
   <ItemGroup>
     <ProjectReference Include="..\Elastic.OpenTelemetry\Elastic.OpenTelemetry.csproj" />
   </ItemGroup>

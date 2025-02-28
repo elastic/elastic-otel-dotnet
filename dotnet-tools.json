@@ -9,7 +9,7 @@
       ]
     },
     "assembly-differ": {
-      "version": "0.15.0",
+      "version": "0.16.0",
       "commands": [
         "assembly-differ"
       ]
@@ -21,7 +21,7 @@
       ]
     },
     "nupkg-validator": {
-      "version": "0.6.0",
+      "version": "0.7.0",
       "commands": [
         "nupkg-validator"
       ]

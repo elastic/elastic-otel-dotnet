@@ -42,8 +42,13 @@ internal static class SignalBuilder
 		return true;
 	}
 
+	public static string GetBuilderIdentifier<T>(this T builder) where T : class =>
+		!ElasticOpenTelemetry.BuilderStateTable.TryGetValue(builder, out var state)
+			? builder.GetHashCode().ToString()
+			: $"{state.InstanceIdentifier}:{builder.GetHashCode()}";
+
 	/// <summary>
-	/// Hold common logic for configuring a builder, either a TracerProviderBuilder,
+	/// Holds common logic for configuring a builder, either a TracerProviderBuilder,
 	/// MeterProviderBuilder or LoggingProviderBuilder.
 	/// </summary>
 	public static bool ConfigureBuilder<T>(
@@ -184,7 +189,13 @@ internal static class SignalBuilder
 		if (components.Options.SkipInstrumentationAssemblyScanning)
 			return;
 
-		var logger = components.Logger;
+		AddInstrumentationViaReflection(builder, components.Logger, assemblyInfos);
+	}
+
+	[RequiresUnreferencedCode("Accesses assemblies and methods dynamically using refelction. This is by design and cannot be made trim compatible.")]
+	public static void AddInstrumentationViaReflection<T>(T builder, ILogger logger, ReadOnlySpan<InstrumentationAssemblyInfo> assemblyInfos)
+		where T : class
+	{
 		var builderTypeName = builder.GetType().Name;
 		var assemblyLocation = AppContext.BaseDirectory;
 
