@@ -2,14 +2,12 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Elastic.OpenTelemetry.Core;
 using Elastic.OpenTelemetry.Diagnostics;
 using Elastic.OpenTelemetry.Instrumentation;
 using Elastic.OpenTelemetry.SemanticConventions;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 #if NET
 using System.Runtime.CompilerServices;
@@ -43,6 +41,7 @@ internal static class ResourceBuilderExtensions
 	internal static ResourceBuilder WithElasticDefaults(this ResourceBuilder builder, ElasticOpenTelemetryComponents components, IServiceCollection? services)
 	{
 		var callCount = Interlocked.Increment(ref WithElasticDefaultsCallCount);
+
 		components.Logger.LogWithElasticDefaultsCallCount(callCount, nameof(ResourceBuilder));
 
 		return SignalBuilder.WithElasticDefaults(builder, components.Options, components, services, ConfigureBuilder);

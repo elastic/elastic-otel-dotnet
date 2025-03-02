@@ -13,7 +13,6 @@ using Elastic.OpenTelemetry.Instrumentation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -147,34 +146,31 @@ public static class MeterProviderBuilderExtensions
 			WithElasticDefaultsCore(builder, null, null, serviceCollection);
 
 	[UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026", Justification = "The calls to `AddSqlClientInstrumentation` and `AssemblyScanning.AddInstrumentationViaReflection` " +
-			"are guarded by a RuntimeFeature.IsDynamicCodeSupported` check and therefore this method is safe to call in AoT scenarios.")]
+		"are guarded by a RuntimeFeature.IsDynamicCodeSupported` check and therefore this method is safe to call in AoT scenarios.")]
 	internal static MeterProviderBuilder WithElasticDefaultsCore(
 		this MeterProviderBuilder builder,
 		CompositeElasticOpenTelemetryOptions? options,
 		ElasticOpenTelemetryComponents? components,
 		IServiceCollection? services)
 	{
+		var logger = SignalBuilder.GetLogger(builder, components, options, null);
+
 		var callCount = Interlocked.Increment(ref WithElasticDefaultsCallCount);
-
-		var logger = components?.Logger ?? options?.AdditionalLogger;
-
-		if (logger is null && ElasticOpenTelemetry.BuilderStateTable.TryGetValue(builder, out var state))
-			logger = state.Components.Logger;
 
 		if (callCount > 1)
 		{
-			logger?.LogMultipleWithElasticDefaultsCallsWarning(callCount, nameof(MeterProviderBuilder));
+			logger.LogMultipleWithElasticDefaultsCallsWarning(callCount, nameof(MeterProviderBuilder));
 		}
 		else
 		{
-			logger?.LogWithElasticDefaultsCallCount(callCount, nameof(MeterProviderBuilder));
+			logger.LogWithElasticDefaultsCallCount(callCount, nameof(MeterProviderBuilder));
 		}
 
 		return SignalBuilder.WithElasticDefaults(builder, Signals.Traces, options, components, services, ConfigureBuilder);
 
 		static void ConfigureBuilder(MeterProviderBuilder builder, BuilderState builderState, IServiceCollection? services)
 		{
-			const string loggingProviderName = nameof(LoggerProviderBuilder);
+			const string loggingProviderName = nameof(MeterProviderBuilder);
 			var components = builderState.Components;
 			var logger = components.Logger;
 

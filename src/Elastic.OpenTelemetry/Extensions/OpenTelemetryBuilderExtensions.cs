@@ -111,16 +111,14 @@ public static class OpenTelemetryBuilderExtensions
 		this IOpenTelemetryBuilder builder,
 		CompositeElasticOpenTelemetryOptions options)
 	{
-		var providerBuilderName = builder.GetType().Name;
-		var logger = options.AdditionalLogger ?? NullLogger.Instance;
-
 		var callCount = Interlocked.Increment(ref WithElasticDefaultsCallCount);
+
+		var providerBuilderName = builder.GetType().Name;
+
+		var logger = SignalBuilder.GetLogger(builder, null, options, null);
 
 		if (callCount > 1)
 		{
-			if (logger is NullLogger && ElasticOpenTelemetry.BuilderStateTable.TryGetValue(builder, out var state))
-				logger = state.Components.Logger;
-
 			logger.LogMultipleWithElasticDefaultsCallsWarning(callCount, nameof(IOpenTelemetryBuilder));
 		}
 

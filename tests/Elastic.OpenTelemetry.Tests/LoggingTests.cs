@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information
 
 using System.Text.RegularExpressions;
-using Elastic.OpenTelemetry.Core;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using Xunit.Abstractions;
@@ -24,8 +23,6 @@ public partial class LoggingTests(ITestOutputHelper output)
 	[Fact]
 	public void LoggingIsEnabled_WhenConfiguredViaTracerProviderBuilder()
 	{
-		ElasticOpenTelemetry.ResetSharedComponentsForTesting();
-
 		var logger = new TestLogger(output);
 		var options = new ElasticOpenTelemetryOptions { AdditionalLogger = logger, SkipOtlpExporter = true };
 
@@ -39,8 +36,6 @@ public partial class LoggingTests(ITestOutputHelper output)
 	[Fact]
 	public void LoggingIsEnabled_WhenConfiguredViaMeterProviderBuilder()
 	{
-		ElasticOpenTelemetry.ResetSharedComponentsForTesting();
-
 		var logger = new TestLogger(output);
 		var options = new ElasticOpenTelemetryOptions { AdditionalLogger = logger, SkipOtlpExporter = true };
 
@@ -54,8 +49,6 @@ public partial class LoggingTests(ITestOutputHelper output)
 	[Fact]
 	public void LoggingPreamble_IsSkipped_WhenReusingSharedComponents()
 	{
-		ElasticOpenTelemetry.ResetSharedComponentsForTesting();
-
 		var logger = new TestLogger(output);
 		var options = new ElasticOpenTelemetryOptions { AdditionalLogger = logger, SkipOtlpExporter = true };
 

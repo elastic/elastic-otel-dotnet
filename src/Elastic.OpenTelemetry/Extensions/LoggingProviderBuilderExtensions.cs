@@ -125,20 +125,17 @@ public static class LoggingProviderBuilderExtensions
 		ElasticOpenTelemetryComponents? components,
 		IServiceCollection? services)
 	{
+		var logger = SignalBuilder.GetLogger(builder, components, options, null);
+
 		var callCount = Interlocked.Increment(ref WithElasticDefaultsCallCount);
-
-		var logger = components?.Logger ?? options?.AdditionalLogger;
-
-		if (logger is null && ElasticOpenTelemetry.BuilderStateTable.TryGetValue(builder, out var state))
-			logger = state.Components.Logger;
 
 		if (callCount > 1)
 		{
-			logger?.LogMultipleWithElasticDefaultsCallsWarning(callCount, nameof(LoggerProviderBuilder));
+			logger.LogMultipleWithElasticDefaultsCallsWarning(callCount, nameof(LoggerProviderBuilder));
 		}
 		else
 		{
-			logger?.LogWithElasticDefaultsCallCount(callCount, nameof(LoggerProviderBuilder));
+			logger.LogWithElasticDefaultsCallCount(callCount, nameof(LoggerProviderBuilder));
 		}
 
 		return SignalBuilder.WithElasticDefaults(builder, Signals.Traces, options, components, services, ConfigureBuilder);

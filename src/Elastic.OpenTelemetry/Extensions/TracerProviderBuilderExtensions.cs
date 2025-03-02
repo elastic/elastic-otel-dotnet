@@ -14,7 +14,7 @@ using Elastic.OpenTelemetry.Processors;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
+using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 
@@ -139,20 +139,17 @@ public static class TracerProviderBuilderExtensions
 		ElasticOpenTelemetryComponents? components,
 		IServiceCollection? services)
 	{
+		var logger = SignalBuilder.GetLogger(builder, components, options, null);
+
 		var callCount = Interlocked.Increment(ref WithElasticDefaultsCallCount);
-
-		var logger = components?.Logger ?? options?.AdditionalLogger;
-
-		if (logger is null && ElasticOpenTelemetry.BuilderStateTable.TryGetValue(builder, out var state))
-			logger = state.Components.Logger;
 
 		if (callCount > 1)
 		{
-			logger?.LogMultipleWithElasticDefaultsCallsWarning(callCount, nameof(TracerProviderBuilder));
+			logger.LogMultipleWithElasticDefaultsCallsWarning(callCount, nameof(TracerProviderBuilder));
 		}
 		else
 		{
-			logger?.LogWithElasticDefaultsCallCount(callCount, nameof(TracerProviderBuilder));
+			logger.LogWithElasticDefaultsCallCount(callCount, nameof(TracerProviderBuilder));
 		}
 
 		return SignalBuilder.WithElasticDefaults(builder, Signals.Traces, options, components, services, ConfigureBuilder);
@@ -330,15 +327,10 @@ public static class TracerProviderBuilderExtensions
 
 		var callCount = Interlocked.Increment(ref AddElasticProcessorsCallCount);
 
+		var logger = SignalBuilder.GetLogger(builder, components, null, builderState);
+
 		if (callCount > 1)
-		{
-			var logger = components?.Logger;
-
-			if (logger is null && ElasticOpenTelemetry.BuilderStateTable.TryGetValue(builder, out var state))
-				logger = state.Components.Logger;
-
-			logger?.LogMultipleAddElasticProcessorsCallsWarning(callCount);
-		}
+			logger.LogMultipleAddElasticProcessorsCallsWarning(callCount);
 
 		if (builderState is not null)
 		{
