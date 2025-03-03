@@ -12,93 +12,129 @@ namespace Elastic.OpenTelemetry.Diagnostics;
 
 internal static partial class LoggerMessages
 {
-	[LoggerMessage(EventId = 1, EventName = "Bootstapped", Level = LogLevel.Information, Message = "Elastic OpenTelemetry bootstrap invoked. {newline}{StackTrace}", SkipEnabledCheck = true)]
-	public static partial void LogElasticOpenTelemetryBootstrapped(this ILogger logger, string newline, StackTrace stackTrace);
+	// NOTE:
+	// The IDs and EventNames should ideally not change to ensure constistency in log querying.
 
-	[LoggerMessage(EventId = 2, EventName = "SharedComponentsCreated", Level = LogLevel.Debug, Message = "Shared components created.")]
-	public static partial void LogSharedComponentsCreated(this ILogger logger);
+	[LoggerMessage(EventId = 1, EventName = "BootstrapInvoked", Level = LogLevel.Trace, Message = "Bootstrap has been invoked {InvocationCount} times.")]
+	public static partial void LogBootstrapInvoked(this ILogger logger, int invocationCount);
 
-	[LoggerMessage(EventId = 3, EventName = "SharedComponentsReused", Level = LogLevel.Debug, Message = "Reusing existing shared components. {newline}{StackTrace}", SkipEnabledCheck = true)]
-	public static partial void LogSharedComponentsReused(this ILogger logger, string newline, StackTrace stackTrace);
+	[LoggerMessage(EventId = 2, EventName = "ComponentsCreated", Level = LogLevel.Debug, Message = "Elastic OpenTelemetry components created. {newline}{StackTrace}")]
+	public static partial void LogComponentsCreated(this ILogger logger, string newline, StackTrace stackTrace);
+
+	[LoggerMessage(EventId = 3, EventName = "SharedComponentsReused", Level = LogLevel.Debug, Message = "Reusing existing shared components.")]
+	public static partial void LogSharedComponentsReused(this ILogger logger);
 
 	[LoggerMessage(EventId = 4, EventName = "SharedComponentsNotReused", Level = LogLevel.Debug, Message = "Unable to reuse existing shared components as the provided " +
-		"`CompositeElasticOpenTelemetryOptions` differ. {newline}{StackTrace}", SkipEnabledCheck = true)]
-	public static partial void LogSharedComponentsNotReused(this ILogger logger, string newline, StackTrace stackTrace);
+		"`CompositeElasticOpenTelemetryOptions` do not match.", SkipEnabledCheck = true)]
+	public static partial void LogSharedComponentsNotReused(this ILogger logger);
 
-	[LoggerMessage(EventId = 5, EventName = "ServiceCollectionComponentsReused", Level = LogLevel.Debug, Message = "Reusing existing components on IServiceCollection. {newline}{StackTrace}")]
-	public static partial void LogComponentsReused(this ILogger logger, string newline, StackTrace stackTrace);
+	[LoggerMessage(EventId = 5, EventName = "ServiceCollectionComponentsReused", Level = LogLevel.Debug, Message = "Reusing existing components on IServiceCollection.")]
+	public static partial void LogServiceCollectionComponentsReused(this ILogger logger);
 
-	[LoggerMessage(EventId = 6, EventName = "ConfiguredSignalProvider", Level = LogLevel.Debug, Message = "Configured EDOT defaults for {Signal} via the {ProviderBuilderType}.")]
-	public static partial void LogConfiguredSignalProvider(this ILogger logger, string signal, string providerBuilderType);
+	[LoggerMessage(EventId = 6, EventName = "NoExistingComponents", Level = LogLevel.Trace, Message = "No existing components have been found for the {BuilderName} (instance:{BuilderInstanceId}).")]
+	public static partial void LogNoExistingComponents(this ILogger logger, string builderName, string builderInstanceId);
 
-	[LoggerMessage(EventId = 7, EventName = "SkippingOtlpExporter", Level = LogLevel.Information, Message = "Skipping OTLP exporter for {Signal} based on the provided `ElasticOpenTelemetryOptions` " +
-		"via the {ProviderBuilderType}.")]
-	public static partial void LogSkippingOtlpExporter(this ILogger logger, string signal, string providerBuilderType);
+	[LoggerMessage(EventId = 7, EventName = "StoringBuilderState", Level = LogLevel.Trace, Message = "Storing state for the current {BuilderName} (instance:{BuilderInstanceId}).")]
+	public static partial void LogStoringBuilderState(this ILogger logger, string builderName, string builderInstanceId);
 
-	[LoggerMessage(EventId = 8, EventName = "LocatedInstrumentationAssembly", Level = LogLevel.Trace, Message = "Located {AssemblyFilename} in {Path}.")]
-	public static partial void LogLocatedInstrumentationAssembly(this ILogger logger, string assemblyFilename, string path);
+	[LoggerMessage(EventId = 8, EventName = "MultipleWithElasticDefaultsCalls", Level = LogLevel.Warning, Message = "The `WithElasticDefaults` method has been called {CallCount} " +
+		"times across all {Target} instances. This method is generally expected to be invoked on a single builder instance. Consider reviewing its usage.")]
+	public static partial void LogMultipleWithElasticDefaultsCallsWarning(this ILogger logger, int callCount, string target);
 
-	// We explictly reuse the same event ID and this is the same log message, but with different types for the structured data
-	[LoggerMessage(EventId = 9, Level = LogLevel.Trace, Message = "{ProcessorName} found `{AttributeName}` attribute with value '{AttributeValue}' on the span.")]
-	internal static partial void FoundTag(this ILogger logger, string processorName, string attributeName, string attributeValue);
+	[LoggerMessage(EventId = 9, EventName = "MultipleAddElasticProcessorsCalls", Level = LogLevel.Warning, Message = "The `AddElasticProcessors` method has been called {CallCount} " +
+		"times across all TracerProviderBuilder instances. This method is generally expected to be invoked on a single builder instance. Consider reviewing its usage.")]
+	public static partial void LogMultipleAddElasticProcessorsCallsWarning(this ILogger logger, int callCount);
 
-	// We explictly reuse the same event ID and this is the same log message, but with different types for the structured data
-	[LoggerMessage(EventId = 9, Level = LogLevel.Trace, Message = "{ProcessorName} found `{AttributeName}` attribute with value '{AttributeValue}' on the span.")]
-	internal static partial void FoundTag(this ILogger logger, string processorName, string attributeName, int attributeValue);
+	[LoggerMessage(EventId = 10, EventName = "AddingResourceAttribute", Level = LogLevel.Trace, Message = "Adding resource attribute '{AttributeName}' with value '{AttributeValue}' to " +
+		"the ResourceBuilder (instance:{BuilderInstanceId}).")]
+	public static partial void LogAddingResourceAttribute(this ILogger logger, string attributeName, string attributeValue, string builderInstanceId);
 
-	// We explictly reuse the same event ID and this is the same log message, but with different types for the structured data
-	[LoggerMessage(EventId = 10, Level = LogLevel.Trace, Message = "{ProcessorName} set `{AttributeName}` attribute with value '{AttributeValue}' on the span.")]
-	internal static partial void SetTag(this ILogger logger, string processorName, string attributeName, string attributeValue);
+	[LoggerMessage(EventId = 11, EventName = "ResourceBuilderWithElasticDefaultsMultipleCalls", Level = LogLevel.Debug, Message = "The `WithElasticDefaults` method has been called {CallCount} " +
+		"times across all {Target} instances.")]
+	public static partial void LogWithElasticDefaultsCallCount(this ILogger logger, int callCount, string target);
 
-	// We explictly reuse the same event ID and this is the same log message, but with different types for the structured data
-	[LoggerMessage(EventId = 10, Level = LogLevel.Trace, Message = "{ProcessorName} set `{AttributeName}` attribute with value '{AttributeValue}' on the span.")]
-	internal static partial void SetTag(this ILogger logger, string processorName, string attributeName, int attributeValue);
 
-	[LoggerMessage(EventId = 11, Level = LogLevel.Debug, Message = "Added '{ProcessorTypeName}' processor to {BuilderTypeName} with ID '{BuilderIdentifier}'.")]
-	public static partial void LogProcessorAdded(this ILogger logger, string processorTypeName, string builderTypeName, string builderIdentifier);
 
-	[LoggerMessage(EventId = 12, Level = LogLevel.Debug, Message = "Added '{MeterName}' meter to {BuilderTypeName}.")]
-	public static partial void LogMeterAdded(this ILogger logger, string meterName, string builderTypeName);
 
-	[LoggerMessage(EventId = 13, Level = LogLevel.Error, Message = "Unable to configure {BuilderTypeName} with EDOT .NET logging defaults.")]
-	public static partial void UnableToConfigureLoggingDefaultsError(this ILogger logger, string builderTypeName);
+	[LoggerMessage(EventId = 20, EventName = "ConfiguredSignalProvider", Level = LogLevel.Debug, Message = "Configured EDOT defaults for {Signal} via the {ProviderBuilderType} (instance:{BuilderInstanceId}).")]
+	public static partial void LogConfiguredSignalProvider(this ILogger logger, string signal, string providerBuilderType, string builderInstanceId);
 
-	[LoggerMessage(EventId = 14, EventName = "AddedInstrumentation", Level = LogLevel.Debug, Message = "Added {InstrumentationName} to {ProviderBuilderType}.")]
-	public static partial void LogAddedInstrumentation(this ILogger logger, string instrumentationName, string providerBuilderType);
+	[LoggerMessage(EventId = 21, EventName = "SkippingOtlpExporter", Level = LogLevel.Information, Message = "Skipping OTLP exporter for {Signal} based on the provided `ElasticOpenTelemetryOptions` " +
+		"via the {ProviderBuilderType} (instance:{BuilderInstanceId}).")]
+	public static partial void LogSkippingOtlpExporter(this ILogger logger, string signal, string providerBuilderType, string builderInstanceId);
 
-	[LoggerMessage(EventId = 15, EventName = "AddedInstrumentationViaReflection", Level = LogLevel.Debug, Message = "Added {InstrumentationName} to {ProviderBuilderType} via reflection assembly scanning.")]
-	public static partial void LogAddedInstrumentationViaReflection(this ILogger logger, string instrumentationName, string providerBuilderType);
+	[LoggerMessage(EventId = 22, EventName = "ProviderBuilderSignalDisabled", Level = LogLevel.Information, Message = "Skipping configuring and setting EDOT defaults for {Signal} on {ProviderBuilderType}" +
+		"(instance:{BuilderInstanceId}), as these have been disabled via configuration.")]
+	public static partial void LogSignalDisabled(this ILogger logger, string signal, string providerBuilderType, string builderInstanceId);
 
-	[LoggerMessage(EventId = 16, EventName = "HttpInstrumentationFound", Level = LogLevel.Debug, Message = "The contrib HTTP instrumentation library was located alongside the executing assembly. " +
-		"Skipping adding native {InstrumentationType} instrumentation from the 'System.Net.Http' ActivitySource to '{ProviderBuilderType}' with ID '{BuilderIdentifier}'.")]
-	public static partial void LogHttpInstrumentationFound(this ILogger logger, string instrumentationType, string providerBuilderType, string builderIdentifier);
-
-	[LoggerMessage(EventId = 17, EventName = "RuntimeInstrumentationFound", Level = LogLevel.Debug, Message = "The contrib runtime instrumentation library was located alongside the executing assembly. " +
-		"Skipping adding native metric instrumentation from the 'System.Runtime' ActivitySource.")]
-	public static partial void LogRuntimeInstrumentationFound(this ILogger logger);
-
-	[LoggerMessage(EventId = 18, EventName = "SignalDisabled", Level = LogLevel.Information, Message = "Skipping configuring and setting EDOT defaults for {Signal}, as these have been disabled via configuration.")]
-	public static partial void LogSignalDisabled(this ILogger logger, string signal);
-
-	[LoggerMessage(EventId = 19, EventName = "ProviderBuilderSignalDisabled", Level = LogLevel.Information, Message = "Skipping configuring and setting EDOT defaults for {Signal} on {ProviderBuilderType}, " +
-		"as these have been disabled via configuration.")]
-	public static partial void LogSignalDisabled(this ILogger logger, string signal, string providerBuilderType);
-
-	[LoggerMessage(EventId = 20, EventName = "SkippingBootstrap", Level = LogLevel.Warning, Message = "Skipping EDOT bootstrap and provider configuration because the `Signals` configuration is set to `None`. " +
+	[LoggerMessage(EventId = 23, EventName = "SkippingBootstrap", Level = LogLevel.Warning, Message = "Skipping EDOT bootstrap and provider configuration because the `Signals` configuration is set to `None`. " +
 		"This likely represents a misconfiguration. If you do not want to use the EDOT for any signals, avoid calling `WithElasticDefaults` on the builder.")]
 	public static partial void LogSkippingBootstrapWarning(this ILogger logger);
 
-	[LoggerMessage(EventId = 21, EventName = "LogAddedMeter", Level = LogLevel.Warning, Message = "Added {MeterName} to resource builder '{BuilderIdentifier}'.")]
-	public static partial void LogAddedMeter(this ILogger logger, string meterName, string builderIdentifier);
+	[LoggerMessage(EventId = 24, EventName = "BuilderAlreadyConfigured", Level = LogLevel.Debug, Message = "The {ProviderBuilderType} (instance:{BuilderInstanceId}) has already been configured with EDOT defaults.")]
+	public static partial void LogBuilderAlreadyConfigured(this ILogger logger, string providerBuilderType, string builderInstanceId);
 
-	[LoggerMessage(EventId = 22, EventName = "ResourceBuilderAlreadyConfigured", Level = LogLevel.Debug, Message = "The resource builder '{BuilderIdentifier}' has already been configured with EDOT defaults.")]
-	public static partial void LogResourceBuilderAlreadyConfigured(this ILogger logger, string builderIdentifier);
+	[LoggerMessage(EventId = 25, EventName = "ConfiguringBuilder", Level = LogLevel.Information, Message = "Configuring the {ProviderBuilderType} (instance:{BuilderInstanceId}) with EDOT defaults.")]
+	public static partial void LogConfiguringBuilder(this ILogger logger, string providerBuilderType, string builderInstanceId);
 
-	[LoggerMessage(EventId = 23, EventName = "ResourceBuilderConfigured", Level = LogLevel.Debug, Message = "Configuring the resource builder '{BuilderIdentifier}' with EDOT defaults.")]
-	public static partial void LogResourceBuilderConfigured(this ILogger logger, string builderIdentifier);
 
-	[LoggerMessage(EventId = 24, EventName = "ConfiguringBuilder", Level = LogLevel.Information, Message = "Configuring the {ProviderBuilderType} with ID '{BuilderIdentifier}' with EDOT defaults.")]
-	public static partial void LogConfiguringBuilder(this ILogger logger, string providerBuilderType, string builderIdentifier);
+
+	[LoggerMessage(EventId = 30, EventName = "LocatedInstrumentationAssembly", Level = LogLevel.Trace, Message = "Located {AssemblyFilename} in {Path}.")]
+	public static partial void LogLocatedInstrumentationAssembly(this ILogger logger, string assemblyFilename, string path);
+
+	[LoggerMessage(EventId = 31, EventName = "AddedInstrumentation", Level = LogLevel.Debug, Message = "Added contrib instrumentation '{InstrumentationName}' " +
+		"to {ProviderBuilderType} (instance:{BuilderInstanceId}).")]
+	public static partial void LogAddedInstrumentation(this ILogger logger, string instrumentationName, string providerBuilderType, string builderInstanceId);
+
+	[LoggerMessage(EventId = 32, EventName = "HttpInstrumentationFound", Level = LogLevel.Debug, Message = "The contrib HTTP instrumentation library was located alongside the executing assembly. " +
+		"Skipping adding native {InstrumentationType} instrumentation from the 'System.Net.Http' ActivitySource to '{ProviderBuilderType}' (instance:{BuilderInstanceId}).")]
+	public static partial void LogHttpInstrumentationFound(this ILogger logger, string instrumentationType, string providerBuilderType, string builderInstanceId);
+
+	[LoggerMessage(EventId = 33, EventName = "RuntimeInstrumentationFound", Level = LogLevel.Debug, Message = "The contrib runtime instrumentation library was located alongside the executing assembly. " +
+		"Skipping adding native metric instrumentation from the 'System.Runtime' ActivitySource.")]
+	public static partial void LogRuntimeInstrumentationFound(this ILogger logger);
+
+	[LoggerMessage(EventId = 34, EventName = "AddedInstrumentationViaReflection", Level = LogLevel.Debug, Message = "Added contrib instrumentation '{InstrumentationName}' to " +
+		"{ProviderBuilderType} (instance:{BuilderInstanceIdentifier}) via reflection.")]
+	public static partial void LogAddedInstrumentationViaReflection(this ILogger logger, string instrumentationName, string providerBuilderType, string builderInstanceIdentifier);
+
+	[LoggerMessage(EventId = 35, EventName = "UnableToFindTypeViaReflection", Level = LogLevel.Warning, Message = "Unable to find {FullyQualifiedTypeName} in {AssemblyFullName}.")]
+	public static partial void LogUnableToFindTypeWarning(this ILogger logger, string fullyQualifiedTypeName, string assemblyFullName);
+
+	[LoggerMessage(EventId = 36, EventName = "UnableToFindMethodViaReflection", Level = LogLevel.Warning, Message = "Unable to find the {FullyQualifiedTypeName}.{MethodName} extension " +
+		"method in {AssemblyFullName}.")]
+	public static partial void LogUnableToFindMethodWarning(this ILogger logger, string fullyQualifiedTypeName, string methodName, string assemblyFullName);
+
+	[LoggerMessage(EventId = 37, EventName = "InvalidBaseDirectory", Level = LogLevel.Warning, Message = "The result of `AppContext.BaseDirectory` was null or empty. Unable to " +
+		"perform instrumentation assembly scanning.")]
+	public static partial void LogBaseDirectoryWarning(this ILogger logger);
+
+	[LoggerMessage(EventId = 38, EventName = "SkippingAssemblyScanning", Level = LogLevel.Trace, Message = "Skipping instrumentation assembly scanning on " +
+		"{ProviderBuilderType} (instance:{BuilderInstanceId}) because it is disabled in configuration.")]
+	public static partial void LogSkippingAssemblyScanning(this ILogger logger, string providerBuilderType, string builderInstanceId);
+
+
+
+	[LoggerMessage(EventId = 40, EventName = "ProcessorAdded", Level = LogLevel.Debug, Message = "Added '{ProcessorTypeName}' processor to TracerProviderBuilder (instance:{BuilderInstanceId}).")]
+	public static partial void LogProcessorAdded(this ILogger logger, string processorTypeName, string builderInstanceId);
+
+	[LoggerMessage(EventId = 41, EventName = "MeterAdded", Level = LogLevel.Debug, Message = "Added '{MeterName}' meter to MeterProviderBuilder (instance:{BuilderInstanceId}).")]
+	public static partial void LogMeterAdded(this ILogger logger, string meterName, string builderInstanceId);
+
+	[LoggerMessage(EventId = 42, EventName = "ActivitySourceAdded", Level = LogLevel.Debug, Message = "Added '{ActivitySource}' to TracerProviderBuilder (instance:{BuilderInstanceId}).")]
+	public static partial void LogActivitySourceAdded(this ILogger logger, string activitySource, string builderInstanceId);
+
+
+
+	// We explictly reuse the same event ID and this is the same log message, but with different types for the structured data
+	[LoggerMessage(EventId = 50, EventName = "FoundTag", Level = LogLevel.Trace, Message = "{ProcessorName} found `{AttributeName}` attribute with value '{AttributeValue}' on the span.")]
+	internal static partial void LogFoundTag(this ILogger logger, string processorName, string attributeName, object attributeValue);
+
+	// We explictly reuse the same event ID and this is the same log message, but with different types for the structured data
+	[LoggerMessage(EventId = 51, EventName = "SetTag", Level = LogLevel.Trace, Message = "{ProcessorName} set `{AttributeName}` attribute with value '{AttributeValue}' on the span.")]
+	internal static partial void LogSetTag(this ILogger logger, string processorName, string attributeName, object attributeValue);
+
+
 
 	public static void LogDistroPreamble(this ILogger logger, SdkActivationMethod activationMethod, ElasticOpenTelemetryComponents components)
 	{

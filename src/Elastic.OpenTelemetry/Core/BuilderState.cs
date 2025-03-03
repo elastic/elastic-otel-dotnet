@@ -9,18 +9,13 @@ namespace Elastic.OpenTelemetry.Core;
 /// tracked per builder (OpenTelemetryBuilder, TracerProviderBuilder, MeterProviderBuilder
 /// or LoggerProviderBuilder) instance.
 /// </summary>
-internal sealed class BuilderState(
-	BootstrapInfo bootstrapInfo,
-	ElasticOpenTelemetryComponents components,
-	Guid? instanceIdentifier = null)
+internal sealed class BuilderState(ElasticOpenTelemetryComponents components, string identifier)
 {
-	private int _useElasticDefaultsCounter;
-
-	public BootstrapInfo BootstrapInfo { get; } = bootstrapInfo;
+	private int _useElasticDefaultsCounter = 1;
 
 	public ElasticOpenTelemetryComponents Components { get; } = components;
 
-	public Guid InstanceIdentifier { get; } = instanceIdentifier ?? Guid.NewGuid();
+	public string InstanceIdentifier { get; } = identifier;
 
 	public void IncrementWithElasticDefaults() =>
 		Interlocked.Increment(ref _useElasticDefaultsCounter);

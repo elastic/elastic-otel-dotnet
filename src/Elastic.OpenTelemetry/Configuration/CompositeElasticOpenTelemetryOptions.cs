@@ -289,7 +289,18 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 
 	private void SetFromEnvironment<T>(string key, ConfigCell<T> field, Func<string?, T?> parser)
 	{
-		var value = parser(GetSafeEnvironmentVariable(key));
+		var safeValue = GetSafeEnvironmentVariable(key);
+
+		// 'Trace' does not exist in OTEL_LOG_LEVEL ensure we parse it to next granularity
+		// debug, NOTE that OpenTelemetry treats this as invalid and will parse to 'Information'
+		// We treat 'Debug' and 'Trace' as a signal global file logging should be enabled.
+		if (key.Equals("OTEL_LOG_LEVEL") && safeValue.Equals("trace", StringComparison.OrdinalIgnoreCase))
+		{
+			safeValue = "debug";
+		}
+
+		var value = parser(safeValue);
+
 		if (value is null)
 			return;
 
@@ -304,12 +315,12 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 
 	internal void LogConfigSources(ILogger logger)
 	{
-		logger.LogInformation("Configured value for {Configuration}", _logDirectory);
-		logger.LogInformation("Configured value for {Configuration}", _logLevel);
-		logger.LogInformation("Configured value for {Configuration}", _skipOtlpExporter);
-		logger.LogInformation("Configured value for {Configuration}", _signals);
-		logger.LogInformation("Configured value for {Configuration}", _tracing);
-		logger.LogInformation("Configured value for {Configuration}", _metrics);
-		logger.LogInformation("Configured value for {Configuration}", _logging);
+		logger.LogDebug("Configured value for {Configuration}", _logDirectory);
+		logger.LogDebug("Configured value for {Configuration}", _logLevel);
+		logger.LogDebug("Configured value for {Configuration}", _skipOtlpExporter);
+		logger.LogDebug("Configured value for {Configuration}", _signals);
+		logger.LogDebug("Configured value for {Configuration}", _tracing);
+		logger.LogDebug("Configured value for {Configuration}", _metrics);
+		logger.LogDebug("Configured value for {Configuration}", _logging);
 	}
 }

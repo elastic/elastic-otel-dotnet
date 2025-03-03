@@ -5,7 +5,6 @@
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using OpenTelemetry.Logs;
 
 #pragma warning disable IDE0130 // Namespace does not match folder structure
@@ -14,18 +13,33 @@ namespace OpenTelemetry;
 
 /// <summary>
 /// Extension methods for <see cref="OpenTelemetryLoggerOptions"/> used to register
-/// the Elastic Distribution of OpenTelemetry (EDOT) defaults.
+/// the Elastic Distribution of OpenTelemetry (EDOT) .NET defaults.
 /// </summary>
-public static class OpenTelemetryLoggerOptionsExtensions
+internal static class OpenTelemetryLoggerOptionsExtensions
 {
 	/// <summary>
-	/// Ensures Elastic Distribution of OpenTelemetry (EDOT) options are set for <see cref="OpenTelemetryLoggerOptions"/>
+	/// Ensures Elastic Distribution of OpenTelemetry (EDOT) .NET options are set for <see cref="OpenTelemetryLoggerOptions"/>.
 	/// </summary>
-	public static void WithElasticDefaults(this OpenTelemetryLoggerOptions options, ILogger? logger = null)
+	/// <param name="options">The <see cref="OpenTelemetryLoggerOptions"/> to configure.</param>
+	/// <param name="logger">An <see cref="ILogger"/> to use for diagnostic logging.</param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="options"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="logger"/> is null.</exception>
+	public static void WithElasticDefaults(this OpenTelemetryLoggerOptions options, ILogger logger)
 	{
-		logger ??= NullLogger.Instance;
+#if NET
+		ArgumentNullException.ThrowIfNull(options);
+		ArgumentNullException.ThrowIfNull(logger);
+#else
+		if (options is null)
+			throw new ArgumentNullException(nameof(options));
+
+		if (logger is null)
+			throw new ArgumentNullException(nameof(logger));
+#endif
+
 		options.IncludeFormattedMessage = true;
 		options.IncludeScopes = true;
-		logger.LogConfiguredSignalProvider(nameof(Signals.Logs), nameof(OpenTelemetryLoggerOptions));
+
+		logger.LogConfiguredSignalProvider(nameof(Signals.Logs), nameof(OpenTelemetryLoggerOptions), "<n/a>");
 	}
 }

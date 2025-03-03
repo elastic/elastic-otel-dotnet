@@ -9,133 +9,86 @@ using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Diagnostics;
 using Elastic.OpenTelemetry.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace Elastic.OpenTelemetry.Core;
 
 internal static class ElasticOpenTelemetry
 {
-	private static volatile ElasticOpenTelemetryComponents? SharedComponents;
+	private static int BootstrapCounter;
 
-#pragma warning disable IDE0028 // Simplify collection initialization
-	internal static readonly ConditionalWeakTable<object, BuilderState> BuilderStateTable = new();
-#pragma warning restore IDE0028 // Simplify collection initialization
+	public static SdkActivationMethod ActivationMethod;
+
+
+	internal static readonly HashSet<ElasticOpenTelemetryComponents> SharedComponents = [];
 
 	private static readonly Lock Lock = new();
 
-	internal static BootstrapInfo TryBootstrap(out ElasticOpenTelemetryComponents components) =>
-		TryBootstrap(SdkActivationMethod.NuGet, CompositeElasticOpenTelemetryOptions.DefaultOptions, null, out components);
+	internal static ElasticOpenTelemetryComponents Bootstrap(SdkActivationMethod activationMethod) =>
+		Bootstrap(activationMethod, CompositeElasticOpenTelemetryOptions.DefaultOptions, null);
 
-	internal static BootstrapInfo TryBootstrap(SdkActivationMethod activationMethod, out ElasticOpenTelemetryComponents components) =>
-		TryBootstrap(activationMethod, CompositeElasticOpenTelemetryOptions.DefaultOptions, null, out components);
-
-	internal static BootstrapInfo TryBootstrap(
-		CompositeElasticOpenTelemetryOptions options,
-		out ElasticOpenTelemetryComponents components) =>
-			TryBootstrap(SdkActivationMethod.NuGet, options, null, out components);
-
-	internal static BootstrapInfo TryBootstrap(
-		IServiceCollection? services,
-		out ElasticOpenTelemetryComponents components) =>
-			TryBootstrap(SdkActivationMethod.NuGet, CompositeElasticOpenTelemetryOptions.DefaultOptions, services, out components);
-
-	internal static BootstrapInfo TryBootstrap(
-		CompositeElasticOpenTelemetryOptions options,
-		IServiceCollection? services,
-		out ElasticOpenTelemetryComponents components) =>
-			TryBootstrap(SdkActivationMethod.NuGet, options, services, out components);
+	internal static ElasticOpenTelemetryComponents Bootstrap(CompositeElasticOpenTelemetryOptions options, IServiceCollection? services) =>
+		Bootstrap(SdkActivationMethod.NuGet, options, services);
 
 	/// <summary>
 	/// Shared bootstrap routine for the Elastic Distribution of OpenTelemetry .NET.
 	/// Used to ensure auto instrumentation and manual instrumentation bootstrap the same way.
 	/// </summary>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal static BootstrapInfo TryBootstrap(
+	internal static ElasticOpenTelemetryComponents Bootstrap(
 		SdkActivationMethod activationMethod,
 		CompositeElasticOpenTelemetryOptions options,
-		IServiceCollection? services,
-		out ElasticOpenTelemetryComponents components)
+		IServiceCollection? services)
 	{
-		BootstrapInfo? bootstrapInfo = null;
+		ActivationMethod = activationMethod;
 
-		try
+		ElasticOpenTelemetryComponents components;
+
+		// We only expect this to be allocated a handful of times, generally once.
+		var stackTrace = new StackTrace(true);
+
+		var invocationCount = Interlocked.Increment(ref BootstrapCounter);
+
+		// Strictly speaking, we probably don't require locking here as the registration of
+		// OpenTelemetry is expected to run sequentially. That said, the overhead is low
+		// since this is called infrequently.
+		using (var scope = Lock.EnterScope())
 		{
 			// If an IServiceCollection is provided, we attempt to access any existing
-			// components to reuse them.
-			if (TryGetExistingComponents(services, out var existingComponents))
-			{
-				components = existingComponents;
-				return existingComponents.BootstrapInfo;
-			}
-
-			// We only expect this to be allocated a handful of times, generally once.
-			var stackTrace = new StackTrace(true);
-
-			// If an IServiceCollection is provided, but it doesn't yet include any components then
-			// create new components.
+			// components to reuse them before accessing any potential shared components.
 			if (services is not null)
 			{
-				using (var scope = Lock.EnterScope())
+				if (TryGetExistingComponentsFromServiceCollection(services, out var existingComponents))
 				{
-					if (TryGetExistingComponents(services, out existingComponents))
-					{
-						components = existingComponents;
-						return existingComponents.BootstrapInfo;
-					}
-
-					bootstrapInfo = new BootstrapInfo(activationMethod, stackTrace);
-					components = CreateComponents(bootstrapInfo, options, stackTrace);
+					existingComponents.Logger.LogBootstrapInvoked(invocationCount);
+					return existingComponents;
 				}
+			}
 
+			// We don't have components assigned for this IServiceCollection, attempt to use
+			// the existing SharedComponents, or create components.
+			if (TryGetSharedComponents(options, out var sharedComponents))
+			{
+				components = sharedComponents;
+			}
+			else
+			{
+				components = CreateComponents(activationMethod, options, stackTrace);
+				components.Logger.LogSharedComponentsNotReused();
+				SharedComponents.Add(components);
+			}
+
+			components.Logger.LogBootstrapInvoked(invocationCount);
+
+			if (services is not null)
+			{
 				services.AddSingleton(components);
 				services.AddHostedService<ElasticOpenTelemetryService>();
-
-				return bootstrapInfo;
 			}
 
-			// When no IServiceCollection is provided we attempt to avoid bootstrapping more than
-			// once. The first call into Bootstrap wins and thereafter the same components are reused.
-			if (TryGetSharedComponents(SharedComponents, stackTrace, out var shared))
-			{
-				// We compare whether the options (values) equal those from the shared components. If the
-				// values of the options differ, we will not reuse the shared components.
-				if (shared.Options.Equals(options))
-				{
-					components = shared;
-					components.Logger.LogSharedComponentsReused(Environment.NewLine, stackTrace);
-					return shared.BootstrapInfo;
-				}
-
-				bootstrapInfo = new BootstrapInfo(activationMethod, stackTrace);
-				components = CreateComponents(bootstrapInfo, options, stackTrace);
-				components.Logger.LogSharedComponentsNotReused(Environment.NewLine, new StackTrace(true));
-				return bootstrapInfo;
-			}
-
-			using (var scope = Lock.EnterScope())
-			{
-				if (TryGetSharedComponents(SharedComponents, stackTrace, out shared) && shared.Options.Equals(options))
-				{
-					components = shared;
-					return shared.BootstrapInfo;
-				}
-
-				// If we get this far, we've been unable to get the shared components
-				bootstrapInfo = new BootstrapInfo(activationMethod, stackTrace);
-				components = SharedComponents = CreateComponents(bootstrapInfo, options, stackTrace);
-				return bootstrapInfo;
-			}
-		}
-		catch (Exception ex)
-		{
-			options.AdditionalLogger?.LogCritical(ex, "Unable to bootstrap the Elastic Distribution of OpenTelemetry .NET SDK.");
-			bootstrapInfo = new(activationMethod, ex);
-			components = ElasticOpenTelemetryComponents.CreateDefault(bootstrapInfo);
-
-			return bootstrapInfo;
+			return components;
 		}
 
-		static bool TryGetExistingComponents(IServiceCollection? services, [NotNullWhen(true)] out ElasticOpenTelemetryComponents? components)
+		static bool TryGetExistingComponentsFromServiceCollection(IServiceCollection? services, [NotNullWhen(true)] out ElasticOpenTelemetryComponents? components)
 		{
 			components = null;
 
@@ -143,37 +96,47 @@ internal static class ElasticOpenTelemetry
 				?.ImplementationInstance as ElasticOpenTelemetryComponents is not { } existingComponents)
 				return false;
 
-			existingComponents.Logger.LogComponentsReused(Environment.NewLine, new StackTrace(true));
+			existingComponents.Logger.LogServiceCollectionComponentsReused();
 			components = existingComponents;
 			return true;
 		}
 
-		static bool TryGetSharedComponents(ElasticOpenTelemetryComponents? components, StackTrace stackTrace,
+		static bool TryGetSharedComponents(CompositeElasticOpenTelemetryOptions options,
 			[NotNullWhen(true)] out ElasticOpenTelemetryComponents? sharedComponents)
 		{
 			sharedComponents = null;
 
-			if (components is null)
-				return false;
+			foreach (var cachedComponents in SharedComponents)
+			{
+				if (cachedComponents.Options.Equals(options))
+				{
+					sharedComponents = cachedComponents;
+					cachedComponents.Logger.LogSharedComponentsReused();
+					return true;
+				}
+			}
 
-			sharedComponents = components;
-
-			return true;
+			return false;
 		}
 
 		static ElasticOpenTelemetryComponents CreateComponents(
-			BootstrapInfo bootstrap,
+			SdkActivationMethod activationMethod,
 			CompositeElasticOpenTelemetryOptions options,
 			StackTrace stackTrace)
 		{
 			var logger = new CompositeLogger(options);
 			var eventListener = new LoggingEventListener(logger, options);
-			var components = new ElasticOpenTelemetryComponents(bootstrap, logger, eventListener, options);
+			var components = new ElasticOpenTelemetryComponents(logger, eventListener, options);
 
-			logger.LogDistroPreamble(bootstrap.ActivationMethod, components);
-			logger.LogElasticOpenTelemetryBootstrapped(Environment.NewLine, stackTrace);
+			logger.LogDistroPreamble(activationMethod, components);
+			logger.LogComponentsCreated(Environment.NewLine, stackTrace);
 
 			return components;
 		}
 	}
+
+	///// <summary>
+	///// Used for testing.
+	///// </summary>
+	//internal static void ResetSharedComponentsForTesting() => SharedComponents = null;
 }

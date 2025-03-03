@@ -2,15 +2,16 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry.Core;
 using Elastic.OpenTelemetry.Diagnostics;
 using Elastic.OpenTelemetry.Instrumentation;
 using Elastic.OpenTelemetry.SemanticConventions;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
+
+#if NET
+using System.Runtime.CompilerServices;
+#endif
 
 #pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace OpenTelemetry.Resources;
@@ -18,78 +19,65 @@ namespace OpenTelemetry.Resources;
 
 /// <summary>
 /// Provides extension methods on the <see cref="ResourceBuilder"/> used to register
-/// the Elastic Distribution of OpenTelemetry (EDOT) defaults.
+/// the Elastic Distribution of OpenTelemetry (EDOT) .NET defaults.
 /// </summary>
 internal static class ResourceBuilderExtensions
 {
-	private static readonly string InstanceId = Guid.NewGuid().ToString();
+	/// <summary>
+	/// Used to track the number of times any variation of `WithElasticDefaults` is invoked by consuming
+	/// code acrosss all <see cref="ResourceBuilder"/> instances. This allows us to warn about potenital
+	/// misconfigurations.
+	/// </summary>
+	private static int WithElasticDefaultsCallCount;
 
-#pragma warning disable IDE0028 // Simplify collection initialization
-	private static readonly ConditionalWeakTable<ResourceBuilder, string> ConfiguredBuilders = new();
-#pragma warning restore IDE0028 // Simplify collection initialization
+	/// <summary>
+	/// The unique ID for this instance of the application/service.
+	/// </summary>
+	private static readonly string ApplicationInstanceId = Guid.NewGuid().ToString();
 
-#if !NET
-	private static readonly Lock Lock = new();
-#endif
+	internal static ResourceBuilder WithElasticDefaults(this ResourceBuilder builder, BuilderState builderState, IServiceCollection? services) =>
+		WithElasticDefaults(builder, builderState.Components, services);
 
-	public static ResourceBuilder WithElasticDefaults(this ResourceBuilder builder) =>
-		WithElasticDefaults(builder, NullLogger.Instance);
+	internal static ResourceBuilder WithElasticDefaults(this ResourceBuilder builder, ElasticOpenTelemetryComponents components, IServiceCollection? services)
+	{
+		var callCount = Interlocked.Increment(ref WithElasticDefaultsCallCount);
+
+		components.Logger.LogWithElasticDefaultsCallCount(callCount, nameof(ResourceBuilder));
+
+		return SignalBuilder.WithElasticDefaults(builder, components.Options, components, services, ConfigureBuilder);
+	}
 
 	[UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026", Justification = "The call to `AssemblyScanning.AddInstrumentationViaReflection` " +
 		"is guarded by a RuntimeFeature.IsDynamicCodeSupported` check and therefore this method is safe to call in AoT scenarios.")]
-	public static ResourceBuilder WithElasticDefaults(this ResourceBuilder builder, ILogger logger)
+	private static void ConfigureBuilder(ResourceBuilder builder, BuilderState builderState, IServiceCollection? services)
 	{
-		var defaultServiceName = "unknown_service";
-
-		if (ConfiguredBuilders.TryGetValue(builder, out var builderIdentifier))
+		var attributes = new Dictionary<string, object>
 		{
-			logger.LogResourceBuilderAlreadyConfigured($"{builderIdentifier}:{builder.GetHashCode()}");
-			return builder;
-		}
+			{ ResourceSemanticConventions.AttributeServiceInstanceId, ApplicationInstanceId },
+			{ ResourceSemanticConventions.AttributeTelemetryDistroName, "elastic" },
+			{ ResourceSemanticConventions.AttributeTelemetryDistroVersion, VersionHelper.InformationalVersion }
+		};
 
-		builderIdentifier = Guid.NewGuid().ToString();
+		builder.AddAttributes(attributes);
 
-#if NET
-		ConfiguredBuilders.TryAdd(builder, builderIdentifier);
-#else
-		using (var scope = Lock.EnterScope())
+		foreach (var attribute in attributes)
 		{
-			ConfiguredBuilders.Add(builder, builderIdentifier);
-		}
-#endif
-
-		try
-		{
-			var processName = Process.GetCurrentProcess().ProcessName;
-			if (!string.IsNullOrWhiteSpace(processName))
-				defaultServiceName = $"{defaultServiceName}:{processName}";
-		}
-		catch
-		{
-			// GetCurrentProcess can throw PlatformNotSupportedException
-		}
-
-		builder
-			.AddAttributes(new Dictionary<string, object>
+			if (attribute.Value is not null)
 			{
-				{ ResourceSemanticConventions.AttributeServiceName, defaultServiceName },
-				{ ResourceSemanticConventions.AttributeServiceInstanceId, InstanceId },
-				{ ResourceSemanticConventions.AttributeTelemetryDistroName, "elastic" },
-				{ ResourceSemanticConventions.AttributeTelemetryDistroVersion, VersionHelper.InformationalVersion }
-			});
+				var value = attribute.Value.ToString() ?? "<empty>";
+				builderState.Components.Logger.LogAddingResourceAttribute(attribute.Key, value, builderState.InstanceIdentifier);
+			}
+		}
 
 #if NET
 		if (RuntimeFeature.IsDynamicCodeSupported)
 #endif
 		{
-			// Currently, this adds just the HostDetector is the DLL is present. This ensures that this method can be called
+			// Currently, this adds just the HostDetector if the DLL is present. This ensures that this method can be called
 			// by auto-instrumentation which won't ship with that DLL. For the NuGet package, we depend on it so it will always
 			// be present.
-			SignalBuilder.AddInstrumentationViaReflection(builder, logger, ContribResourceDetectors.GetContribResourceDetectors());
+			SignalBuilder.AddInstrumentationViaReflection(builder, builderState.Components,
+				ContribResourceDetectors.GetContribResourceDetectors(), builderState.InstanceIdentifier);
 		}
-
-		logger.LogResourceBuilderConfigured($"{builderIdentifier}:{builder.GetHashCode()}");
-
-		return builder;
 	}
 }

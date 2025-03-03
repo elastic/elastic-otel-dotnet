@@ -61,7 +61,7 @@ internal static class LogFormatter
 
 	private static void WriteLogPrefix(int managedThreadId, DateTime dateTime, LogLevel level, StringBuilder builder, string spanId = "")
 	{
-		const int maxLength = 5;
+		const int maxLength = 6;
 
 		if (string.IsNullOrEmpty(spanId))
 			spanId = EmptySpanId;
@@ -72,7 +72,7 @@ internal static class LogFormatter
 		{
 			var digits = (int)Math.Floor(Math.Log10(managedThreadId) + 1);
 
-			if (digits < 5)
+			if (digits < maxLength)
 			{
 				Span<char> buffer = stackalloc char[maxLength];
 				for (var i = 0; i < maxLength - digits; i++)

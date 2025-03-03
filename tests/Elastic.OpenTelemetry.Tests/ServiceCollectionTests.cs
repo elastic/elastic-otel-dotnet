@@ -9,6 +9,9 @@ using Xunit.Abstractions;
 
 namespace Elastic.OpenTelemetry.Tests;
 
+// These run in a collection to avoid them running in parallel with other tests that may set the SharedComponents which would cause
+// these to fail.
+[Collection("Discrete SharedComponents")]
 public class ServiceCollectionTests(ITestOutputHelper output)
 {
 	private readonly ITestOutputHelper _output = output;
