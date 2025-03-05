@@ -12,7 +12,7 @@ namespace Elastic.OpenTelemetry.Configuration.Parsers;
 internal static class SharedParsers
 {
 	internal static LogLevel? LogLevelParser(string? s) =>
-		!string.IsNullOrEmpty(s) ? LogLevelHelpers.ToLogLevel(s) : null;
+		!string.IsNullOrEmpty(s) ? LogLevelHelpers.ToLogLevel(s!) : null;
 
 	internal static LogTargets? LogTargetsParser(string? s)
 	{
@@ -22,15 +22,13 @@ internal static class SharedParsers
 		var logTargets = LogTargets.None;
 		var found = false;
 
-		foreach (var target in s.Split([';', ','], RemoveEmptyEntries))
-		{
+		foreach (var target in s!.Split([';', ','], RemoveEmptyEntries))
 			if (IsSet(target, "stdout"))
 				logTargets |= LogTargets.StdOut;
 			else if (IsSet(target, "file"))
 				logTargets |= LogTargets.File;
 			else if (IsSet(target, "none"))
 				logTargets |= LogTargets.None;
-		}
 		return !found ? null : logTargets;
 
 		bool IsSet(string k, string v)

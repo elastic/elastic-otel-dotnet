@@ -2,7 +2,6 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry;
@@ -273,39 +272,5 @@ public static class MeterProviderBuilderExtensions
 			add.Invoke(builder);
 			logger.LogAddedInstrumentation(name, nameof(MeterProviderBuilder), builderIdentifier);
 		}
-	}
-
-	// We use a different method here to ensure we don't cause a crash depending on instrumentation libraries which are not present.
-	// We can't assume that any DLLs are available besides OpenTelemetry.dll, which auto-instrumentation includes.
-	// The auto instrumentation enables a set of default instrumentation of it's own, so we rely on that.
-	// In the future, we can assess if we should copy instrumentation DLLs into the autoinstrumentation zip file and enable them.
-	internal static MeterProviderBuilder UseAutoInstrumentationElasticDefaults(this MeterProviderBuilder builder, ElasticOpenTelemetryComponents components)
-	{
-		Debug.Assert(components is not null, "Components should not be null when invoked from the auto instrumentation.");
-
-		try
-		{
-			builder.ConfigureResource(r => r.WithElasticDefaults(components, null));
-
-			if (components.Options.SkipOtlpExporter)
-			{
-				components.Logger.LogSkippingOtlpExporter(nameof(Signals.Metrics), nameof(MeterProviderBuilder), "<n/a>");
-			}
-			else
-			{
-				builder.AddOtlpExporter();
-			}
-
-			components.Logger.LogConfiguredSignalProvider(nameof(Signals.Metrics), nameof(MeterProviderBuilder), "<n/a>");
-
-			return builder;
-		}
-		catch (Exception ex)
-		{
-			components.Logger.LogError(new EventId(521, "AutoInstrumentationTracerFailure"), ex,
-				"Failed to register EDOT defaults for metrics auto-instrumentation to the MeterProviderBuilder.");
-		}
-
-		return builder;
 	}
 }

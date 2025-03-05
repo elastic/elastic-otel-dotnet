@@ -72,7 +72,7 @@ internal enum TraceInstrumentation
 	/// <summary>MassTransit.</summary>
 	MassTransit,
 
-	/// <summary>MongoDB.Driver.Core.</summary>
+	/// <summary>MongoDB.Driver.</summary>
 	MongoDb,
 
 	/// <summary>MySqlConnector.</summary>

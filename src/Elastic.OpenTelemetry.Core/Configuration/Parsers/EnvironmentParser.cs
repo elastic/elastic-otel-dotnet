@@ -27,7 +27,7 @@ internal class EnvironmentParser(IDictionary environmentVariables)
 			var name = getter(instrumentation).ToUpperInvariant();
 			var key = $"OTEL_DOTNET_AUTO_{signalEnv}_{name}_INSTRUMENTATION_ENABLED";
 			var enabled = BoolParser(GetSafeEnvironmentVariable(key));
-			if ((enabled.HasValue && enabled.Value) || (!enabled.HasValue && allEnabled))
+			if (enabled.HasValue && enabled.Value || !enabled.HasValue && allEnabled)
 				instrumentations.Add(instrumentation);
 			if (enabled.HasValue)
 				opted = true;

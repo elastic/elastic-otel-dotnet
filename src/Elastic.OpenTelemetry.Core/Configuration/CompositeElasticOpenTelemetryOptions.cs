@@ -8,6 +8,7 @@ using System.Diagnostics.Tracing;
 using System.Runtime.InteropServices;
 using Elastic.OpenTelemetry.Configuration.Instrumentations;
 using Elastic.OpenTelemetry.Configuration.Parsers;
+using Elastic.OpenTelemetry.Core;
 using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -295,9 +296,7 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 		// debug, NOTE that OpenTelemetry treats this as invalid and will parse to 'Information'
 		// We treat 'Debug' and 'Trace' as a signal global file logging should be enabled.
 		if (key.Equals("OTEL_LOG_LEVEL") && safeValue.Equals("trace", StringComparison.OrdinalIgnoreCase))
-		{
 			safeValue = "debug";
-		}
 
 		var value = parser(safeValue);
 

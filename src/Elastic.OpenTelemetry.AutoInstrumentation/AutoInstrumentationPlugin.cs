@@ -4,6 +4,8 @@
 
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Core;
+using Elastic.OpenTelemetry.Diagnostics;
+using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
@@ -28,14 +30,53 @@ public class AutoInstrumentationPlugin
 	/// <summary>
 	/// To configure tracing SDK before Auto Instrumentation configured SDK.
 	/// </summary>
-	public TracerProviderBuilder BeforeConfigureTracerProvider(TracerProviderBuilder builder) =>
-		builder.UseAutoInstrumentationElasticDefaults(_components);
+	public TracerProviderBuilder BeforeConfigureTracerProvider(TracerProviderBuilder builder)
+	{
+		var logger = _components.Logger;
+
+		try
+		{
+			builder.ConfigureResource(r => r.WithElasticDefaults(_components, null));
+
+			CoreTracerProvderBuilderExtensions.AddActivitySourceWithLogging(builder, logger, "Elastic.Transport", "<n/a>");
+			CoreTracerProvderBuilderExtensions.AddElasticProcessorsCore(builder, null, _components, null);
+
+			logger.LogConfiguredSignalProvider("Traces", nameof(TracerProviderBuilder), "<n/a>");
+
+			return builder;
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(new EventId(520, "AutoInstrumentationTracerFailure"), ex,
+				"Failed to register EDOT defaults for tracing auto-instrumentation to the TracerProviderBuilder.");
+		}
+
+		return builder;
+	}
 
 	/// <summary>
 	/// To configure metrics SDK before Auto Instrumentation configured SDK.
 	/// /// </summary>
-	public MeterProviderBuilder BeforeConfigureMeterProvider(MeterProviderBuilder builder) =>
-		builder.UseAutoInstrumentationElasticDefaults(_components);
+	public MeterProviderBuilder BeforeConfigureMeterProvider(MeterProviderBuilder builder)
+	{
+		var logger = _components.Logger;
+
+		try
+		{
+			builder.ConfigureResource(r => r.WithElasticDefaults(_components, null));
+
+			logger.LogConfiguredSignalProvider(nameof(Signals.Metrics), nameof(MeterProviderBuilder), "<n/a>");
+
+			return builder;
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(new EventId(521, "AutoInstrumentationTracerFailure"), ex,
+				"Failed to register EDOT defaults for metrics auto-instrumentation to the MeterProviderBuilder.");
+		}
+
+		return builder;
+	}
 
 	/// <summary>
 	/// To configure logs SDK (the method name is the same as for other logs options).

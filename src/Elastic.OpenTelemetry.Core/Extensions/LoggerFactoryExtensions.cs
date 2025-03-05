@@ -6,7 +6,7 @@ using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 #pragma warning disable IDE0130 // Namespace does not match folder structure
-namespace Elastic.OpenTelemetry;
+namespace Elastic.OpenTelemetry.Core;
 #pragma warning restore IDE0130 // Namespace does not match folder structure
 
 internal static class LoggerFactoryExtensions

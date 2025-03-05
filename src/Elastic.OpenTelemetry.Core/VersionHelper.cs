@@ -27,7 +27,7 @@ internal static class VersionHelper
 		 * The following parts are optional: pre-release label, pre-release version, git height, Git SHA of current commit
 		 */
 
-		var indexOfPlusSign = informationalVersion.IndexOf('+');
+		var indexOfPlusSign = informationalVersion!.IndexOf('+');
 		return indexOfPlusSign > 0
 			? informationalVersion[..indexOfPlusSign]
 			: informationalVersion;

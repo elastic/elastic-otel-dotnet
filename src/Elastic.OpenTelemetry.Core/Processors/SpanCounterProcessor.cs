@@ -5,7 +5,9 @@ using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using OpenTelemetry;
 
+#pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace Elastic.OpenTelemetry.Processors;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary> An example processor that emits the number of spans as a metric </summary>
 internal sealed class SpanCounterProcessor : BaseProcessor<Activity>

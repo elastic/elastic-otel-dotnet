@@ -10,7 +10,6 @@ using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
 
 // Matching namespace with LoggerProviderBuilder
 #pragma warning disable IDE0130 // Namespace does not match folder structure

@@ -5,7 +5,9 @@
 using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry;
 using Elastic.OpenTelemetry.Configuration;
+using Elastic.OpenTelemetry.Hosting;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 
@@ -126,8 +128,16 @@ public static class ServiceCollectionExtensions
 #else
 		if (options is null)
 			throw new ArgumentNullException(nameof(options));
+
 #endif
 
-		return services.AddOpenTelemetry().WithElasticDefaultsCore(options);
+		var builder = services.AddOpenTelemetry().WithElasticDefaultsCore(options);
+
+		if (!services.Any((ServiceDescriptor d) => d.ServiceType == typeof(IHostedService) && d.ImplementationType == typeof(ElasticOpenTelemetryService)))
+		{
+			services.Insert(0, ServiceDescriptor.Singleton<IHostedService, ElasticOpenTelemetryService>());
+		}
+
+		return builder;
 	}
 }
