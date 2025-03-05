@@ -130,13 +130,12 @@ let private generateApiChanges _ =
     nugetPackages
     |> Seq.iter(fun p ->
         let outputFile = Path.Combine(output, $"breaking-changes-%s{p}.md")
-        let tfm = "net8.0"
+        let tfm = "net8.0" // We use net8.0 as AutoInstrumentation doesn't have a net9.0 target
         let args =
             [
                 "assembly-differ"
                 $"previous-nuget|%s{p}|%s{currentVersion}|%s{tfm}";
-                //$"directory|.artifacts/bin/%s{p}/release/%s{tfm}";
-                $"directory|.artifacts/bin/%s{p}/release_net9.0";
+                $"directory|.artifacts/bin/%s{p}/release_%s{tfm}";
                 "-a"; "true"; "--target"; p; "-f"; "github-comment"; "--output"; outputFile
             ]
         exec { run "dotnet" args }
