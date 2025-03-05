@@ -7,7 +7,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Diagnostics;
-using Elastic.OpenTelemetry.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Elastic.OpenTelemetry.Core;
@@ -17,7 +16,6 @@ internal static class ElasticOpenTelemetry
 	private static int BootstrapCounter;
 
 	public static SdkActivationMethod ActivationMethod;
-
 
 	internal static readonly HashSet<ElasticOpenTelemetryComponents> SharedComponents = [];
 
@@ -79,11 +77,7 @@ internal static class ElasticOpenTelemetry
 
 			components.Logger.LogBootstrapInvoked(invocationCount);
 
-			if (services is not null)
-			{
-				services.AddSingleton(components);
-				services.AddHostedService<ElasticOpenTelemetryService>();
-			}
+			services?.AddSingleton(components);
 
 			return components;
 		}
@@ -134,9 +128,4 @@ internal static class ElasticOpenTelemetry
 			return components;
 		}
 	}
-
-	///// <summary>
-	///// Used for testing.
-	///// </summary>
-	//internal static void ResetSharedComponentsForTesting() => SharedComponents = null;
 }

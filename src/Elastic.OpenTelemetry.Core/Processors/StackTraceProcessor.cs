@@ -4,7 +4,9 @@
 using System.Diagnostics;
 using OpenTelemetry;
 
+#pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace Elastic.OpenTelemetry.Processors;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary> A processor that includes stack trace information of long running spans.</summary>
 internal sealed class StackTraceProcessor : BaseProcessor<Activity>

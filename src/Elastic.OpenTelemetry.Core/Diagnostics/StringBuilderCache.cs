@@ -27,7 +27,6 @@ internal static class StringBuilderCache
 		{
 			var sb = CachedInstance;
 			if (sb != null)
-			{
 				// Avoid StringBuilder block fragmentation by getting a new StringBuilder
 				// when the requested size is larger than the current capacity
 				if (capacity <= sb.Capacity)
@@ -36,7 +35,6 @@ internal static class StringBuilderCache
 					sb.Clear();
 					return sb;
 				}
-			}
 		}
 
 		return new StringBuilder(capacity);

@@ -2,9 +2,9 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
-using System.Threading.Channels;
 using Elastic.OpenTelemetry.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -12,18 +12,13 @@ namespace Elastic.OpenTelemetry.Diagnostics;
 
 internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 {
-	private bool _disposing;
-	private readonly ManualResetEventSlim _syncDisposeWaitHandle = new(false);
-	private readonly StreamWriter? _streamWriter;
-	private readonly Channel<string> _channel = Channel.CreateBounded<string>(new BoundedChannelOptions(1024)
-	{
-		SingleReader = true,
-		SingleWriter = false,
-		AllowSynchronousContinuations = true,
-		FullMode = BoundedChannelFullMode.Wait
-	});
-
+	private readonly ConcurrentQueue<string> _logQueue = new();
+	private readonly SemaphoreSlim _logSemaphore = new(0);
+	private readonly CancellationTokenSource _cancellationTokenSource = new();
+	private readonly StreamWriter _streamWriter;
 	private readonly LogLevel _configuredLogLevel;
+
+	private bool _disposed;
 
 	public bool FileLoggingEnabled { get; }
 
@@ -33,7 +28,9 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 	{
 		_scopeProvider = new LoggerExternalScopeProvider();
 		_configuredLogLevel = options.LogLevel;
+		_streamWriter = StreamWriter.Null;
 
+		WritingTask = Task.CompletedTask;
 		FileLoggingEnabled = options.GlobalLogEnabled && options.LogTargets.HasFlag(LogTargets.File);
 
 		if (!FileLoggingEnabled)
@@ -44,7 +41,7 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 			var process = Process.GetCurrentProcess();
 
 			// When ordered by filename, we see logs from the same process grouped, then ordered by oldest to newest, then the PID for that instance
-			var logFileName = $"{process.ProcessName}_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{process.Id}.instrumentation.log";
+			var logFileName = $"EDOT.{process.ProcessName}_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{process.Id}.log";
 			var logDirectory = options.LogDirectory;
 
 			LogFilePath = Path.Combine(logDirectory, logFileName);
@@ -52,7 +49,7 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 			if (!Directory.Exists(logDirectory))
 				Directory.CreateDirectory(logDirectory);
 
-			//StreamWriter.Dispose disposes underlying stream too
+			// StreamWriter.Dispose disposes underlying stream too.
 			var stream = new FileStream(LogFilePath, FileMode.OpenOrCreate, FileAccess.Write);
 
 			_streamWriter = new StreamWriter(stream, Encoding.UTF8);
@@ -62,11 +59,23 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 
 			WritingTask = Task.Run(async () =>
 			{
-				while (await _channel.Reader.WaitToReadAsync().ConfigureAwait(false) && !_disposing)
-					while (_channel.Reader.TryRead(out var logLine) && !_disposing)
-						await _streamWriter.WriteLineAsync(logLine).ConfigureAwait(false);
+				var cancellationToken = _cancellationTokenSource.Token;
 
-				_syncDisposeWaitHandle.Set();
+				while (!cancellationToken.IsCancellationRequested)
+				{
+					await _logSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+					while (_logQueue.TryDequeue(out var logEntry))
+					{
+						await _streamWriter.WriteLineAsync(logEntry).ConfigureAwait(false);
+					}
+				}
+
+				// Flush remaining log entries before exiting
+				while (_logQueue.TryDequeue(out var logEntry))
+				{
+					await _streamWriter.WriteLineAsync(logEntry).ConfigureAwait(false);
+				}
 			});
 
 			_streamWriter.AutoFlush = true; // Ensure we don't lose logs by not flushing to the file.
@@ -98,13 +107,11 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 
 		var logLine = LogFormatter.Format(logLevel, eventId, state, exception, formatter);
 
-		var spin = new SpinWait();
-		while (!_disposing)
-		{
-			if (_channel.Writer.TryWrite(logLine))
-				break;
-			spin.SpinOnce();
-		}
+		if (exception is not null)
+			logLine = $"{logLine}{Environment.NewLine}{exception}";
+
+		_logQueue.Enqueue(logLine);
+		_logSemaphore.Release();
 	}
 
 	public bool IsEnabled(LogLevel logLevel) => FileLoggingEnabled && _configuredLogLevel <= logLevel;
@@ -113,30 +120,39 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 
 	public string? LogFilePath { get; }
 
-	public Task? WritingTask { get; }
+	public Task WritingTask { get; }
 
 	public void Dispose()
 	{
-		// Tag that we are running a dispose. This allows running tasks and spin waits to short circuit
-		_disposing = true;
-		_channel.Writer.TryComplete();
+		if (_disposed)
+			return;
 
-		_syncDisposeWaitHandle.Wait(TimeSpan.FromSeconds(1));
+		_cancellationTokenSource.Cancel();
+		_logSemaphore.Release();
 
-		_streamWriter?.Dispose();
+		WritingTask?.Wait();
+
+		_streamWriter.Dispose();
+		_logSemaphore.Dispose();
+		_cancellationTokenSource.Dispose();
+
+		_disposed = true;
 	}
 
 	public async ValueTask DisposeAsync()
 	{
-		// Tag that we are running a dispose. This allows running tasks and spin waits to short circuit
-		_disposing = true;
+		if (_disposed)
+			return;
 
-		_channel.Writer.TryComplete();
+		_cancellationTokenSource.Cancel();
+		_logSemaphore.Release();
 
-		//Writing task will short circuit once _disposing is flipped to true
-		if (WritingTask != null)
-			await WritingTask.ConfigureAwait(false);
+		await WritingTask.ConfigureAwait(false);
 
-		_streamWriter?.Dispose();
+		_streamWriter.Dispose();
+		_logSemaphore.Dispose();
+		_cancellationTokenSource.Dispose();
+
+		_disposed = true;
 	}
 }

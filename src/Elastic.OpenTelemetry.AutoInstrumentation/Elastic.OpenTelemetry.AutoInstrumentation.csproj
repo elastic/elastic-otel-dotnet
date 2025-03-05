@@ -1,19 +1,34 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net462;net8.0;net9.0</TargetFrameworks>
+    <TargetFrameworks>net462;netstandard2.1;net8.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <IsPackable>True</IsPackable>
+    <IsPackable>true</IsPackable>
+    <PolyPublic>true</PolyPublic>
+    <GenerateNuspecDependsOn>$(GenerateNuspecDependsOn);_ExcludeTargetFramework;_ExcludeTargetFrameworkDependency</GenerateNuspecDependsOn>
   </PropertyGroup>
 
-  <ItemGroup>
+  <!-- This package doe not support netstandard2.1 and this target is only used for building the redistributable. -->
+  <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.1'">
     <PackageReference Include="OpenTelemetry.AutoInstrumentation" Version="1.10.0" GeneratePathProperty="true" PrivateAssets="contentfiles" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Content Remove="README.md" />
+  <!-- 
+  We only need these dependencies when building the netstandard2.1 target to include in the redistributable. They are already present
+  for the other targets when including OpenTelemetry.AutoInstrumentation.
+  -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
+    <PackageReference Include="OpenTelemetry" Version="1.11.2" PrivateAssets="all" />
+  </ItemGroup>
 
+  <!-- We need these dependencies when building agianst all targets. As they are private, we don't have to worry about them being packaged. -->
+  <ItemGroup>
+    <PackageReference Include="Polyfill" Version="7.20.0" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
+    <PackageReference Include="NetEscapades.EnumGenerators" Version="1.0.0-beta09" PrivateAssets="all" ExcludeAssets="runtime" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.1'">
     <!-- ensure we remove the linked instrument.cmd from base OpenTelemetry.AutoInstrumentation
           and link it as _instrument.cmd since we manually copy it over in the prebuild event -->
     <Content Update="instrument.cmd" CopyToPublishDirectory="Never" CopyToOutputDirectory="Never" />
@@ -23,7 +38,6 @@
 
     <!-- ensure we remove the linked instrument.sh from base OpenTelemetry.AutoInstrumentation
           and link it as _instrument.sh since we manually copy it over in the prebuild event -->
-
     <Content Update="instrument.sh" CopyToPublishDirectory="Never" CopyToOutputDirectory="Never" />
     <Content Remove="instrument.sh" />
     <Content Include="_instrument.sh" CopyToOutputDirectory="Always" CopyToPublishDirectory="Always" Pack="True" PackagePath="contentFiles/any/any/_instrument.sh" />
@@ -32,15 +46,33 @@
     <Content Include="instrument.props" CopyToOutputDirectory="Always" CopyToPublishDirectory="Always" Pack="True" PackagePath="build/elastic.opentelemetry.autoinstrumentation.props" />
   </ItemGroup>
 
-  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+  <ItemGroup>
+    <Compile Include="..\Elastic.OpenTelemetry.Core\**\*.cs" />
+    <Content Remove="README.md" />
+  </ItemGroup>
+
+  <Target Condition="'$(TargetFramework)' != 'netstandard2.1'" Name="PreBuild" BeforeTargets="PreBuildEvent">
     <!-- Copies the content files manually as physical files in the source repository -->
     <!-- we manually repackage these as contentfiles (albeit renamed) -->
     <Copy SourceFiles="$(PkgOpenTelemetry_AutoInstrumentation)/contentFiles/any/any/instrument.cmd" DestinationFiles="$(MSBuildThisFileDirectory)/_instrument.cmd" />
     <Copy SourceFiles="$(PkgOpenTelemetry_AutoInstrumentation)/contentFiles/any/any/instrument.sh" DestinationFiles="$(MSBuildThisFileDirectory)/_instrument.sh" />
   </Target>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Elastic.OpenTelemetry\Elastic.OpenTelemetry.csproj" />
-  </ItemGroup>
+  <!-- 
+  We require the netstandard2.1 target when building to include this in the redistributable of the auto-instrumentation zip file.
+  We do not want to include it in the NuGet package because OpenTelemetry.AutoInstrumentation does not support that target and in
+  doing so, the package would appear to support netstandard2.1 but that target would not be able to depend on 
+  OpenTelemetry.AutoInstrumentation and therefore not be useful. -->
+  <Target Name="_ExcludeTargetFramework" AfterTargets="_GetTargetFrameworksOutput" BeforeTargets="_WalkEachTargetPerFramework">
+    <ItemGroup>
+      <_TargetFrameworks Remove="netstandard2.1" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_ExcludeTargetFrameworkDependency" AfterTargets="_WalkEachTargetPerFramework" BeforeTargets="GenerateNuspec">
+    <ItemGroup>
+      <_FrameworksWithSuppressedDependencies Include="netstandard2.1" />
+    </ItemGroup>
+  </Target>
 
 </Project>

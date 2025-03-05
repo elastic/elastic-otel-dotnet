@@ -9,7 +9,9 @@ using Microsoft.Extensions.Logging.Abstractions;
 using OpenTelemetry;
 using static Elastic.OpenTelemetry.SemanticConventions.TraceSemanticConventions;
 
+#pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace Elastic.OpenTelemetry.Processors;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
 /// This processor ensures that the data is compatible with Elastic backends.

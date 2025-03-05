@@ -177,7 +177,7 @@ let Setup (parsed:ParseResults<Build>) =
         | Unit_Test -> Build.Cmd [] [Build] <| runTests Unit
         | Test -> Build.Cmd [] [Build] test
         
-        | Redistribute -> Build.Cmd [Compile;] [] Packaging.redistribute
+        | Redistribute -> Build.Cmd [] [] Packaging.redistribute
         
         | Release -> 
             Build.Cmd 

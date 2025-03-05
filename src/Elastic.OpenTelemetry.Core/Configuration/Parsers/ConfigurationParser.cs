@@ -62,7 +62,7 @@ internal class ConfigurationParser
 
 		if (!string.IsNullOrEmpty(LoggingSectionLogLevel) && logLevel.Source == ConfigSource.Default)
 		{
-			var level = LogLevelHelpers.ToLogLevel(LoggingSectionLogLevel);
+			var level = LogLevelHelpers.ToLogLevel(LoggingSectionLogLevel!);
 			logLevel.Assign(level, ConfigSource.IConfiguration);
 		}
 
@@ -71,7 +71,7 @@ internal class ConfigurationParser
 		var eventLogLevel = logLevel.Value;
 		if (!string.IsNullOrEmpty(LoggingSectionLogLevel))
 		{
-			var sectionLogLevel = LogLevelHelpers.ToLogLevel(LoggingSectionLogLevel) ?? LogLevel.None;
+			var sectionLogLevel = LogLevelHelpers.ToLogLevel(LoggingSectionLogLevel!) ?? LogLevel.None;
 
 			if (sectionLogLevel < eventLogLevel)
 				eventLogLevel = sectionLogLevel;

@@ -3,9 +3,13 @@
 // See the LICENSE file in the project root for more information
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using Elastic.OpenTelemetry.Core;
+using Elastic.OpenTelemetry.Processors;
 using OpenTelemetry;
 
+#pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace Elastic.OpenTelemetry.Processors;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary> A processor that can mark spans as compressed/composite </summary>
 internal sealed class SpanCompressionProcessor : BaseProcessor<Activity>
@@ -40,18 +44,16 @@ internal sealed class SpanCompressionProcessor : BaseProcessor<Activity>
 		}
 
 		if (_compressionBuffer.TryGetValue(data.Parent!, out var compressionBuffer))
-		{
 			if (!compressionBuffer.TryCompress(data))
 			{
 				FlushBuffer(data.Parent!);
 				_compressionBuffer.Add(data.Parent!, data);
 			}
-		}
-		else
-		{
-			_compressionBuffer.Add(data.Parent!, data);
-			data.ActivityTraceFlags &= ~ActivityTraceFlags.Recorded;
-		}
+			else
+			{
+				_compressionBuffer.Add(data.Parent!, data);
+				data.ActivityTraceFlags &= ~ActivityTraceFlags.Recorded;
+			}
 
 		base.OnEnd(data);
 

@@ -4,7 +4,6 @@
 
 using System.Collections;
 using Elastic.OpenTelemetry.Configuration;
-using Microsoft.Extensions.Logging;
 using static Elastic.OpenTelemetry.Configuration.EnvironmentVariables;
 
 namespace Elastic.OpenTelemetry.Tests.Configuration;
