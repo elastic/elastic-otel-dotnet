@@ -22,7 +22,7 @@ namespace Elastic.OpenTelemetry.Processors;
 /// </para>
 /// </summary>
 /// <param name="logger"></param>
-public sealed class ElasticCompatibilityProcessor(ILogger? logger) : BaseProcessor<Activity>
+internal sealed class ElasticCompatibilityProcessor(ILogger? logger) : BaseProcessor<Activity>
 {
 	private readonly ILogger _logger = logger ?? NullLogger.Instance;
 
