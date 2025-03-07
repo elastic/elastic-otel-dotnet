@@ -7,13 +7,16 @@ using Elastic.OpenTelemetry;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Core;
 using Elastic.OpenTelemetry.Diagnostics;
+using Elastic.OpenTelemetry.Exporters;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
 
 // Matching namespace with LoggerProviderBuilder
 #pragma warning disable IDE0130 // Namespace does not match folder structure
-namespace OpenTelemetry.Logs;
+namespace OpenTelemetry;
 #pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
@@ -24,7 +27,7 @@ public static class LoggingProviderBuilderExtensions
 {
 	/// <summary>
 	/// Used to track the number of times any variation of `WithElasticDefaults` is invoked by consuming
-	/// code acrosss all <see cref="LoggerProviderBuilder"/> instances. This allows us to warn about potenital
+	/// code across all <see cref="LoggerProviderBuilder"/> instances. This allows us to warn about potential
 	/// misconfigurations.
 	/// </summary>
 	private static int WithElasticDefaultsCallCount;
@@ -148,6 +151,9 @@ public static class LoggingProviderBuilderExtensions
 			logger.LogConfiguringBuilder(loggingProviderName, builderState.InstanceIdentifier);
 
 			builder.ConfigureResource(r => r.WithElasticDefaults(builderState, services));
+
+			if (services is null)
+				builder.ConfigureServices(sc => sc.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions));
 
 			if (components.Options.SkipOtlpExporter)
 			{

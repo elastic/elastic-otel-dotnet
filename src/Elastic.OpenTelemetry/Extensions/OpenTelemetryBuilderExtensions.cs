@@ -6,10 +6,12 @@ using Elastic.OpenTelemetry;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Core;
 using Elastic.OpenTelemetry.Diagnostics;
+using Elastic.OpenTelemetry.Exporters;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.Logging;
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -28,7 +30,7 @@ public static class OpenTelemetryBuilderExtensions
 {
 	/// <summary>
 	/// Used to track the number of times any variation of `WithElasticDefaults` is invoked by consuming
-	/// code acrosss all <see cref="IOpenTelemetryBuilder"/> instances. This allows us to warn about potenital
+	/// code across all <see cref="IOpenTelemetryBuilder"/> instances. This allows us to warn about potential
 	/// misconfigurations.
 	/// </summary>
 	private static int WithElasticDefaultsCallCount;
@@ -137,6 +139,8 @@ public static class OpenTelemetryBuilderExtensions
 	{
 		var components = builderState.Components;
 		var options = builderState.Components.Options;
+
+		services?.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions);
 
 		if (options.Signals.HasFlagFast(Signals.Traces))
 		{

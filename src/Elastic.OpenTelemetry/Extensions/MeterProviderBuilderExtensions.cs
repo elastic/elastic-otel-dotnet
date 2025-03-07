@@ -8,17 +8,19 @@ using Elastic.OpenTelemetry;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Core;
 using Elastic.OpenTelemetry.Diagnostics;
+using Elastic.OpenTelemetry.Exporters;
 using Elastic.OpenTelemetry.Instrumentation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
 
 // Matching namespace with MeterProviderBuilder
 #pragma warning disable IDE0130 // Namespace does not match folder structure
-namespace OpenTelemetry.Metrics;
+namespace OpenTelemetry;
 #pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
@@ -29,7 +31,7 @@ public static class MeterProviderBuilderExtensions
 {
 	/// <summary>
 	/// Used to track the number of times any variation of `WithElasticDefaults` is invoked by consuming
-	/// code acrosss all <see cref="MeterProviderBuilder"/> instances. This allows us to warn about potenital
+	/// code across all <see cref="MeterProviderBuilder"/> instances. This allows us to warn about potential
 	/// misconfigurations.
 	/// </summary>
 	private static int WithElasticDefaultsCallCount;
@@ -176,6 +178,9 @@ public static class MeterProviderBuilderExtensions
 			logger.LogConfiguringBuilder(loggingProviderName, builderState.InstanceIdentifier);
 
 			builder.ConfigureResource(r => r.WithElasticDefaults(builderState, services));
+
+			if (services is null)
+				builder.ConfigureServices(sc => sc.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions));
 
 #if NET9_0_OR_GREATER
 			// On .NET 9, the contrib HTTP instrumentation is no longer required. If the dependency exists,

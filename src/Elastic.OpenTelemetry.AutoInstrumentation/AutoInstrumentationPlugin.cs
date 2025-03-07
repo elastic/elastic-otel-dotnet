@@ -5,9 +5,12 @@
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Core;
 using Elastic.OpenTelemetry.Diagnostics;
+using Elastic.OpenTelemetry.Exporters;
 using Elastic.OpenTelemetry.Resources;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -39,6 +42,8 @@ public class AutoInstrumentationPlugin
 		{
 			builder.ConfigureResource(r => r.WithElasticDefaultsCore(_components, null, null));
 
+			builder.ConfigureServices(sc => sc.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions));
+
 			CoreTracerProvderBuilderExtensions.AddActivitySourceWithLogging(builder, logger, "Elastic.Transport", "<n/a>");
 			CoreTracerProvderBuilderExtensions.AddElasticProcessorsCore(builder, null, _components, null);
 
@@ -65,6 +70,8 @@ public class AutoInstrumentationPlugin
 		try
 		{
 			builder.ConfigureResource(r => r.WithElasticDefaultsCore(_components, null, null));
+
+			builder.ConfigureServices(sc => sc.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions));
 
 			logger.LogConfiguredSignalProvider(nameof(Signals.Metrics), nameof(MeterProviderBuilder), "<n/a>");
 
