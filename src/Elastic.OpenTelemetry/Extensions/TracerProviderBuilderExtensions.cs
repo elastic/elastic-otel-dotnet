@@ -8,18 +8,18 @@ using Elastic.OpenTelemetry;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Core;
 using Elastic.OpenTelemetry.Diagnostics;
+using Elastic.OpenTelemetry.Exporters;
 using Elastic.OpenTelemetry.Instrumentation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OpenTelemetry.Logs;
-using OpenTelemetry.Metrics;
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
 // Matching namespace with TracerProviderBuilder
 #pragma warning disable IDE0130 // Namespace does not match folder structure
-namespace OpenTelemetry.Trace;
+namespace OpenTelemetry;
 #pragma warning restore IDE0130 // Namespace does not match folder structure
 
 /// <summary>
@@ -166,6 +166,9 @@ public static class TracerProviderBuilderExtensions
 		logger.LogConfiguringBuilder(tracerProviderBuilderName, builderState.InstanceIdentifier);
 
 		builder.ConfigureResource(r => r.WithElasticDefaults(builderState, services));
+
+		if (services is null)
+			builder.ConfigureServices(sc => sc.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions));
 
 #if NET9_0_OR_GREATER
 		if (SignalBuilder.InstrumentationAssemblyExists("OpenTelemetry.Instrumentation.Http.dll"))

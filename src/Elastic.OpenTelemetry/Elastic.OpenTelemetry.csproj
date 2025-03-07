@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
@@ -46,6 +46,10 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.11.1" />
     <!-- We skip this on .NET since we prefer to use the native instrumentation from the built in ActivitySource -->
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.11.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Net.Http" Condition="'$(TargetFramework)' == 'net462'" />
   </ItemGroup>
   
   <ItemGroup>
