@@ -24,7 +24,7 @@ internal static class ResourceBuilderExtensions
 {
 	/// <summary>
 	/// Used to track the number of times any variation of `WithElasticDefaults` is invoked by consuming
-	/// code acrosss all <see cref="ResourceBuilder"/> instances. This allows us to warn about potenital
+	/// code across all <see cref="ResourceBuilder"/> instances. This allows us to warn about potenital
 	/// misconfigurations.
 	/// </summary>
 	private static int WithElasticDefaultsCallCount;
