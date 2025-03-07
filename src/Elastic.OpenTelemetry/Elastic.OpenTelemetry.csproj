@@ -5,7 +5,7 @@
     <TargetFrameworks>netstandard2.0;netstandard2.1;net462;net8.0;net9.0</TargetFrameworks>
     <Title>Elastic Distribution of OpenTelemetry .NET</Title>
     <Description>OpenTelemetry extensions for Elastic Observability.</Description>
-    <PackageTags>elastic;opentelemetry;otel;observabillity;apm;logs;metrics;traces;monitoring</PackageTags>
+    <PackageTags>Elastic;OpenTelemetry;OTel;Observability;APM;Monitoring;Logging;Metrics;Tracing;Telemetry</PackageTags>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>true</IsPackable>
@@ -27,21 +27,25 @@
 
   <ItemGroup>
     <PackageReference Include="OpenTelemetry" Version="1.11.2" />
-    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.11.2" />
-    <PackageReference Include="OpenTelemetry.Resources.Host" Version="1.11.0-beta.1" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.11.2" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.11.2" />
+    
+    <PackageReference Include="OpenTelemetry.Resources.Host" Version="1.11.0-beta.1" />
+    <PackageReference Include="OpenTelemetry.Resources.ProcessRuntime" Version="1.11.0-beta.2" />
+        
     <PackageReference Include="OpenTelemetry.Instrumentation.GrpcNetClient" Version="1.9.0-beta.1" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Process" Version="0.5.0-beta.6" />
     <PackageReference Include="OpenTelemetry.Instrumentation.SqlClient" Version="1.9.0-beta.1" />
-    <PackageReference Include="Polyfill" Version="7.20.0" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
+    
+    <PackageReference Include="Polyfill" Version="7.21.0" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
     <PackageReference Include="NetEscapades.EnumGenerators" Version="1.0.0-beta09" PrivateAssets="all" ExcludeAssets="runtime" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' != 'net9.0'">
     <!-- We skip this on .NET since we prefer to use the native instrumentation from the built in Meter -->
-    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.11.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.11.1" />
     <!-- We skip this on .NET since we prefer to use the native instrumentation from the built in ActivitySource -->
-    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.11.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.11.1" />
   </ItemGroup>
   
   <ItemGroup>

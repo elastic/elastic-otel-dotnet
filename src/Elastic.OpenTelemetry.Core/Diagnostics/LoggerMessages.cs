@@ -124,6 +124,9 @@ internal static partial class LoggerMessages
 	[LoggerMessage(EventId = 42, EventName = "ActivitySourceAdded", Level = LogLevel.Debug, Message = "Added '{ActivitySource}' to TracerProviderBuilder (instance:{BuilderInstanceId}).")]
 	public static partial void LogActivitySourceAdded(this ILogger logger, string activitySource, string builderInstanceId);
 
+	[LoggerMessage(EventId = 43, EventName = "ResourceDetectorAdded", Level = LogLevel.Debug, Message = "Added '{ResourceDetector}' to ResourceBuilder (instance:{BuilderInstanceId}).")]
+	public static partial void LogResourceDetectorAdded(this ILogger logger, string resourceDetector, string builderInstanceId);
+
 
 
 	// We explictly reuse the same event ID and this is the same log message, but with different types for the structured data
