@@ -10,7 +10,4 @@ internal static class ResourceSemanticConventions
 
 	public const string AttributeServiceName = "service.name";
 	public const string AttributeServiceInstanceId = "service.instance.id";
-
-	public const string AttributeHostName = "host.name";
-	public const string AttributeHostId = "host.id";
 }

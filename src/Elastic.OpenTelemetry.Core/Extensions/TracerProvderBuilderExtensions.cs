@@ -9,9 +9,9 @@ using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Core;
 using Elastic.OpenTelemetry.Diagnostics;
 using Elastic.OpenTelemetry.Processors;
+using Elastic.OpenTelemetry.Resources;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OpenTelemetry.Resources;
 
 // Matching namespace with TracerProviderBuilder
 #pragma warning disable IDE0130 // Namespace does not match folder structure
@@ -104,7 +104,7 @@ public static class CoreTracerProvderBuilderExtensions
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static void ConfigureBuilder(TracerProviderBuilder builder, BuilderState builderState, IServiceCollection? services)
 		{
-			builder.ConfigureResource(r => r.WithElasticDefaults(builderState, services));
+			builder.ConfigureResource(r => r.WithElasticDefaultsCore(builderState, services, null));
 			builder.LogAndAddProcessor(new ElasticCompatibilityProcessor(builderState.Components.Logger), builderState);
 		}
 
