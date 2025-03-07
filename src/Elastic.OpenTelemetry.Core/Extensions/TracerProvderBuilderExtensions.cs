@@ -8,7 +8,6 @@ using Elastic.OpenTelemetry;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Core;
 using Elastic.OpenTelemetry.Diagnostics;
-using Elastic.OpenTelemetry.Processors;
 using Elastic.OpenTelemetry.Resources;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -95,7 +94,6 @@ public static class CoreTracerProvderBuilderExtensions
 		{
 			// When we have existing builderState, this method is being invoked from the main WithElasticDefaults method.
 			// In that scenario, we skip configuring the resource, as it will have already been configured by the caller.
-			ConfigureBuilderProcessors(builder, builderState, services);
 			return builder;
 		}
 
@@ -105,13 +103,6 @@ public static class CoreTracerProvderBuilderExtensions
 		static void ConfigureBuilder(TracerProviderBuilder builder, BuilderState builderState, IServiceCollection? services)
 		{
 			builder.ConfigureResource(r => r.WithElasticDefaultsCore(builderState, services, null));
-			builder.LogAndAddProcessor(new ElasticCompatibilityProcessor(builderState.Components.Logger), builderState);
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		static void ConfigureBuilderProcessors(TracerProviderBuilder builder, BuilderState builderState, IServiceCollection? services)
-		{
-			builder.LogAndAddProcessor(new ElasticCompatibilityProcessor(builderState.Components.Logger), builderState);
 		}
 	}
 
