@@ -2,16 +2,14 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using System.Text;
 using Elastic.OpenTelemetry.Core;
 using Elastic.OpenTelemetry.Hosting;
 using OpenTelemetry;
 using Xunit.Abstractions;
 
-namespace Elastic.OpenTelemetry.Tests;
+namespace Elastic.OpenTelemetry.Tests.Extensions;
 
-// These run in a collection to avoid them running in parallel with other tests that may set the SharedComponents which would cause
-// these to fail.
-[Collection("Discrete SharedComponents")]
 public class ServiceCollectionTests(ITestOutputHelper output)
 {
 	private readonly ITestOutputHelper _output = output;
@@ -126,5 +124,48 @@ public class ServiceCollectionTests(ITestOutputHelper output)
 			.Cast<ElasticOpenTelemetryService>();
 
 		Assert.Single(hostedService);
+	}
+
+	[Fact]
+	public void AddElasticOpenTelemetry_AppliesConfigAndOptions_InExpectedOrder()
+	{
+		var serviceCollection = new ServiceCollection();
+
+		const string fileLogDirectory = "C:\\Temp";
+
+		var options = new ElasticOpenTelemetryOptions
+		{
+			LogDirectory = fileLogDirectory,
+			LogLevel = LogLevel.Critical
+		};
+
+		var json = $$"""
+					{
+						"Elastic": {
+							"OpenTelemetry": {
+								"LogDirectory": "C:\\Json",
+								"LogLevel": "Trace",
+								"ElasticDefaults": "All",
+								"SkipOtlpExporter": true,
+								"SkipInstrumentationAssemblyScanning": true
+							}
+						}
+					}
+					""";
+
+		var config = new ConfigurationBuilder()
+			.AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(json)))
+			.Build();
+
+		serviceCollection.AddElasticOpenTelemetry(config, options);
+
+		using var serviceProvider = serviceCollection.BuildServiceProvider();
+
+		var components = serviceProvider.GetRequiredService<ElasticOpenTelemetryComponents>();
+
+		Assert.Equal(fileLogDirectory, components.Options.LogDirectory);
+		Assert.Equal(LogLevel.Critical, components.Options.LogLevel);
+		Assert.True(components.Options.SkipOtlpExporter);
+		Assert.True(components.Options.SkipInstrumentationAssemblyScanning);
 	}
 }

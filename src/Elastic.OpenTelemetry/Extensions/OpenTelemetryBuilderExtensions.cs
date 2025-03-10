@@ -2,6 +2,7 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Core;
@@ -108,6 +109,7 @@ public static class OpenTelemetryBuilderExtensions
 		return WithElasticDefaultsCore(builder, new(options));
 	}
 
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	internal static IOpenTelemetryBuilder WithElasticDefaultsCore(
 		this IOpenTelemetryBuilder builder,
 		CompositeElasticOpenTelemetryOptions options)
@@ -133,44 +135,6 @@ public static class OpenTelemetryBuilderExtensions
 		}
 
 		return SignalBuilder.WithElasticDefaults(builder, options, null, builder.Services, ConfigureBuilder);
-	}
-
-	private static void ConfigureBuilder(IOpenTelemetryBuilder builder, BuilderState builderState, IServiceCollection? services)
-	{
-		var components = builderState.Components;
-		var options = builderState.Components.Options;
-
-		services?.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions);
-
-		if (options.Signals.HasFlagFast(Signals.Traces))
-		{
-			builder.WithTracing(b => b.WithElasticDefaults(components, builder.Services));
-		}
-		else
-		{
-			components.Logger.LogSignalDisabled(Signals.Traces.ToString().ToLower(),
-				nameof(IOpenTelemetryBuilder), builderState.InstanceIdentifier);
-		}
-
-		if (options.Signals.HasFlagFast(Signals.Metrics))
-		{
-			builder.WithMetrics(b => b.WithElasticDefaults(components, builder.Services));
-		}
-		else
-		{
-			components.Logger.LogSignalDisabled(Signals.Metrics.ToString().ToLower(),
-				nameof(IOpenTelemetryBuilder), builderState.InstanceIdentifier);
-		}
-
-		if (options.Signals.HasFlagFast(Signals.Logs))
-		{
-			builder.WithLogging(b => b.WithElasticDefaults(components, builder.Services));
-		}
-		else
-		{
-			components.Logger.LogSignalDisabled(Signals.Logs.ToString().ToLower(),
-				nameof(IOpenTelemetryBuilder), builderState.InstanceIdentifier);
-		}
 	}
 
 	/// <summary>
@@ -472,5 +436,41 @@ public static class OpenTelemetryBuilderExtensions
 			tpb.WithElasticDefaults(configuration, builder.Services);
 			configure?.Invoke(tpb);
 		});
+	}
+
+	private static void ConfigureBuilder(IOpenTelemetryBuilder builder, BuilderState builderState, IServiceCollection? services)
+	{
+		var components = builderState.Components;
+		var options = builderState.Components.Options;
+
+		if (options.Signals.HasFlagFast(Signals.Traces))
+		{
+			builder.WithTracing(tpb => tpb.WithElasticDefaults(components, builder.Services));
+		}
+		else
+		{
+			components.Logger.LogSignalDisabled(Signals.Traces.ToString().ToLower(),
+				nameof(IOpenTelemetryBuilder), builderState.InstanceIdentifier);
+		}
+
+		if (options.Signals.HasFlagFast(Signals.Metrics))
+		{
+			builder.WithMetrics(mpb => mpb.WithElasticDefaults(components, builder.Services));
+		}
+		else
+		{
+			components.Logger.LogSignalDisabled(Signals.Metrics.ToString().ToLower(),
+				nameof(IOpenTelemetryBuilder), builderState.InstanceIdentifier);
+		}
+
+		if (options.Signals.HasFlagFast(Signals.Logs))
+		{
+			builder.WithLogging(lpb => lpb.WithElasticDefaults(components, builder.Services));
+		}
+		else
+		{
+			components.Logger.LogSignalDisabled(Signals.Logs.ToString().ToLower(),
+				nameof(IOpenTelemetryBuilder), builderState.InstanceIdentifier);
+		}
 	}
 }

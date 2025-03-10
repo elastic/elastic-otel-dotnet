@@ -54,25 +54,6 @@ public static class LoggingProviderBuilderExtensions
 	/// <inheritdoc cref="WithElasticDefaults(LoggerProviderBuilder)" />
 	/// </summary>
 	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(LoggerProviderBuilder)" path="/param[@name='builder']"/></param>
-	/// <param name="skipOtlpExporter">When registering Elastic defaults, skip automatic registration of the OTLP exporter for logging.</param>
-	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
-	/// <returns><inheritdoc cref="WithElasticDefaults(LoggerProviderBuilder)" /></returns>
-	public static LoggerProviderBuilder WithElasticDefaults(this LoggerProviderBuilder builder, bool skipOtlpExporter)
-	{
-#if NET
-        ArgumentNullException.ThrowIfNull(builder);
-#else
-		if (builder is null)
-			throw new ArgumentNullException(nameof(builder));
-#endif
-
-		return WithElasticDefaultsCore(builder, skipOtlpExporter ? CompositeElasticOpenTelemetryOptions.SkipOtlpOptions : CompositeElasticOpenTelemetryOptions.DefaultOptions, null, null);
-	}
-
-	/// <summary>
-	/// <inheritdoc cref="WithElasticDefaults(LoggerProviderBuilder)" />
-	/// </summary>
-	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(LoggerProviderBuilder)" path="/param[@name='builder']"/></param>
 	/// <param name="options"><see cref="ElasticOpenTelemetryOptions"/> used to configure the Elastic Distribution of OpenTelemetry (EDOT) .NET.</param>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="options"/> is null.</exception>

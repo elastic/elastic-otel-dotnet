@@ -52,24 +52,6 @@ public static class TracerProviderBuilderExtensions
 		return WithElasticDefaultsCore(builder, null, null, null);
 	}
 
-	/// <summary>
-	/// <inheritdoc cref="WithElasticDefaults(TracerProviderBuilder)" />
-	/// </summary>
-	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(TracerProviderBuilder)" path="/param[@name='builder']"/></param>
-	/// <param name="skipOtlpExporter">When registering Elastic defaults, skip automatic registration of the OTLP exporter for traces.</param>
-	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
-	/// <returns><inheritdoc cref="WithElasticDefaults(TracerProviderBuilder)" /></returns>
-	public static TracerProviderBuilder WithElasticDefaults(this TracerProviderBuilder builder, bool skipOtlpExporter)
-	{
-#if NET
-        ArgumentNullException.ThrowIfNull(builder);
-#else
-		if (builder is null)
-			throw new ArgumentNullException(nameof(builder));
-#endif
-
-		return WithElasticDefaultsCore(builder, skipOtlpExporter ? CompositeElasticOpenTelemetryOptions.SkipOtlpOptions : null, null, null);
-	}
 
 	/// <summary>
 	/// <inheritdoc cref="WithElasticDefaults(TracerProviderBuilder)" />

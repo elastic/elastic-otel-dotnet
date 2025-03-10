@@ -95,6 +95,37 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 		parser.ParseSkipInstrumentationAssemblyScanning(_skipInstrumentationAssemblyScanning);
 	}
 
+	[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2026:RequiresUnreferencedCode", Justification = "Manually verified")]
+	[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL3050:RequiresDynamicCode", Justification = "Manually verified")]
+	internal CompositeElasticOpenTelemetryOptions(IConfiguration configuration, ElasticOpenTelemetryOptions options)
+		: this((IDictionary?)null)
+	{
+		var parser = new ConfigurationParser(configuration);
+
+		parser.ParseLogDirectory(_logDirectory);
+		parser.ParseLogTargets(_logTargets);
+		parser.ParseLogLevel(_logLevel, ref _eventLevel);
+		parser.ParseSkipOtlpExporter(_skipOtlpExporter);
+		parser.ParseSkipInstrumentationAssemblyScanning(_skipInstrumentationAssemblyScanning);
+
+		if (options.SkipOtlpExporter.HasValue)
+			_skipOtlpExporter.Assign(options.SkipOtlpExporter.Value, ConfigSource.Options);
+
+		if (!string.IsNullOrEmpty(options.LogDirectory))
+			_logDirectory.Assign(options.LogDirectory, ConfigSource.Options);
+
+		if (options.LogLevel.HasValue)
+			_logLevel.Assign(options.LogLevel.Value, ConfigSource.Options);
+
+		if (options.LogTargets.HasValue)
+			_logTargets.Assign(options.LogTargets.Value, ConfigSource.Options);
+
+		if (options.SkipInstrumentationAssemblyScanning.HasValue)
+			_skipInstrumentationAssemblyScanning.Assign(options.SkipInstrumentationAssemblyScanning.Value, ConfigSource.Options);
+
+		AdditionalLogger = options.AdditionalLogger ?? options.AdditionalLoggerFactory?.CreateElasticLogger();
+	}
+
 	internal CompositeElasticOpenTelemetryOptions(ElasticOpenTelemetryOptions options)
 		: this((IDictionary?)null)
 	{
@@ -115,6 +146,9 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 
 		if (options.LogTargets.HasValue)
 			_logTargets.Assign(options.LogTargets.Value, ConfigSource.Options);
+
+		if (options.SkipInstrumentationAssemblyScanning.HasValue)
+			_skipInstrumentationAssemblyScanning.Assign(options.SkipInstrumentationAssemblyScanning.Value, ConfigSource.Options);
 
 		AdditionalLogger = options.AdditionalLogger ?? options.AdditionalLoggerFactory?.CreateElasticLogger();
 	}

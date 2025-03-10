@@ -252,6 +252,43 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 	}
 
 	[Fact]
+	public void ExplicitOptions_TakePrecedenceOver_ConfigValues()
+	{
+		const string fileLogDirectory = "C:\\Temp";
+
+		var options = new ElasticOpenTelemetryOptions
+		{
+			LogDirectory = fileLogDirectory,
+			LogLevel = LogLevel.Critical
+		};
+
+		var json = $$"""
+					{
+						"Elastic": {
+							"OpenTelemetry": {
+								"LogDirectory": "C:\\Json",
+								"LogLevel": "Trace",
+								"ElasticDefaults": "All",
+								"SkipOtlpExporter": false,
+								"SkipInstrumentationAssemblyScanning": true
+							}
+						}
+					}
+					""";
+
+		var config = new ConfigurationBuilder()
+			.AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(json)))
+			.Build();
+
+		var sut = new CompositeElasticOpenTelemetryOptions(config, options);
+
+		Assert.Equal(fileLogDirectory, sut.LogDirectory);
+		Assert.Equal(LogLevel.Critical, sut.LogLevel);
+		Assert.False(sut.SkipOtlpExporter);
+		Assert.True(sut.SkipInstrumentationAssemblyScanning);
+	}
+
+	[Fact]
 	public void InitializedProperties_TakePrecedenceOver_EnvironmentValues()
 	{
 		const string fileLogDirectory = "C:\\Property";

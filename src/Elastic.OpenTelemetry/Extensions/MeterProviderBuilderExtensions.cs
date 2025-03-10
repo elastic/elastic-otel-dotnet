@@ -61,26 +61,6 @@ public static class MeterProviderBuilderExtensions
 	/// <summary>
 	/// <inheritdoc cref="WithElasticDefaults(MeterProviderBuilder)" />
 	/// </summary>
-	/// <remarks><inheritdoc cref="WithElasticDefaults(MeterProviderBuilder)" /></remarks>
-	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(MeterProviderBuilder)" path="/param[@name='builder']"/></param>
-	/// <param name="skipOtlpExporter">When registering Elastic defaults, skip automatic registration of the OTLP exporter for metrics.</param>
-	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
-	/// <returns><inheritdoc cref="WithElasticDefaults(MeterProviderBuilder)" /></returns>
-	public static MeterProviderBuilder WithElasticDefaults(this MeterProviderBuilder builder, bool skipOtlpExporter)
-	{
-#if NET
-		ArgumentNullException.ThrowIfNull(builder);
-#else
-		if (builder is null)
-			throw new ArgumentNullException(nameof(builder));
-#endif
-
-		return WithElasticDefaultsCore(builder, skipOtlpExporter ? CompositeElasticOpenTelemetryOptions.SkipOtlpOptions : null, null, null);
-	}
-
-	/// <summary>
-	/// <inheritdoc cref="WithElasticDefaults(MeterProviderBuilder)" />
-	/// </summary>
 	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(MeterProviderBuilder)" path="/param[@name='builder']"/></param>
 	/// <param name="options"><see cref="ElasticOpenTelemetryOptions"/> used to configure the Elastic Distribution of OpenTelemetry (EDOT) .NET.</param>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>

@@ -49,9 +49,9 @@ internal static class Usage
 		//	.Build();
 
 		using var sdk = OpenTelemetrySdk.Create(builder => builder
-			.WithElasticMetrics()
-			.WithElasticMetrics()
-			.ConfigureResource(resource => resource.AddService("MyCustomServiceName")));
+			.WithElasticDefaults()
+			.ConfigureResource(resource => resource
+				.AddService("MyCustomServiceName")));
 
 		//This is the most flexible approach for a consumer as they can include our processor(s)
 		//using var tracerProvider = Sdk.CreateTracerProviderBuilder()

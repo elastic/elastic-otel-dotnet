@@ -2,11 +2,11 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
-using Elastic.OpenTelemetry.Hosting;
+using Elastic.OpenTelemetry;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenTelemetry;
-using OpenTelemetry.Resources;
 
 #pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace Microsoft.Extensions.Hosting;
@@ -34,6 +34,37 @@ public static class HostApplicationBuilderExtensions
 #endif
 
 		builder.Services.AddElasticOpenTelemetry(builder.Configuration);
+
+		return builder;
+	}
+
+	/// <summary>
+	/// <inheritdoc cref="AddElasticOpenTelemetry(IHostApplicationBuilder)" />
+	/// </summary>
+	/// <remarks>
+	/// Configuration is first bound from <see cref="IConfiguration"/> and then overridden by any options configured on
+	/// the provided <paramref name="options"/>.
+	/// </remarks>
+	/// <param name="builder"><inheritdoc cref="AddElasticOpenTelemetry(IHostApplicationBuilder)" path="/param[@name='builder']"/></param>
+	/// <param name="options"><see cref="ElasticOpenTelemetryOptions"/> used to configure the Elastic Distribution of OpenTelemetry (EDOT) .NET.</param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="options"/> is null.</exception>
+	/// <returns><inheritdoc cref="AddElasticOpenTelemetry(IHostApplicationBuilder)" /></returns>
+	public static IHostApplicationBuilder AddElasticOpenTelemetry(this IHostApplicationBuilder builder, ElasticOpenTelemetryOptions options)
+	{
+#if NET
+        ArgumentNullException.ThrowIfNull(builder);
+		ArgumentNullException.ThrowIfNull(builder);
+#else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+
+		if (options is null)
+			throw new ArgumentNullException(nameof(options));
+#endif
+
+		builder.Services.AddElasticOpenTelemetry(builder.Configuration, options);
+
 		return builder;
 	}
 
@@ -41,24 +72,35 @@ public static class HostApplicationBuilderExtensions
 	/// <inheritdoc cref="AddElasticOpenTelemetry(IHostApplicationBuilder)" />
 	/// </summary>
 	/// <param name="builder"><inheritdoc cref="AddElasticOpenTelemetry(IHostApplicationBuilder)" path="/param[@name='builder']"/></param>
-	/// <param name="serviceName">A <see cref="string"/> representing the logical name of the service sent with resource attributes.</param>
+	/// <param name="options"><see cref="ElasticOpenTelemetryOptions"/> used to configure the Elastic Distribution of OpenTelemetry (EDOT) .NET.</param>
+	/// <param name="configure"><see cref="IOpenTelemetryBuilder"/> configuration action.</param>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
-	/// <exception cref="ArgumentException">Thrown when the <paramref name="serviceName"/> is null or empty.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="options"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configure"/> is null.</exception>
 	/// <returns><inheritdoc cref="AddElasticOpenTelemetry(IHostApplicationBuilder)" /></returns>
-	public static IHostApplicationBuilder AddElasticOpenTelemetry(this IHostApplicationBuilder builder, string serviceName)
+	public static IHostApplicationBuilder AddElasticOpenTelemetry(this IHostApplicationBuilder builder, ElasticOpenTelemetryOptions options, Action<IOpenTelemetryBuilder> configure)
 	{
 #if NET
 		ArgumentNullException.ThrowIfNull(builder);
-		ArgumentException.ThrowIfNullOrEmpty(serviceName);
+		ArgumentNullException.ThrowIfNull(options);
+		ArgumentNullException.ThrowIfNull(configure);
 #else
 		if (builder is null)
 			throw new ArgumentNullException(nameof(builder));
 
-		if (string.IsNullOrEmpty(serviceName))
-			throw new ArgumentException(nameof(serviceName));
+		if (options is null)
+			throw new ArgumentNullException(nameof(options));
+
+		if (configure is null)
+			throw new ArgumentNullException(nameof(configure));
 #endif
 
-		return AddElasticOpenTelemetry(builder, r => r.ConfigureResource(r => r.AddService(serviceName)));
+		var otelBuilder = builder.Services
+			.AddElasticOpenTelemetry(builder.Configuration, options);
+
+		configure.Invoke(otelBuilder);
+
+		return builder;
 	}
 
 	/// <summary>
