@@ -8,7 +8,6 @@ using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 
 // ReSharper disable once CheckNamespace
@@ -27,21 +26,48 @@ public static class ServiceCollectionExtensions
 	/// OpenTelemetry SDK in the application, configured with Elastic Distribution of OpenTelemetry (EDOT) .NET defaults.
 	/// </summary>
 	/// <param name="services">The <see cref="IServiceCollection"/> for adding services.</param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="services"/> is null.</exception>
 	/// <returns>
 	/// An instance of <see cref="IOpenTelemetryBuilder"/> that can be used to further configure the
 	/// OpenTelemetry SDK.
 	/// </returns>
-	public static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection services) =>
-		AddElasticOpenTelemetryCore(services, CompositeElasticOpenTelemetryOptions.DefaultOptions);
+	public static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection services)
+	{
+#if NET
+		ArgumentNullException.ThrowIfNull(services);
+#else
+		if (services is null)
+			throw new ArgumentNullException(nameof(services));
+#endif
+
+		return AddElasticOpenTelemetryCore(services, CompositeElasticOpenTelemetryOptions.DefaultOptions);
+	}
 
 	/// <summary>
 	/// <inheritdoc cref="AddElasticOpenTelemetry(IServiceCollection)"/>
 	/// </summary>
 	/// <param name="services"><inheritdoc cref="AddElasticOpenTelemetry(IServiceCollection)" path="/param[@name='services']"/></param>
-	/// <param name="skipOtlpExporter">Controls whether the OTLP exporter is enabled automatically.</param>
+	/// <param name="options">
+	/// The <see cref="CompositeElasticOpenTelemetryOptions"/> used to configure the Elastic Distribution of OpenTelemetry (EDOT) .NET.
+	/// </param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="services"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="options"/> is null.</exception>
 	/// <returns><inheritdoc cref="AddElasticOpenTelemetry(IServiceCollection)"/></returns>
-	public static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection services, bool skipOtlpExporter) =>
-		AddElasticOpenTelemetryCore(services, skipOtlpExporter ? CompositeElasticOpenTelemetryOptions.SkipOtlpOptions : CompositeElasticOpenTelemetryOptions.DefaultOptions);
+	public static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection services, ElasticOpenTelemetryOptions options)
+	{
+#if NET
+		ArgumentNullException.ThrowIfNull(services);
+		ArgumentNullException.ThrowIfNull(options);
+#else
+		if (services is null)
+			throw new ArgumentNullException(nameof(services));
+
+		if (options is null)
+			throw new ArgumentNullException(nameof(options));
+#endif
+
+		return AddElasticOpenTelemetryCore(services, new(options));
+	}
 
 	/// <summary>
 	/// <inheritdoc cref="AddElasticOpenTelemetry(IServiceCollection)"/>
@@ -50,12 +76,18 @@ public static class ServiceCollectionExtensions
 	/// <param name="configuration">
 	/// An <see cref="IConfiguration"/> instance from which to attempt binding of configuration values.
 	/// </param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="services"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configuration"/> is null.</exception>
 	/// <returns><inheritdoc cref="AddElasticOpenTelemetry(IServiceCollection)"/></returns>
 	public static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection services, IConfiguration configuration)
 	{
 #if NET
+		ArgumentNullException.ThrowIfNull(services);
 		ArgumentNullException.ThrowIfNull(configuration);
 #else
+		if (services is null)
+			throw new ArgumentNullException(nameof(services));
+
 		if (configuration is null)
 			throw new ArgumentNullException(nameof(configuration));
 #endif
@@ -66,71 +98,40 @@ public static class ServiceCollectionExtensions
 	/// <summary>
 	/// <inheritdoc cref="AddElasticOpenTelemetry(IServiceCollection)"/>
 	/// </summary>
+	/// <remarks>
+	/// Configuration is first bound from <see cref="IConfiguration"/> and then overridden by any options configured on
+	/// the provided <paramref name="options"/>.
+	/// </remarks>
 	/// <param name="services"><inheritdoc cref="AddElasticOpenTelemetry(IServiceCollection)" path="/param[@name='services']"/></param>
-	/// <param name="configuration"><inheritdoc cref="AddElasticOpenTelemetry(IServiceCollection)" path="/param[@name='configuration']"/></param>
-	/// <param name="additionalLoggerFactory">
-	/// An <see cref="ILoggerFactory"/> that Elastic Distribution of OpenTelemetry (EDOT) .NET can use to create an additional <see cref="ILogger"/>
-	/// used for diagnostic logging.
-	/// </param>
+	/// <param name="configuration">An <see cref="IConfiguration"/> instance from which to attempt binding of configuration values.</param>
+	/// <param name="options"><see cref="ElasticOpenTelemetryOptions"/> used to configure the Elastic Distribution of OpenTelemetry (EDOT) .NET.</param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="services"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configuration"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="options"/> is null.</exception>
 	/// <returns><inheritdoc cref="AddElasticOpenTelemetry(IServiceCollection)"/></returns>
-	public static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection services,
-		IConfiguration configuration, ILoggerFactory additionalLoggerFactory)
+	internal static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection services, IConfiguration configuration, ElasticOpenTelemetryOptions options)
 	{
 #if NET
+		ArgumentNullException.ThrowIfNull(services);
 		ArgumentNullException.ThrowIfNull(configuration);
-		ArgumentNullException.ThrowIfNull(additionalLoggerFactory);
+		ArgumentNullException.ThrowIfNull(options);
 #else
+		if (services is null)
+			throw new ArgumentNullException(nameof(services));
+
 		if (configuration is null)
 			throw new ArgumentNullException(nameof(configuration));
-		if (additionalLoggerFactory is null)
-			throw new ArgumentNullException(nameof(additionalLoggerFactory));
+
+		if (options is null)
+			throw new ArgumentNullException(nameof(options));
 #endif
 
-		return AddElasticOpenTelemetryCore(services, new(configuration, additionalLoggerFactory));
+		return AddElasticOpenTelemetryCore(services, new(configuration, options));
 	}
-
-	/// <summary>
-	/// <inheritdoc cref="AddElasticOpenTelemetry(IServiceCollection)"/>
-	/// </summary>
-	/// <param name="services"><inheritdoc cref="AddElasticOpenTelemetry(IServiceCollection)" path="/param[@name='services']"/></param>
-	/// <param name="configuration"><inheritdoc cref="AddElasticOpenTelemetry(IServiceCollection)" path="/param[@name='configuration']"/></param>
-	/// <param name="additionalLogger">An additional <see cref="ILogger"/> to be used for diagnostic logging.</param>
-	/// <returns><inheritdoc cref="AddElasticOpenTelemetry(IServiceCollection)"/></returns>
-	public static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection services,
-		IConfiguration configuration, ILogger additionalLogger)
-	{
-#if NET
-		ArgumentNullException.ThrowIfNull(configuration);
-#else
-		if (configuration is null)
-			throw new ArgumentNullException(nameof(configuration));
-#endif
-
-		return AddElasticOpenTelemetryCore(services, new(configuration) { AdditionalLogger = additionalLogger });
-	}
-
-	/// <summary>
-	/// <inheritdoc cref="AddElasticOpenTelemetry(IServiceCollection)"/>
-	/// </summary>
-	/// <param name="services"><inheritdoc cref="AddElasticOpenTelemetry(IServiceCollection)" path="/param[@name='services']"/></param>
-	/// <param name="options">
-	/// The <see cref="CompositeElasticOpenTelemetryOptions"/> used to configure the Elastic Distribution of OpenTelemetry (EDOT) .NET.
-	/// </param>
-	/// <returns><inheritdoc cref="AddElasticOpenTelemetry(IServiceCollection)"/></returns>
-	public static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection services, ElasticOpenTelemetryOptions options) =>
-		AddElasticOpenTelemetryCore(services, new(options));
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	internal static IOpenTelemetryBuilder AddElasticOpenTelemetryCore(IServiceCollection services, CompositeElasticOpenTelemetryOptions options)
 	{
-#if NET
-		ArgumentNullException.ThrowIfNull(options);
-#else
-		if (options is null)
-			throw new ArgumentNullException(nameof(options));
-
-#endif
-
 		var builder = services.AddOpenTelemetry().WithElasticDefaultsCore(options);
 
 		if (!services.Any((ServiceDescriptor d) => d.ServiceType == typeof(IHostedService) && d.ImplementationType == typeof(ElasticOpenTelemetryService)))

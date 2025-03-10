@@ -9,9 +9,6 @@ using Xunit.Abstractions;
 
 namespace Elastic.OpenTelemetry.Tests;
 
-// These run in a collection to avoid them running in parallel with other tests that may set the SharedComponents which would cause
-// these to fail.
-[Collection("Discrete SharedComponents")]
 public partial class LoggingTests(ITestOutputHelper output)
 {
 	[GeneratedRegex(@"\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}\]\[\d{6}\]\[-*\]\[Information\]\s+Elastic Distribution of OpenTelemetry \(EDOT\) \.NET:.*")]
