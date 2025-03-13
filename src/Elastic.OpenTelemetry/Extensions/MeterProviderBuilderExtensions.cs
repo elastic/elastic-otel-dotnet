@@ -159,8 +159,12 @@ public static class MeterProviderBuilderExtensions
 
 			builder.ConfigureResource(r => r.WithElasticDefaults(builderState, services));
 
+			// When services is not null here, the options will have already been configured by the calling code.
 			if (services is null)
 				builder.ConfigureServices(sc => sc.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions));
+
+			builder.ConfigureServices(sc => sc.Configure<MetricReaderOptions>(o =>
+				o.TemporalityPreference = MetricReaderTemporalityPreference.Delta));
 
 #if NET9_0_OR_GREATER
 			// On .NET 9, the contrib HTTP instrumentation is no longer required. If the dependency exists,

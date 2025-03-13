@@ -62,7 +62,7 @@ public class AutoInstrumentationPlugin
 
 	/// <summary>
 	/// To configure metrics SDK before Auto Instrumentation configured SDK.
-	/// /// </summary>
+	/// </summary>
 	public MeterProviderBuilder BeforeConfigureMeterProvider(MeterProviderBuilder builder)
 	{
 		var logger = _components.Logger;
@@ -71,7 +71,9 @@ public class AutoInstrumentationPlugin
 		{
 			builder.ConfigureResource(r => r.WithElasticDefaultsCore(_components, null, null));
 
-			builder.ConfigureServices(sc => sc.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions));
+			builder.ConfigureServices(sc => sc
+				.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions)
+				.Configure<MetricReaderOptions>(o => o.TemporalityPreference = MetricReaderTemporalityPreference.Delta));
 
 			logger.LogConfiguredSignalProvider(nameof(Signals.Metrics), nameof(MeterProviderBuilder), "<n/a>");
 
