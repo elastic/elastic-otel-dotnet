@@ -180,9 +180,11 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 
 	private static string GetDefaultLogDirectory()
 	{
-		var applicationMoniker = "elastic-otel-dotnet";
+		const string applicationMoniker = "elastic-otel-dotnet";
+
 		if (IsOSPlatform(OSPlatform.Windows))
 			return Path.Combine(GetFolderPath(SpecialFolder.ApplicationData), "elastic", applicationMoniker);
+
 		if (IsOSPlatform(OSPlatform.OSX))
 			return Path.Combine(GetFolderPath(SpecialFolder.LocalApplicationData), "elastic", applicationMoniker);
 
@@ -192,9 +194,9 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 	/// <summary>
 	/// The default log directory if file logging was enabled but non was specified
 	/// <para>Defaults to: </para>
-	/// <para> - %PROGRAMDATA%\elastic\apm-agent-dotnet (on Windows)</para>
-	/// <para> - /var/log/elastic/apm-agent-dotnet (on Linux)</para>
-	/// <para> - ~/Library/Application_Support/elastic/apm-agent-dotnet (on OSX)</para>
+	/// <para> - %USERPROFILE%\AppData\Roaming\elastic\elastic-otel-dotnet (on Windows)</para>
+	/// <para> - /var/log/elastic/elastic-otel-dotnet (on Linux)</para>
+	/// <para> - ~/Library/Application Support/elastic/elastic-otel-dotnet (on OSX)</para>
 	/// </summary>
 	internal string LogDirectoryDefault { get; }
 

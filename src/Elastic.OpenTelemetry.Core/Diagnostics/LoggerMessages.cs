@@ -154,7 +154,7 @@ internal static partial class LoggerMessages
 			logger.LogInformation("EDOT log file: <disabled>");
 		}
 
-		logger.LogInformation("Activation method: {ActivationMethod}", activationMethod.ToString());
+		logger.LogDebug("Activation method: {ActivationMethod}", activationMethod.ToString());
 
 #if NET8_0
 		logger.LogDebug("Matched TFM: {TargetFrameworkMoniker}", "net8.0");
