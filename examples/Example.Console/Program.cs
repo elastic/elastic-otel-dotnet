@@ -6,7 +6,7 @@ using Example.Console;
 
 Console.WriteLine("Starting sample application.");
 
-await Usage.BasicBuilderUsageAsync();
+Usage.BasicBuilderUsage();
 
 //await Usage.ComplexUsageAsync();
 

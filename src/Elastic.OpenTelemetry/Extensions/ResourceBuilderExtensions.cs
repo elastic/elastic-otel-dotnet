@@ -6,6 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using Elastic.OpenTelemetry.Core;
 using Elastic.OpenTelemetry.Diagnostics;
 using Elastic.OpenTelemetry.Instrumentation;
+using Elastic.OpenTelemetry.Resources;
 using Microsoft.Extensions.DependencyInjection;
 
 #if NET
@@ -38,7 +39,7 @@ internal static class ResourceBuilderExtensions
 
 		components.Logger.LogWithElasticDefaultsCallCount(callCount, nameof(ResourceBuilder));
 
-		return SignalBuilder.WithElasticDefaults(builder, components.Options, components, services, (b, bs, _) => ConfigureBuilder(b, bs));
+		return builder.WithElasticDefaultsCore(components, services, ConfigureBuilder);
 	}
 
 	[UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026", Justification = "The call to `AssemblyScanning.AddInstrumentationViaReflection` " +

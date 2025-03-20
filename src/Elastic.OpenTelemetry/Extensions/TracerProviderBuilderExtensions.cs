@@ -164,14 +164,14 @@ public static class TracerProviderBuilderExtensions
 		}
 		else
 		{
-			CoreTracerProvderBuilderExtensions.AddActivitySourceWithLogging(builder, logger, "System.Net.Http", builderState.InstanceIdentifier);
+			TracerProvderBuilderExtensions.AddActivitySourceWithLogging(builder, logger, "System.Net.Http", builderState.InstanceIdentifier);
 		}
 #else
 		AddWithLogging(builder, logger, "HTTP", b => b.AddHttpClientInstrumentation(), builderState.InstanceIdentifier);
 #endif
 
 		AddWithLogging(builder, logger, "GrpcClient", b => b.AddGrpcClientInstrumentation(), builderState.InstanceIdentifier);
-		CoreTracerProvderBuilderExtensions.AddActivitySourceWithLogging(builder, logger, "Elastic.Transport", builderState.InstanceIdentifier);
+		TracerProvderBuilderExtensions.AddActivitySourceWithLogging(builder, logger, "Elastic.Transport", builderState.InstanceIdentifier);
 
 		// NOTE: Despite them having no dependencies. We cannot add the OpenTelemetry.Instrumentation.ElasticsearchClient or
 		// OpenTelemetry.Instrumentation.EntityFrameworkCore instrumentations here, as including the package references causes
@@ -186,7 +186,7 @@ public static class TracerProviderBuilderExtensions
 			SignalBuilder.AddInstrumentationViaReflection(builder, components, ContribTraceInstrumentation.GetReflectionInstrumentationAssemblies(), builderState.InstanceIdentifier);
 		}
 
-		CoreTracerProvderBuilderExtensions.AddElasticProcessorsCore(builder, builderState, null, services);
+		TracerProvderBuilderExtensions.AddElasticProcessorsCore(builder, builderState, null, services);
 
 		if (components.Options.SkipOtlpExporter)
 		{

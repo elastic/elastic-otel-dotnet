@@ -44,8 +44,8 @@ public class AutoInstrumentationPlugin
 
 			builder.ConfigureServices(sc => sc.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions));
 
-			CoreTracerProvderBuilderExtensions.AddActivitySourceWithLogging(builder, logger, "Elastic.Transport", "<n/a>");
-			CoreTracerProvderBuilderExtensions.AddElasticProcessorsCore(builder, null, _components, null);
+			TracerProvderBuilderExtensions.AddActivitySourceWithLogging(builder, logger, "Elastic.Transport", "<n/a>");
+			TracerProvderBuilderExtensions.AddElasticProcessorsCore(builder, null, _components, null);
 
 			logger.LogConfiguredSignalProvider("Traces", nameof(TracerProviderBuilder), "<n/a>");
 
