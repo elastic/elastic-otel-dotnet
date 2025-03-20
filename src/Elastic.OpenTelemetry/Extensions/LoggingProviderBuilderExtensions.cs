@@ -133,8 +133,11 @@ public static class LoggingProviderBuilderExtensions
 
 			builder.ConfigureResource(r => r.WithElasticDefaults(builderState, services));
 
+			// When services is not null here, the options will have already been configured by the calling code.
 			if (services is null)
 				builder.ConfigureServices(sc => sc.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions));
+
+			builder.ConfigureServices(sc => sc.Configure<OpenTelemetryLoggerOptions>(o => o.WithElasticDefaults(logger)));
 
 			if (components.Options.SkipOtlpExporter)
 			{

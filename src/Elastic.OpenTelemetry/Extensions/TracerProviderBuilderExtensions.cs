@@ -171,6 +171,7 @@ public static class TracerProviderBuilderExtensions
 #endif
 
 		AddWithLogging(builder, logger, "GrpcClient", b => b.AddGrpcClientInstrumentation(), builderState.InstanceIdentifier);
+
 		TracerProvderBuilderExtensions.AddActivitySourceWithLogging(builder, logger, "Elastic.Transport", builderState.InstanceIdentifier);
 
 		// NOTE: Despite them having no dependencies. We cannot add the OpenTelemetry.Instrumentation.ElasticsearchClient or
