@@ -143,12 +143,11 @@ internal static class SignalBuilder
 				components = ElasticOpenTelemetry.Bootstrap(options, services);
 				builderState = new BuilderState(components, instanceId);
 
-				components.Logger.LogStoringBuilderState(providerBuilderName, instanceId);
+				configure(builder, builderState, services);
 
+				components.Logger.LogStoringBuilderState(providerBuilderName, instanceId);
 				BuilderStateTable.Add(builder, builderState);
 			}
-
-			configure(builder, builderState, services);
 		}
 		catch (Exception ex)
 		{

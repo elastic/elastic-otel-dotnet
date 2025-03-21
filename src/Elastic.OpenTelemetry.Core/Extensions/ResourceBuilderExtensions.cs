@@ -33,8 +33,8 @@ internal static class ResourceBuilderExtensions
 		Action<ResourceBuilder, BuilderState>? configure) =>
 			WithElasticDefaultsCore(builder, builderState.Components, services, configure);
 
-	internal static ResourceBuilder WithElasticDefaultsCore
-		(this ResourceBuilder builder,
+	internal static ResourceBuilder WithElasticDefaultsCore(
+		this ResourceBuilder builder,
 		ElasticOpenTelemetryComponents components,
 		IServiceCollection? services,
 		Action<ResourceBuilder, BuilderState>? configure)
