@@ -2,7 +2,9 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry;
 using Elastic.OpenTelemetry.Configuration;
@@ -135,9 +137,9 @@ public static class TracerProviderBuilderExtensions
 		return SignalBuilder.WithElasticDefaults(builder, Signals.Traces, options, components, services, ConfigureBuilder);
 	}
 
-	[UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026", Justification = "The calls to `AddSqlClientInstrumentation` and " +
-		"`AssemblyScanning.AddInstrumentationViaReflection` are guarded by a RuntimeFeature.IsDynamicCodeSupported` check and therefore " +
-		"this method is safe to call in AoT scenarios.")]
+	[UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026", Justification = "The call to AssemblyScanning.AddInstrumentationViaReflection` " +
+		"is guarded by a RuntimeFeature.IsDynamicCodeSupported` check and, therefore, this method is safe to call in AoT scenarios.")]
+
 	private static void ConfigureBuilder(TracerProviderBuilder builder, BuilderState builderState, IServiceCollection? services)
 	{
 		const string tracerProviderBuilderName = nameof(TracerProviderBuilder);
@@ -153,38 +155,28 @@ public static class TracerProviderBuilderExtensions
 			builder.ConfigureServices(sc => sc.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions));
 
 #if NET9_0_OR_GREATER
-		if (SignalBuilder.InstrumentationAssemblyExists("OpenTelemetry.Instrumentation.Http.dll"))
-		{
-			logger.LogHttpInstrumentationFound("trace", tracerProviderBuilderName, builderState.InstanceIdentifier);
-
-			if (!RuntimeFeature.IsDynamicCodeSupported)
-				logger.LogWarning("The OpenTelemetry.Instrumentation.Http.dll was found alongside the executing assembly. " +
-					"When using Native AOT publishing on .NET, the trace instrumentation is not registered automatically. Either register it manually, " +
-					"or remove the dependency so that the native `System.Net.Http` instrumentation (available in .NET 9) is observed instead.");
-		}
-		else
+		// .NET 9 introduced semantic convention compatible instrumentation in System.Net.Http so it's recommended to no longer
+		// use the contrib instrumentation. We don't bring in the dependency for .NET 9+. However, if the consuming app depends
+		// on it, it will be assumed that the user prefers it and therefore we allow the assembly scanning to add it. We don't
+		// add the native source to avoid doubling up on spans.
+		if (!SignalBuilder.InstrumentationAssemblyExists("OpenTelemetry.Instrumentation.Http.dll"))
 		{
 			TracerProvderBuilderExtensions.AddActivitySourceWithLogging(builder, logger, "System.Net.Http", builderState.InstanceIdentifier);
 		}
-#else
-		AddWithLogging(builder, logger, "HTTP", b => b.AddHttpClientInstrumentation(), builderState.InstanceIdentifier);
 #endif
 
-		AddWithLogging(builder, logger, "GrpcClient", b => b.AddGrpcClientInstrumentation(), builderState.InstanceIdentifier);
-
 		TracerProvderBuilderExtensions.AddActivitySourceWithLogging(builder, logger, "Elastic.Transport", builderState.InstanceIdentifier);
-
-		// NOTE: Despite them having no dependencies. We cannot add the OpenTelemetry.Instrumentation.ElasticsearchClient or
-		// OpenTelemetry.Instrumentation.EntityFrameworkCore instrumentations here, as including the package references causes
-		// trimming warnings. We can still add them via reflection.
 
 #if NET
 		if (RuntimeFeature.IsDynamicCodeSupported)
 #endif
 		{
-			// This instrumentation is not currently compatible for AoT scenarios.
-			AddWithLogging(builder, logger, "SqlClient", b => b.AddSqlClientInstrumentation(), builderState.InstanceIdentifier);
 			SignalBuilder.AddInstrumentationViaReflection(builder, components, ContribTraceInstrumentation.GetReflectionInstrumentationAssemblies(), builderState.InstanceIdentifier);
+
+			// This is special-cased because we need to register additional options to ensure we capture exceptions by default
+			// This improves the UI experience as requests which cause an exception are highlighted in the UI and users can view the
+			// log generated from the span event.
+			AddAspNetCoreInstrumentation(builder, builderState);
 		}
 
 		TracerProvderBuilderExtensions.AddElasticProcessorsCore(builder, builderState, null, services);
@@ -199,12 +191,79 @@ public static class TracerProviderBuilderExtensions
 		}
 
 		logger.LogConfiguredSignalProvider(nameof(Signals.Traces), nameof(TracerProviderBuilder), builderState.InstanceIdentifier);
+	}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		static void AddWithLogging(TracerProviderBuilder builder, ILogger logger, string name, Action<TracerProviderBuilder> add, string builderIdentifier)
+	[UnconditionalSuppressMessage("DynamicCode", "IL2026", Justification = "The call to this method is guarded by a RuntimeFeature.IsDynamicCodeSupported` " +
+		"check and therefore this method is safe to call in AoT scenarios.")]
+	[UnconditionalSuppressMessage("DynamicCode", "IL3050", Justification = "The call to this method is guarded by a RuntimeFeature.IsDynamicCodeSupported` " +
+		"check and therefore this method is safe to call in AoT scenarios.")]
+	[UnconditionalSuppressMessage("DynamicallyAccessMembers", "IL2075", Justification = "The call to this method is guarded by a RuntimeFeature.IsDynamicCodeSupported` " +
+		"check and therefore this method is safe to call in AoT scenarios.")]
+	private static void AddAspNetCoreInstrumentation(TracerProviderBuilder builder, BuilderState builderState)
+	{
+		if (builderState.Components.Options.SkipInstrumentationAssemblyScanning)
+			return;
+
+		var logger = builderState.Components.Logger;
+
+		const string tracerProviderBuilderExtensionsTypeName = "OpenTelemetry.Trace.AspNetCoreInstrumentationTracerProviderBuilderExtensions";
+		const string aspNetCoreTraceInstrumentationOptionsTypeName = "OpenTelemetry.Instrumentation.AspNetCore.AspNetCoreTraceInstrumentationOptions";
+		const string extensionMethodName = "AddAspNetCoreInstrumentation";
+		const string assemblyName = "OpenTelemetry.Instrumentation.AspNetCore";
+
+		var builderTypeName = builder.GetType().Name;
+
+		try
 		{
-			add.Invoke(builder);
-			logger.LogAddedInstrumentation(name, nameof(TracerProviderBuilder), builderIdentifier);
+			var tracerProviderBuilderExtensionsType = Type.GetType($"{tracerProviderBuilderExtensionsTypeName}, {assemblyName}");
+			var optionsType = Type.GetType($"{aspNetCoreTraceInstrumentationOptionsTypeName}, {assemblyName}");
+
+			if (tracerProviderBuilderExtensionsType is null)
+			{
+				logger.LogUnableToFindTypeWarning(tracerProviderBuilderExtensionsTypeName, assemblyName);
+				return;
+			}
+
+			if (optionsType is null)
+			{
+				logger.LogUnableToFindTypeWarning(aspNetCoreTraceInstrumentationOptionsTypeName, assemblyName);
+				return;
+			}
+
+			Action<object> configureOptions = options =>
+			{
+				var enrichWithExceptionProperty = options.GetType().GetProperty("EnrichWithException");
+				if (enrichWithExceptionProperty is not null)
+				{
+					var enrichWithExceptionDelegate = (Action<Activity, Exception>)((activity, ex) =>
+					{
+						activity.AddException(ex);
+
+						if (ex.Source is not null)
+						{
+							activity.SetTag("exception.source", ex.Source);
+						}
+					});
+
+					enrichWithExceptionProperty.SetValue(options, enrichWithExceptionDelegate);
+				}
+			};
+
+			var methodInfo = tracerProviderBuilderExtensionsType.GetMethod(extensionMethodName, BindingFlags.Static | BindingFlags.Public,
+				Type.DefaultBinder, [typeof(TracerProviderBuilder), typeof(Action<>).MakeGenericType(optionsType)], null);
+
+			if (methodInfo is null)
+			{
+				logger.LogUnableToFindMethodWarning(tracerProviderBuilderExtensionsTypeName, extensionMethodName, assemblyName);
+				return;
+			}
+
+			methodInfo.Invoke(null, [builder, configureOptions]);
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(new EventId(503, "DynamicInstrumentaionFailed"), ex, "Failed to dynamically enable " +
+				"{InstrumentationName} on {Provider}.", assemblyName, builderTypeName);
 		}
 	}
 }

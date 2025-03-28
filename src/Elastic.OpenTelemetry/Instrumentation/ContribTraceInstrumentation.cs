@@ -23,13 +23,7 @@ internal static class ContribTraceInstrumentation
 			InstrumentationMethod = "AddAspNetInstrumentation"
 		},
 
-		new()
-		{
-			Name = "AspNetCore",
-			Filename = "OpenTelemetry.Instrumentation.AspNetCore.dll",
-			FullyQualifiedType = "OpenTelemetry.Trace.AspNetCoreInstrumentationTracerProviderBuilderExtensions",
-			InstrumentationMethod = "AddAspNetCoreInstrumentation"
-		},
+		// NOTE: We don't add ASP.NET Core here as we special-case it and handle it manually
 
 		new()
 		{
@@ -41,18 +35,10 @@ internal static class ContribTraceInstrumentation
 
 		new()
 		{
-			Name = "Kafka (Producer)",
-			Filename = "OpenTelemetry.Instrumentation.ConfluentKafka.dll",
+			Name = "ElasticsearchClient (NEST)",
+			Filename = "OpenTelemetry.Instrumentation.ElasticsearchClient.dll",
 			FullyQualifiedType = "OpenTelemetry.Trace.TracerProviderBuilderExtensions",
-			InstrumentationMethod = "AddKafkaProducerInstrumentation"
-		},
-
-		new()
-		{
-			Name = "Kafka (Consumer)",
-			Filename = "OpenTelemetry.Instrumentation.ConfluentKafka.dll",
-			FullyQualifiedType = "OpenTelemetry.Trace.TracerProviderBuilderExtensions",
-			InstrumentationMethod = "AddKafkaConsumerInstrumentation"
+			InstrumentationMethod = "AddElasticsearchClientInstrumentation"
 		},
 
 		new()
@@ -61,6 +47,14 @@ internal static class ContribTraceInstrumentation
 			Filename = "OpenTelemetry.Instrumentation.EntityFrameworkCore.dll",
 			FullyQualifiedType = "OpenTelemetry.Trace.TracerProviderBuilderExtensions",
 			InstrumentationMethod = "AddEntityFrameworkCoreInstrumentation"
+		},
+
+		new()
+		{
+			Name = "GrpcNetClient",
+			Filename = "OpenTelemetry.Instrumentation.GrpcNetClient.dll",
+			FullyQualifiedType = "OpenTelemetry.Trace.TracerProviderBuilderExtensions",
+			InstrumentationMethod = "AddGrpcClientInstrumentation"
 		},
 
 		new()
@@ -79,11 +73,10 @@ internal static class ContribTraceInstrumentation
 			InstrumentationMethod = "AddHangfireInstrumentation"
 		},
 
-#if NET9_0_OR_GREATER
 		// On .NET 9, we add the `System.Net.Http` source for native instrumentation, rather than referencing
 		// the contrib instrumentation. However, if the consuming application has their own reference to
 		// `OpenTelemetry.Instrumentation.Http`, then we use that since it signals the consumer prefers the
-		// contrib instrumentation. Therefore, on .NET 9+ targets, we attempt to dynamically load the contrib
+		// contrib instrumentation. Therefore, even on .NET 9+ targets, we attempt to dynamically load the contrib
 		// instrumentation, when available, because we no longer take this dependency for .NET 9 targets.
 		new()
 		{
@@ -92,14 +85,21 @@ internal static class ContribTraceInstrumentation
 			FullyQualifiedType = "OpenTelemetry.Trace.HttpClientInstrumentationTracerProviderBuilderExtensions",
 			InstrumentationMethod = "AddHttpClientInstrumentation"
 		},
-#endif
 
 		new()
 		{
-			Name = "NEST",
-			Filename = "OpenTelemetry.Instrumentation.ElasticsearchClient.dll",
+			Name = "Kafka (Producer)",
+			Filename = "OpenTelemetry.Instrumentation.ConfluentKafka.dll",
 			FullyQualifiedType = "OpenTelemetry.Trace.TracerProviderBuilderExtensions",
-			InstrumentationMethod = "AddElasticsearchClientInstrumentation"
+			InstrumentationMethod = "AddKafkaProducerInstrumentation"
+		},
+
+		new()
+		{
+			Name = "Kafka (Consumer)",
+			Filename = "OpenTelemetry.Instrumentation.ConfluentKafka.dll",
+			FullyQualifiedType = "OpenTelemetry.Trace.TracerProviderBuilderExtensions",
+			InstrumentationMethod = "AddKafkaConsumerInstrumentation"
 		},
 
 		new()
