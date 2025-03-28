@@ -18,7 +18,7 @@ namespace Elastic.OpenTelemetry.Tests.Aot
 		{
 			var workingDir = Environment.CurrentDirectory;
 			var indexOfSolutionFolder = workingDir.AsSpan().LastIndexOf("elastic-otel-dotnet");
-			workingDir = workingDir.AsSpan().Slice(0, indexOfSolutionFolder + "elastic-otel-dotnet".Length).ToString();
+			workingDir = workingDir.AsSpan()[..(indexOfSolutionFolder + "elastic-otel-dotnet".Length)].ToString();
 			workingDir = Path.Combine(workingDir, "examples", "Example.AspNetCore.WebApiAot");
 
 			var rid = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "win-x64" : "linux-x64";
