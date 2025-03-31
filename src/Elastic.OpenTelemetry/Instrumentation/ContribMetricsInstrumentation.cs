@@ -71,19 +71,28 @@ internal static class ContribMetricsInstrumentation
 			InstrumentationMethod = "AddEventCountersInstrumentation"
 		},
 
-#if NET9_0_OR_GREATER
-		// On .NET 9, we add the `System.Net.Http` source for native instrumentation, rather than referencing
-		// the contrib instrumentation. However, if the consuming application has their own reference to
-		// `OpenTelemetry.Instrumentation.Http`, then we use that since it signals the consumer prefers the
-		// contrib instrumentation. Therefore, on .NET 9+ targets, we attempt to dynamically load the contrib
-		// instrumentation, when available.
 		new()
 		{
-			Name = "Http",
+			Name = "HTTP",
 			Filename = "OpenTelemetry.Instrumentation.Http.dll",
 			FullyQualifiedType = "OpenTelemetry.Metrics.HttpClientInstrumentationMeterProviderBuilderExtensions",
 			InstrumentationMethod = "AddHttpClientInstrumentation"
 		},
-#endif
+
+		new()
+		{
+			Name = "Runtime",
+			Filename = "OpenTelemetry.Instrumentation.Runtime.dll",
+			FullyQualifiedType = "OpenTelemetry.Metrics.MeterProviderBuilderExtensions",
+			InstrumentationMethod = "AddRuntimeInstrumentation"
+		},
+
+		new()
+		{
+			Name = "Process",
+			Filename = "OpenTelemetry.Instrumentation.Process.dll",
+			FullyQualifiedType = "OpenTelemetry.Metrics.MeterProviderBuilderExtensions",
+			InstrumentationMethod = "AddProcessInstrumentation"
+		}
 	];
 }

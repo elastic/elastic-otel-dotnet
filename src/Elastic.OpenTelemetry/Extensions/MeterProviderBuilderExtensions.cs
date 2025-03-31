@@ -14,7 +14,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry.Exporter;
-using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 
@@ -151,11 +150,11 @@ public static class MeterProviderBuilderExtensions
 
 		static void ConfigureBuilder(MeterProviderBuilder builder, BuilderState builderState, IServiceCollection? services)
 		{
-			const string loggingProviderName = nameof(MeterProviderBuilder);
+			const string meterProviderBuilderName = nameof(MeterProviderBuilder);
 			var components = builderState.Components;
 			var logger = components.Logger;
 
-			logger.LogConfiguringBuilder(loggingProviderName, builderState.InstanceIdentifier);
+			logger.LogConfiguringBuilder(meterProviderBuilderName, builderState.InstanceIdentifier);
 
 			builder.ConfigureResource(r => r.WithElasticDefaults(builderState, services));
 
@@ -167,20 +166,17 @@ public static class MeterProviderBuilderExtensions
 				o.TemporalityPreference = MetricReaderTemporalityPreference.Delta));
 
 #if NET9_0_OR_GREATER
-			// On .NET 9, the contrib HTTP instrumentation is no longer required. If the dependency exists,
-			// it will be registered via the reflection-based assembly scanning.
+			// .NET 9 introduced semantic convention compatible instrumentation in System.Net.Http so it's recommended to no longer
+			// use the contrib instrumentation. We don't bring in the dependency for .NET 9+. However, if the consuming app depends
+			// on it, it will be assumed that the user prefers it and therefore we allow the assembly scanning to add it. We don't
+			// add the native meter to avoid doubling up on metrics.
 			if (SignalBuilder.InstrumentationAssemblyExists("OpenTelemetry.Instrumentation.Http.dll"))
 			{
-				logger.LogHttpInstrumentationFound("metric", nameof(MeterProviderBuilder), builderState.InstanceIdentifier);
+				logger.LogHttpInstrumentationFound("metric", meterProviderBuilderName, builderState.InstanceIdentifier);
 
-				// For native AOT scenarios, the reflection-based assembly scanning will not run.
-				// Therefore, we log a warning since no HTTP instrumentation will be automatically registered.
-				// In this scenario, the consumer must register the contrib instrumentation manually, or
-				// remove the dependency so that the native .NET 9 HTTP instrumentation source will be added
-				// instead.
 				if (!RuntimeFeature.IsDynamicCodeSupported)
 					logger.LogWarning("The OpenTelemetry.Instrumentation.Http.dll was found alongside the executing assembly. " +
-						"When using Native AOT publishing on .NET, the metric instrumentation is not registered automatically. Either register it manually, " +
+						"When using Native AOT publishing on .NET, the metrics instrumentation is not registered automatically. Either register it manually, " +
 						"or remove the dependency so that the native `System.Net.Http` instrumentation (available in .NET 9) is observed instead.");
 			}
 			else
@@ -208,12 +204,7 @@ public static class MeterProviderBuilderExtensions
 			{
 				AddMeterWithLogging(builder, logger, "System.Runtime", builderState.InstanceIdentifier);
 			}
-#else
-			AddWithLogging(builder, logger, "HTTP", b => b.AddHttpClientInstrumentation(), builderState.InstanceIdentifier);
-			AddWithLogging(builder, logger, "Runtime", b => b.AddRuntimeInstrumentation(), builderState.InstanceIdentifier);
 #endif
-			// We explicity include this dependency and add it, since the current curated metric dashboard requires the memory metric.
-			AddWithLogging(builder, logger, "Process", b => b.AddProcessInstrumentation(), builderState.InstanceIdentifier);
 
 			if (SignalBuilder.InstrumentationAssemblyExists("OpenTelemetry.Instrumentation.AspNetCore.dll"))
 			{
@@ -253,13 +244,6 @@ public static class MeterProviderBuilderExtensions
 		{
 			builder.AddMeter(meterName);
 			logger.LogMeterAdded(meterName, builderIdentifier);
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		static void AddWithLogging(MeterProviderBuilder builder, ILogger logger, string name, Action<MeterProviderBuilder> add, string builderIdentifier)
-		{
-			add.Invoke(builder);
-			logger.LogAddedInstrumentation(name, nameof(MeterProviderBuilder), builderIdentifier);
 		}
 	}
 }
