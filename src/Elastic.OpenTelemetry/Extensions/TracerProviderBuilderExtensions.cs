@@ -159,7 +159,16 @@ public static class TracerProviderBuilderExtensions
 		// use the contrib instrumentation. We don't bring in the dependency for .NET 9+. However, if the consuming app depends
 		// on it, it will be assumed that the user prefers it and therefore we allow the assembly scanning to add it. We don't
 		// add the native source to avoid doubling up on spans.
-		if (!SignalBuilder.InstrumentationAssemblyExists("OpenTelemetry.Instrumentation.Http.dll"))
+		if (SignalBuilder.InstrumentationAssemblyExists("OpenTelemetry.Instrumentation.Http.dll"))
+		{
+			logger.LogHttpInstrumentationFound("trace", tracerProviderBuilderName, builderState.InstanceIdentifier);
+
+			if (!RuntimeFeature.IsDynamicCodeSupported)
+				logger.LogWarning("The OpenTelemetry.Instrumentation.Http.dll was found alongside the executing assembly. " +
+					"When using Native AOT publishing on .NET, the trace instrumentation is not registered automatically. Either register it manually, " +
+					"or remove the dependency so that the native `System.Net.Http` instrumentation (available in .NET 9) is observed instead.");
+		}
+		else
 		{
 			TracerProvderBuilderExtensions.AddActivitySourceWithLogging(builder, logger, "System.Net.Http", builderState.InstanceIdentifier);
 		}
