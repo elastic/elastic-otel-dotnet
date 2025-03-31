@@ -73,7 +73,7 @@ internal static class ContribMetricsInstrumentation
 
 		new()
 		{
-			Name = "Http",
+			Name = "HTTP",
 			Filename = "OpenTelemetry.Instrumentation.Http.dll",
 			FullyQualifiedType = "OpenTelemetry.Metrics.HttpClientInstrumentationMeterProviderBuilderExtensions",
 			InstrumentationMethod = "AddHttpClientInstrumentation"
