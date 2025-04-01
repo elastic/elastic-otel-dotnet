@@ -2,47 +2,72 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
+using System.Runtime.CompilerServices;
 
 namespace Example.WorkerService;
 
-public class Worker(ILogger<Worker> logger) : BackgroundService
+public class QueueReader
 {
-	public const string ActivitySourceName = "CustomActivitySource";
-	public const string MeterName = "CustomMeter";
+	public async IAsyncEnumerable<Message> GetMessages([EnumeratorCancellation] CancellationToken ctx = default)
+	{
+		while (!ctx.IsCancellationRequested)
+		{
+			// Get messages from queue/service bus
+			await Task.Delay(TimeSpan.FromSeconds(5), ctx);
 
-	private readonly ILogger<Worker> _logger = logger;
-	private static readonly HttpClient HttpClient = new();
+			yield return new Message(Guid.NewGuid().ToString());
+		}
+	}
+}
 
-	private static readonly ActivitySource ActivitySource = new(ActivitySourceName, "1.0.0");
-	private static readonly Meter Meter = new(MeterName);
-	private static readonly Counter<int> Counter = Meter.CreateCounter<int>("invocations",
-		null, null, [KeyValuePair.Create<string, object?>("label1", "value1")]);
+public record class Message(string Id) { }
+
+public class Worker : BackgroundService
+{
+	public const string DiagnosticName = "Elastic.Processor";
+
+	private static readonly ActivitySource ActivitySource = new(DiagnosticName);
+	private static readonly Meter Meter = new(DiagnosticName);
+	private static readonly Counter<int> MessagesReadCounter = Meter.CreateCounter<int>("elastic.processor.messages_read");
+
+	private readonly ILogger<Worker> _logger;
+	private readonly QueueReader _queueReader;
+
+	private static readonly Random Random = new();
+
+	public Worker(ILogger<Worker> logger, QueueReader queueReader)
+	{
+		_logger = logger;
+		_queueReader = queueReader;
+	}
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{
-		_logger.LogInformation("Sending request... ");
-
-		using (var activity = ActivitySource.StartActivity("DoingStuff", ActivityKind.Internal))
+		await foreach (var message in _queueReader.GetMessages().WithCancellation(stoppingToken))
 		{
-			activity?.SetTag("CustomTag", "TagValue");
+			using var activity = ActivitySource.StartActivity("Process message", ActivityKind.Internal);
 
-			if (Counter.Enabled)
-				Counter.Add(1);
+			activity?.SetTag("elastic.message.id", message.Id);
 
-			_logger.LogInformation("Sending request... ");
+			if (MessagesReadCounter.Enabled)
+				MessagesReadCounter.Add(1);
 
-			await Task.Delay(100, stoppingToken);
-			var response = await HttpClient.GetAsync("http://elastic.co", stoppingToken);
-			await Task.Delay(50, stoppingToken);
+			var success = await ProcessMessageAsync(message);
 
-			if (response.StatusCode == System.Net.HttpStatusCode.OK)
-				activity?.SetStatus(ActivityStatusCode.Ok);
-			else
+			if (!success)
+			{
+				_logger.LogError("Unable to process message {Id}", message.Id);
 				activity?.SetStatus(ActivityStatusCode.Error);
+			}
 		}
+	}
 
-		await Task.Delay(5000, stoppingToken);
+	private static async Task<bool> ProcessMessageAsync(Message message)
+	{
+		await Task.Delay(Random.Next(100, 300)); // simulate processing
+		return Random.Next(10) < 8; // simulate 80% success
 	}
 }
