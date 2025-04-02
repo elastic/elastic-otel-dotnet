@@ -4,17 +4,14 @@
 
 using Example.WorkerService;
 using OpenTelemetry;
-using OpenTelemetry.Metrics;
-using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-builder.Services.AddElasticOpenTelemetry()
-	.ConfigureResource(r => r.AddService(serviceName: "MyService"))
-	.WithTracing(t => t.AddSource(Worker.ActivitySourceName).AddConsoleExporter())
-	.WithMetrics(m => m.AddMeter(Worker.MeterName).AddConsoleExporter());
+builder.AddElasticOpenTelemetry(b => b
+	.WithTracing(t => t.AddSource(Worker.DiagnosticName))
+	.WithMetrics(m => m.AddMeter(Worker.DiagnosticName)));
 
+builder.Services.AddSingleton<QueueReader>();
 builder.Services.AddHostedService<Worker>();
 
 var host = builder.Build();
