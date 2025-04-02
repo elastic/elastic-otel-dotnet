@@ -18,7 +18,7 @@ internal static class ContribTraceInstrumentation
 		new()
 		{
 			Name = "AspNet",
-			Filename = "OpenTelemetry.Instrumentation.AspNet.dll",
+			AssemblyName = "OpenTelemetry.Instrumentation.AspNet",
 			FullyQualifiedType = "OpenTelemetry.Trace.TracerProviderBuilderExtensions",
 			InstrumentationMethod = "AddAspNetInstrumentation"
 		},
@@ -28,7 +28,7 @@ internal static class ContribTraceInstrumentation
 		new()
 		{
 			Name = "AWS",
-			Filename = "OpenTelemetry.Instrumentation.AWS.dll",
+			AssemblyName = "OpenTelemetry.Instrumentation.AWS",
 			FullyQualifiedType = "OpenTelemetry.Trace.TracerProviderBuilderExtensions",
 			InstrumentationMethod = "AddAWSInstrumentation"
 		},
@@ -36,7 +36,7 @@ internal static class ContribTraceInstrumentation
 		new()
 		{
 			Name = "ElasticsearchClient (NEST)",
-			Filename = "OpenTelemetry.Instrumentation.ElasticsearchClient.dll",
+			AssemblyName = "OpenTelemetry.Instrumentation.ElasticsearchClient",
 			FullyQualifiedType = "OpenTelemetry.Trace.TracerProviderBuilderExtensions",
 			InstrumentationMethod = "AddElasticsearchClientInstrumentation"
 		},
@@ -44,7 +44,7 @@ internal static class ContribTraceInstrumentation
 		new()
 		{
 			Name = "EntityFrameworkCore",
-			Filename = "OpenTelemetry.Instrumentation.EntityFrameworkCore.dll",
+			AssemblyName = "OpenTelemetry.Instrumentation.EntityFrameworkCore",
 			FullyQualifiedType = "OpenTelemetry.Trace.TracerProviderBuilderExtensions",
 			InstrumentationMethod = "AddEntityFrameworkCoreInstrumentation"
 		},
@@ -52,7 +52,7 @@ internal static class ContribTraceInstrumentation
 		new()
 		{
 			Name = "GrpcNetClient",
-			Filename = "OpenTelemetry.Instrumentation.GrpcNetClient.dll",
+			AssemblyName = "OpenTelemetry.Instrumentation.GrpcNetClient",
 			FullyQualifiedType = "OpenTelemetry.Trace.TracerProviderBuilderExtensions",
 			InstrumentationMethod = "AddGrpcClientInstrumentation"
 		},
@@ -60,7 +60,7 @@ internal static class ContribTraceInstrumentation
 		new()
 		{
 			Name = "GrpcCore",
-			Filename = "OpenTelemetry.Instrumentation.GrpcCore.dll",
+			AssemblyName = "OpenTelemetry.Instrumentation.GrpcCore",
 			FullyQualifiedType = "OpenTelemetry.Trace.TracerProviderBuilderExtensions",
 			InstrumentationMethod = "AddGrpcCoreInstrumentation"
 		},
@@ -68,7 +68,7 @@ internal static class ContribTraceInstrumentation
 		new()
 		{
 			Name = "Hangfire",
-			Filename = "OpenTelemetry.Instrumentation.Hangfire.dll",
+			AssemblyName = "OpenTelemetry.Instrumentation.Hangfire",
 			FullyQualifiedType = "OpenTelemetry.Trace.TracerProviderBuilderExtensions",
 			InstrumentationMethod = "AddHangfireInstrumentation"
 		},
@@ -81,7 +81,7 @@ internal static class ContribTraceInstrumentation
 		new()
 		{
 			Name = "HTTP",
-			Filename = "OpenTelemetry.Instrumentation.Http.dll",
+			AssemblyName = "OpenTelemetry.Instrumentation.Http",
 			FullyQualifiedType = "OpenTelemetry.Trace.HttpClientInstrumentationTracerProviderBuilderExtensions",
 			InstrumentationMethod = "AddHttpClientInstrumentation"
 		},
@@ -89,7 +89,7 @@ internal static class ContribTraceInstrumentation
 		new()
 		{
 			Name = "Kafka (Producer)",
-			Filename = "OpenTelemetry.Instrumentation.ConfluentKafka.dll",
+			AssemblyName = "OpenTelemetry.Instrumentation.ConfluentKafka",
 			FullyQualifiedType = "OpenTelemetry.Trace.TracerProviderBuilderExtensions",
 			InstrumentationMethod = "AddKafkaProducerInstrumentation"
 		},
@@ -97,7 +97,7 @@ internal static class ContribTraceInstrumentation
 		new()
 		{
 			Name = "Kafka (Consumer)",
-			Filename = "OpenTelemetry.Instrumentation.ConfluentKafka.dll",
+			AssemblyName = "OpenTelemetry.Instrumentation.ConfluentKafka",
 			FullyQualifiedType = "OpenTelemetry.Trace.TracerProviderBuilderExtensions",
 			InstrumentationMethod = "AddKafkaConsumerInstrumentation"
 		},
@@ -105,7 +105,7 @@ internal static class ContribTraceInstrumentation
 		new()
 		{
 			Name = "Owin",
-			Filename = "OpenTelemetry.Instrumentation.Owin.dll",
+			AssemblyName = "OpenTelemetry.Instrumentation.Owin",
 			FullyQualifiedType = "OpenTelemetry.Trace.TracerProviderBuilderExtensions",
 			InstrumentationMethod = "AddOwinInstrumentation"
 		},
@@ -113,7 +113,7 @@ internal static class ContribTraceInstrumentation
 		new()
 		{
 			Name = "Quartz",
-			Filename = "OpenTelemetry.Instrumentation.Quartz.dll",
+			AssemblyName = "OpenTelemetry.Instrumentation.Quartz",
 			FullyQualifiedType = "OpenTelemetry.Trace.TracerProviderBuilderExtensions",
 			InstrumentationMethod = "AddQuartzInstrumentation"
 		},
@@ -121,7 +121,7 @@ internal static class ContribTraceInstrumentation
 		new()
 		{
 			Name = "ServiceFabricRemoting",
-			Filename = "OpenTelemetry.Instrumentation.ServiceFabricRemoting.dll",
+			AssemblyName = "OpenTelemetry.Instrumentation.ServiceFabricRemoting",
 			FullyQualifiedType = "OpenTelemetry.Trace.TracerProviderBuilderExtensions",
 			InstrumentationMethod = "AddServiceFabricRemotingInstrumentation"
 		},
@@ -129,7 +129,7 @@ internal static class ContribTraceInstrumentation
 		new()
 		{
 			Name = "SqlClient",
-			Filename = "OpenTelemetry.Instrumentation.SqlClient.dll",
+			AssemblyName = "OpenTelemetry.Instrumentation.SqlClient",
 			FullyQualifiedType = "OpenTelemetry.Trace.TracerProviderBuilderExtensions",
 			InstrumentationMethod = "AddSqlClientInstrumentation"
 		},
@@ -137,7 +137,7 @@ internal static class ContribTraceInstrumentation
 		new()
 		{
 			Name = "StackExchangeRedis",
-			Filename = "OpenTelemetry.Instrumentation.StackExchangeRedis.dll",
+			AssemblyName = "OpenTelemetry.Instrumentation.StackExchangeRedis",
 			FullyQualifiedType = "OpenTelemetry.Trace.TracerProviderBuilderExtensions",
 			InstrumentationMethod = "AddRedisInstrumentation"
 		},
@@ -145,7 +145,7 @@ internal static class ContribTraceInstrumentation
 		new()
 		{
 			Name = "WCF",
-			Filename = "OpenTelemetry.Instrumentation.Wcf.dll",
+			AssemblyName = "OpenTelemetry.Instrumentation.Wcf",
 			FullyQualifiedType = "OpenTelemetry.Trace.TracerProviderBuilderExtensions",
 			InstrumentationMethod = "AddWcfInstrumentation"
 		},

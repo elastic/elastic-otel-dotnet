@@ -189,53 +189,45 @@ internal static class SignalBuilder
 		where T : class
 	{
 		var builderTypeName = builder.GetType().Name;
-		var assemblyLocation = AppContext.BaseDirectory;
 
-		if (!string.IsNullOrEmpty(assemblyLocation))
+		foreach (var assemblyInfo in assemblyInfos)
 		{
-			foreach (var assemblyInfo in assemblyInfos)
+			try
 			{
-				try
+				var type = Type.GetType($"{assemblyInfo.FullyQualifiedType}, {assemblyInfo.AssemblyName}");
+
+				if (type is null)
 				{
-					var assemblyPath = Path.Combine(assemblyLocation, assemblyInfo.Filename);
-					if (File.Exists(assemblyPath))
-					{
-						logger.LogLocatedInstrumentationAssembly(assemblyInfo.Filename, assemblyLocation);
-
-						var assembly = Assembly.LoadFrom(assemblyPath);
-						var type = assembly.GetType(assemblyInfo.FullyQualifiedType);
-
-						if (type is null)
-						{
-							logger.LogUnableToFindTypeWarning(assemblyInfo.FullyQualifiedType, assembly.FullName ?? "UNKNOWN");
-							continue;
-						}
-
-						var methodInfo = type.GetMethod(assemblyInfo.InstrumentationMethod, BindingFlags.Static | BindingFlags.Public,
-							Type.DefaultBinder, [typeof(T)], null);
-
-						if (methodInfo is null)
-						{
-							logger.LogUnableToFindMethodWarning(assemblyInfo.FullyQualifiedType, assemblyInfo.InstrumentationMethod,
-								assembly.FullName ?? "UNKNOWN");
-							continue;
-						}
-
-						methodInfo.Invoke(null, [builder]); // Invoke the extension method to register the instrumentation with the builder.
-
-						logger.LogAddedInstrumentationViaReflection(assemblyInfo.Name, builderTypeName, builderInstanceId);
-					}
+					logger.LogUnableToFindType(assemblyInfo.FullyQualifiedType, assemblyInfo.AssemblyName);
+					continue;
 				}
-				catch (Exception ex)
+
+				var methodInfo = type.GetMethod(assemblyInfo.InstrumentationMethod, BindingFlags.Static | BindingFlags.Public,
+					Type.DefaultBinder, [typeof(T)], null);
+
+				if (methodInfo is null)
 				{
-					logger.LogError(new EventId(503, "DynamicInstrumentaionFailed"), ex, "Failed to dynamically enable " +
-						"{InstrumentationName} on {Provider}.", assemblyInfo.Name, builderTypeName);
+					logger.LogUnableToFindMethodWarning(assemblyInfo.FullyQualifiedType, assemblyInfo.InstrumentationMethod,
+						assemblyInfo.AssemblyName);
+					continue;
+				}
+
+				methodInfo.Invoke(null, [builder]); // Invoke the extension method to register the instrumentation with the builder.
+
+				if (builderTypeName.StartsWith("ResourceBuilder"))
+				{
+					logger.LogAddedResourceDetectorViaReflection(assemblyInfo.Name, builderTypeName, builderInstanceId);
+				}
+				else
+				{
+					logger.LogAddedInstrumentationViaReflection(assemblyInfo.Name, builderTypeName, builderInstanceId);
 				}
 			}
-		}
-		else
-		{
-			logger.LogBaseDirectoryWarning();
+			catch (Exception ex)
+			{
+				logger.LogError(new EventId(503, "DynamicInstrumentaionFailed"), ex, "Failed to dynamically enable " +
+					"{InstrumentationName} on {Provider}.", assemblyInfo.Name, builderTypeName);
+			}
 		}
 	}
 }

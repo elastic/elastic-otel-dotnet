@@ -18,7 +18,7 @@ internal static class ContribMetricsInstrumentation
 		new()
 		{
 			Name = "AspNet",
-			Filename = "OpenTelemetry.Instrumentation.AspNet.dll",
+			AssemblyName = "OpenTelemetry.Instrumentation.AspNet",
 			FullyQualifiedType = "OpenTelemetry.Metrics.MeterProviderBuilderExtensions",
 			InstrumentationMethod = "AddAspNetInstrumentation"
 		},
@@ -26,7 +26,7 @@ internal static class ContribMetricsInstrumentation
 		new()
 		{
 			Name = "AspNetCore",
-			Filename = "OpenTelemetry.Instrumentation.AspNetCore.dll",
+			AssemblyName = "OpenTelemetry.Instrumentation.AspNetCore",
 			FullyQualifiedType = "OpenTelemetry.Metrics.AspNetCoreInstrumentationMeterProviderBuilderExtensions",
 			InstrumentationMethod = "AddAspNetCoreInstrumentation"
 		},
@@ -34,7 +34,7 @@ internal static class ContribMetricsInstrumentation
 		new()
 		{
 			Name = "AWS",
-			Filename = "OpenTelemetry.Instrumentation.AWS.dll",
+			AssemblyName = "OpenTelemetry.Instrumentation.AWS",
 			FullyQualifiedType = "OpenTelemetry.Metrics.MeterProviderBuilderExtensions",
 			InstrumentationMethod = "AddAWSInstrumentation"
 		},
@@ -42,7 +42,7 @@ internal static class ContribMetricsInstrumentation
 		new()
 		{
 			Name = "Cassandra",
-			Filename = "OpenTelemetry.Instrumentation.Cassandra.dll",
+			AssemblyName = "OpenTelemetry.Instrumentation.Cassandra",
 			FullyQualifiedType = "OpenTelemetry.Metrics.MeterProviderBuilderExtensions",
 			InstrumentationMethod = "AddCassandraInstrumentation"
 		},
@@ -50,7 +50,7 @@ internal static class ContribMetricsInstrumentation
 		new()
 		{
 			Name = "Kafka (Producer)",
-			Filename = "OpenTelemetry.Instrumentation.ConfluentKafka.dll",
+			AssemblyName = "OpenTelemetry.Instrumentation.ConfluentKafka",
 			FullyQualifiedType = "OpenTelemetry.Metrics.MeterProviderBuilderExtensions",
 			InstrumentationMethod = "AddKafkaProducerInstrumentation"
 		},
@@ -58,7 +58,7 @@ internal static class ContribMetricsInstrumentation
 		new()
 		{
 			Name = "Kafka (Consumer)",
-			Filename = "OpenTelemetry.Instrumentation.ConfluentKafka.dll",
+			AssemblyName = "OpenTelemetry.Instrumentation.ConfluentKafka",
 			FullyQualifiedType = "OpenTelemetry.Metrics.MeterProviderBuilderExtensions",
 			InstrumentationMethod = "AddKafkaConsumerInstrumentation"
 		},
@@ -66,7 +66,7 @@ internal static class ContribMetricsInstrumentation
 		new()
 		{
 			Name = "EventCounters",
-			Filename = "OpenTelemetry.Instrumentation.EventCounters.dll",
+			AssemblyName = "OpenTelemetry.Instrumentation.EventCounters",
 			FullyQualifiedType = "OpenTelemetry.Metrics.MeterProviderBuilderExtensions",
 			InstrumentationMethod = "AddEventCountersInstrumentation"
 		},
@@ -74,7 +74,7 @@ internal static class ContribMetricsInstrumentation
 		new()
 		{
 			Name = "HTTP",
-			Filename = "OpenTelemetry.Instrumentation.Http.dll",
+			AssemblyName = "OpenTelemetry.Instrumentation.Http",
 			FullyQualifiedType = "OpenTelemetry.Metrics.HttpClientInstrumentationMeterProviderBuilderExtensions",
 			InstrumentationMethod = "AddHttpClientInstrumentation"
 		},
@@ -82,7 +82,7 @@ internal static class ContribMetricsInstrumentation
 		new()
 		{
 			Name = "Runtime",
-			Filename = "OpenTelemetry.Instrumentation.Runtime.dll",
+			AssemblyName = "OpenTelemetry.Instrumentation.Runtime",
 			FullyQualifiedType = "OpenTelemetry.Metrics.MeterProviderBuilderExtensions",
 			InstrumentationMethod = "AddRuntimeInstrumentation"
 		},
@@ -90,7 +90,7 @@ internal static class ContribMetricsInstrumentation
 		new()
 		{
 			Name = "Process",
-			Filename = "OpenTelemetry.Instrumentation.Process.dll",
+			AssemblyName = "OpenTelemetry.Instrumentation.Process",
 			FullyQualifiedType = "OpenTelemetry.Metrics.MeterProviderBuilderExtensions",
 			InstrumentationMethod = "AddProcessInstrumentation"
 		}
