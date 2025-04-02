@@ -8,6 +8,8 @@
     <PackageProjectUrl>https://github.com/elastic/elastic-otel-dotnet</PackageProjectUrl>
     <PackageReleaseNotes>https://github.com/elastic/elastic-otel-dotnet/releases</PackageReleaseNotes>
     <IsPackable>False</IsPackable>
+    <!-- NU5104: "A stable release of a package should not have a prerelease dependency." -->
+    <NoWarn>$(NoWarn);NU5104</NoWarn>
   </PropertyGroup>
   
   <PropertyGroup>
