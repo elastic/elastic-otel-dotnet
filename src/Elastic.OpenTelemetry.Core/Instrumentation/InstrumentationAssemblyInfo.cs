@@ -7,7 +7,7 @@ namespace Elastic.OpenTelemetry.Core;
 internal readonly struct InstrumentationAssemblyInfo
 {
 	public readonly required string Name { get; init; }
-	public readonly required string Filename { get; init; }
+	public readonly required string AssemblyName { get; init; }
 	public readonly required string FullyQualifiedType { get; init; }
 	public readonly required string InstrumentationMethod { get; init; }
 }

@@ -229,13 +229,13 @@ public static class TracerProviderBuilderExtensions
 
 			if (tracerProviderBuilderExtensionsType is null)
 			{
-				logger.LogUnableToFindTypeWarning(tracerProviderBuilderExtensionsTypeName, assemblyName);
+				logger.LogUnableToFindType(tracerProviderBuilderExtensionsTypeName, assemblyName);
 				return;
 			}
 
 			if (optionsType is null)
 			{
-				logger.LogUnableToFindTypeWarning(aspNetCoreTraceInstrumentationOptionsTypeName, assemblyName);
+				logger.LogUnableToFindType(aspNetCoreTraceInstrumentationOptionsTypeName, assemblyName);
 				return;
 			}
 

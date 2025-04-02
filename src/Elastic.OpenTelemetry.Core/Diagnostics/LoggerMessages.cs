@@ -98,8 +98,8 @@ internal static partial class LoggerMessages
 		"{ProviderBuilderType} (instance:{BuilderInstanceIdentifier}) via reflection.")]
 	public static partial void LogAddedInstrumentationViaReflection(this ILogger logger, string instrumentationName, string providerBuilderType, string builderInstanceIdentifier);
 
-	[LoggerMessage(EventId = 35, EventName = "UnableToFindTypeViaReflection", Level = LogLevel.Warning, Message = "Unable to find {FullyQualifiedTypeName} in {AssemblyFullName}.")]
-	public static partial void LogUnableToFindTypeWarning(this ILogger logger, string fullyQualifiedTypeName, string assemblyFullName);
+	[LoggerMessage(EventId = 35, EventName = "UnableToFindTypeViaReflection", Level = LogLevel.Debug, Message = "Unable to find {FullyQualifiedTypeName} in {AssemblyFullName}.")]
+	public static partial void LogUnableToFindType(this ILogger logger, string fullyQualifiedTypeName, string assemblyFullName);
 
 	[LoggerMessage(EventId = 36, EventName = "UnableToFindMethodViaReflection", Level = LogLevel.Warning, Message = "Unable to find the {FullyQualifiedTypeName}.{MethodName} extension " +
 		"method in {AssemblyFullName}.")]
@@ -112,6 +112,10 @@ internal static partial class LoggerMessages
 	[LoggerMessage(EventId = 38, EventName = "SkippingAssemblyScanning", Level = LogLevel.Trace, Message = "Skipping instrumentation assembly scanning on " +
 		"{ProviderBuilderType} (instance:{BuilderInstanceId}) because it is disabled in configuration.")]
 	public static partial void LogSkippingAssemblyScanning(this ILogger logger, string providerBuilderType, string builderInstanceId);
+
+	[LoggerMessage(EventId = 39, EventName = "AddedResourceDetectorViaReflection", Level = LogLevel.Debug, Message = "Added contrib resource detector '{InstrumentationName}' to " +
+	"{ProviderBuilderType} (instance:{BuilderInstanceIdentifier}) via reflection.")]
+	public static partial void LogAddedResourceDetectorViaReflection(this ILogger logger, string instrumentationName, string providerBuilderType, string builderInstanceIdentifier);
 
 
 

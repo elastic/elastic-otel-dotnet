@@ -23,7 +23,7 @@ internal static class ContribResourceDetectors
 		new()
 		{
 			Name = "Container",
-			Filename = "OpenTelemetry.Resources.Container.dll",
+			AssemblyName = "OpenTelemetry.Resources.Container",
 			FullyQualifiedType = "OpenTelemetry.Resources.ContainerResourceBuilderExtensions",
 			InstrumentationMethod = "AddContainerDetector"
 		},
@@ -31,7 +31,7 @@ internal static class ContribResourceDetectors
 		new()
 		{
 			Name = "OperatingSystem",
-			Filename = "OpenTelemetry.Resources.OperatingSystem.dll",
+			AssemblyName = "OpenTelemetry.Resources.OperatingSystem",
 			FullyQualifiedType = "OpenTelemetry.Resources.OperatingSystemResourceBuilderExtensions",
 			InstrumentationMethod = "AddOperatingSystemDetector"
 		},
@@ -39,7 +39,7 @@ internal static class ContribResourceDetectors
 		new()
 		{
 			Name = "Process",
-			Filename = "OpenTelemetry.Resources.Process.dll",
+			AssemblyName = "OpenTelemetry.Resources.Process",
 			FullyQualifiedType = "OpenTelemetry.Resources.ProcessResourceBuilderExtensions",
 			InstrumentationMethod = "AddProcessDetector"
 		}
