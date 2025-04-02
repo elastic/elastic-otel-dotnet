@@ -28,13 +28,9 @@ type Paths =
     static member private SrcFolder = DirectoryInfo(Path.Combine(Paths.Root.FullName, "src"))
     static member SrcPath (t: string list) = DirectoryInfo(Path.Combine([Paths.SrcFolder.FullName] @ t |> List.toArray))
 
-
 type BuildConfiguration = 
     static member ValidateAssemblyName = false
     static member GenerateApiChanges = false
-    
-        
-        
 
 type Software =
     static member Organization = "elastic"
