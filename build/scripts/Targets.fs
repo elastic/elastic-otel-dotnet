@@ -181,7 +181,7 @@ let Setup (parsed:ParseResults<Build>) =
         | Release -> 
             Build.Cmd 
                 [PristineCheck; Build; Redistribute]
-                [ValidateLicenses; GeneratePackages; ValidatePackages; GenerateReleaseNotes; GenerateApiChanges]
+                [ValidateLicenses; GeneratePackages; ValidatePackages; GenerateReleaseNotes]
                 release
 
         | Format -> Build.Step format
