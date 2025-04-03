@@ -11,6 +11,8 @@ namespace Elastic.OpenTelemetry.Tests;
 
 public partial class LoggingTests(ITestOutputHelper output)
 {
+	private readonly ITestOutputHelper _output = output;
+
 	[GeneratedRegex(@"\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}\]\[\d{6}\]\[-*\]\[Information\]\s+Elastic Distribution of OpenTelemetry \(EDOT\) \.NET:.*")]
 	private static partial Regex EdotPreamble();
 
@@ -20,33 +22,33 @@ public partial class LoggingTests(ITestOutputHelper output)
 	[Fact]
 	public void LoggingIsEnabled_WhenConfiguredViaTracerProviderBuilder()
 	{
-		var logger = new TestLogger(output);
+		var logger = new TestLogger(_output);
 		var options = new ElasticOpenTelemetryOptions { AdditionalLogger = logger, SkipOtlpExporter = true };
 
 		using var tracerProvider = Sdk.CreateTracerProviderBuilder()
 			.WithElasticDefaults(options)
 			.Build();
 
-		Assert.Single(logger.Messages.ToArray(), m => EdotPreamble().IsMatch(m));
+		Assert.Single(logger.Messages, m => EdotPreamble().IsMatch(m));
 	}
 
 	[Fact]
 	public void LoggingIsEnabled_WhenConfiguredViaMeterProviderBuilder()
 	{
-		var logger = new TestLogger(output);
+		var logger = new TestLogger(_output);
 		var options = new ElasticOpenTelemetryOptions { AdditionalLogger = logger, SkipOtlpExporter = true };
 
 		using var tracerProvider = Sdk.CreateMeterProviderBuilder()
 			.WithElasticDefaults(options)
 			.Build();
 
-		Assert.Single(logger.Messages.ToArray(), m => EdotPreamble().IsMatch(m));
+		Assert.Single(logger.Messages, m => EdotPreamble().IsMatch(m));
 	}
 
 	[Fact]
 	public void LoggingPreamble_IsSkipped_WhenReusingSharedComponents()
 	{
-		var logger = new TestLogger(output);
+		var logger = new TestLogger(_output);
 		var options = new ElasticOpenTelemetryOptions { AdditionalLogger = logger, SkipOtlpExporter = true };
 
 		using var tracerProvider = Sdk.CreateTracerProviderBuilder()
@@ -61,11 +63,9 @@ public partial class LoggingTests(ITestOutputHelper output)
 			.AddInMemoryExporter(new List<Metric>())
 			.Build();
 
-		var messages = logger.Messages.ToArray();
-
 		// On this builder, because we are reusing the same ElasticOpenTelemetryOptions, shared components will be available,
 		// and as such, the pre-amble should not be output a second time.
-		Assert.Single(messages, m => EdotPreamble().IsMatch(m));
-		Assert.Contains(messages, m => UsingSharedComponents().IsMatch(m));
+		Assert.Single(logger.Messages, m => EdotPreamble().IsMatch(m));
+		Assert.Contains(logger.Messages, m => UsingSharedComponents().IsMatch(m));
 	}
 }
