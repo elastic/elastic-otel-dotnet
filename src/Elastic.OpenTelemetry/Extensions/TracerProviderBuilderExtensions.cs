@@ -268,6 +268,8 @@ public static class TracerProviderBuilderExtensions
 			}
 
 			methodInfo.Invoke(null, [builder, configureOptions]);
+
+			logger.LogAddedInstrumentationViaReflection(assemblyName, builderTypeName, builderState.InstanceIdentifier);
 		}
 		catch (Exception ex)
 		{
