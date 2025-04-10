@@ -10,6 +10,7 @@ using Elastic.OpenTelemetry.Diagnostics;
 using Elastic.OpenTelemetry.Exporters;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
@@ -41,7 +42,7 @@ public static class LoggingProviderBuilderExtensions
 	public static LoggerProviderBuilder WithElasticDefaults(this LoggerProviderBuilder builder)
 	{
 #if NET
-        ArgumentNullException.ThrowIfNull(builder);
+		ArgumentNullException.ThrowIfNull(builder);
 #else
 		if (builder is null)
 			throw new ArgumentNullException(nameof(builder));
@@ -138,6 +139,24 @@ public static class LoggingProviderBuilderExtensions
 				builder.ConfigureServices(sc => sc.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions));
 
 			builder.ConfigureServices(sc => sc.Configure<OpenTelemetryLoggerOptions>(o => o.WithElasticDefaults(logger)));
+
+			if (builder is IDeferredLoggerProviderBuilder deferredBuilder)
+			{
+				var httpContextType = Type.GetType("Microsoft.AspNetCore.Http.HttpContext, Microsoft.AspNetCore.Http.Abstractions");
+
+				if (httpContextType is not null)
+				{
+					var options = deferredBuilder.Configure((sp, _) =>
+					{
+						var options = sp.GetService<IOptions<OpenTelemetryLoggerOptions>>();
+
+						if (options is not null && options.Value.IncludeScopes == true)
+						{
+							logger.LogDetectedIncludeScopesWarning();
+						}
+					});
+				}
+			}
 
 			if (components.Options.SkipOtlpExporter)
 			{
