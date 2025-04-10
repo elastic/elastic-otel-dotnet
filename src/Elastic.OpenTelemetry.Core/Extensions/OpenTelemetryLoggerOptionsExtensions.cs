@@ -38,7 +38,12 @@ internal static class OpenTelemetryLoggerOptionsExtensions
 #endif
 
 		options.IncludeFormattedMessage = true;
-		options.IncludeScopes = true;
+
+		// IncludeScopes is disabled until we have a resolution to duplicate attributes
+		// See:
+		//   - https://github.com/open-telemetry/opentelemetry-dotnet/issues/4324
+		//   - https://github.com/open-telemetry/opentelemetry-collector-contrib/issues/39304
+		// options.IncludeScopes = true;
 
 		logger.LogConfiguredSignalProvider(nameof(Signals.Logs), nameof(OpenTelemetryLoggerOptions), "<n/a>");
 	}

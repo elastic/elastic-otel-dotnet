@@ -133,13 +133,17 @@ internal static partial class LoggerMessages
 
 
 
-	// We explictly reuse the same event ID and this is the same log message, but with different types for the structured data
-	[LoggerMessage(EventId = 50, EventName = "FoundTag", Level = LogLevel.Trace, Message = "{ProcessorName} found `{AttributeName}` attribute with value '{AttributeValue}' on the span.")]
+	[LoggerMessage(EventId = 50, EventName = "FoundTag", Level = LogLevel.Trace, Message = "{ProcessorName} found '{AttributeName}' attribute with value '{AttributeValue}' on the span.")]
 	internal static partial void LogFoundTag(this ILogger logger, string processorName, string attributeName, object attributeValue);
 
-	// We explictly reuse the same event ID and this is the same log message, but with different types for the structured data
-	[LoggerMessage(EventId = 51, EventName = "SetTag", Level = LogLevel.Trace, Message = "{ProcessorName} set `{AttributeName}` attribute with value '{AttributeValue}' on the span.")]
+	[LoggerMessage(EventId = 51, EventName = "SetTag", Level = LogLevel.Trace, Message = "{ProcessorName} set '{AttributeName}' attribute with value '{AttributeValue}' on the span.")]
 	internal static partial void LogSetTag(this ILogger logger, string processorName, string attributeName, object attributeValue);
+
+
+
+
+	[LoggerMessage(EventId = 60, EventName = "DetectedIncludeScopes", Level = LogLevel.Warning, Message = "IncludeScopes is enabled and may cause export issues. See https://elastic.github.io/opentelemetry/edot-sdks/dotnet/troubleshooting.html#missing-log-records")]
+	internal static partial void LogDetectedIncludeScopesWarning(this ILogger logger);
 
 
 
