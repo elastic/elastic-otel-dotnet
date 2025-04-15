@@ -4,11 +4,11 @@ name: Pull Request Validation # The name must be the same as in ci.yml
 
 on:
   pull_request:
-    paths-ignore: # This expression needs to match the paths ignored on ci.yml.
-      - '**'
-      - '!*.md'
-      - '!*.asciidoc'
-      - '!docs/**'
+    paths: # This expression needs to match the paths ignored on ci.yml.
+      - '!**'
+      - '*.md'
+      - '*.asciidoc'
+      - 'docs/**'
 
 permissions:
   contents: read
