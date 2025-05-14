@@ -142,7 +142,7 @@ internal static partial class LoggerMessages
 
 
 
-	[LoggerMessage(EventId = 60, EventName = "DetectedIncludeScopes", Level = LogLevel.Warning, Message = "IncludeScopes is enabled and may cause export issues. See https://elastic.github.io/opentelemetry/edot-sdks/dotnet/troubleshooting.html#missing-log-records")]
+	[LoggerMessage(EventId = 60, EventName = "DetectedIncludeScopes", Level = LogLevel.Warning, Message = "IncludeScopes is enabled and may cause export issues. See https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/troubleshooting.html#missing-log-records")]
 	internal static partial void LogDetectedIncludeScopesWarning(this ILogger logger);
 
 
