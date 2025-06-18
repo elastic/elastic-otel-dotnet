@@ -19,33 +19,33 @@ To check for security updates, go to [Security announcements for the Elastic sta
 
 % Release notes include only features, enhancements, and fixes. Add breaking changes, deprecations, and known issues to the applicable release notes sections.
 
-% ## version.next [kibana-X.X.X-release-notes]
+% ## version.next [edot-dotnet-X.X.X-release-notes]
 
-% ### Features and enhancements [kibana-X.X.X-features-enhancements]
+% ### Features and enhancements [edot-dotnet-X.X.X-features-enhancements]
 % *
 
-% ### Fixes [kibana-X.X.X-fixes]
+% ### Fixes [edot-dotnet-X.X.X-fixes]
 % *
 
-## 1.0.2
+## 1.0.2 [edot-dotnet-1.0.2-release-notes]
 
-### Features and enhancements
+### Features and enhancements [edot-dotnet-1.0.2-features-enhancements]
 
 - Log after adding AspNetCore trace instrumentation. Improves the trace logging for diagnostic and support purposes.
 
-### Fixes 
+### Fixes [edot-dotnet-1.0.2-fixes]
 
 - No longer default to IncludeScopes. The upstream SDK isn't spec-compliant regarding not exporting duplicate attributes. As such, when using IncludeScopes in ASP.NET Core, log entries often include a duplicated RequestId attribute. The Elasticsearch exporter component of the collector expects the data to comply with the spec and, for performance reasons, doesn't attempt to de-duplicate, resulting in export errors for the log record. EDOT .NET no longer enables IncludeScopes by default as a partial workaround. This will be re-enabled in a future release, once the risk of data loss is resolved upstream.
 
-## 1.0.1
+## 1.0.1 [edot-dotnet-1.0.1-release-notes]
 
-### Features and enhancements
+### Features and enhancements [edot-dotnet-1.0.1-features-enhancements]
 
 - Removed invalid prefix from minver command.
 
-## 1.0.0
+## 1.0.0 [edot-dotnet-1.0.0-release-notes]
 
-### Features and enhancements
+### Features and enhancements [edot-dotnet-1.0.0-features-enhancements]
 
 - Update docs for GA.
 - Simplify reflection to work on classic ASP.NET and singlefile publish.
