@@ -12,7 +12,7 @@
   <ItemGroup>
     <PackageReference Condition="'$(TargetFramework)' == 'net8.0'" Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.13" />
     <PackageReference Condition="'$(TargetFramework)' == 'net9.0'" Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.2" />
-    <PackageReference Include="OpenTelemetry.Exporter.InMemory" Version="1.11.1" />
+    <PackageReference Include="OpenTelemetry.Exporter.InMemory" Version="1.12.0" />
   </ItemGroup>
 
   <ItemGroup>
