@@ -94,7 +94,7 @@ internal sealed
 				EventLevel.Error => LogLevel.Error,
 				EventLevel.Warning => LogLevel.Warning,
 				EventLevel.Informational => LogLevel.Information,
-				EventLevel.Verbose => LogLevel.Trace,
+				EventLevel.Verbose => LogLevel.Debug,
 				EventLevel.LogAlways => LogLevel.Information,
 				_ => LogLevel.None
 			};
