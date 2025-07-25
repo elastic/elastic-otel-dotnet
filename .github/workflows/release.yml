@@ -127,55 +127,57 @@ jobs:
           :large_yellow_circle: [${{ github.repository }}] Release *${{ github.ref_name }}* could not be published.
           Build: (<${{ env.JOB_URL }}|here>)
           
-  # We currently do not create a post-release PR as we don't use branches for major versions yet, but we can uncomment this section if needed.
-  # post-release:
-  #   needs: ['release']
-  #   runs-on: ubuntu-latest
-  #   env:
-  #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #     GIT_TAG: v${{ needs.release.outputs.agent-version }}
-  #     NEW_BRANCH: update/${{ needs.release.outputs.agent-version }}
-  #     TARGET_BRANCH: ${{ needs.release.outputs.major-version }}.x
-  #   permissions:
-  #     contents: write
-  #     issues: write
-  #     pull-requests: write
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #       with:
-  #         fetch-depth: 0
+  # We currently do not create a post-release PR as we don't use branches for major versions yet.
+  # We can re-enable this section if needed by removing `if: false`.
+  post-release:
+    if: false
+    needs: ['release']
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GIT_TAG: v${{ needs.release.outputs.agent-version }}
+      NEW_BRANCH: update/${{ needs.release.outputs.agent-version }}
+      TARGET_BRANCH: ${{ needs.release.outputs.major-version }}.x
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-  #     - name: Setup git config
-  #       uses: elastic/oblt-actions/git/setup@v1
+      - name: Setup git config
+        uses: elastic/oblt-actions/git/setup@v1
 
-  #     - name: Create GitHub Pull Request if minor release (only for release events)
-  #       if: ${{ github.event_name == 'release' }}
-  #       run: |
-  #         echo "as long as there is a major.x branch"
-  #         existed_in_local=$(git ls-remote --heads origin ${TARGET_BRANCH})
-  #         if [ -z "${existed_in_local}" ]; then
-  #           echo -e "::warning::Target branch '${TARGET_BRANCH}' does not exist."
-  #           exit 0
-  #         fi
-  #         git checkout $TARGET_BRANCH
-  #         git checkout -b ${NEW_BRANCH}
-  #         git format-patch -k --stdout ${TARGET_BRANCH}...origin/main -- docs | git am -3 -k
-  #         git push origin ${NEW_BRANCH}
-  #         gh pr create \
-  #           --title "post-release: ${GIT_TAG}" \
-  #           --body "Generated automatically with ${JOB_URL}" \
-  #           --head "elastic:${NEW_BRANCH}" \
-  #           --base "$TARGET_BRANCH" \
-  #           --repo "${{ github.repository }}"
+      - name: Create GitHub Pull Request if minor release (only for release events)
+        if: ${{ github.event_name == 'release' }}
+        run: |
+          echo "as long as there is a major.x branch"
+          existed_in_local=$(git ls-remote --heads origin ${TARGET_BRANCH})
+          if [ -z "${existed_in_local}" ]; then
+            echo -e "::warning::Target branch '${TARGET_BRANCH}' does not exist."
+            exit 0
+          fi
+          git checkout $TARGET_BRANCH
+          git checkout -b ${NEW_BRANCH}
+          git format-patch -k --stdout ${TARGET_BRANCH}...origin/main -- docs | git am -3 -k
+          git push origin ${NEW_BRANCH}
+          gh pr create \
+            --title "post-release: ${GIT_TAG}" \
+            --body "Generated automatically with ${JOB_URL}" \
+            --head "elastic:${NEW_BRANCH}" \
+            --base "$TARGET_BRANCH" \
+            --repo "${{ github.repository }}"
 
-  #     - name: Create branch if major release (only for release events)
-  #       if: ${{ github.event_name == 'release' }}
-  #       run: |
-  #         echo "as long as there is no a major.x branch"
-  #         existed_in_local=$(git ls-remote --heads origin ${TARGET_BRANCH})
-  #         if [ -n "${existed_in_local}" ]; then
-  #           echo -e "::warning::Target branch '${TARGET_BRANCH}' does exist."
-  #           exit 0
-  #         fi
-  #         git branch -D $TARGET_BRANCH
-  #         git push origin $TARGET_BRANCH
+      - name: Create branch if major release (only for release events)
+        if: ${{ github.event_name == 'release' }}
+        run: |
+          echo "as long as there is no a major.x branch"
+          existed_in_local=$(git ls-remote --heads origin ${TARGET_BRANCH})
+          if [ -n "${existed_in_local}" ]; then
+            echo -e "::warning::Target branch '${TARGET_BRANCH}' does exist."
+            exit 0
+          fi
+          git branch -D $TARGET_BRANCH
+          git push origin $TARGET_BRANCH
