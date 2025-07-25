@@ -11,7 +11,7 @@
 
   <!-- This package doe not support netstandard2.1 and this target is only used for building the redistributable. -->
   <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.1'">
-    <PackageReference Include="OpenTelemetry.AutoInstrumentation" Version="1.11.0" GeneratePathProperty="true" PrivateAssets="contentfiles" />
+    <PackageReference Include="OpenTelemetry.AutoInstrumentation" Version="1.12.0" GeneratePathProperty="true" PrivateAssets="contentfiles" />
   </ItemGroup>
 
   <!-- 
@@ -19,12 +19,12 @@
   for the other targets when including OpenTelemetry.AutoInstrumentation.
   -->
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
-    <PackageReference Include="OpenTelemetry" Version="1.11.2" PrivateAssets="all" />
+    <PackageReference Include="OpenTelemetry" Version="1.12.0" PrivateAssets="all" />
   </ItemGroup>
 
   <!-- We need these dependencies when building agianst all targets. As they are private, we don't have to worry about them being packaged. -->
   <ItemGroup>
-    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.11.2" PrivateAssets="all" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.12.0" PrivateAssets="all" />
     <PackageReference Include="Polyfill" Version="7.21.0" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
     <PackageReference Include="NetEscapades.EnumGenerators" Version="1.0.0-beta09" PrivateAssets="all" ExcludeAssets="runtime" />
   </ItemGroup>
