@@ -127,7 +127,10 @@ jobs:
           :large_yellow_circle: [${{ github.repository }}] Release *${{ github.ref_name }}* could not be published.
           Build: (<${{ env.JOB_URL }}|here>)
           
+  # We currently do not create a post-release PR as we don't use branches for major versions yet.
+  # We can re-enable this section if needed by removing `if: false`.
   post-release:
+    if: false
     needs: ['release']
     runs-on: ubuntu-latest
     env:
