@@ -67,7 +67,7 @@ let private runTests suite _ =
             $"--logger:\"junit;%s{loggerPathArgs}\""
     let filterArgs =
         match suite with
-        | All -> []
+        | All -> [ "--filter"; "FullyQualifiedName!~.EndToEndTests" ]
         | Skip_All -> ["--filter"; "FullyQualifiedName~.SKIPPING.ALL.TESTS"]
         | Unit ->  [ "--filter"; "FullyQualifiedName~.Tests" ]
         | Integration -> [ "--filter"; "FullyQualifiedName~.IntegrationTests" ]
