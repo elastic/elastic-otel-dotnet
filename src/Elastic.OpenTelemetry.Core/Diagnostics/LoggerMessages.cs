@@ -12,10 +12,11 @@ namespace Elastic.OpenTelemetry.Diagnostics;
 
 internal static partial class LoggerMessages
 {
-	// NOTE:
-	// The IDs and EventNames should ideally not change to ensure constistency in log querying.
+	// NOTES:
+	// - The IDs and EventNames should ideally not change to ensure constistency in log querying.
+	// - Avoid using LogLevel.Trace as this level doesn't align well with the upstream diagnostic levels.
 
-	[LoggerMessage(EventId = 1, EventName = "BootstrapInvoked", Level = LogLevel.Trace, Message = "Bootstrap has been invoked {InvocationCount} times.")]
+	[LoggerMessage(EventId = 1, EventName = "BootstrapInvoked", Level = LogLevel.Debug, Message = "Bootstrap has been invoked {InvocationCount} times.")]
 	public static partial void LogBootstrapInvoked(this ILogger logger, int invocationCount);
 
 	[LoggerMessage(EventId = 2, EventName = "ComponentsCreated", Level = LogLevel.Debug, Message = "Elastic OpenTelemetry components created. {newline}{StackTrace}")]
@@ -31,10 +32,10 @@ internal static partial class LoggerMessages
 	[LoggerMessage(EventId = 5, EventName = "ServiceCollectionComponentsReused", Level = LogLevel.Debug, Message = "Reusing existing components on IServiceCollection.")]
 	public static partial void LogServiceCollectionComponentsReused(this ILogger logger);
 
-	[LoggerMessage(EventId = 6, EventName = "NoExistingComponents", Level = LogLevel.Trace, Message = "No existing components have been found for the {BuilderName} (instance:{BuilderInstanceId}).")]
+	[LoggerMessage(EventId = 6, EventName = "NoExistingComponents", Level = LogLevel.Debug, Message = "No existing components have been found for the {BuilderName} (instance:{BuilderInstanceId}).")]
 	public static partial void LogNoExistingComponents(this ILogger logger, string builderName, string builderInstanceId);
 
-	[LoggerMessage(EventId = 7, EventName = "StoringBuilderState", Level = LogLevel.Trace, Message = "Storing state for the current {BuilderName} (instance:{BuilderInstanceId}).")]
+	[LoggerMessage(EventId = 7, EventName = "StoringBuilderState", Level = LogLevel.Debug, Message = "Storing state for the current {BuilderName} (instance:{BuilderInstanceId}).")]
 	public static partial void LogStoringBuilderState(this ILogger logger, string builderName, string builderInstanceId);
 
 	[LoggerMessage(EventId = 8, EventName = "MultipleWithElasticDefaultsCalls", Level = LogLevel.Warning, Message = "The `WithElasticDefaults` method has been called {CallCount} " +
@@ -45,7 +46,7 @@ internal static partial class LoggerMessages
 		"times across all TracerProviderBuilder instances. This method is generally expected to be invoked on a single builder instance. Consider reviewing its usage.")]
 	public static partial void LogMultipleAddElasticProcessorsCallsWarning(this ILogger logger, int callCount);
 
-	[LoggerMessage(EventId = 10, EventName = "AddingResourceAttribute", Level = LogLevel.Trace, Message = "Adding resource attribute '{AttributeName}' with value '{AttributeValue}' to " +
+	[LoggerMessage(EventId = 10, EventName = "AddingResourceAttribute", Level = LogLevel.Debug, Message = "Adding resource attribute '{AttributeName}' with value '{AttributeValue}' to " +
 		"the ResourceBuilder (instance:{BuilderInstanceId}).")]
 	public static partial void LogAddingResourceAttribute(this ILogger logger, string attributeName, string attributeValue, string builderInstanceId);
 
@@ -79,7 +80,7 @@ internal static partial class LoggerMessages
 
 
 
-	[LoggerMessage(EventId = 30, EventName = "LocatedInstrumentationAssembly", Level = LogLevel.Trace, Message = "Located {AssemblyFilename} in {Path}.")]
+	[LoggerMessage(EventId = 30, EventName = "LocatedInstrumentationAssembly", Level = LogLevel.Debug, Message = "Located {AssemblyFilename} in {Path}.")]
 	public static partial void LogLocatedInstrumentationAssembly(this ILogger logger, string assemblyFilename, string path);
 
 	[LoggerMessage(EventId = 31, EventName = "AddedInstrumentation", Level = LogLevel.Debug, Message = "Added contrib instrumentation '{InstrumentationName}' " +
@@ -109,7 +110,7 @@ internal static partial class LoggerMessages
 		"perform instrumentation assembly scanning.")]
 	public static partial void LogBaseDirectoryWarning(this ILogger logger);
 
-	[LoggerMessage(EventId = 38, EventName = "SkippingAssemblyScanning", Level = LogLevel.Trace, Message = "Skipping instrumentation assembly scanning on " +
+	[LoggerMessage(EventId = 38, EventName = "SkippingAssemblyScanning", Level = LogLevel.Debug, Message = "Skipping instrumentation assembly scanning on " +
 		"{ProviderBuilderType} (instance:{BuilderInstanceId}) because it is disabled in configuration.")]
 	public static partial void LogSkippingAssemblyScanning(this ILogger logger, string providerBuilderType, string builderInstanceId);
 
@@ -133,10 +134,10 @@ internal static partial class LoggerMessages
 
 
 
-	[LoggerMessage(EventId = 50, EventName = "FoundTag", Level = LogLevel.Trace, Message = "{ProcessorName} found '{AttributeName}' attribute with value '{AttributeValue}' on the span.")]
+	[LoggerMessage(EventId = 50, EventName = "FoundTag", Level = LogLevel.Debug, Message = "{ProcessorName} found '{AttributeName}' attribute with value '{AttributeValue}' on the span.")]
 	internal static partial void LogFoundTag(this ILogger logger, string processorName, string attributeName, object attributeValue);
 
-	[LoggerMessage(EventId = 51, EventName = "SetTag", Level = LogLevel.Trace, Message = "{ProcessorName} set '{AttributeName}' attribute with value '{AttributeValue}' on the span.")]
+	[LoggerMessage(EventId = 51, EventName = "SetTag", Level = LogLevel.Debug, Message = "{ProcessorName} set '{AttributeName}' attribute with value '{AttributeValue}' on the span.")]
 	internal static partial void LogSetTag(this ILogger logger, string processorName, string attributeName, object attributeValue);
 
 

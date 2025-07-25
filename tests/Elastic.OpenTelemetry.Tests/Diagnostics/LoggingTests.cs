@@ -55,7 +55,8 @@ public partial class LoggingTests(ITestOutputHelper output)
 			.WithElasticDefaults(options)
 			.Build();
 
-		Assert.Single(logger.Messages, m => EdotPreamble().IsMatch(m));
+		var messages = logger.Messages.ToArray();
+		Assert.Single(messages, m => EdotPreamble().IsMatch(m));
 
 		using var meterProvider = Sdk.CreateMeterProviderBuilder()
 			.WithElasticDefaults(options)
@@ -65,7 +66,8 @@ public partial class LoggingTests(ITestOutputHelper output)
 
 		// On this builder, because we are reusing the same ElasticOpenTelemetryOptions, shared components will be available,
 		// and as such, the pre-amble should not be output a second time.
-		Assert.Single(logger.Messages, m => EdotPreamble().IsMatch(m));
-		Assert.Contains(logger.Messages, m => UsingSharedComponents().IsMatch(m));
+		messages = logger.Messages.ToArray();
+		Assert.Single(messages, m => EdotPreamble().IsMatch(m));
+		Assert.Contains(messages, m => UsingSharedComponents().IsMatch(m));
 	}
 }
