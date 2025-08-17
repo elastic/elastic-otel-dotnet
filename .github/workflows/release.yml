@@ -29,7 +29,7 @@ jobs:
     env:
       DOCKER_IMAGE_NAME: "docker.elastic.co/observability/elastic-otel-dotnet"
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Bootstrap Action Workspace
       id: bootstrap
       uses: ./.github/workflows/bootstrap
@@ -143,7 +143,7 @@ jobs:
       issues: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
