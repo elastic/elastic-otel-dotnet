@@ -9,10 +9,11 @@ on:
       - '*.asciidoc'
       - 'docs/**'
   pull_request:
-    paths-ignore:
-      - '*.md'
-      - '*.asciidoc'
-      - 'docs/**'
+    paths:
+      - '**'
+      - '!*.md'
+      - '!*.asciidoc'
+      - '!docs/**'
 
 permissions:
   contents: read
