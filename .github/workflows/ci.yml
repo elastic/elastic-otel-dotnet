@@ -31,7 +31,7 @@ jobs:
     name: Windows Tests
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Bootstrap Action Workspace
         id: bootstrap
@@ -45,7 +45,7 @@ jobs:
     name: Linux Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Bootstrap Action Workspace
         id: bootstrap
@@ -59,7 +59,7 @@ jobs:
     name: Release Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Bootstrap Action Workspace
         id: bootstrap

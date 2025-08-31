@@ -29,7 +29,7 @@ jobs:
     env:
       DOCKER_IMAGE_NAME: "docker.elastic.co/observability/elastic-otel-dotnet"
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Bootstrap Action Workspace
       id: bootstrap
       uses: ./.github/workflows/bootstrap
@@ -41,12 +41,12 @@ jobs:
       run: ls -al ${{ env.RELEASE_DISTRO }}
       
     - name: Generate build provenance (Distribution)
-      uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be  # v2.4.0
+      uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a  # v3.0.0
       with:
         subject-path: "${{ github.workspace }}/${{ env.RELEASE_DISTRO }}"
 
     - name: Generate build provenance (Packages)
-      uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be  # v2.4.0
+      uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a  # v3.0.0
       with:
         subject-path: "${{ github.workspace }}/${{ env.RELEASE_PACKAGES }}"
         
@@ -91,7 +91,7 @@ jobs:
         labels: ${{ steps.docker-meta.outputs.labels }}
 
     - name: Attest image
-      uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be  # v2.4.0
+      uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a  # v3.0.0
       continue-on-error: true # continue for now until we see it working in action
       with:
         subject-name: ${{ env.DOCKER_IMAGE_NAME }}
@@ -143,7 +143,7 @@ jobs:
       issues: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 

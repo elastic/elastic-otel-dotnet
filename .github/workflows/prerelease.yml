@@ -20,7 +20,7 @@ jobs:
       id-token: write
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Bootstrap Action Workspace
         id: bootstrap
@@ -33,12 +33,12 @@ jobs:
         name: Release
         
       - name: Generate build provenance (Distribution)
-        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be  # v2.4.0
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a  # v3.0.0
         with:
           subject-path: "${{ github.workspace }}/${{ env.RELEASE_DISTRO }}"
           
       - name: Generate build provenance (Packages)
-        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be  # v2.4.0
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a  # v3.0.0
         with:
           subject-path: "${{ github.workspace }}/${{ env.RELEASE_PACKAGES }}"
 
