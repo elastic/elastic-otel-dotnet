@@ -139,7 +139,7 @@ let stageInstallationBashScript () =
         (File.ReadAllText staged.FullName)
             .Replace("/open-telemetry/opentelemetry-dotnet-instrumentation/", "/elastic/elastic-otel-dotnet/")
             .Replace("opentelemetry-dotnet-instrumentation", "elastic-dotnet-instrumentation")
-            .Replace("v" + Software.OpenTelemetryAutoInstrumentationVersion.AsString, Software.Version.NormalizeToShorter())
+            .Replace("v" + Software.OpenTelemetryAutoInstrumentationVersion.AsString, Software.Version.Normalize())
             
     let elasticInstall = distroFile installScript
     File.WriteAllText(elasticInstall.FullName, contents)
@@ -160,8 +160,8 @@ let stageInstallationPsScript () =
         (File.ReadAllText staged.FullName)
             .Replace("/open-telemetry/opentelemetry-dotnet-instrumentation/", "/elastic/elastic-otel-dotnet/")
             .Replace("opentelemetry-dotnet-instrumentation", "elastic-dotnet-instrumentation")
-            .Replace("OpenTelemetry .NET Automatic Instrumentation", "Elastic Distribution for OpenTelemetry .NET")
-            .Replace("OpenTelemetry.Dotnet.Auto", "Elastic.OpenTelemetry.DotNet")
+            .Replace("OpenTelemetry .NET Automatic Instrumentation", "Elastic Distribution of OpenTelemetry (EDOT) .NET")
+            .Replace("OpenTelemetry.DotNet.Auto", "Elastic.OpenTelemetry.DotNet")
             .Replace(envMarker,
                      [
                         envMarker
@@ -170,7 +170,7 @@ let stageInstallationPsScript () =
                      ]
                      |> String.concat "\r\n        "
             )
-            .Replace("v" + Software.OpenTelemetryAutoInstrumentationVersion.AsString, Software.Version.NormalizeToShorter())
+            .Replace("v" + Software.OpenTelemetryAutoInstrumentationVersion.AsString, Software.Version.Normalize())
     let elasticInstall = distroFile installScript
     //ensure we write our new module name
     File.WriteAllText(elasticInstall.FullName.Replace("elastic.DotNet.Auto", "Elastic.OpenTelemetry.DotNet"), contents);

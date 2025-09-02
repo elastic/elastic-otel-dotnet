@@ -29,7 +29,7 @@ public partial class LoggingTests(ITestOutputHelper output)
 			.WithElasticDefaults(options)
 			.Build();
 
-		Assert.Single(logger.Messages, m => EdotPreamble().IsMatch(m));
+		Assert.Single(logger.Messages.ToArray(), m => EdotPreamble().IsMatch(m));
 	}
 
 	[Fact]
@@ -42,7 +42,7 @@ public partial class LoggingTests(ITestOutputHelper output)
 			.WithElasticDefaults(options)
 			.Build();
 
-		Assert.Single(logger.Messages, m => EdotPreamble().IsMatch(m));
+		Assert.Single(logger.Messages.ToArray(), m => EdotPreamble().IsMatch(m));
 	}
 
 	[Fact]
