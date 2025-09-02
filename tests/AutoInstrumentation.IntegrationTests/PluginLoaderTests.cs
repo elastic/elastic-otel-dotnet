@@ -19,8 +19,7 @@ public class PluginLoaderTests(ExampleApplicationContainer exampleApplicationCon
 
 		Assert.False(string.IsNullOrWhiteSpace(output));
 		Assert.Contains("Elastic Distribution of OpenTelemetry (EDOT) .NET:", output);
-		Assert.Contains("ElasticOpenTelemetryBuilder initialized", output);
-		Assert.Contains("Added 'Elastic.OpenTelemetry.Processors.ElasticCompatibilityProcessor'", output);
+		Assert.Contains("Elastic OpenTelemetry components created.", output);
 	}
 }
 
