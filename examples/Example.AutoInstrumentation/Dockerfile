@@ -1,5 +1,5 @@
-ARG OTEL_VERSION=1.9.0
-FROM mcr.microsoft.com/dotnet/runtime:8.0 AS base
+ARG OTEL_VERSION=1.12.0
+FROM mcr.microsoft.com/dotnet/runtime:9.0 AS base
 ARG TARGETPLATFORM
 ARG TARGETARCH
 ARG TARGETVARIANT
@@ -18,7 +18,7 @@ ADD https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation/relea
 RUN chmod +x otel-dotnet-auto-install.sh
 RUN OTEL_DOTNET_AUTO_HOME="/app/otel" sh otel-dotnet-auto-install.sh
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build_example
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build_example
 ENV _PROJECT="Example.AutoInstrumentation"
 ENV _PROJECTPATH="${_PROJECT}/${_PROJECT}.csproj"
 WORKDIR /work
@@ -40,7 +40,15 @@ COPY ["src/${_PROJECTPATH}", "src/${_PROJECT}/"]
 RUN dotnet restore "src/${_PROJECTPATH}"
 COPY . .
 WORKDIR "/work/src/${_PROJECT}"
-RUN dotnet build "${_PROJECT}.csproj" -c Release 
+RUN dotnet build "${_PROJECT}.csproj" -c Release
+ENV _PROJECT="Elastic.OpenTelemetry.AutoInstrumentation"
+ENV _PROJECTPATH="${_PROJECT}/${_PROJECT}.csproj"
+WORKDIR /work
+COPY ["src/${_PROJECTPATH}", "src/${_PROJECT}/"]
+RUN dotnet restore "src/${_PROJECTPATH}"
+COPY . .
+WORKDIR "/work/src/${_PROJECT}"
+RUN dotnet build "${_PROJECT}.csproj" -c Release
 
 FROM otel AS final
 ARG TARGETPLATFORM
@@ -50,12 +58,14 @@ WORKDIR /app
 COPY --from=publish_example /app/example /app/example
 COPY --from=build_distro /work/.artifacts/bin/Elastic.OpenTelemetry/release_netstandard2.1/Elastic.OpenTelemetry.dll /app/otel/net/
 COPY --from=build_distro /work/.artifacts/bin/Elastic.OpenTelemetry/release_netstandard2.1/Elastic.OpenTelemetry.pdb /app/otel/net/
+COPY --from=build_distro /work/.artifacts/bin/Elastic.OpenTelemetry.AutoInstrumentation/release_netstandard2.1/Elastic.OpenTelemetry.AutoInstrumentation.dll /app/otel/net/
+COPY --from=build_distro /work/.artifacts/bin/Elastic.OpenTelemetry.AutoInstrumentation/release_netstandard2.1/Elastic.OpenTelemetry.AutoInstrumentation.pdb /app/otel/net/
 
 ENV CORECLR_ENABLE_PROFILING="1"
 ENV CORECLR_PROFILER="{918728DD-259F-4A6A-AC2B-B85E1B658318}"
-ENV CORECLR_PROFILER_PATH="/app/otel/linux-${TARGETARCH}/OpenTelemetry.AutoInstrumentation.Native.so"
-ENV OTEL_DOTNET_AUTO_PLUGINS="Elastic.OpenTelemetry.AutoInstrumentationPlugin, Elastic.OpenTelemetry.AutoInstrumentation, Version=1.0.0.0, Culture=neutral, PublicKeyToken=069ca2728db333c1"
-       
+ENV CORECLR_PROFILER_PATH="/app/otel/linux-x64/OpenTelemetry.AutoInstrumentation.Native.so"
+ENV OTEL_DOTNET_AUTO_PLUGINS="Elastic.OpenTelemetry.AutoInstrumentationPlugin, Elastic.OpenTelemetry.AutoInstrumentation"
+
 ENV OTEL_TRACES_EXPORTER=none
 ENV OTEL_METRICS_EXPORTER=none
 ENV OTEL_LOGS_EXPORTER=none
