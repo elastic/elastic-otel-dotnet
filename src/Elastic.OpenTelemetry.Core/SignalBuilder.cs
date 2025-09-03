@@ -113,25 +113,20 @@ internal static class SignalBuilder
 		{
 			if (BuilderStateTable.TryGetValue(builder, out var builderState))
 			{
-				builderState.Components.Logger.LogBuilderAlreadyConfigured(providerBuilderName, builderState.InstanceIdentifier);
-
-				// This allows us to track the number of times a specific instance of a builder is configured.
-				// We expect each builder to be configured at most once and log a warning if multiple invocations
-				// are detected.
-				builderState.IncrementWithElasticDefaults();
-
-				if (builderState.WithElasticDefaultsCounter > 1)
-					builderState.Components.Logger.LogWarning("The `WithElasticDefaults` method has been called {WithElasticDefaultsCount} " +
-						"times on the same `{BuilderType}` (instance: {BuilderInstanceId}). This method is " +
-						"expected to be invoked a maximum of one time.", builderState.WithElasticDefaultsCounter, providerBuilderName,
-						builderState.InstanceIdentifier);
-
-				return builder;
+				return HandleAlreadyConfigured(builder, providerBuilderName, builderState);
 			}
 
 			// This should not be a hot path, so locking here is reasonable.
+
+#pragma warning disable IDE0063 // Use simple 'using' statement
 			using (var scope = Lock.EnterScope())
 			{
+				// Check again inside the lock
+				if (BuilderStateTable.TryGetValue(builder, out builderState))
+				{
+					return HandleAlreadyConfigured(builder, providerBuilderName, builderState);
+				}
+
 				var instanceId = Guid.NewGuid().ToString(); // Used in logging to track duplicate calls to the same builder
 
 				// We can't log to the file here as we don't yet have any bootstrapped components.
@@ -148,6 +143,7 @@ internal static class SignalBuilder
 				components.Logger.LogStoringBuilderState(providerBuilderName, instanceId);
 				BuilderStateTable.Add(builder, builderState);
 			}
+#pragma warning restore IDE0063 // Use simple 'using' statement
 		}
 		catch (Exception ex)
 		{
@@ -156,6 +152,24 @@ internal static class SignalBuilder
 		}
 
 		return builder;
+
+		static T HandleAlreadyConfigured(T builder, string providerBuilderName, BuilderState builderState)
+		{
+			builderState.Components.Logger.LogBuilderAlreadyConfigured(providerBuilderName, builderState.InstanceIdentifier);
+
+			// This allows us to track the number of times a specific instance of a builder is configured.
+			// We expect each builder to be configured at most once and log a warning if multiple invocations
+			// are detected.
+			builderState.IncrementWithElasticDefaults();
+
+			if (builderState.WithElasticDefaultsCounter > 1)
+				builderState.Components.Logger.LogWarning("The `WithElasticDefaults` method has been called {WithElasticDefaultsCount} " +
+					"times on the same `{BuilderType}` (instance: {BuilderInstanceId}). This method is " +
+					"expected to be invoked a maximum of one time.", builderState.WithElasticDefaultsCounter, providerBuilderName,
+					builderState.InstanceIdentifier);
+
+			return builder;
+		}
 	}
 
 	/// <summary>
