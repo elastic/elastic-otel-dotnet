@@ -28,7 +28,8 @@
       "applicationUrl": "https://localhost:7140;http://localhost:5146",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "OTEL_RESOURCE_ATTRIBUTES": "service.name=minimal-api-example"
+        "OTEL_RESOURCE_ATTRIBUTES": "service.name=minimal-api-example",
+        "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317"
       }
     },
     "IIS Express": {

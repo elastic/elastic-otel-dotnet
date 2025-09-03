@@ -23,6 +23,21 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.31.1" />
+    <PackageReference Include="Grpc.Tools" Version="2.72.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="System.Collections.Immutable" Version="9.0.8" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Protobuf Include="OpAmp\Protos\anyvalue.proto" ProtoRoot="OpAmp\Protos" Access="Internal" />
+    <Protobuf Include="OpAmp\Protos\opamp.proto" ProtoRoot="OpAmp\Protos" Access="Internal" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Remove="README.md" />
   </ItemGroup>
 

@@ -48,8 +48,22 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.31.1" />
+    <PackageReference Include="Grpc.Tools" Version="2.72.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="System.Collections.Immutable" Version="9.0.8" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Include="..\Elastic.OpenTelemetry.Core\**\*.cs" />
     <Content Remove="README.md" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Protobuf Include="..\Elastic.OpenTelemetry.Core\OpAmp\Protos\anyvalue.proto" ProtoRoot="..\Elastic.OpenTelemetry.Core\OpAmp\Protos" Access="Internal" />
+    <Protobuf Include="..\Elastic.OpenTelemetry.Core\OpAmp\Protos\opamp.proto" ProtoRoot="..\Elastic.OpenTelemetry.Core\OpAmp\Protos" Access="Internal" />
   </ItemGroup>
 
   <Target Condition="'$(TargetFramework)' != 'netstandard2.1'" Name="PreBuild" BeforeTargets="PreBuildEvent">
@@ -58,6 +72,10 @@
     <Copy SourceFiles="$(PkgOpenTelemetry_AutoInstrumentation)/contentFiles/any/any/instrument.cmd" DestinationFiles="$(MSBuildThisFileDirectory)/_instrument.cmd" />
     <Copy SourceFiles="$(PkgOpenTelemetry_AutoInstrumentation)/contentFiles/any/any/instrument.sh" DestinationFiles="$(MSBuildThisFileDirectory)/_instrument.sh" />
   </Target>
+
+  <ItemGroup Condition="$(TargetFramework.StartsWith('netstandard2')) OR $(TargetFramework.StartsWith('net4'))">
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
 
   <!-- 
   We require the netstandard2.1 target when building to include this in the redistributable of the auto-instrumentation zip file.
