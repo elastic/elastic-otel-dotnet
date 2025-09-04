@@ -7,6 +7,7 @@ using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Tracing;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Elastic.OpenTelemetry.Configuration.Instrumentations;
@@ -89,6 +90,9 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 		var uid = ByteString.CopyFrom(Guid.NewGuid().ToByteArray());
 
 		var agentDescription = new AgentDescription();
+
+		// TODO - This is a challenge as we need the service name before we can initialise the Otel SDK
+		// When not configured explicitly, the SDK uses internal logic to determine the name based on the app type.
 		agentDescription.IdentifyingAttributes.Add(new KeyValue() { Key = "service.name", Value = new AnyValue() { StringValue = "minimal-api-example-2" } });
 
 		var frame = new AgentToServer()
