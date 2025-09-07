@@ -35,7 +35,7 @@ runs:
         key: otel-distribution
     
     - name: Setup dotnet
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v5
       with:
         global-json-file: ./global.json
         # 6.x is required for the release-notes tool.
