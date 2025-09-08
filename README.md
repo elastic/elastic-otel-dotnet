@@ -17,13 +17,13 @@ With EDOT .NET, you have access to all the features of the [OpenTelemetry SDK fo
 
 * Access to SDK enhancements and bug fixes contributed by the Elastic team _before_ the changes are available upstream in OpenTelemetry repositories.
 * Elastic-specific processors that ensure optimal compatibility when exporting OpenTelemetry signal data to an Elastic backend like an Elastic Observability deployment.
-* Preconfigured collection of tracing and metrics signals, applying [opinionated defaults](https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/setup/edot-defaults.html), 
+* Preconfigured collection of tracing and metrics signals, applying [opinionated defaults](https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/setup/edot-defaults), 
 such as which instrumentation sources are observed by default.
 * Ensuring that the OpenTelemetry protocol [(OTLP) exporter](https://opentelemetry.io/docs/specs/otlp) is enabled by default.
 * Instrumentation assembly scanning to automatically enable instrumentation from installed contrib NuGet packages.
 
-**Ready to try out the distro?** Follow the step-by-step instructions in [our quickstart guide](https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/setup/index.html).
+**Ready to try out the distro?** Follow the step-by-step instructions in [our quickstart guide](https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/setup).
 
 ## Read the docs
 
-Read our complete [EDOT .NET documentation](https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/index.html) for more information.
+Read our complete [EDOT .NET documentation](https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet) for more information.
