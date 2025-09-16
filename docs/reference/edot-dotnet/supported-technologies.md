@@ -54,11 +54,11 @@ Instrumentation for .NET can occur in three ways:
 
 1. Built-in OpenTelemetry native instrumentation, where libraries are instrumented using the .NET APIs, requiring no bridging libraries to be observed. Many Microsoft recent libraries implement OpenTelemetry native instrumentation, and many third parties are working on such improvements. When native OTel instrumentation exists, it may be observed directly by the OpenTelemetry SDK (and, by extension, EDOT .NET) by calling `AddSource` to register the `ActivitySource` used by the instrumented code.
 
-2. [Contrib instrumentation](https://github.com/open-telemetry/opentelemetry-dotnet-contrib) packages. These packages bridge existing telemetry from libraries to emit or enrich OpenTelemetry spans and metrics. Some packages have no dependencies and are included with EDOT .NET [by default](/reference/setup/edot-defaults.md). Others, which bring in transitive dependencies, can be added to applications and registered with the OpenTelemetry SDK. EDOT .NET provides an instrumentation assembly scanning feature to register any contrib instrumentation without code changes.
+2. [Contrib instrumentation](https://github.com/open-telemetry/opentelemetry-dotnet-contrib) packages. These packages bridge existing telemetry from libraries to emit or enrich OpenTelemetry spans and metrics. Some packages have no dependencies and are included with EDOT .NET [by default](/reference/edot-dotnet/setup/edot-defaults.md). Others, which bring in transitive dependencies, can be added to applications and registered with the OpenTelemetry SDK. EDOT .NET provides an instrumentation assembly scanning feature to register any contrib instrumentation without code changes.
 
-3. Additional instrumentation is available for some components and libraries when using the profiler-based [zero code installation](/reference/setup/zero-code.md), for which  EDOT .NET does not add any additional instrumentation. Find the current list supported in the [.NET zero-code documentation](https://opentelemetry.io/docs/zero-code/dotnet/instrumentations/).
+3. Additional instrumentation is available for some components and libraries when using the profiler-based [zero code installation](/reference/edot-dotnet/setup/zero-code.md), for which  EDOT .NET does not add any additional instrumentation. Find the current list supported in the [.NET zero-code documentation](https://opentelemetry.io/docs/zero-code/dotnet/instrumentations/).
 
-See also the EDOT .NET [opinionated defaults](/reference/setup/edot-defaults.md) for behavior that might differ from the OpenTelemetry NET SDK defaults.
+See also the EDOT .NET [opinionated defaults](/reference/edot-dotnet/setup/edot-defaults.md) for behavior that might differ from the OpenTelemetry NET SDK defaults.
 
 :::{warning}
 Instrumentation assembly scanning is not supported for applications using native [AOT](https://learn.microsoft.com/dotnet/core/deploying/native-aot) compilation.
