@@ -27,6 +27,13 @@ To check for security updates, go to [Security announcements for the Elastic sta
 % ### Fixes [edot-dotnet-X.X.X-fixes]
 % *
 
+## 1.1.0 [edot-dotnet-1.1.0-release-notes]
+
+### Features and enhancements [edot-dotnet-1.1.0-features-enhancements]
+
+- Update to 1.12.x upstream packages.
+- Treat `EventLevel.Verbose` as debug log level when subscribing to SDK events for diagnostics.
+
 ## 1.0.2 [edot-dotnet-1.0.2-release-notes]
 
 ### Features and enhancements [edot-dotnet-1.0.2-features-enhancements]
