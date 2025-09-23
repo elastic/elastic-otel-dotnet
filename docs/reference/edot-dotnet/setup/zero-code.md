@@ -47,7 +47,7 @@ Download and run the .sh script:
 curl -sSfL https://github.com/elastic/elastic-otel-dotnet/releases/latest/download/elastic-dotnet-auto-install.sh -O
 
 # Install core files
-sh ./otel-dotnet-auto-install.sh
+sh ./elastic-dotnet-auto-install.sh
 
 # Enable execution for the instrumentation script
 chmod +x $HOME/.otel-dotnet-auto/instrument.sh
