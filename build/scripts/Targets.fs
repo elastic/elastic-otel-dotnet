@@ -101,7 +101,7 @@ let private test (arguments:ParseResults<Build>) =
 
 let private validateLicenses _ =
     let args = ["-t"; "-i"; "Elastic.OpenTelemetry.sln";
-                "--allowed-license-types"; "build/allowed-licenses.json"; 
+                "--allowed-license-types";"build/allowed-licenses.json"; 
                 "--exclude-projects-matching"; "build/exclude-license-check.json"; "--ignored-packages"; "build/ignored-packages-license-check.json"
                 "-o"; "JsonPretty"]
     exec { run "dotnet" (["nuget-license"] @ args) }
