@@ -100,10 +100,11 @@ let private test (arguments:ParseResults<Build>) =
         | _ -> runTests suite arguments   
 
 let private validateLicenses _ =
-    let args = ["-u"; "-t"; "-i"; "Elastic.OpenTelemetry.sln"; "--use-project-assets-json"
-                "--forbidden-license-types"; "build/forbidden-license-types.json"
-                "--packages-filter"; "#System\..*#";]
-    exec { run "dotnet" (["dotnet-project-licenses"] @ args) }
+    let args = ["-t"; "-i"; "Elastic.OpenTelemetry.sln";
+                "--allowed-license-types";"build/allowed-licenses.json"; 
+                "--exclude-projects-matching"; "build/exclude-license-check.json"; "--ignored-packages"; "build/ignored-packages-license-check.json"
+                "-o"; "JsonPretty"]
+    exec { run "dotnet" (["nuget-license"] @ args) }
 
 let private validatePackages _ =
     let packagesPath = Paths.ArtifactPath "package"
@@ -181,7 +182,7 @@ let Setup (parsed:ParseResults<Build>) =
         | Release -> 
             Build.Cmd 
                 [PristineCheck; Build; Redistribute]
-                [ValidateLicenses; GeneratePackages; ValidatePackages; GenerateReleaseNotes]
+                [ValidateLicenses; GeneratePackages; ValidatePackages; GenerateReleaseNotes; GenerateApiChanges]
                 release
 
         | Format -> Build.Step format
