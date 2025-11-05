@@ -94,14 +94,19 @@ internal static class TracerProvderBuilderExtensions
 		{
 			// When we have existing builderState, this method is being invoked from the main WithElasticDefaults method.
 			// In that scenario, we skip configuring the resource, as it will have already been configured by the caller.
+			// TODO - Log
 			return builder;
 		}
 
-		return SignalBuilder.WithElasticDefaults(builder, Signals.Traces, components?.Options, components, null, ConfigureBuilder);
+		return SignalBuilder.WithElasticDefaults(builder, components, null, default, ConfigureBuilder);
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		static void ConfigureBuilder(TracerProviderBuilder builder, BuilderState builderState, IServiceCollection? services)
+		static void ConfigureBuilder(BuilderContext<TracerProviderBuilder> builderContext)
 		{
+			var builder = builderContext.Builder;
+			var builderState = builderContext.BuilderState;
+			var services = builderContext.Services;
+
 			builder.ConfigureResource(r => r.WithElasticDefaultsCore(builderState, services, null));
 		}
 	}

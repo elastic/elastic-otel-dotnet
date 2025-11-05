@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using OpenTelemetry;
@@ -67,130 +68,91 @@ internal static class SignalBuilder
 		return logger;
 	}
 
-	//internal static T WithElasticDefaults<T>(
-	//	T builder,
-	//	Signals signal,
-	//	CompositeElasticOpenTelemetryOptions? options,
-	//	ElasticOpenTelemetryComponents? components,
-	//	IServiceCollection? services,
-	//	BuilderOptions<T> builderOptions,
-	//	Action<BuilderContext<T>> configure) where T : class
-	//{
-	//	var providerBuilderName = builder.GetType().Name;
-	//	var logger = GetLogger(components, options);
-
-	//	BuilderState? builderState = null;
-
-	//	try
-	//	{
-	//		var builderInstanceId = "<unknown>";
-
-	//		if (BuilderStateTable.TryGetValue(builder, out var existingBuilderState))
-	//		{
-	//			builderState = existingBuilderState;
-	//			builderInstanceId = existingBuilderState.InstanceIdentifier;
-	//		}
-
-	//		if (builderState is not null)
-	//			logger = builderState.Components.Logger;
-
-	//		// If the signal is disabled via configuration we skip any potential bootstrapping.
-	//		var configuredSignals = components?.Options.Signals ?? options?.Signals ?? Signals.All;
-	//		if (!configuredSignals.HasFlagFast(signal))
-	//		{
-	//			logger.LogSignalDisabled(signal.ToString().ToLower(), providerBuilderName, builderInstanceId);
-	//			return builder;
-	//		}
-
-	//		return WithElasticDefaults(builder, options, components, services, builderOptions, configure);
-	//	}
-	//	catch (Exception ex)
-	//	{
-	//		var signalNameForLogging = signal.ToStringFast().ToLowerInvariant();
-	//		logger.LogError(new EventId(501, "BuilderDefaultsFailed"), ex, "Failed to fully register EDOT .NET " +
-	//			"{Signal} defaults on the {ProviderBuilderName}.", signalNameForLogging, providerBuilderName);
-	//	}
-
-	//	return builder;
-	//}
-
+	/// <summary>
+	/// This overload is needed to handle scenarios where we don't yet have a builder state and context.
+	/// </summary>
 	internal static T WithElasticDefaults<T>(
-		BuilderContext<T> builderContext,
+		T builder,
+		ElasticOpenTelemetryComponents? components,
+		CompositeElasticOpenTelemetryOptions? options,
+		IServiceCollection? services,
+		BuilderOptions<T> builderOptions,
 		Action<BuilderContext<T>> configureBuilder) where T : class
 	{
-		var builder = builderContext.Builder;
-		var components = builderContext.BuilderState.Components;
-		var options = components.Options;
-		var services = builderContext.Services;
 		var providerBuilderName = builder.GetType().Name;
+
+		if (BuilderStateTable.TryGetValue(builder, out var existingBuilderState))
+		{
+			return HandleExistingBuilderState(builder, providerBuilderName, existingBuilderState);
+		}
+
 		var logger = GetLogger(components, options);
 		var builderInstanceId = Guid.NewGuid().ToString(); // Used in logging to track duplicate calls to the same builder
 
-		try
+		// When dealing with a signal specific builder, we need to check if that signal is enabled.
+		// If not, we can log and return early.
+		if (builder is not IOpenTelemetryBuilder)
 		{
-			if (BuilderStateTable.TryGetValue(builder, out var existingBuilderState))
+			var configuredSignals = components?.Options.Signals ?? options?.Signals ?? Signals.All;
+
+			var signal = Signals.None;
+			switch (builder)
+			{
+				case TracerProviderBuilder:
+					signal = Signals.Traces;
+					break;
+				case MeterProviderBuilder:
+					signal = Signals.Metrics;
+					break;
+				case LoggerProviderBuilder:
+					signal = Signals.Logs;
+					break;
+			}
+
+			if (configuredSignals.HasFlagFast(signal) is false)
+			{
+				logger.LogSignalDisabled(signal.ToString().ToLower(), providerBuilderName, builderInstanceId);
+				return builder;
+			}
+		}
+
+#pragma warning disable IDE0063 // Use simple 'using' statement
+		// This should not be a hot path, so locking here is reasonable.
+		using (var scope = Lock.EnterScope())
+		{
+			// Double check after acquiring the lock.
+			if (BuilderStateTable.TryGetValue(builder, out existingBuilderState))
 			{
 				return HandleExistingBuilderState(builder, providerBuilderName, existingBuilderState);
 			}
 
-			if (builder is not IOpenTelemetryBuilder)
+			// We can't log to the file here as we don't yet have any bootstrapped components.
+			// Therefore, this message will only appear if the consumer provides an additional logger.
+			// This is fine as it's a trace level message for advanced debugging.
+			logger.LogNoExistingComponents(providerBuilderName, builderInstanceId);
+
+			options ??= CompositeElasticOpenTelemetryOptions.DefaultOptions;
+
+			// This will check for any existing components on the IServiceCollection and reuse them if found.
+			// It would also attempt to used a shared components instance if available.
+			// If neither are available, it will create a new instance.
+			components = ElasticOpenTelemetry.Bootstrap(options, services);
+			var builderState = new BuilderState(components, builderInstanceId);
+
+			var builderContext = new BuilderContext<T>
 			{
-				var configuredSignals = components?.Options.Signals ?? options?.Signals ?? Signals.All;
+				Builder = builder,
+				BuilderState = builderState,
+				BuilderOptions = builderOptions,
+				Services = services
+			};
 
-				var signal = Signals.None;
-				switch (builder)
-				{
-					case TracerProviderBuilder:
-						signal = Signals.Traces;
-						break;
-					case MeterProviderBuilder:
-						signal = Signals.Metrics;
-						break;
-					case LoggerProviderBuilder:
-						signal = Signals.Logs;
-						break;
-				}
+			configureBuilder(builderContext);
 
-				if (configuredSignals.HasFlagFast(signal) is false)
-				{
-					logger.LogSignalDisabled(signal.ToString().ToLower(), providerBuilderName, builderInstanceId);
-					return builder;
-				}
-			}
-
-			// This should not be a hot path, so locking here is reasonable.
-			using (var scope = Lock.EnterScope())
-			{
-				// Double check after acquiring the lock.
-				if (BuilderStateTable.TryGetValue(builder, out existingBuilderState))
-				{
-					return HandleExistingBuilderState(builder, providerBuilderName, existingBuilderState);
-				}
-
-				// We can't log to the file here as we don't yet have any bootstrapped components.
-				// Therefore, this message will only appear if the consumer provides an additional logger.
-				// This is fine as it's a trace level message for advanced debugging.
-				logger.LogNoExistingComponents(providerBuilderName, builderInstanceId);
-
-				options ??= CompositeElasticOpenTelemetryOptions.DefaultOptions;
-
-				// This will check for any existing components on the IServiceCollection and reuse them if found.
-				// It would also attempt to used a shared components instance if available.
-				// If neither are available, it will create a new instance.
-				components = ElasticOpenTelemetry.Bootstrap(options, services);
-				var builderState = new BuilderState(components, builderInstanceId);
-
-				configureBuilder(builderContext);
-
-				components.Logger.LogStoringBuilderState(providerBuilderName, builderInstanceId);
-				BuilderStateTable.Add(builder, builderState);
-			}
+			components.Logger.LogStoringBuilderState(providerBuilderName, builderInstanceId);
+			BuilderStateTable.Add(builder, builderState);
 		}
-		catch (Exception ex)
-		{
-			logger.LogError(new EventId(502, "BuilderDefaultsFailed"), ex, "Failed to fully register EDOT .NET " +
-				"defaults on the {ProviderBuilderName}.", providerBuilderName);
-		}
+#pragma warning restore IDE0063 // Use simple 'using' statement
 
 		return builder;
 
@@ -199,7 +161,6 @@ internal static class SignalBuilder
 			string providerBuilderName,
 			BuilderState builderState)
 		{
-			var builderInstanceId = builderState.InstanceIdentifier;
 			var logger = builderState.Components.Logger;
 			logger.LogBuilderAlreadyConfigured(providerBuilderName, builderState.InstanceIdentifier);
 
@@ -217,6 +178,14 @@ internal static class SignalBuilder
 
 			return builder;
 		}
+	}
+
+	internal static T WithElasticDefaults<T>(
+		BuilderContext<T> builderContext,
+		Action<BuilderContext<T>> configureBuilder) where T : class
+	{
+		configureBuilder(builderContext);
+		return builderContext.Builder;
 	}
 
 	/// <summary>
