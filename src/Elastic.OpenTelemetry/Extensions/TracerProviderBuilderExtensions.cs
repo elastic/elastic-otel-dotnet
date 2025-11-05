@@ -51,9 +51,39 @@ public static class TracerProviderBuilderExtensions
 			throw new ArgumentNullException(nameof(builder));
 #endif
 
-		return WithElasticDefaultsCore(builder, null, null, null);
+		return WithElasticDefaultsCore(builder, null, null, null, null);
 	}
 
+	/// <summary>
+	/// Use Elastic Distribution of OpenTelemetry .NET defaults for <see cref="TracerProviderBuilder"/>.
+	/// </summary>
+	/// <remarks>
+	/// This is not neccesary if <see cref="OpenTelemetryBuilderExtensions.WithElasticDefaults(IOpenTelemetryBuilder)"/>
+	/// has been called previously as that automatically adds the .
+	/// </remarks>
+	/// <param name="builder">The <see cref="TracerProviderBuilder"/> to configure.</param>
+	/// <param name="configureBuilder">
+	/// An <see cref="Action"/> used to further configure the <see cref="TracerProviderBuilder"/>.
+	/// This action is invoked after <see href="https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/setup/edot-defaults">EDOT .NET defaults</see>
+	/// have been applied, but before the OTLP exporter is added. This ensures that any custom processors run before the exporter.
+	/// </param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
+	/// <returns>The <see cref="TracerProviderBuilder"/> for chaining configuration.</returns>
+	public static TracerProviderBuilder WithElasticDefaults(this TracerProviderBuilder builder, Action<TracerProviderBuilder> configureBuilder)
+	{
+#if NET
+		ArgumentNullException.ThrowIfNull(builder);
+		ArgumentNullException.ThrowIfNull(configureBuilder);
+#else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+
+		if (configureBuilder is null)
+			throw new ArgumentNullException(nameof(configureBuilder));
+#endif
+
+		return WithElasticDefaultsCore(builder, null, null, null, configureBuilder);
+	}
 
 	/// <summary>
 	/// <inheritdoc cref="WithElasticDefaults(TracerProviderBuilder)" />
@@ -76,7 +106,40 @@ public static class TracerProviderBuilderExtensions
 			throw new ArgumentNullException(nameof(options));
 #endif
 
-		return WithElasticDefaultsCore(builder, new(options), null, null);
+		return WithElasticDefaultsCore(builder, new(options), null, null, null);
+	}
+
+	/// <summary>
+	/// <inheritdoc cref="WithElasticDefaults(TracerProviderBuilder)" />
+	/// </summary>
+	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(TracerProviderBuilder)" path="/param[@name='builder']"/></param>
+	/// <param name="options"><see cref="ElasticOpenTelemetryOptions"/> used to configure the Elastic Distribution of OpenTelemetry (EDOT) .NET.</param>
+	/// <param name="configureBuilder">
+	/// An <see cref="Action"/> used to further configure the <see cref="TracerProviderBuilder"/>.
+	/// This action is invoked after <see href="https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/setup/edot-defaults">EDOT .NET defaults</see>
+	/// have been applied, but before the OTLP exporter is added. This ensures that any custom processors run before the exporter.
+	/// </param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="options"/> is null.</exception>
+	/// <returns><inheritdoc cref="WithElasticDefaults(TracerProviderBuilder)" /></returns>
+	public static TracerProviderBuilder WithElasticDefaults(this TracerProviderBuilder builder, ElasticOpenTelemetryOptions options, Action<TracerProviderBuilder> configureBuilder)
+	{
+#if NET
+		ArgumentNullException.ThrowIfNull(builder);
+		ArgumentNullException.ThrowIfNull(options);
+		ArgumentNullException.ThrowIfNull(configureBuilder);
+#else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+
+		if (options is null)
+			throw new ArgumentNullException(nameof(options));
+
+		if (configureBuilder is null)
+			throw new ArgumentNullException(nameof(configureBuilder));
+#endif
+
+		return WithElasticDefaultsCore(builder, new(options), null, null, configureBuilder);
 	}
 
 	/// <summary>
@@ -99,28 +162,60 @@ public static class TracerProviderBuilderExtensions
 		if (configuration is null)
 			throw new ArgumentNullException(nameof(configuration));
 #endif
-		return WithElasticDefaultsCore(builder, new(configuration), null, null);
+		return WithElasticDefaultsCore(builder, new(configuration), null, null, null);
+	}
+
+	/// <summary>
+	/// <inheritdoc cref="WithElasticDefaults(TracerProviderBuilder)" />
+	/// </summary>
+	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(TracerProviderBuilder)" path="/param[@name='builder']"/></param>
+	/// <param name="configuration">An <see cref="IConfiguration"/> instance from which to load the OpenTelemetry SDK options.</param>
+	/// <param name="configureBuilder">
+	/// An <see cref="Action"/> used to further configure the <see cref="TracerProviderBuilder"/>.
+	/// This action is invoked after <see href="https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/setup/edot-defaults">EDOT .NET defaults</see>
+	/// have been applied, but before the OTLP exporter is added. This ensures that any custom processors run before the exporter.
+	/// </param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configuration"/> is null.</exception>
+	/// <returns><inheritdoc cref="WithElasticDefaults(TracerProviderBuilder)" /></returns>
+	public static TracerProviderBuilder WithElasticDefaults(this TracerProviderBuilder builder, IConfiguration configuration, Action<TracerProviderBuilder> configureBuilder)
+	{
+#if NET
+		ArgumentNullException.ThrowIfNull(builder);
+		ArgumentNullException.ThrowIfNull(configuration);
+		ArgumentNullException.ThrowIfNull(configureBuilder);
+#else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+
+		if (configuration is null)
+			throw new ArgumentNullException(nameof(configuration));
+
+		if (configureBuilder is null)
+			throw new ArgumentNullException(nameof(configureBuilder));
+#endif
+		return WithElasticDefaultsCore(builder, new(configuration), null, null, configureBuilder);
 	}
 
 	internal static TracerProviderBuilder WithElasticDefaults(
 		this TracerProviderBuilder builder,
 		IConfiguration configuration,
-		IServiceCollection serviceCollection) =>
-			WithElasticDefaultsCore(builder, new(configuration), null, serviceCollection);
+		IServiceCollection serviceCollection,
+		Action<TracerProviderBuilder>? configure) =>
+			WithElasticDefaultsCore(builder, new(configuration), null, serviceCollection, configure);
 
 	internal static TracerProviderBuilder WithElasticDefaults(
 		this TracerProviderBuilder builder,
-		ElasticOpenTelemetryComponents components,
-		IServiceCollection? services) =>
-			WithElasticDefaultsCore(builder, components.Options, components, services);
+		BuilderState builderState,
+		BuilderContext<TracerProviderBuilder> builderContext) =>
+			WithElasticDefaultsCore(builder, builderState, builderContext);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private static TracerProviderBuilder WithElasticDefaultsCore(
-		TracerProviderBuilder builder,
-		CompositeElasticOpenTelemetryOptions? options,
-		ElasticOpenTelemetryComponents? components,
-		IServiceCollection? services)
+	private static TracerProviderBuilder WithElasticDefaultsCore(BuilderContext<TracerProviderBuilder> builderContext)
 	{
+		var builder = builderContext.Builder;
+		var options = builderContext.BuilderState.Components.Options;
+		var components = builderContext.BuilderState.Components;
 		var logger = SignalBuilder.GetLogger(builder, components, options, null);
 
 		var callCount = Interlocked.Increment(ref WithElasticDefaultsCallCount);
@@ -134,18 +229,21 @@ public static class TracerProviderBuilderExtensions
 			logger.LogWithElasticDefaultsCallCount(callCount, nameof(TracerProviderBuilder));
 		}
 
-		return SignalBuilder.WithElasticDefaults(builder, Signals.Traces, options, components, services, ConfigureBuilder);
+		return SignalBuilder.WithElasticDefaults(builder, Signals.Traces, options, components, builderContext, ConfigureBuilder);
 	}
 
 	[UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026", Justification = "The call to AssemblyScanning.AddInstrumentationViaReflection` " +
 		"is guarded by a RuntimeFeature.IsDynamicCodeSupported` check and, therefore, this method is safe to call in AoT scenarios.")]
 
-	private static void ConfigureBuilder(TracerProviderBuilder builder, BuilderState builderState, IServiceCollection? services)
+	private static void ConfigureBuilder(BuilderContext<TracerProviderBuilder> builderContext)
 	{
 		const string tracerProviderBuilderName = nameof(TracerProviderBuilder);
 
+		var builder = builderContext.Builder;
+		var builderState = builderContext.BuilderState;
 		var components = builderState.Components;
 		var logger = components.Logger;
+		var services = builderContext.Services;
 
 		logger.LogConfiguringBuilder(tracerProviderBuilderName, builderState.InstanceIdentifier);
 
@@ -190,13 +288,29 @@ public static class TracerProviderBuilderExtensions
 
 		TracerProvderBuilderExtensions.AddElasticProcessorsCore(builder, builderState, null, services);
 
+		var userProvidedConfigureBuilder = builderContext.BuilderOptions.UserProvidedConfigureBuilder;
+
+		if (userProvidedConfigureBuilder is not null)
+		{
+			userProvidedConfigureBuilder(builder);
+			logger.LogInvokedConfigureAction(nameof(Signals.Traces), nameof(TracerProviderBuilder), builderState.InstanceIdentifier);
+		}
+
 		if (components.Options.SkipOtlpExporter)
 		{
 			logger.LogSkippingOtlpExporter(nameof(Signals.Traces), nameof(TracerProviderBuilder), builderState.InstanceIdentifier);
 		}
 		else
 		{
-			builder.AddOtlpExporter();
+			if (builderContext.BuilderOptions.DeferAddOtlpExporter)
+			{
+				logger.LogDeferredOtlpExporter(nameof(Signals.Traces), nameof(TracerProviderBuilder), builderState.InstanceIdentifier);
+			}
+			else
+			{
+				builder.AddOtlpExporter();
+				logger.LogAddedOtlpExporter(nameof(Signals.Traces), nameof(TracerProviderBuilder), builderState.InstanceIdentifier);
+			}
 		}
 
 		logger.LogConfiguredSignalProvider(nameof(Signals.Traces), nameof(TracerProviderBuilder), builderState.InstanceIdentifier);

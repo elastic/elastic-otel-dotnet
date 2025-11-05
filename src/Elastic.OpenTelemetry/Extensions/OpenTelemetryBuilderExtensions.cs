@@ -7,12 +7,11 @@ using Elastic.OpenTelemetry;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Core;
 using Elastic.OpenTelemetry.Diagnostics;
-using Elastic.OpenTelemetry.Exporters;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.Metrics;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -39,6 +38,13 @@ public static class OpenTelemetryBuilderExtensions
 	/// <summary>
 	/// Enables collection of all signals using Elastic Distribution of OpenTelemetry .NET defaults.
 	/// </summary>
+	/// <remarks>
+	/// <b>Guidance:</b> Prefer using the <c>AddElasticOpenTelemetry</c> method on the <see cref="IHostApplicationBuilder"/>
+	/// or <see cref="IServiceCollection"/> rather than calling this method on the <see cref="IOpenTelemetryBuilder"/> directly.
+	/// <br/>
+	/// These methods are primarily intended for advanced scenarios, non-host-based applications or when developing
+	/// libraries that need to customize the OpenTelemetry configuration.
+	/// </remarks>
 	/// <param name="builder">The <see cref="IOpenTelemetryBuilder"/> being configured.</param>
 	/// <returns>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
@@ -53,7 +59,7 @@ public static class OpenTelemetryBuilderExtensions
 			throw new ArgumentNullException(nameof(builder));
 #endif
 
-		return WithElasticDefaultsCore(builder, CompositeElasticOpenTelemetryOptions.DefaultOptions);
+		return WithElasticDefaultsCore(builder, CompositeElasticOpenTelemetryOptions.DefaultOptions, null);
 	}
 
 	/// <summary>
@@ -78,7 +84,7 @@ public static class OpenTelemetryBuilderExtensions
 			throw new ArgumentNullException(nameof(configuration));
 #endif
 
-		return WithElasticDefaultsCore(builder, new(configuration));
+		return WithElasticDefaultsCore(builder, new(configuration), null);
 	}
 
 	/// <summary>
@@ -106,13 +112,14 @@ public static class OpenTelemetryBuilderExtensions
 			throw new ArgumentNullException(nameof(options));
 #endif
 
-		return WithElasticDefaultsCore(builder, new(options));
+		return WithElasticDefaultsCore(builder, new(options), null);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	internal static IOpenTelemetryBuilder WithElasticDefaultsCore(
 		this IOpenTelemetryBuilder builder,
-		CompositeElasticOpenTelemetryOptions options)
+		CompositeElasticOpenTelemetryOptions options,
+		BuilderOptions<IOpenTelemetryBuilder> builderOptions)
 	{
 		var callCount = Interlocked.Increment(ref WithElasticDefaultsCallCount);
 
@@ -134,7 +141,46 @@ public static class OpenTelemetryBuilderExtensions
 			return builder;
 		}
 
-		return SignalBuilder.WithElasticDefaults(builder, options, null, builder.Services, ConfigureBuilder);
+		// Apply the EDOT defaults to the builder.
+		SignalBuilder.WithElasticDefaults(builder, options, null, builder.Services, builderOptions, ConfigureBuilder);
+
+		// If the user provided a configuration callback, invoke it now.
+		if (builderOptions.UserProvidedConfigureBuilder is not null)
+		{
+			// Run the user-provided builder configuration after the EDOT defaults have been applied.
+			builderOptions.UserProvidedConfigureBuilder(builder);
+			// TODO - Log
+
+			// For each signal (if it is enabled) we can now add the OTLP exporter after the
+			// user-provided configuration callback has run.
+
+			if (options.SkipOtlpExporter)
+			{
+				// TODO - Log skipped
+			}
+			else
+			{
+				if (options.Signals.HasFlagFast(Signals.Traces))
+				{
+					builder.WithTracing(tpb => tpb.AddOtlpExporter());
+					// TODO - Log
+				}
+
+				if (options.Signals.HasFlagFast(Signals.Metrics))
+				{
+					builder.WithMetrics(tpb => tpb.AddOtlpExporter());
+					// TODO - Log
+				}
+
+				if (options.Signals.HasFlagFast(Signals.Logs))
+				{
+					builder.WithLogging(tpb => tpb.AddOtlpExporter());
+					// TODO - Log
+				}
+			}
+		}
+
+		return builder;
 	}
 
 	/// <summary>
@@ -431,6 +477,8 @@ public static class OpenTelemetryBuilderExtensions
 			throw new ArgumentNullException(nameof(configure));
 #endif
 
+
+
 		return builder.WithTracing(tpb =>
 		{
 			tpb.WithElasticDefaults(configuration, builder.Services);
@@ -438,14 +486,25 @@ public static class OpenTelemetryBuilderExtensions
 		});
 	}
 
-	private static void ConfigureBuilder(IOpenTelemetryBuilder builder, BuilderState builderState, IServiceCollection? services)
+	private static void ConfigureBuilder(BuilderContext<IOpenTelemetryBuilder> builderContext)
 	{
-		var components = builderState.Components;
-		var options = builderState.Components.Options;
+		var builder = builderContext.Builder;
+		var components = builderContext.BuilderState.Components;
+		var options = builderContext.BuilderState.Components.Options;
+		var builderState = builderContext.BuilderState;
 
+		// Configure tracing, if the signal is enabled.
 		if (options.Signals.HasFlagFast(Signals.Traces))
 		{
-			builder.WithTracing(tpb => tpb.WithElasticDefaults(components, builder.Services));
+			// When the user has provided their own configuration callback for the IOpenTelemetryBuilder
+			// we don't want WithElasticDefaults for the TracerProviderBuilder to add the OTLP exporter so
+			// we defer it until after this method runs the user-provided callback.
+			var builderOptions = new BuilderOptions<TracerProviderBuilder>
+			{
+				DeferAddOtlpExporter = builderContext.BuilderOptions.UserProvidedConfigureBuilder is not null
+			};
+
+			builder.WithTracing(tpb => tpb.WithElasticDefaults(components, options,, null));
 		}
 		else
 		{
@@ -471,6 +530,19 @@ public static class OpenTelemetryBuilderExtensions
 		{
 			components.Logger.LogSignalDisabled(Signals.Logs.ToString().ToLower(),
 				nameof(IOpenTelemetryBuilder), builderState.InstanceIdentifier);
+		}
+
+		if (builderContext.UserProvidedConfigureBuilder is not null)
+		{
+			// Run the user-provided builder configuration after the EDOT defaults have been applied.
+			builderContext.UserProvidedConfigureBuilder(builder);
+
+			// If tracing is enabled and the user provided their own configuration callback,
+			// we need to ensure the OTLP exporter is added after running the user-provided callback.
+			if (options.Signals.HasFlagFast(Signals.Traces) && !builderState.Components.Options.SkipOtlpExporter)
+			{
+				builder.WithTracing(tpb => tpb.AddOtlpExporter());
+			}
 		}
 	}
 }

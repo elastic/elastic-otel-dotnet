@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information
 
 using Elastic.OpenTelemetry;
+using Elastic.OpenTelemetry.Core;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -78,7 +79,8 @@ public static class HostApplicationBuilderExtensions
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="options"/> is null.</exception>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configure"/> is null.</exception>
 	/// <returns><inheritdoc cref="AddElasticOpenTelemetry(IHostApplicationBuilder)" /></returns>
-	public static IHostApplicationBuilder AddElasticOpenTelemetry(this IHostApplicationBuilder builder, ElasticOpenTelemetryOptions options, Action<IOpenTelemetryBuilder> configure)
+	public static IHostApplicationBuilder AddElasticOpenTelemetry(this IHostApplicationBuilder builder,
+		ElasticOpenTelemetryOptions options, Action<IOpenTelemetryBuilder> configure)
 	{
 #if NET
 		ArgumentNullException.ThrowIfNull(builder);
@@ -124,10 +126,14 @@ public static class HostApplicationBuilderExtensions
 			throw new ArgumentNullException(nameof(configure));
 #endif
 
-		var otelBuilder = builder.Services
-			.AddElasticOpenTelemetry(builder.Configuration);
+		var builderOptions = new BuilderOptions<IOpenTelemetryBuilder>
+		{
+			UserProvidedConfigureBuilder = configure,
+			// We don't set defer as we expect the callee to handle executing the configure action at the correct time.
+			DeferAddOtlpExporter = false
+		};
 
-		configure.Invoke(otelBuilder);
+		var otelBuilder = builder.Services.AddElasticOpenTelemetry(builder.Configuration, builderOptions);
 
 		return builder;
 	}

@@ -78,6 +78,16 @@ internal static partial class LoggerMessages
 	[LoggerMessage(EventId = 25, EventName = "ConfiguringBuilder", Level = LogLevel.Information, Message = "Configuring the {ProviderBuilderType} (instance:{BuilderInstanceId}) with EDOT defaults.")]
 	public static partial void LogConfiguringBuilder(this ILogger logger, string providerBuilderType, string builderInstanceId);
 
+	[LoggerMessage(EventId = 26, EventName = "AddedOtlpExporter", Level = LogLevel.Debug, Message = "Adding OTLP exporter for {Signal} for {ProviderBuilderType} (instance:{BuilderInstanceId}).")]
+	public static partial void LogAddedOtlpExporter(this ILogger logger, string signal, string providerBuilderType, string builderInstanceId);
+
+	[LoggerMessage(EventId = 27, EventName = "InvokedConfigureAction", Level = LogLevel.Debug, Message = "Invoking user-provided builder configure delegate for {Signal} based on the provided " +
+		"`ElasticOpenTelemetryOptions` via the {ProviderBuilderType} (instance:{BuilderInstanceId}).")]
+	public static partial void LogInvokedConfigureAction(this ILogger logger, string signal, string providerBuilderType, string builderInstanceId);
+
+	[LoggerMessage(EventId = 28, EventName = "DeferredOtlpExporter", Level = LogLevel.Debug, Message = "Deferring OTLP exporter for {Signal} for {ProviderBuilderType} (instance:{BuilderInstanceId}).")]
+	public static partial void LogDeferredOtlpExporter(this ILogger logger, string signal, string providerBuilderType, string builderInstanceId);
+
 
 
 	[LoggerMessage(EventId = 30, EventName = "LocatedInstrumentationAssembly", Level = LogLevel.Debug, Message = "Located {AssemblyFilename} in {Path}.")]

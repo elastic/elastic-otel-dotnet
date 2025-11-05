@@ -5,6 +5,7 @@
 using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry;
 using Elastic.OpenTelemetry.Configuration;
+using Elastic.OpenTelemetry.Core;
 using Elastic.OpenTelemetry.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -92,7 +93,7 @@ public static class ServiceCollectionExtensions
 			throw new ArgumentNullException(nameof(configuration));
 #endif
 
-		return AddElasticOpenTelemetryCore(services, new(configuration));
+		return AddElasticOpenTelemetryCore(services, new(configuration), null);
 	}
 
 	/// <summary>
@@ -126,13 +127,46 @@ public static class ServiceCollectionExtensions
 			throw new ArgumentNullException(nameof(options));
 #endif
 
-		return AddElasticOpenTelemetryCore(services, new(configuration, options));
+		return AddElasticOpenTelemetryCore(services, new(configuration, options), null);
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal static IOpenTelemetryBuilder AddElasticOpenTelemetryCore(IServiceCollection services, CompositeElasticOpenTelemetryOptions options)
+	/// <summary>
+	/// <inheritdoc cref="AddElasticOpenTelemetry(IServiceCollection)"/>
+	/// </summary>
+	/// <param name="services"><inheritdoc cref="AddElasticOpenTelemetry(IServiceCollection)" path="/param[@name='services']"/></param>
+	/// <param name="configuration">
+	/// An <see cref="IConfiguration"/> instance from which to attempt binding of configuration values.
+	/// </param>
+	/// <param name="builderOptions">TODO</param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="services"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configuration"/> is null.</exception>
+	/// <returns><inheritdoc cref="AddElasticOpenTelemetry(IServiceCollection)"/></returns>
+	internal static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection services,
+		IConfiguration configuration, BuilderOptions<IOpenTelemetryBuilder> builderOptions)
 	{
-		var builder = services.AddOpenTelemetry().WithElasticDefaultsCore(options);
+#if NET
+		ArgumentNullException.ThrowIfNull(services);
+		ArgumentNullException.ThrowIfNull(configuration);
+#else
+		if (services is null)
+			throw new ArgumentNullException(nameof(services));
+
+		if (configuration is null)
+			throw new ArgumentNullException(nameof(configuration));
+#endif
+
+		return AddElasticOpenTelemetryCore(services, new(configuration), builderOptions);
+	}
+
+	// TODO - Overloads accepting Action<IOpenTelemetryBuilder>
+
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	internal static IOpenTelemetryBuilder AddElasticOpenTelemetryCore(
+		IServiceCollection services,
+		CompositeElasticOpenTelemetryOptions options,
+		BuilderOptions<IOpenTelemetryBuilder> builderOptions)
+	{
+		var builder = services.AddOpenTelemetry().WithElasticDefaultsCore(options, builderOptions);
 
 		if (!services.Any((ServiceDescriptor d) => d.ServiceType == typeof(IHostedService) && d.ImplementationType == typeof(ElasticOpenTelemetryService)))
 		{
