@@ -262,10 +262,13 @@ public static class TracerProviderBuilderExtensions
 
 		builder.ConfigureResource(r => r.WithElasticDefaults(builderState, services));
 
-		// TODO - Log this
-		// When services is not null here, the options will have already been configured by the calling code.
+		// When services is not null here, the options will have already been configured by the calling code so
+		// we don't need to do it again.
 		if (services is null)
+		{
 			builder.ConfigureServices(sc => sc.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions));
+			logger.LogConfiguredOtlpExporterOptions();
+		}
 
 #if NET9_0_OR_GREATER
 		// .NET 9 introduced semantic convention compatible instrumentation in System.Net.Http so it's recommended to no longer
