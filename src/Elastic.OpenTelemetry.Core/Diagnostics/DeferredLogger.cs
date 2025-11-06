@@ -17,13 +17,13 @@ namespace Elastic.OpenTelemetry.Diagnostics;
 /// Log entries are stored in a concurrent queue and drained to the file logger.
 /// Log entries are only captured if file logging is enabled in the options.
 /// </remarks>
-internal sealed class DeferredFileLogger : ILogger
+internal sealed class DeferredLogger : ILogger
 {
 	private readonly bool _isEnabled = false;
 	private readonly LogLevel _configuredLogLevel;
 	private readonly ConcurrentQueue<string> _logQueue = new();
 
-	public DeferredFileLogger(CompositeElasticOpenTelemetryOptions options)
+	public DeferredLogger(CompositeElasticOpenTelemetryOptions options)
 	{
 		_isEnabled = options.GlobalLogEnabled && options.LogTargets.HasFlag(LogTargets.File);
 		_configuredLogLevel = options.LogLevel;
@@ -57,18 +57,18 @@ internal sealed class DeferredFileLogger : ILogger
 		}
 	}
 
-	private static DeferredFileLogger? Instance;
+	private static DeferredLogger? Instance;
 
 	internal static ILogger GetOrCreate(CompositeElasticOpenTelemetryOptions options)
 	{
 		// We only create a DeferredFileLogger if file logging is enabled
 		if (options.GlobalLogEnabled && options.LogTargets.HasFlag(LogTargets.File))
-			return Instance ??= new DeferredFileLogger(options);
+			return Instance ??= new DeferredLogger(options);
 
 		return NullLogger.Instance;
 	}
 
-	internal static bool TryGetInstance([NotNullWhen(true)] out DeferredFileLogger? instance)
+	internal static bool TryGetInstance([NotNullWhen(true)] out DeferredLogger? instance)
 	{
 		instance = Instance;
 		return instance is not null;

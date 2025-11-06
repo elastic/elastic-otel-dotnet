@@ -48,7 +48,8 @@ internal static class SignalBuilder
 	internal static ILogger GetLogger(
 		ElasticOpenTelemetryComponents? components,
 		CompositeElasticOpenTelemetryOptions? options) =>
-			components?.Logger ?? options?.AdditionalLogger ?? NullLogger.Instance;
+			components?.Logger ?? options?.AdditionalLogger ??
+			(options is not null ? DeferredLogger.GetOrCreate(options) : NullLogger.Instance);
 
 	/// <summary>
 	/// Returns the most relevant <see cref="ILogger"/> for builder extension methods to use.
@@ -62,7 +63,8 @@ internal static class SignalBuilder
 		if (builderState is not null)
 			return builderState.Components.Logger;
 
-		var logger = components?.Logger ?? options?.AdditionalLogger ?? NullLogger.Instance;
+		var logger = components?.Logger ?? options?.AdditionalLogger ??
+			(options is not null ? DeferredLogger.GetOrCreate(options) : NullLogger.Instance);
 
 		if (BuilderStateTable.TryGetValue(builder, out builderState))
 			logger = builderState.Components.Logger;
@@ -81,17 +83,14 @@ internal static class SignalBuilder
 		BuilderOptions<T> builderOptions,
 		Action<BuilderContext<T>> configureBuilder) where T : class
 	{
-		var providerBuilderName = builder.GetType().Name;
+		// FullName may return null so we fallback to Name when required.
+		var providerBuilderName = builder.GetType().FullName ?? builder.GetType().Name;
 
 		if (BuilderStateTable.TryGetValue(builder, out var existingBuilderState))
 		{
 			return HandleExistingBuilderState(builder, providerBuilderName, existingBuilderState);
 		}
 
-		// TODO - If the builder is not bootstrapped, the logger will be NullLogger
-		// We should consider creating a temp logger if the options specific the expected log level
-		// We can also reach into services for ILoggerFactory and create the additional logger.
-		// Add a fallback func to GetLogger which can be null or passed in from here.
 		var logger = GetLogger(components, options);
 		var builderInstanceId = Guid.NewGuid().ToString(); // Used in logging to track duplicate calls to the same builder
 

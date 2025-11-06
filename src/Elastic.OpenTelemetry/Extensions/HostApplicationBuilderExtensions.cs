@@ -133,7 +133,7 @@ public static class HostApplicationBuilderExtensions
 			DeferAddOtlpExporter = false
 		};
 
-		var otelBuilder = builder.Services.AddElasticOpenTelemetry(builder.Configuration, builderOptions);
+		builder.Services.AddElasticOpenTelemetry(builder.Configuration, builderOptions);
 
 		return builder;
 	}

@@ -11,6 +11,7 @@ using Elastic.OpenTelemetry.Exporters;
 using Elastic.OpenTelemetry.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Exporter;
 
@@ -360,9 +361,12 @@ public static class ServiceCollectionExtensions
 		CompositeElasticOpenTelemetryOptions options,
 		BuilderOptions<IOpenTelemetryBuilder> builderOptions)
 	{
-		services.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions);
+		var logger = DeferredLogger.GetOrCreate(options);
 
-		var builder = services.AddOpenTelemetry().WithElasticDefaultsCore(options, builderOptions, l => l.LogConfiguredOtlpExporterOptions());
+		services.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions);
+		logger.LogConfiguredOtlpExporterOptions();
+
+		var builder = services.AddOpenTelemetry().WithElasticDefaultsCore(options, builderOptions);
 
 		if (!services.Any((ServiceDescriptor d) => d.ServiceType == typeof(IHostedService) && d.ImplementationType == typeof(ElasticOpenTelemetryService)))
 		{

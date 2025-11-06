@@ -123,16 +123,12 @@ public static class OpenTelemetryBuilderExtensions
 	/// <param name="builder">The <see cref="IOpenTelemetryBuilder"/> being configured.</param>
 	/// <param name="options">The <see cref="CompositeElasticOpenTelemetryOptions"/> used to configure the Elastic Distribution of OpenTelemetry (EDOT) .NET.</param>
 	/// <param name="builderOptions">The <see cref="BuilderOptions{IOpenTelemetryBuilder}"/> used to configure the builder.</param>
-	/// <param name="deferredLogging">An optional action to perform deferred logging.
-	/// This is used when the caller doesn't yet have access to the EDOT .NET <see cref="ILogger"/> instance.
-	/// Logs are written as soon as a logger is available.</param>
 	/// <returns></returns>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	internal static IOpenTelemetryBuilder WithElasticDefaultsCore(
 		this IOpenTelemetryBuilder builder,
 		CompositeElasticOpenTelemetryOptions options,
-		BuilderOptions<IOpenTelemetryBuilder> builderOptions,
-		Action<ILogger>? deferredLogging = null)
+		BuilderOptions<IOpenTelemetryBuilder> builderOptions)
 	{
 		var callCount = Interlocked.Increment(ref WithElasticDefaultsCallCount);
 
@@ -140,19 +136,6 @@ public static class OpenTelemetryBuilderExtensions
 		var providerBuilderName = builder.GetType().FullName ?? builder.GetType().Name;
 
 		var logger = SignalBuilder.GetLogger(builder, null, options, null);
-
-		var usingTemporaryLogger = false;
-		if (logger is NullLogger)
-		{
-			logger = DeferredFileLogger.GetOrCreate(options);
-			usingTemporaryLogger = true;
-		}
-
-		// Perform any deferred logging now that we have a logger.
-		if (deferredLogging is not null)
-		{
-			deferredLogging(logger);
-		}
 
 		if (callCount > 1)
 		{
@@ -169,11 +152,6 @@ public static class OpenTelemetryBuilderExtensions
 		}
 
 		SignalBuilder.WithElasticDefaults(builder, options, null, builder.Services, builderOptions, ConfigureBuilder);
-
-		if (usingTemporaryLogger && logger is CompositeLogger compositeLogger)
-		{
-			compositeLogger.Dispose();
-		}
 
 		return builder;
 	}

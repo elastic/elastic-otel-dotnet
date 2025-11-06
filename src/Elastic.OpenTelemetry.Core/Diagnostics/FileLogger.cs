@@ -56,10 +56,10 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 			_streamWriter.WriteLine("DateTime (UTC)           Thread  SpanId  Level         Message");
 			_streamWriter.WriteLine();
 
-			if (DeferredFileLogger.TryGetInstance(out var deferredLogger))
+			if (DeferredLogger.TryGetInstance(out var deferredLogger))
 			{
 				deferredLogger.DrainLogQueue(_streamWriter);
-				DeferredFileLogger.ReleaseInstance();
+				DeferredLogger.ReleaseInstance();
 			}
 
 			WritingTask = Task.Run(async () =>
