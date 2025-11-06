@@ -48,7 +48,7 @@ public static class LoggingProviderBuilderExtensions
 			throw new ArgumentNullException(nameof(builder));
 #endif
 
-		return WithElasticDefaultsCore(builder, null, null, null);
+		return WithElasticDefaultsCore(builder, null, null, null, default);
 	}
 
 	/// <summary>
@@ -72,7 +72,7 @@ public static class LoggingProviderBuilderExtensions
 			throw new ArgumentNullException(nameof(options));
 #endif
 
-		return WithElasticDefaultsCore(builder, new(options), null, null);
+		return WithElasticDefaultsCore(builder, new(options), null, null, default);
 	}
 
 	/// <summary>
@@ -95,19 +95,20 @@ public static class LoggingProviderBuilderExtensions
 		if (configuration is null)
 			throw new ArgumentNullException(nameof(configuration));
 #endif
-		return WithElasticDefaultsCore(builder, new(configuration), null, null);
+		return WithElasticDefaultsCore(builder, new(configuration), null, null, default);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	internal static LoggerProviderBuilder WithElasticDefaults(this LoggerProviderBuilder builder, ElasticOpenTelemetryComponents components, IServiceCollection? services) =>
-		WithElasticDefaultsCore(builder, components.Options, components, services);
+		WithElasticDefaultsCore(builder, components.Options, components, services, default);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	internal static LoggerProviderBuilder WithElasticDefaultsCore(
 		this LoggerProviderBuilder builder,
 		CompositeElasticOpenTelemetryOptions? options,
 		ElasticOpenTelemetryComponents? components,
-		IServiceCollection? services)
+		IServiceCollection? services,
+		BuilderOptions<LoggerProviderBuilder> builderOptions)
 	{
 		var logger = SignalBuilder.GetLogger(builder, components, options, null);
 
@@ -122,13 +123,18 @@ public static class LoggingProviderBuilderExtensions
 			logger.LogWithElasticDefaultsCallCount(callCount, nameof(LoggerProviderBuilder));
 		}
 
-		return SignalBuilder.WithElasticDefaults(builder, Signals.Traces, options, components, services, ConfigureBuilder);
+		return SignalBuilder.WithElasticDefaults(builder, options, components, services, builderOptions, ConfigureBuilder);
 
-		static void ConfigureBuilder(LoggerProviderBuilder builder, BuilderState builderState, IServiceCollection? services)
+		static void ConfigureBuilder(BuilderContext<LoggerProviderBuilder> builderContext)
 		{
+			// TODO - Should we use the actual builder type full name here?
 			const string loggingProviderName = nameof(LoggerProviderBuilder);
+
+			var builder = builderContext.Builder;
+			var builderState = builderContext.BuilderState;
 			var components = builderState.Components;
 			var logger = components.Logger;
+			var services = builderContext.Services;
 
 			logger.LogConfiguringBuilder(loggingProviderName, builderState.InstanceIdentifier);
 
@@ -157,6 +163,8 @@ public static class LoggingProviderBuilderExtensions
 					});
 				}
 			}
+
+			// TODO - Support BuilderOptions and defer adding the exporter when required
 
 			if (components.Options.SkipOtlpExporter)
 			{

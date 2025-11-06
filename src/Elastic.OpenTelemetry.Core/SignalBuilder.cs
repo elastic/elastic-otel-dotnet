@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
 namespace Elastic.OpenTelemetry.Core;
@@ -30,6 +31,7 @@ namespace Elastic.OpenTelemetry.Core;
 ///  <item><see cref="TracerProviderBuilder"/></item>
 ///  <item><see cref="MeterProviderBuilder"/></item>
 ///  <item><see cref="LoggerProviderBuilder"/></item>
+///  <item><see cref="ResourceBuilder"/></item>
 ///</list>
 /// </remarks>
 internal static class SignalBuilder
@@ -73,8 +75,8 @@ internal static class SignalBuilder
 	/// </summary>
 	internal static T WithElasticDefaults<T>(
 		T builder,
-		ElasticOpenTelemetryComponents? components,
 		CompositeElasticOpenTelemetryOptions? options,
+		ElasticOpenTelemetryComponents? components,
 		IServiceCollection? services,
 		BuilderOptions<T> builderOptions,
 		Action<BuilderContext<T>> configureBuilder) where T : class
@@ -91,7 +93,7 @@ internal static class SignalBuilder
 
 		// When dealing with a signal specific builder, we need to check if that signal is enabled.
 		// If not, we can log and return early.
-		if (builder is not IOpenTelemetryBuilder)
+		if (builder is not IOpenTelemetryBuilder && builder is not ResourceBuilder)
 		{
 			var configuredSignals = components?.Options.Signals ?? options?.Signals ?? Signals.All;
 
@@ -116,7 +118,6 @@ internal static class SignalBuilder
 			}
 		}
 
-#pragma warning disable IDE0063 // Use simple 'using' statement
 		// This should not be a hot path, so locking here is reasonable.
 		using (var scope = Lock.EnterScope())
 		{
@@ -152,7 +153,6 @@ internal static class SignalBuilder
 			components.Logger.LogStoringBuilderState(providerBuilderName, builderInstanceId);
 			BuilderStateTable.Add(builder, builderState);
 		}
-#pragma warning restore IDE0063 // Use simple 'using' statement
 
 		return builder;
 

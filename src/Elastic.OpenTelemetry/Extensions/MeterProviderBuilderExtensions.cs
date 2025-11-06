@@ -14,6 +14,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry.Exporter;
+using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 
@@ -54,7 +55,7 @@ public static class MeterProviderBuilderExtensions
 			throw new ArgumentNullException(nameof(builder));
 #endif
 
-		return WithElasticDefaultsCore(builder, null, null, null);
+		return WithElasticDefaultsCore(builder, null, null, null, default);
 	}
 
 	/// <summary>
@@ -78,7 +79,7 @@ public static class MeterProviderBuilderExtensions
 			throw new ArgumentNullException(nameof(options));
 #endif
 
-		return WithElasticDefaultsCore(builder, new(options), null, null);
+		return WithElasticDefaultsCore(builder, new(options), null, null, default);
 	}
 
 	/// <summary>
@@ -102,7 +103,7 @@ public static class MeterProviderBuilderExtensions
 		if (configuration is null)
 			throw new ArgumentNullException(nameof(configuration));
 #endif
-		return WithElasticDefaultsCore(builder, new(configuration), null, null);
+		return WithElasticDefaultsCore(builder, new(configuration), null, null, default);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -110,20 +111,20 @@ public static class MeterProviderBuilderExtensions
 		this MeterProviderBuilder builder,
 		ElasticOpenTelemetryComponents components,
 		IServiceCollection serviceCollection) =>
-			WithElasticDefaultsCore(builder, components.Options, components, serviceCollection);
+			WithElasticDefaultsCore(builder, components.Options, components, serviceCollection, default);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	internal static MeterProviderBuilder WithElasticDefaults(
 		this MeterProviderBuilder builder,
 		IConfiguration configuration,
 		IServiceCollection serviceCollection) =>
-			WithElasticDefaultsCore(builder, new(configuration), null, serviceCollection);
+			WithElasticDefaultsCore(builder, new(configuration), null, serviceCollection, default);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	internal static MeterProviderBuilder WithElasticDefaults(
 		this MeterProviderBuilder builder,
 		IServiceCollection serviceCollection) =>
-			WithElasticDefaultsCore(builder, null, null, serviceCollection);
+			WithElasticDefaultsCore(builder, null, null, serviceCollection, default);
 
 	[UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026", Justification = "The calls to `AddSqlClientInstrumentation` and `AssemblyScanning.AddInstrumentationViaReflection` " +
 		"are guarded by a RuntimeFeature.IsDynamicCodeSupported` check and therefore this method is safe to call in AoT scenarios.")]
@@ -131,7 +132,8 @@ public static class MeterProviderBuilderExtensions
 		this MeterProviderBuilder builder,
 		CompositeElasticOpenTelemetryOptions? options,
 		ElasticOpenTelemetryComponents? components,
-		IServiceCollection? services)
+		IServiceCollection? services,
+		BuilderOptions<MeterProviderBuilder> builderOptions)
 	{
 		var logger = SignalBuilder.GetLogger(builder, components, options, null);
 
@@ -146,13 +148,18 @@ public static class MeterProviderBuilderExtensions
 			logger.LogWithElasticDefaultsCallCount(callCount, nameof(MeterProviderBuilder));
 		}
 
-		return SignalBuilder.WithElasticDefaults(builder, Signals.Traces, options, components, services, ConfigureBuilder);
+		return SignalBuilder.WithElasticDefaults(builder, options, components, services, builderOptions, ConfigureBuilder);
 
-		static void ConfigureBuilder(MeterProviderBuilder builder, BuilderState builderState, IServiceCollection? services)
+		static void ConfigureBuilder(BuilderContext<MeterProviderBuilder> builderContext)
 		{
+			// TODO - Should we use the actual builder type full name here?
 			const string meterProviderBuilderName = nameof(MeterProviderBuilder);
+
+			var builder = builderContext.Builder;
+			var builderState = builderContext.BuilderState;
 			var components = builderState.Components;
 			var logger = components.Logger;
+			var services = builderContext.Services;
 
 			logger.LogConfiguringBuilder(meterProviderBuilderName, builderState.InstanceIdentifier);
 

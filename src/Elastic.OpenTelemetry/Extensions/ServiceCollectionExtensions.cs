@@ -41,7 +41,7 @@ public static class ServiceCollectionExtensions
 			throw new ArgumentNullException(nameof(services));
 #endif
 
-		return AddElasticOpenTelemetryCore(services, CompositeElasticOpenTelemetryOptions.DefaultOptions);
+		return AddElasticOpenTelemetryCore(services, CompositeElasticOpenTelemetryOptions.DefaultOptions, default);
 	}
 
 	/// <summary>
@@ -67,7 +67,7 @@ public static class ServiceCollectionExtensions
 			throw new ArgumentNullException(nameof(options));
 #endif
 
-		return AddElasticOpenTelemetryCore(services, new(options));
+		return AddElasticOpenTelemetryCore(services, new(options), default);
 	}
 
 	/// <summary>
@@ -93,7 +93,7 @@ public static class ServiceCollectionExtensions
 			throw new ArgumentNullException(nameof(configuration));
 #endif
 
-		return AddElasticOpenTelemetryCore(services, new(configuration), null);
+		return AddElasticOpenTelemetryCore(services, new(configuration), default);
 	}
 
 	/// <summary>
@@ -127,7 +127,7 @@ public static class ServiceCollectionExtensions
 			throw new ArgumentNullException(nameof(options));
 #endif
 
-		return AddElasticOpenTelemetryCore(services, new(configuration, options), null);
+		return AddElasticOpenTelemetryCore(services, new(configuration, options), default);
 	}
 
 	/// <summary>

@@ -51,7 +51,7 @@ public static class TracerProviderBuilderExtensions
 			throw new ArgumentNullException(nameof(builder));
 #endif
 
-		return WithElasticDefaultsCore(builder, null, null, null, null);
+		return WithElasticDefaultsCore(builder, null, null, null, default);
 	}
 
 	/// <summary>
@@ -81,8 +81,9 @@ public static class TracerProviderBuilderExtensions
 		if (configureBuilder is null)
 			throw new ArgumentNullException(nameof(configureBuilder));
 #endif
+		var builderOptions = new BuilderOptions<TracerProviderBuilder> { UserProvidedConfigureBuilder = configureBuilder };
 
-		return WithElasticDefaultsCore(builder, null, null, null, configureBuilder);
+		return WithElasticDefaultsCore(builder, null, null, null, builderOptions);
 	}
 
 	/// <summary>
@@ -106,7 +107,7 @@ public static class TracerProviderBuilderExtensions
 			throw new ArgumentNullException(nameof(options));
 #endif
 
-		return WithElasticDefaultsCore(builder, new(options), null, null, null);
+		return WithElasticDefaultsCore(builder, new(options), null, null, default);
 	}
 
 	/// <summary>
@@ -139,7 +140,9 @@ public static class TracerProviderBuilderExtensions
 			throw new ArgumentNullException(nameof(configureBuilder));
 #endif
 
-		return WithElasticDefaultsCore(builder, new(options), null, null, configureBuilder);
+		var builderOptions = new BuilderOptions<TracerProviderBuilder> { UserProvidedConfigureBuilder = configureBuilder };
+
+		return WithElasticDefaultsCore(builder, new(options), null, null, builderOptions);
 	}
 
 	/// <summary>
@@ -162,7 +165,7 @@ public static class TracerProviderBuilderExtensions
 		if (configuration is null)
 			throw new ArgumentNullException(nameof(configuration));
 #endif
-		return WithElasticDefaultsCore(builder, new(configuration), null, null, null);
+		return WithElasticDefaultsCore(builder, new(configuration), null, null, default);
 	}
 
 	/// <summary>
@@ -194,28 +197,38 @@ public static class TracerProviderBuilderExtensions
 		if (configureBuilder is null)
 			throw new ArgumentNullException(nameof(configureBuilder));
 #endif
-		return WithElasticDefaultsCore(builder, new(configuration), null, null, configureBuilder);
+		var builderOptions = new BuilderOptions<TracerProviderBuilder> { UserProvidedConfigureBuilder = configureBuilder };
+
+		return WithElasticDefaultsCore(builder, new(configuration), null, null, builderOptions);
 	}
 
 	internal static TracerProviderBuilder WithElasticDefaults(
 		this TracerProviderBuilder builder,
 		IConfiguration configuration,
-		IServiceCollection serviceCollection,
-		Action<TracerProviderBuilder>? configure) =>
-			WithElasticDefaultsCore(builder, new(configuration), null, serviceCollection, configure);
+		IServiceCollection serviceCollection) =>
+			WithElasticDefaultsCore(builder, new(configuration), null, serviceCollection, default);
 
 	internal static TracerProviderBuilder WithElasticDefaults(
 		this TracerProviderBuilder builder,
-		BuilderState builderState,
-		BuilderContext<TracerProviderBuilder> builderContext) =>
-			WithElasticDefaultsCore(builder, builderState, builderContext);
+		ElasticOpenTelemetryComponents components,
+		IServiceCollection? services) =>
+			WithElasticDefaultsCore(builder, components.Options, components, services, default);
+
+	internal static TracerProviderBuilder WithElasticDefaults(
+		this TracerProviderBuilder builder,
+		ElasticOpenTelemetryComponents components,
+		IServiceCollection? services,
+		BuilderOptions<TracerProviderBuilder> builderOptions) =>
+			WithElasticDefaultsCore(builder, components.Options, components, services, builderOptions);
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private static TracerProviderBuilder WithElasticDefaultsCore(BuilderContext<TracerProviderBuilder> builderContext)
+	private static TracerProviderBuilder WithElasticDefaultsCore(
+		TracerProviderBuilder builder,
+		CompositeElasticOpenTelemetryOptions? options,
+		ElasticOpenTelemetryComponents? components,
+		IServiceCollection? services,
+		BuilderOptions<TracerProviderBuilder> builderOptions)
 	{
-		var builder = builderContext.Builder;
-		var options = builderContext.BuilderState.Components.Options;
-		var components = builderContext.BuilderState.Components;
 		var logger = SignalBuilder.GetLogger(builder, components, options, null);
 
 		var callCount = Interlocked.Increment(ref WithElasticDefaultsCallCount);
@@ -229,7 +242,7 @@ public static class TracerProviderBuilderExtensions
 			logger.LogWithElasticDefaultsCallCount(callCount, nameof(TracerProviderBuilder));
 		}
 
-		return SignalBuilder.WithElasticDefaults(builder, Signals.Traces, options, components, builderContext, ConfigureBuilder);
+		return SignalBuilder.WithElasticDefaults(builder, options, components, services, builderOptions, ConfigureBuilder);
 	}
 
 	[UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026", Justification = "The call to AssemblyScanning.AddInstrumentationViaReflection` " +

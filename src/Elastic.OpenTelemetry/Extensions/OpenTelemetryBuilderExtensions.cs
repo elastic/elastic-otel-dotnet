@@ -59,7 +59,7 @@ public static class OpenTelemetryBuilderExtensions
 			throw new ArgumentNullException(nameof(builder));
 #endif
 
-		return WithElasticDefaultsCore(builder, CompositeElasticOpenTelemetryOptions.DefaultOptions, null);
+		return WithElasticDefaultsCore(builder, CompositeElasticOpenTelemetryOptions.DefaultOptions, default);
 	}
 
 	/// <summary>
@@ -84,7 +84,7 @@ public static class OpenTelemetryBuilderExtensions
 			throw new ArgumentNullException(nameof(configuration));
 #endif
 
-		return WithElasticDefaultsCore(builder, new(configuration), null);
+		return WithElasticDefaultsCore(builder, new(configuration), default);
 	}
 
 	/// <summary>
@@ -112,7 +112,7 @@ public static class OpenTelemetryBuilderExtensions
 			throw new ArgumentNullException(nameof(options));
 #endif
 
-		return WithElasticDefaultsCore(builder, new(options), null);
+		return WithElasticDefaultsCore(builder, new(options), default);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -319,6 +319,8 @@ public static class OpenTelemetryBuilderExtensions
 			throw new ArgumentNullException(nameof(configure));
 #endif
 
+		// TODO - switch to BuilderOptions and defer skip OTLP etc.
+
 		return builder.WithMetrics(mpb =>
 			{
 				mpb.WithElasticDefaults(builder.Services);
@@ -437,6 +439,8 @@ public static class OpenTelemetryBuilderExtensions
 			throw new ArgumentNullException(nameof(configure));
 #endif
 
+		// TODO - switch to BuilderOptions and defer skip OTLP etc.
+
 		return builder.WithTracing(tpb =>
 			{
 				tpb.WithElasticDefaults();
@@ -477,7 +481,7 @@ public static class OpenTelemetryBuilderExtensions
 			throw new ArgumentNullException(nameof(configure));
 #endif
 
-
+		// TODO - switch to BuilderOptions and defer skip OTLP etc.
 
 		return builder.WithTracing(tpb =>
 		{
@@ -492,6 +496,7 @@ public static class OpenTelemetryBuilderExtensions
 		var components = builderContext.BuilderState.Components;
 		var options = builderContext.BuilderState.Components.Options;
 		var builderState = builderContext.BuilderState;
+		var services = builderContext.Services;
 
 		// Configure tracing, if the signal is enabled.
 		if (options.Signals.HasFlagFast(Signals.Traces))
@@ -504,7 +509,7 @@ public static class OpenTelemetryBuilderExtensions
 				DeferAddOtlpExporter = builderContext.BuilderOptions.UserProvidedConfigureBuilder is not null
 			};
 
-			builder.WithTracing(tpb => tpb.WithElasticDefaults(components, options,, null));
+			builder.WithTracing(tpb => tpb.WithElasticDefaults(components, services, builderOptions));
 		}
 		else
 		{
@@ -532,16 +537,37 @@ public static class OpenTelemetryBuilderExtensions
 				nameof(IOpenTelemetryBuilder), builderState.InstanceIdentifier);
 		}
 
-		if (builderContext.UserProvidedConfigureBuilder is not null)
+		if (builderContext.BuilderOptions.UserProvidedConfigureBuilder is not null)
 		{
 			// Run the user-provided builder configuration after the EDOT defaults have been applied.
-			builderContext.UserProvidedConfigureBuilder(builder);
+			builderContext.BuilderOptions.UserProvidedConfigureBuilder(builder);
+			// TODO - Log
 
-			// If tracing is enabled and the user provided their own configuration callback,
-			// we need to ensure the OTLP exporter is added after running the user-provided callback.
-			if (options.Signals.HasFlagFast(Signals.Traces) && !builderState.Components.Options.SkipOtlpExporter)
+			if (builderState.Components.Options.SkipOtlpExporter is false)
 			{
-				builder.WithTracing(tpb => tpb.AddOtlpExporter());
+				// If tracing is enabled and the user provided their own configuration callback,
+				// we need to ensure the OTLP exporter is added after running the user-provided callback.
+				if (options.Signals.HasFlagFast(Signals.Traces))
+				{
+					builder.WithTracing(tpb => tpb.AddOtlpExporter());
+					// TODO - Log
+				}
+
+				// If tracing is enabled and the user provided their own configuration callback,
+				// we need to ensure the OTLP exporter is added after running the user-provided callback.
+				if (options.Signals.HasFlagFast(Signals.Metrics))
+				{
+					builder.WithMetrics(tpb => tpb.AddOtlpExporter());
+					// TODO - Log
+				}
+
+				// If tracing is enabled and the user provided their own configuration callback,
+				// we need to ensure the OTLP exporter is added after running the user-provided callback.
+				if (options.Signals.HasFlagFast(Signals.Logs))
+				{
+					builder.WithLogging(tpb => tpb.AddOtlpExporter());
+					// TODO - Log
+				}
 			}
 		}
 	}
