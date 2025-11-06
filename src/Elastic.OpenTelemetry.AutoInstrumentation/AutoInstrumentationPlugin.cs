@@ -42,6 +42,7 @@ public class AutoInstrumentationPlugin
 		{
 			builder.ConfigureResource(r => r.WithElasticDefaultsCore(_components, null, null));
 
+			// TODO - Log this
 			builder.ConfigureServices(sc => sc.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions));
 
 			TracerProvderBuilderExtensions.AddActivitySourceWithLogging(builder, logger, "Elastic.Transport", "<n/a>");

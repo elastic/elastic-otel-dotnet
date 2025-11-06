@@ -141,44 +141,7 @@ public static class OpenTelemetryBuilderExtensions
 			return builder;
 		}
 
-		// Apply the EDOT defaults to the builder.
 		SignalBuilder.WithElasticDefaults(builder, options, null, builder.Services, builderOptions, ConfigureBuilder);
-
-		// If the user provided a configuration callback, invoke it now.
-		if (builderOptions.UserProvidedConfigureBuilder is not null)
-		{
-			// Run the user-provided builder configuration after the EDOT defaults have been applied.
-			builderOptions.UserProvidedConfigureBuilder(builder);
-			// TODO - Log
-
-			// For each signal (if it is enabled) we can now add the OTLP exporter after the
-			// user-provided configuration callback has run.
-
-			if (options.SkipOtlpExporter)
-			{
-				// TODO - Log skipped
-			}
-			else
-			{
-				if (options.Signals.HasFlagFast(Signals.Traces))
-				{
-					builder.WithTracing(tpb => tpb.AddOtlpExporter());
-					// TODO - Log
-				}
-
-				if (options.Signals.HasFlagFast(Signals.Metrics))
-				{
-					builder.WithMetrics(tpb => tpb.AddOtlpExporter());
-					// TODO - Log
-				}
-
-				if (options.Signals.HasFlagFast(Signals.Logs))
-				{
-					builder.WithLogging(tpb => tpb.AddOtlpExporter());
-					// TODO - Log
-				}
-			}
-		}
 
 		return builder;
 	}
@@ -549,6 +512,7 @@ public static class OpenTelemetryBuilderExtensions
 				// we need to ensure the OTLP exporter is added after running the user-provided callback.
 				if (options.Signals.HasFlagFast(Signals.Traces))
 				{
+					// TODO - Add default options?
 					builder.WithTracing(tpb => tpb.AddOtlpExporter());
 					// TODO - Log
 				}

@@ -165,9 +165,9 @@ public static class MeterProviderBuilderExtensions
 
 			builder.ConfigureResource(r => r.WithElasticDefaults(builderState, services));
 
+			// TODO - Log this
 			// When services is not null here, the options will have already been configured by the calling code.
-			if (services is null)
-				builder.ConfigureServices(sc => sc.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions));
+			builder.ConfigureServices(sc => sc.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions));
 
 			builder.ConfigureServices(sc => sc.Configure<MetricReaderOptions>(o =>
 				o.TemporalityPreference = MetricReaderTemporalityPreference.Delta));

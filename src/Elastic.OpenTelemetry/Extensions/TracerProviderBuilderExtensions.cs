@@ -262,6 +262,8 @@ public static class TracerProviderBuilderExtensions
 
 		builder.ConfigureResource(r => r.WithElasticDefaults(builderState, services));
 
+		// TODO - Log this
+		// When services is not null here, the options will have already been configured by the calling code.
 		if (services is null)
 			builder.ConfigureServices(sc => sc.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions));
 

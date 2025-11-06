@@ -88,6 +88,10 @@ internal static class SignalBuilder
 			return HandleExistingBuilderState(builder, providerBuilderName, existingBuilderState);
 		}
 
+		// TODO - If the builder is not bootstrapped, the logger will be NullLogger
+		// We should consider creating a temp logger if the options specific the expected log level
+		// We can also reach into services for ILoggerFactory and create the additional logger.
+		// Add a fallback func to GetLogger which can be null or passed in from here.
 		var logger = GetLogger(components, options);
 		var builderInstanceId = Guid.NewGuid().ToString(); // Used in logging to track duplicate calls to the same builder
 

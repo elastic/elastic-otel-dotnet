@@ -6,10 +6,12 @@ using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Core;
+using Elastic.OpenTelemetry.Exporters;
 using Elastic.OpenTelemetry.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using OpenTelemetry;
+using OpenTelemetry.Exporter;
 
 // ReSharper disable once CheckNamespace
 #pragma warning disable IDE0130 // Namespace does not match folder structure
@@ -166,6 +168,9 @@ public static class ServiceCollectionExtensions
 		CompositeElasticOpenTelemetryOptions options,
 		BuilderOptions<IOpenTelemetryBuilder> builderOptions)
 	{
+		// TODO - Log this
+		services.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions);
+
 		var builder = services.AddOpenTelemetry().WithElasticDefaultsCore(options, builderOptions);
 
 		if (!services.Any((ServiceDescriptor d) => d.ServiceType == typeof(IHostedService) && d.ImplementationType == typeof(ElasticOpenTelemetryService)))
