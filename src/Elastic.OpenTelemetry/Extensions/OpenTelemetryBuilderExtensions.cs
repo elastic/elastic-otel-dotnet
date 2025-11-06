@@ -144,7 +144,7 @@ public static class OpenTelemetryBuilderExtensions
 		var usingTemporaryLogger = false;
 		if (logger is NullLogger)
 		{
-			logger = DeferredLogger.GetOrCreate(options);
+			logger = DeferredFileLogger.GetOrCreate(options);
 			usingTemporaryLogger = true;
 		}
 

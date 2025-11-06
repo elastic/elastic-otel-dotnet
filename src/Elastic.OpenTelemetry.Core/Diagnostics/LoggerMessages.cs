@@ -54,6 +54,10 @@ internal static partial class LoggerMessages
 		"times across all {Target} instances.")]
 	public static partial void LogWithElasticDefaultsCallCount(this ILogger logger, int callCount, string target);
 
+	[LoggerMessage(EventId = 12, EventName = "ConfiguredOtlpExporterOptions", Level = LogLevel.Debug, Message = "The `OtlpExporterOptions` have been configured to use the" +
+		"`ElasticUserAgentHandler` to set the EDOT .NET user agent.")]
+	public static partial void LogConfiguredOtlpExporterOptions(this ILogger logger);
+
 
 
 
