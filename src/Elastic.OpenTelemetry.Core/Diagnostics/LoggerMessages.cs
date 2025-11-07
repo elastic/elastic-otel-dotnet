@@ -4,6 +4,7 @@
 
 using System.Buffers;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Core;
 using Microsoft.Extensions.Logging;
@@ -222,6 +223,11 @@ internal static partial class LoggerMessages
 		logger.LogDebug("Processor count: {ProcessorCount}", Environment.ProcessorCount);
 		logger.LogDebug("OS version: {OSVersion}", Environment.OSVersion);
 		logger.LogDebug("CLR version: {CLRVersion}", Environment.Version);
+#if NETFRAMEWORK || NETSTANDARD2_0
+		logger.LogDebug("Dynamic code supported: {IsDynamicCodeSupported}", true);
+#else
+		logger.LogDebug("Dynamic code supported: {IsDynamicCodeSupported}", RuntimeFeature.IsDynamicCodeSupported);
+#endif
 
 		string[] environmentVariables =
 		[

@@ -4,9 +4,11 @@
 
 using Elastic.OpenTelemetry;
 using Elastic.OpenTelemetry.Core;
+using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 
 #pragma warning disable IDE0130 // Namespace does not match folder structure
@@ -125,7 +127,7 @@ public static class HostApplicationBuilderExtensions
 		if (configure is null)
 			throw new ArgumentNullException(nameof(configure));
 #endif
-
+		
 		var builderOptions = new BuilderOptions<IOpenTelemetryBuilder>
 		{
 			UserProvidedConfigureBuilder = configure,
@@ -133,7 +135,8 @@ public static class HostApplicationBuilderExtensions
 			DeferAddOtlpExporter = false
 		};
 
-		builder.Services.AddElasticOpenTelemetry(builder.Configuration, builderOptions);
+		var calleeName = $"{typeof(HostApplicationBuilderExtensions).FullName}.{nameof(AddElasticOpenTelemetry)}";
+		builder.Services.AddElasticOpenTelemetry(builder.Configuration, builderOptions, calleeName);
 
 		return builder;
 	}

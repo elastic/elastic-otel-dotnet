@@ -2,6 +2,7 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry;
 using Elastic.OpenTelemetry.Configuration;
@@ -335,11 +336,12 @@ public static class ServiceCollectionExtensions
 	/// An <see cref="IConfiguration"/> instance from which to attempt binding of configuration values.
 	/// </param>
 	/// <param name="builderOptions">TODO</param>
+	/// <param name="calleeName">TODO</param>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="services"/> is null.</exception>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configuration"/> is null.</exception>
 	/// <returns><inheritdoc cref="AddElasticOpenTelemetry(IServiceCollection)"/></returns>
 	internal static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection services,
-		IConfiguration configuration, BuilderOptions<IOpenTelemetryBuilder> builderOptions)
+		IConfiguration configuration, BuilderOptions<IOpenTelemetryBuilder> builderOptions, string? calleeName = null)
 	{
 #if NET
 		ArgumentNullException.ThrowIfNull(services);
@@ -352,20 +354,25 @@ public static class ServiceCollectionExtensions
 			throw new ArgumentNullException(nameof(configuration));
 #endif
 
-		return AddElasticOpenTelemetryCore(services, new(configuration), builderOptions);
+		return AddElasticOpenTelemetryCore(services, new(configuration), builderOptions, calleeName);
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	internal static IOpenTelemetryBuilder AddElasticOpenTelemetryCore(
 		IServiceCollection services,
 		CompositeElasticOpenTelemetryOptions options,
-		BuilderOptions<IOpenTelemetryBuilder> builderOptions)
+		BuilderOptions<IOpenTelemetryBuilder> builderOptions,
+		string? calleeName = null)
 	{
 		var logger = DeferredLogger.GetOrCreate(options);
+
+		calleeName ??= $"{typeof(ServiceCollectionExtensions).FullName}.{nameof(AddElasticOpenTelemetryCore)}";
+		StackTraceHelper.LogCallerInfo(logger, calleeName);
 
 		services.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions);
 		logger.LogConfiguredOtlpExporterOptions();
 
+		// TODO - Pass a defer log caller info flag down so that we don't log in the With... methods.
 		var builder = services.AddOpenTelemetry().WithElasticDefaultsCore(options, builderOptions);
 
 		if (!services.Any((ServiceDescriptor d) => d.ServiceType == typeof(IHostedService) && d.ImplementationType == typeof(ElasticOpenTelemetryService)))

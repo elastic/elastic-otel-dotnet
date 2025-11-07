@@ -22,14 +22,16 @@ internal sealed class DeferredLogger : ILogger
 	private readonly bool _isEnabled = false;
 	private readonly LogLevel _configuredLogLevel;
 	private readonly ConcurrentQueue<string> _logQueue = new();
+	private readonly ILogger? _additionalLogger;
 
-	public DeferredLogger(CompositeElasticOpenTelemetryOptions options)
+	private DeferredLogger(CompositeElasticOpenTelemetryOptions options, ILogger? additionalLogger = null)
 	{
 		_isEnabled = options.GlobalLogEnabled && options.LogTargets.HasFlag(LogTargets.File);
 		_configuredLogLevel = options.LogLevel;
 
 		if (!_isEnabled)
 			return;
+		_additionalLogger = additionalLogger;
 	}
 
 	public IDisposable BeginScope<TState>(TState state) where TState : notnull => NullScope.Instance;
@@ -47,6 +49,8 @@ internal sealed class DeferredLogger : ILogger
 			logLine = $"{logLine}{Environment.NewLine}{exception}";
 
 		_logQueue.Enqueue(logLine);
+
+		_additionalLogger?.Log(logLevel, eventId, state, exception, formatter);
 	}
 
 	internal void DrainLogQueue(StreamWriter streamWriter)
@@ -63,7 +67,7 @@ internal sealed class DeferredLogger : ILogger
 	{
 		// We only create a DeferredFileLogger if file logging is enabled
 		if (options.GlobalLogEnabled && options.LogTargets.HasFlag(LogTargets.File))
-			return Instance ??= new DeferredLogger(options);
+			return Instance ??= new DeferredLogger(options, options.AdditionalLogger);
 
 		return NullLogger.Instance;
 	}

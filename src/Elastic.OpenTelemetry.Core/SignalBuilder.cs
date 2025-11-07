@@ -47,9 +47,16 @@ internal static class SignalBuilder
 	/// </summary>
 	internal static ILogger GetLogger(
 		ElasticOpenTelemetryComponents? components,
-		CompositeElasticOpenTelemetryOptions? options) =>
-			components?.Logger ?? options?.AdditionalLogger ??
-			(options is not null ? DeferredLogger.GetOrCreate(options) : NullLogger.Instance);
+		CompositeElasticOpenTelemetryOptions? options)
+	{
+		if (components?.Logger is not null)
+			return components.Logger;
+
+		if (options is not null)
+			return DeferredLogger.GetOrCreate(options);
+
+		return NullLogger.Instance;
+	}
 
 	/// <summary>
 	/// Returns the most relevant <see cref="ILogger"/> for builder extension methods to use.
@@ -63,13 +70,10 @@ internal static class SignalBuilder
 		if (builderState is not null)
 			return builderState.Components.Logger;
 
-		var logger = components?.Logger ?? options?.AdditionalLogger ??
-			(options is not null ? DeferredLogger.GetOrCreate(options) : NullLogger.Instance);
-
 		if (BuilderStateTable.TryGetValue(builder, out builderState))
-			logger = builderState.Components.Logger;
+			return builderState.Components.Logger;
 
-		return logger;
+		return GetLogger(components, options);
 	}
 
 	/// <summary>
@@ -181,14 +185,6 @@ internal static class SignalBuilder
 
 			return builder;
 		}
-	}
-
-	internal static T WithElasticDefaults<T>(
-		BuilderContext<T> builderContext,
-		Action<BuilderContext<T>> configureBuilder) where T : class
-	{
-		configureBuilder(builderContext);
-		return builderContext.Builder;
 	}
 
 	/// <summary>
