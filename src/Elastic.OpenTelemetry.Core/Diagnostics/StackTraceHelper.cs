@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 using System.Runtime.CompilerServices;
 #endif
 
-namespace Elastic.OpenTelemetry.Diagnostics;
+namespace Elastic.OpenTelemetry.Core.Diagnostics;
 
 internal static class StackTraceHelper
 {

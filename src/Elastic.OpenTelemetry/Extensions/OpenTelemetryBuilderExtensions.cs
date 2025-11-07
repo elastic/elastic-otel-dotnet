@@ -128,7 +128,7 @@ public static class OpenTelemetryBuilderExtensions
 	internal static IOpenTelemetryBuilder WithElasticDefaultsCore(
 		this IOpenTelemetryBuilder builder,
 		CompositeElasticOpenTelemetryOptions options,
-		BuilderOptions<IOpenTelemetryBuilder> builderOptions)
+		in BuilderOptions<IOpenTelemetryBuilder> builderOptions)
 	{
 		var callCount = Interlocked.Increment(ref WithElasticDefaultsCallCount);
 

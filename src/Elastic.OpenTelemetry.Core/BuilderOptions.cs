@@ -1,12 +1,7 @@
 namespace Elastic.OpenTelemetry.Core;
 
-internal readonly struct BuilderOptions<T> where T : class
-{
-	internal Action<T>? UserProvidedConfigureBuilder { get; init; }
-
-	/// <summary>
-	/// Used to indicate that the OTLP exporter should not be added by the current builder.
-	/// A callee takes responsibility for adding it later when configuring the parent builder.
-	/// </summary>
-	internal bool DeferAddOtlpExporter { get; init; }
-}
+internal readonly record struct BuilderOptions<T>(
+	Action<T>? UserProvidedConfigureBuilder,
+	bool DeferAddOtlpExporter,
+	bool SkipLogCallerInfo,
+	string? CalleeName = null) where T : class;

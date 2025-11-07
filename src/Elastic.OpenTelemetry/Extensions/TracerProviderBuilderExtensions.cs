@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Core;
+using Elastic.OpenTelemetry.Core.Diagnostics;
 using Elastic.OpenTelemetry.Diagnostics;
 using Elastic.OpenTelemetry.Exporters;
 using Elastic.OpenTelemetry.Instrumentation;
@@ -230,6 +231,13 @@ public static class TracerProviderBuilderExtensions
 		BuilderOptions<TracerProviderBuilder> builderOptions)
 	{
 		var logger = SignalBuilder.GetLogger(builder, components, options, null);
+
+		if (!builderOptions.SkipLogCallerInfo)
+		{
+			// We use `WithElasticDefaults` here as it's the public API name that users will be calling.
+			var calleeName = $"{typeof(TracerProvderBuilderExtensions).FullName}.{nameof(WithElasticDefaults)}";
+			StackTraceHelper.LogCallerInfo(logger, calleeName);
+		}
 
 		var callCount = Interlocked.Increment(ref WithElasticDefaultsCallCount);
 

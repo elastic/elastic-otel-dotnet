@@ -2,17 +2,16 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Core;
+using Elastic.OpenTelemetry.Core.Diagnostics;
 using Elastic.OpenTelemetry.Diagnostics;
 using Elastic.OpenTelemetry.Exporters;
 using Elastic.OpenTelemetry.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Exporter;
 
@@ -341,7 +340,7 @@ public static class ServiceCollectionExtensions
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configuration"/> is null.</exception>
 	/// <returns><inheritdoc cref="AddElasticOpenTelemetry(IServiceCollection)"/></returns>
 	internal static IOpenTelemetryBuilder AddElasticOpenTelemetry(this IServiceCollection services,
-		IConfiguration configuration, BuilderOptions<IOpenTelemetryBuilder> builderOptions, string? calleeName = null)
+		IConfiguration configuration, in BuilderOptions<IOpenTelemetryBuilder> builderOptions, string? calleeName = null)
 	{
 #if NET
 		ArgumentNullException.ThrowIfNull(services);
@@ -361,7 +360,7 @@ public static class ServiceCollectionExtensions
 	internal static IOpenTelemetryBuilder AddElasticOpenTelemetryCore(
 		IServiceCollection services,
 		CompositeElasticOpenTelemetryOptions options,
-		BuilderOptions<IOpenTelemetryBuilder> builderOptions,
+		in BuilderOptions<IOpenTelemetryBuilder> builderOptions,
 		string? calleeName = null)
 	{
 		var logger = DeferredLogger.GetOrCreate(options);
@@ -369,11 +368,16 @@ public static class ServiceCollectionExtensions
 		calleeName ??= $"{typeof(ServiceCollectionExtensions).FullName}.{nameof(AddElasticOpenTelemetryCore)}";
 		StackTraceHelper.LogCallerInfo(logger, calleeName);
 
+		// From this point on, we skip logging caller info as we have already logged the main caller entrypoint.
+		var nextBuilderOptions = builderOptions with
+		{
+			SkipLogCallerInfo = true
+		};
+
 		services.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions);
 		logger.LogConfiguredOtlpExporterOptions();
 
-		// TODO - Pass a defer log caller info flag down so that we don't log in the With... methods.
-		var builder = services.AddOpenTelemetry().WithElasticDefaultsCore(options, builderOptions);
+		var builder = services.AddOpenTelemetry().WithElasticDefaultsCore(options, nextBuilderOptions);
 
 		if (!services.Any((ServiceDescriptor d) => d.ServiceType == typeof(IHostedService) && d.ImplementationType == typeof(ElasticOpenTelemetryService)))
 		{
