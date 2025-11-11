@@ -6,7 +6,6 @@ using System.Diagnostics.Tracing;
 using System.Text;
 using System.Text.RegularExpressions;
 using Elastic.OpenTelemetry.Configuration;
-using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 namespace Elastic.OpenTelemetry.Diagnostics;

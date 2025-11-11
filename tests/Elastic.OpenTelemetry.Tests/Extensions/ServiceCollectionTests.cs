@@ -157,7 +157,7 @@ public class ServiceCollectionTests(ITestOutputHelper output)
 			.AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(json)))
 			.Build();
 
-		serviceCollection.AddElasticOpenTelemetry(config, options);
+		serviceCollection.AddElasticOpenTelemetryCore(new(config, options), default);
 
 		using var serviceProvider = serviceCollection.BuildServiceProvider();
 

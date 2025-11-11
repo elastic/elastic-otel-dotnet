@@ -43,9 +43,13 @@ internal static class ResourceBuilderExtensions
 
 		components.Logger.LogWithElasticDefaultsCallCount(callCount, nameof(ResourceBuilder));
 
-		return SignalBuilder.WithElasticDefaults(builder, components.Options, components, services,
-			(ResourceBuilder builder, BuilderState builderState, IServiceCollection? services) =>
+		var builderOptions = new BuilderOptions<ResourceBuilder>();
+
+		return SignalBuilder.WithElasticDefaults(builder, components.Options, components, services, builderOptions,
+			(BuilderContext<ResourceBuilder> builderContext) =>
 			{
+				var builderState = builderContext.BuilderState;
+
 				var attributes = new Dictionary<string, object>
 				{
 					{ ResourceSemanticConventions.AttributeServiceInstanceId, ApplicationInstanceId },

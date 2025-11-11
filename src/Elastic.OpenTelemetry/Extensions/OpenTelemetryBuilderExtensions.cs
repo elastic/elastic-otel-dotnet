@@ -7,15 +7,11 @@ using Elastic.OpenTelemetry;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Core;
 using Elastic.OpenTelemetry.Diagnostics;
-using Elastic.OpenTelemetry.Exporters;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Diagnostics.Metrics;
-using Microsoft.Extensions.Logging;
-using OpenTelemetry.Exporter;
+using Microsoft.Extensions.Hosting;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
-using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
 // Matching namespace with OpenTelemetryBuilder
@@ -25,7 +21,8 @@ namespace OpenTelemetry;
 
 /// <summary>
 /// Provides extension methods on the <see cref="IOpenTelemetryBuilder"/>
-/// used to register the Elastic Distribution of OpenTelemetry (EDOT) .NET defaults.
+/// used to register the Elastic Distribution of OpenTelemetry (EDOT) .NET
+/// <see href="https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/setup/edot-defaults">defaults</see>.
 /// </summary>
 public static class OpenTelemetryBuilderExtensions
 {
@@ -37,12 +34,45 @@ public static class OpenTelemetryBuilderExtensions
 	private static int WithElasticDefaultsCallCount;
 
 	/// <summary>
-	/// Enables collection of all signals using Elastic Distribution of OpenTelemetry .NET defaults.
+	/// Enables collection of all signals using Elastic Distribution of OpenTelemetry .NET
+	/// <see href="https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/setup/edot-defaults">defaults</see>.
 	/// </summary>
+	/// <remarks>
+	/// <para>
+	///   <b>Guidance:</b> Prefer using the <c>AddElasticOpenTelemetry</c> method on the <see cref="IHostApplicationBuilder"/>
+	///   or <see cref="IServiceCollection"/> rather than calling this method on the <see cref="IOpenTelemetryBuilder"/> directly.
+	/// </para>
+	/// <para>
+	///   The <c>WithElasticDefaults</c> methods are primarily intended for advanced scenarios, non-host-based applications or when developing
+	///   libraries that need to customize the OpenTelemetry configuration.
+	/// </para>
+	/// <para>
+	///   <b>Recommendation:</b>When not using <c>AddElasticOpenTelemetry</c>, it is strongly recommended to use the
+	///   <see cref="WithElasticDefaults(IOpenTelemetryBuilder, Action{IOpenTelemetryBuilder})"/> overload instead. This accepts
+	///   an <see cref="Action{IOpenTelemetryBuilder}"/> configuration action and ensures any customisations are applied before
+	///   the OTLP exporter is added.
+	/// </para>
+	/// </remarks>
 	/// <param name="builder">The <see cref="IOpenTelemetryBuilder"/> being configured.</param>
-	/// <returns>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
-	/// The supplied <see cref="IOpenTelemetryBuilder"/> for chaining calls.
+	/// <returns>
+	/// <para>
+	///   An instance of <see cref="IOpenTelemetryBuilder"/> that can be used to further configure the
+	///   OpenTelemetry SDK.
+	/// </para>
+	/// <para>
+	///   <b>Warning:</b> Any further configuration applied via the returned <see cref="IOpenTelemetryBuilder"/> will
+	///   be applied <em>after</em> the OTLP exporter has been added.
+	///   </para>
+	/// <para>
+	///   <b>Recommendation:</b>It is strongly recommended to use the <see cref="WithElasticDefaults(IOpenTelemetryBuilder, Action{IOpenTelemetryBuilder})"/> overload
+	///   to customise the builder instead. This accepts an <see cref="Action{IOpenTelemetryBuilder}"/> configuration action and ensures any
+	///   customisations are applied before the OTLP exporter is added.
+	/// </para>
+	/// <para>
+	///   Alternatively, the <see cref="ElasticOpenTelemetryOptions.SkipOtlpExporter"/> <see href="https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/configuration#skipotlpexporter">option</see>
+	///   can be used to prevent automatic addition of the OTLP exporter, allowing you to add it manually at a later stage.
+	/// </para>
 	/// </returns>
 	public static IOpenTelemetryBuilder WithElasticDefaults(this IOpenTelemetryBuilder builder)
 	{
@@ -53,18 +83,103 @@ public static class OpenTelemetryBuilderExtensions
 			throw new ArgumentNullException(nameof(builder));
 #endif
 
-		return WithElasticDefaultsCore(builder, CompositeElasticOpenTelemetryOptions.DefaultOptions);
+		return WithElasticDefaultsCore(builder, CompositeElasticOpenTelemetryOptions.DefaultOptions, default);
 	}
 
-	/// <summary>
-	/// <inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder)" />
-	/// </summary>
+	/// <summary><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder)" /></summary>
+	/// <remarks>
+	/// <para>
+	///   <b>Guidance:</b> Prefer using the <c>AddElasticOpenTelemetry</c> method on the <see cref="IHostApplicationBuilder"/>
+	///   or <see cref="IServiceCollection"/> rather than calling this method on the <see cref="IOpenTelemetryBuilder"/> directly.
+	/// </para>
+	/// <para>
+	///   The <c>WithElasticDefaults</c> methods are primarily intended for advanced scenarios, non-host-based applications or when developing
+	///   libraries that need to customize the OpenTelemetry configuration.
+	/// </para>
+	/// </remarks>
+	/// <param name="builder">The <see cref="IOpenTelemetryBuilder"/> being configured.</param>
+	/// <param name="configureBuilder">A <see cref="IOpenTelemetryBuilder"/> configuration action used to further customise
+	/// the OpenTelemetry SDK after Elastic Distribution of OpenTelemetry (EDOT) .NET defaults have been applied. This
+	/// callback is invoked before the OTLP exporter is added.</param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configureBuilder"/> is null.</exception>
+	/// The supplied <see cref="IOpenTelemetryBuilder"/> for chaining calls.
+	/// <returns>
+	/// <para>
+	///   An instance of <see cref="IOpenTelemetryBuilder"/> that can be used to further configure the
+	///   OpenTelemetry SDK.
+	/// </para>
+	/// <para>
+	///   <b>Warning:</b> Any further configuration applied via the returned <see cref="IOpenTelemetryBuilder"/> will
+	///   be applied <em>after</em> the OTLP exporter has been added.
+	///   </para>
+	/// <para>
+	///   <b>Recommendation:</b>It is strongly recommended to use the <paramref name="configureBuilder"/> parameter to customise
+	///   the builder instead. This accepts an <see cref="Action{IOpenTelemetryBuilder}"/> configuration action and ensures any
+	///   customisations are applied before the OTLP exporter is added.
+	/// </para>
+	/// <para>
+	///   Alternatively, the <see cref="ElasticOpenTelemetryOptions.SkipOtlpExporter"/> <see href="https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/configuration#skipotlpexporter">option</see>
+	///   can be used to prevent automatic addition of the OTLP exporter, allowing you to add it manually at a later stage.
+	/// </para>
+	/// </returns>
+	public static IOpenTelemetryBuilder WithElasticDefaults(this IOpenTelemetryBuilder builder, Action<IOpenTelemetryBuilder> configureBuilder)
+	{
+#if NET
+		ArgumentNullException.ThrowIfNull(builder);
+		ArgumentNullException.ThrowIfNull(configureBuilder);
+#else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+
+		if (configureBuilder is null)
+			throw new ArgumentNullException(nameof(configureBuilder));
+#endif
+		var builderOptions = new BuilderOptions<IOpenTelemetryBuilder> { UserProvidedConfigureBuilder = configureBuilder };
+		return WithElasticDefaultsCore(builder, CompositeElasticOpenTelemetryOptions.DefaultOptions, builderOptions);
+	}
+
+	/// <summary><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder)" /></summary>
+	/// <remarks>
+	/// <para>
+	///   <b>Guidance:</b> Prefer using the <c>AddElasticOpenTelemetry</c> method on the <see cref="IHostApplicationBuilder"/>
+	///   or <see cref="IServiceCollection"/> rather than calling this method on the <see cref="IOpenTelemetryBuilder"/> directly.
+	/// </para>
+	/// <para>
+	///   The <c>WithElasticDefaults</c> methods are primarily intended for advanced scenarios, non-host-based applications or when developing
+	///   libraries that need to customize the OpenTelemetry configuration.
+	/// </para>
+	/// <para>
+	///   <b>Recommendation:</b>When not using <c>AddElasticOpenTelemetry</c>, it is strongly recommended to use the
+	///   <see cref="WithElasticDefaults(IOpenTelemetryBuilder, IConfiguration, Action{IOpenTelemetryBuilder})"/> overload instead. This accepts
+	///   an <see cref="Action{IOpenTelemetryBuilder}"/> configuration callback and ensures any customisations are applied before
+	///   the OTLP exporter is added.
+	/// </para>
+	/// </remarks>
 	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder)" path="/param[@name='builder']"/></param>
 	/// <param name="configuration">An <see cref="IConfiguration"/> from which to attempt binding of Elastic Distribution of OpenTelemetry
 	/// (EDOT) options.</param>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configuration"/> is null.</exception>
-	/// <returns><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder)"/></returns>
+	/// <returns>
+	/// <para>
+	///   An instance of <see cref="IOpenTelemetryBuilder"/> that can be used to further configure the
+	///   OpenTelemetry SDK.
+	/// </para>
+	/// <para>
+	///   <b>Warning:</b> Any further configuration applied via the returned <see cref="IOpenTelemetryBuilder"/> will
+	///   be applied <em>after</em> the OTLP exporter has been added.
+	///   </para>
+	/// <para>
+	///   <b>Recommendation:</b>It is strongly recommended to use the <see cref="WithElasticDefaults(IOpenTelemetryBuilder, IConfiguration, Action{IOpenTelemetryBuilder})"/> overload
+	///   to customise the builder instead. This accepts an <see cref="Action{IOpenTelemetryBuilder}"/> configuration callback and ensures any
+	///   customisations are applied before the OTLP exporter is added.
+	/// </para>
+	/// <para>
+	///   Alternatively, the <see cref="ElasticOpenTelemetryOptions.SkipOtlpExporter"/> <see href="https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/configuration#skipotlpexporter">option</see>
+	///   can be used to prevent automatic addition of the OTLP exporter, allowing you to add it manually at a later stage.
+	/// </para>
+	/// </returns>
 	public static IOpenTelemetryBuilder WithElasticDefaults(this IOpenTelemetryBuilder builder, IConfiguration configuration)
 	{
 #if NET
@@ -78,12 +193,58 @@ public static class OpenTelemetryBuilderExtensions
 			throw new ArgumentNullException(nameof(configuration));
 #endif
 
-		return WithElasticDefaultsCore(builder, new(configuration));
+		return WithElasticDefaultsCore(builder, new(configuration), default);
+	}
+
+	/// <summary><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder)" /></summary>
+	/// <remarks><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder, Action{IOpenTelemetryBuilder})" /></remarks>
+	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder)" path="/param[@name='builder']"/></param>
+	/// <param name="configuration"><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder, IConfiguration)" path="/param[@name='configuration']"/></param>
+	/// <param name="configureBuilder"><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder, Action{IOpenTelemetryBuilder})" path="/param[@name='configureBuilder']"/></param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configuration"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configureBuilder"/> is null.</exception>
+	/// <returns><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder, Action{IOpenTelemetryBuilder})" /></returns>
+	public static IOpenTelemetryBuilder WithElasticDefaults(this IOpenTelemetryBuilder builder,
+		IConfiguration configuration, Action<IOpenTelemetryBuilder> configureBuilder)
+	{
+#if NET
+		ArgumentNullException.ThrowIfNull(builder);
+		ArgumentNullException.ThrowIfNull(configuration);
+		ArgumentNullException.ThrowIfNull(configureBuilder);
+#else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+
+		if (configuration is null)
+			throw new ArgumentNullException(nameof(configuration));
+
+		if (configureBuilder is null)
+			throw new ArgumentNullException(nameof(configureBuilder));
+#endif
+		var builderOptions = new BuilderOptions<IOpenTelemetryBuilder> { UserProvidedConfigureBuilder = configureBuilder };
+		return WithElasticDefaultsCore(builder, new(configuration), builderOptions);
 	}
 
 	/// <summary>
 	/// <inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder)" />
 	/// </summary>
+	/// <remarks>
+	/// <para>
+	///   <b>Guidance:</b> Prefer using the <c>AddElasticOpenTelemetry</c> method on the <see cref="IHostApplicationBuilder"/>
+	///   or <see cref="IServiceCollection"/> rather than calling this method on the <see cref="IOpenTelemetryBuilder"/> directly.
+	/// </para>
+	/// <para>
+	///   The <c>WithElasticDefaults</c> methods are primarily intended for advanced scenarios, non-host-based applications or when developing
+	///   libraries that need to customize the OpenTelemetry configuration.
+	/// </para>
+	/// <para>
+	///   <b>Recommendation:</b>When not using <c>AddElasticOpenTelemetry</c>, it is strongly recommended to use the
+	///   <see cref="WithElasticDefaults(IOpenTelemetryBuilder, ElasticOpenTelemetryOptions, Action{IOpenTelemetryBuilder})"/> overload instead. This accepts
+	///   an <see cref="Action{IOpenTelemetryBuilder}"/> configuration callback and ensures any customisations are applied before
+	///   the OTLP exporter is added.
+	/// </para>
+	/// </remarks>
 	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder)" path="/param[@name='builder']"/></param>
 	/// <param name="options">
 	/// An <see cref="ElasticOpenTelemetryOptions"/> instance used to configure the initial Elastic Distribution of OpenTelemetry (EDOT) .NET defaults.
@@ -92,7 +253,25 @@ public static class OpenTelemetryBuilderExtensions
 	/// </param>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="options"/> is null.</exception>
-	/// <returns><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder)" /></returns>
+	/// <returns>
+	/// <para>
+	///   An instance of <see cref="IOpenTelemetryBuilder"/> that can be used to further configure the
+	///   OpenTelemetry SDK.
+	/// </para>
+	/// <para>
+	///   <b>Warning:</b> Any further configuration applied via the returned <see cref="IOpenTelemetryBuilder"/> by calling <c>WithLogging</c>,
+	///   <c>WithTracing</c> or <c>WithMetrics</c> will be applied <em>after</em> the OTLP exporter has been added.
+	///   </para>
+	/// <para>
+	///   <b>Recommendation:</b>It is strongly recommended to use the <see cref="WithElasticDefaults(IOpenTelemetryBuilder, ElasticOpenTelemetryOptions, Action{IOpenTelemetryBuilder})"/>
+	///   overload to customise the builder instead. This accepts an <see cref="Action{IOpenTelemetryBuilder}"/> configuration callback and ensures any
+	///   customisations are applied before the OTLP exporter is added.
+	/// </para>
+	/// <para>
+	///   Alternatively, the <see cref="ElasticOpenTelemetryOptions.SkipOtlpExporter"/> <see href="https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/configuration#skipotlpexporter">option</see>
+	///   can be used to prevent automatic addition of the OTLP exporter, allowing you to add it manually at a later stage.
+	/// </para>
+	/// </returns>
 	public static IOpenTelemetryBuilder WithElasticDefaults(this IOpenTelemetryBuilder builder, ElasticOpenTelemetryOptions options)
 	{
 #if NET
@@ -106,55 +285,80 @@ public static class OpenTelemetryBuilderExtensions
 			throw new ArgumentNullException(nameof(options));
 #endif
 
-		return WithElasticDefaultsCore(builder, new(options));
+		return WithElasticDefaultsCore(builder, new(options), default);
 	}
 
-	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	internal static IOpenTelemetryBuilder WithElasticDefaultsCore(
-		this IOpenTelemetryBuilder builder,
-		CompositeElasticOpenTelemetryOptions options)
+	/// <summary><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder)" /></summary>
+	/// <remarks><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder, Action{IOpenTelemetryBuilder})" /></remarks>
+	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder)" path="/param[@name='builder']"/></param>
+	/// <param name="options"><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder, ElasticOpenTelemetryOptions)" path="/param[@name='options']"/></param>
+	/// <param name="configureBuilder"><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder, Action{IOpenTelemetryBuilder})" path="/param[@name='configureBuilder']"/></param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="options"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configureBuilder"/> is null.</exception>
+	/// <returns><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder, Action{IOpenTelemetryBuilder})" /></returns>
+	public static IOpenTelemetryBuilder WithElasticDefaults(this IOpenTelemetryBuilder builder,
+		ElasticOpenTelemetryOptions options, Action<IOpenTelemetryBuilder> configureBuilder)
 	{
-		var callCount = Interlocked.Increment(ref WithElasticDefaultsCallCount);
+#if NET
+		ArgumentNullException.ThrowIfNull(builder);
+		ArgumentNullException.ThrowIfNull(options);
+		ArgumentNullException.ThrowIfNull(configureBuilder);
+#else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
 
-		var providerBuilderName = builder.GetType().Name;
+		if (options is null)
+			throw new ArgumentNullException(nameof(options));
 
-		var logger = SignalBuilder.GetLogger(builder, null, options, null);
+		if (configureBuilder is null)
+			throw new ArgumentNullException(nameof(configureBuilder));
+#endif
 
-		if (callCount > 1)
-		{
-			logger.LogMultipleWithElasticDefaultsCallsWarning(callCount, nameof(IOpenTelemetryBuilder));
-		}
-
-		// If for some reason `WithElasticDefaults` is invoked with the `Signals` option set to
-		// none, we skip bootstrapping entirely. We log this as a warning since it's best to
-		// simply not call `WithElasticDefaults` in this scenario and it may indicate a misconfiguration.
-		if (options.Signals == Signals.None)
-		{
-			logger.LogSkippingBootstrapWarning();
-			return builder;
-		}
-
-		return SignalBuilder.WithElasticDefaults(builder, options, null, builder.Services, ConfigureBuilder);
+		return WithElasticDefaultsCore(builder, new(options), default);
 	}
 
 	/// <summary>
-	/// Adds metric services into the <see cref="IOpenTelemetryBuilder"/> using Elastic Distribution of
-	/// OpenTelemetry (EDOT) .NET defaults.
+	/// Adds logging services into the <see cref="IOpenTelemetryBuilder"/> using Elastic Distribution of
+	/// OpenTelemetry (EDOT) .NET <see href="https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/setup/edot-defaults">defaults</see>.
 	/// </summary>
-	/// <param name="builder"><see cref="IOpenTelemetryBuilder"/>.</param>
 	/// <remarks>
-	/// Notes:
-	/// <list type="bullet">
-	/// <item>This is safe to be called multiple times and by library authors.
-	/// Only a single <see cref="LoggerProvider"/> will be created for a given
-	/// <see cref="IServiceCollection"/>.</item>
-	/// <item>This method automatically registers an <see
-	/// cref="ILoggerProvider"/> named 'OpenTelemetry' into the <see
-	/// cref="IServiceCollection"/>.</item>
-	/// </list>
+	/// <para>
+	///   <b>Guidance:</b> Prefer using the <c>AddElasticOpenTelemetry</c> method on the <see cref="IHostApplicationBuilder"/>
+	///   or <see cref="IServiceCollection"/> rather than calling this method on the <see cref="IOpenTelemetryBuilder"/> directly.
+	/// </para>
+	/// <para>
+	///   The <c>WithElasticLogging</c> methods are primarily intended for advanced scenarios, non-host-based applications or when developing
+	///   libraries that need to customize the OpenTelemetry configuration.
+	/// </para>
+	/// <para>
+	///   <b>Recommendation:</b>When not using <c>AddElasticOpenTelemetry</c>, it is strongly recommended to use the
+	///   <see cref="WithElasticLogging(IOpenTelemetryBuilder, Action{LoggerProviderBuilder})"/> overload instead. This accepts
+	///   an <see cref="Action{LoggerProviderBuilder}"/> configuration callback and ensures any customisations are applied before
+	///   the OTLP exporter is added.
+	/// </para>
 	/// </remarks>
+	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder)" path="/param[@name='builder']"/></param>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
-	/// <returns>The supplied <see cref="IOpenTelemetryBuilder"/> for chaining calls.</returns>
+	/// <returns>
+	/// <para>
+	///   An instance of <see cref="IOpenTelemetryBuilder"/> that can be used to further configure the
+	///   OpenTelemetry SDK.
+	/// </para>
+	/// <para>
+	///   <b>Warning:</b> Any further configuration applied via the returned <see cref="IOpenTelemetryBuilder"/> by calling <c>WithLogging</c> will
+	///   be applied <em>after</em> the OTLP exporter has been added to the <see cref="LoggerProviderBuilder"/>.
+	///   </para>
+	/// <para>
+	///   <b>Recommendation:</b>It is strongly recommended to use the <see cref="WithElasticLogging(IOpenTelemetryBuilder, Action{LoggerProviderBuilder})"/> overload
+	///   to customise the builder instead. This accepts an <see cref="Action{LoggerProviderBuilder}"/> configuration callback and ensures any
+	///   customisations are applied before the OTLP exporter is added.
+	/// </para>
+	/// <para>
+	///   Alternatively, the <see cref="ElasticOpenTelemetryOptions.SkipOtlpExporter"/> <see href="https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/configuration#skipotlpexporter">option</see>
+	///   can be used to prevent automatic addition of the OTLP exporter, allowing you to add it manually at a later stage.
+	/// </para>
+	/// </returns>
 	public static IOpenTelemetryBuilder WithElasticLogging(this IOpenTelemetryBuilder builder)
 	{
 #if NET
@@ -167,15 +371,36 @@ public static class OpenTelemetryBuilderExtensions
 		return builder.WithLogging(lpb => lpb.WithElasticDefaults());
 	}
 
-	/// <summary>
-	/// <inheritdoc cref="WithElasticLogging(IOpenTelemetryBuilder)" />
-	/// </summary>
-	/// <remarks><inheritdoc cref="WithElasticLogging(IOpenTelemetryBuilder)" path="/remarks"/></remarks>
-	/// <param name="builder"><inheritdoc cref="WithElasticLogging(IOpenTelemetryBuilder)" path="/param[@name='builder']"/></param>
-	/// <param name="configure"><see cref="LoggerProviderBuilder"/> configuration callback.</param>
+	/// <summary><inheritdoc cref="WithElasticLogging(IOpenTelemetryBuilder)" /></summary>
+	/// <remarks>
+	/// <para>
+	///   <b>Guidance:</b> Prefer using the <c>AddElasticOpenTelemetry</c> method on the <see cref="IHostApplicationBuilder"/>
+	///   or <see cref="IServiceCollection"/> rather than calling this method on the <see cref="IOpenTelemetryBuilder"/> directly.
+	/// </para>
+	/// <para>
+	///   The <c>WithElasticLogging</c> methods are primarily intended for advanced scenarios, non-host-based applications or when developing
+	///   libraries that need to customize the OpenTelemetry configuration.
+	/// </para>
+	/// </remarks>
+	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder)" path="/param[@name='builder']"/></param>
+	/// <param name="configure">
+	/// An <see cref="Action"/> used to further configure the <see cref="LoggerProviderBuilder"/>.
+	/// This action is invoked after <see href="https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/setup/edot-defaults">EDOT .NET defaults</see>
+	/// have been applied, but before the OTLP exporter is added. This ensures that any custom processors run before the exporter.
+	/// </param>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configure"/> is null.</exception>
-	/// <returns><inheritdoc cref="WithElasticLogging(IOpenTelemetryBuilder)" /></returns>
+	/// <returns>
+	/// <para>
+	///   An instance of <see cref="IOpenTelemetryBuilder"/> that can be used to further configure the
+	///   OpenTelemetry SDK.
+	/// </para>
+	/// <para>
+	///   <b>Warning:</b> Any further configuration applied via the returned <see cref="IOpenTelemetryBuilder"/> by calling <c>WithLogging</c> will
+	///   be applied <em>after</em> the OTLP exporter has been added to the <see cref="LoggerProviderBuilder"/>. Use the
+	///   <paramref name="configure"/> parameter to apply customisations before the exporter is added.
+	/// </para>
+	/// </returns>
 	public static IOpenTelemetryBuilder WithElasticLogging(this IOpenTelemetryBuilder builder, Action<LoggerProviderBuilder> configure)
 	{
 #if NET
@@ -189,30 +414,49 @@ public static class OpenTelemetryBuilderExtensions
 			throw new ArgumentNullException(nameof(configure));
 #endif
 
-		return builder.WithLogging(lpb =>
-			{
-				lpb.WithElasticDefaults();
-				configure?.Invoke(lpb);
-			});
+		return builder.WithLogging(lpb => lpb.WithElasticDefaults(configure));
 	}
 
 	/// <summary>
-	/// Adds metric services into the <see cref="IOpenTelemetryBuilder"/> using Elastic Distribution of OpenTelemetry (EDOT) .NET defaults.
+	/// Adds metrics services into the <see cref="IOpenTelemetryBuilder"/> using Elastic Distribution of
+	/// OpenTelemetry (EDOT) .NET <see href="https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/setup/edot-defaults">defaults</see>.
 	/// </summary>
-	/// <param name="builder"><see cref="IOpenTelemetryBuilder"/>.</param>
 	/// <remarks>
-	/// Notes:
-	/// <list type="bullet">
-	/// <item>This is safe to be called multiple times and by library authors.
-	/// Only a single <see cref="MeterProvider"/> will be created for a given
-	/// <see cref="IServiceCollection"/>.</item>
-	/// <item>This method automatically registers an <see
-	/// cref="IMetricsListener"/> named 'OpenTelemetry' into the <see
-	/// cref="IServiceCollection"/>.</item>
-	/// </list>
+	/// <para>
+	///   <b>Guidance:</b> Prefer using the <c>AddElasticOpenTelemetry</c> method on the <see cref="IHostApplicationBuilder"/>
+	///   or <see cref="IServiceCollection"/> rather than calling this method on the <see cref="IOpenTelemetryBuilder"/> directly.
+	/// </para>
+	/// <para>
+	///   The <c>WithElasticMetrics</c> methods are primarily intended for advanced scenarios, non-host-based applications or when developing
+	///   libraries that need to customize the OpenTelemetry configuration.
+	/// </para>
+	/// <para>
+	///   <b>Recommendation:</b>When not using <c>AddElasticOpenTelemetry</c>, it is strongly recommended to use the
+	///   <see cref="WithElasticMetrics(IOpenTelemetryBuilder, Action{MeterProviderBuilder})"/> overload instead. This accepts
+	///   an <see cref="Action{MeterProviderBuilder}"/> configuration callback and ensures any customisations are applied before
+	///   the OTLP exporter is added.
+	/// </para>
 	/// </remarks>
+	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder)" path="/param[@name='builder']"/></param>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
-	/// <returns>The supplied <see cref="IOpenTelemetryBuilder"/> for chaining calls.</returns>
+	/// <returns>
+	/// <para>
+	///   An instance of <see cref="IOpenTelemetryBuilder"/> that can be used to further configure the OpenTelemetry SDK.
+	/// </para>
+	/// <para>
+	///   <b>Warning:</b> Any further configuration applied via the returned <see cref="IOpenTelemetryBuilder"/> by calling <c>WithMetrics</c> will
+	///   be applied <em>after</em> the OTLP exporter has been added to the <see cref="MeterProviderBuilder"/>.
+	///   </para>
+	/// <para>
+	///   <b>Recommendation:</b>It is strongly recommended to use the <see cref="WithElasticMetrics(IOpenTelemetryBuilder, Action{MeterProviderBuilder})"/> overload
+	///   to customise the builder instead. This accepts an <see cref="Action{MeterProviderBuilder}"/> configuration callback and ensures any
+	///   customisations are applied before the OTLP exporter is added.
+	/// </para>
+	/// <para>
+	///   Alternatively, the <see cref="ElasticOpenTelemetryOptions.SkipOtlpExporter"/> <see href="https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/configuration#skipotlpexporter">option</see>
+	///   can be used to prevent automatic addition of the OTLP exporter, allowing you to add it manually at a later stage.
+	/// </para>
+	/// </returns>
 	public static IOpenTelemetryBuilder WithElasticMetrics(this IOpenTelemetryBuilder builder)
 	{
 #if NET
@@ -225,41 +469,36 @@ public static class OpenTelemetryBuilderExtensions
 		return builder.WithMetrics(mpb => mpb.WithElasticDefaults());
 	}
 
-	/// <summary>
-	/// <inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder)" />
-	/// </summary>
-	/// <remarks><inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder)" path="/remarks"/></remarks>
-	/// <param name="builder"><inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder)" path="/param[@name='builder']"/></param>
-	/// <param name="configuration">An <see cref="IConfiguration"/> instance from which to load the Elastic Distribution of
-	/// OpenTelemetry (EDOT) .NET options.</param>
+	/// <summary><inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder)" /></summary>
+	/// <remarks>
+	/// <para>
+	///   <b>Guidance:</b> Prefer using the <c>AddElasticOpenTelemetry</c> method on the <see cref="IHostApplicationBuilder"/>
+	///   or <see cref="IServiceCollection"/> rather than calling this method on the <see cref="IOpenTelemetryBuilder"/> directly.
+	/// </para>
+	/// <para>
+	///   The <c>WithElasticMetrics</c> methods are primarily intended for advanced scenarios, non-host-based applications or when developing
+	///   libraries that need to customize the OpenTelemetry configuration.
+	/// </para>
+	/// </remarks>
+	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder)" path="/param[@name='builder']"/></param>
+	/// <param name="configure">
+	/// An <see cref="Action"/> used to further configure the <see cref="MeterProviderBuilder"/>.
+	/// This action is invoked after <see href="https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/setup/edot-defaults">EDOT .NET defaults</see>
+	/// have been applied, but before the OTLP exporter is added. This ensures that any custom processors run before the exporter.
+	/// </param>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
-	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configuration"/> is null.</exception>
-	/// <returns><inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder)" /></returns>
-	public static IOpenTelemetryBuilder WithElasticMetrics(this IOpenTelemetryBuilder builder, IConfiguration configuration)
-	{
-#if NET
-		ArgumentNullException.ThrowIfNull(builder);
-		ArgumentNullException.ThrowIfNull(configuration);
-#else
-		if (builder is null)
-			throw new ArgumentNullException(nameof(builder));
-
-		if (configuration is null)
-			throw new ArgumentNullException(nameof(configuration));
-#endif
-
-		return builder.WithMetrics(mpb => mpb.WithElasticDefaults(configuration, builder.Services));
-	}
-
-	/// <summary>
-	/// <inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder)" />
-	/// </summary>
-	/// <remarks><inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder)" path="/remarks"/></remarks>
-	/// <param name="builder"><inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder)" path="/param[@name='builder']"/></param>
-	/// <param name="configure"><see cref="MeterProviderBuilder"/> configuration callback.</param>
-	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
-	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configure"/> is null.</exception> 
-	/// <returns><inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder)" /></returns>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configure"/> is null.</exception>
+	/// <returns>
+	/// <para>
+	///   An instance of <see cref="IOpenTelemetryBuilder"/> that can be used to further configure the
+	///   OpenTelemetry SDK.
+	/// </para>
+	/// <para>
+	///   <b>Warning:</b> Any further configuration applied via the returned <see cref="IOpenTelemetryBuilder"/> by calling <c>WithMetrics</c> will
+	///   be applied <em>after</em> the OTLP exporter has been added to the <see cref="MeterProviderBuilder"/>. Use the
+	///   <paramref name="configure"/> parameter to apply customisations before the exporter is added.
+	/// </para>
+	/// </returns>
 	public static IOpenTelemetryBuilder WithElasticMetrics(this IOpenTelemetryBuilder builder, Action<MeterProviderBuilder> configure)
 	{
 #if NET
@@ -273,28 +512,78 @@ public static class OpenTelemetryBuilderExtensions
 			throw new ArgumentNullException(nameof(configure));
 #endif
 
-		return builder.WithMetrics(mpb =>
-			{
-				mpb.WithElasticDefaults(builder.Services);
-				configure?.Invoke(mpb);
-			});
+		var builderOptions = new BuilderOptions<MeterProviderBuilder> { UserProvidedConfigureBuilder = configure };
+		return builder.WithMetrics(mpb => mpb.WithElasticDefaults(configure));
 	}
 
 	/// <summary>
-	/// <inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder)" />
+	/// Adds metrics services into the <see cref="IOpenTelemetryBuilder"/> using Elastic Distribution of
+	/// OpenTelemetry (EDOT) .NET <see href="https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/setup/edot-defaults">defaults</see>.
 	/// </summary>
-	/// <remarks><inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder)" path="/remarks"/></remarks>
-	/// <param name="builder"><inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder)" path="/param[@name='builder']"/></param>
-	/// <param name="configuration">
-	/// <inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder, IConfiguration)" path="/param[@name='configuration']"/>
-	/// </param>
-	/// <param name="configure">
-	/// <inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder, Action{MeterProviderBuilder})" path="/param[@name='configure']"/>
-	/// </param>
+	/// <remarks>
+	/// <para>
+	///   <b>Guidance:</b> Prefer using the <c>AddElasticOpenTelemetry</c> method on the <see cref="IHostApplicationBuilder"/>
+	///   or <see cref="IServiceCollection"/> rather than calling this method on the <see cref="IOpenTelemetryBuilder"/> directly.
+	/// </para>
+	/// <para>
+	///   The <c>WithElasticMetrics</c> methods are primarily intended for advanced scenarios, non-host-based applications or when developing
+	///   libraries that need to customize the OpenTelemetry configuration.
+	/// </para>
+	/// <para>
+	///   <b>Recommendation:</b>When not using <c>AddElasticOpenTelemetry</c>, it is strongly recommended to use the
+	///   <see cref="WithElasticMetrics(IOpenTelemetryBuilder, IConfiguration, Action{MeterProviderBuilder})"/> overload instead. This accepts
+	///   an <see cref="Action{MeterProviderBuilder}"/> configuration callback and ensures any customisations are applied before
+	///   the OTLP exporter is added.
+	/// </para>
+	/// </remarks>
+	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder)" path="/param[@name='builder']"/></param>
+	/// <param name="configuration"><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder, IConfiguration)" path="/param[@name='configuration']"/></param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configuration"/> is null.</exception>
+	/// <returns>
+	/// <para>
+	///   An instance of <see cref="IOpenTelemetryBuilder"/> that can be used to further configure the
+	///   OpenTelemetry SDK.
+	/// </para>
+	/// <para>
+	///   <b>Warning:</b> Any further configuration applied via the returned <see cref="IOpenTelemetryBuilder"/> by calling <c>WithMetrics</c> will
+	///   be applied <em>after</em> the OTLP exporter has been added to the <see cref="MeterProviderBuilder"/>.
+	///   </para>
+	/// <para>
+	///   <b>Recommendation:</b>It is strongly recommended to use the <see cref="WithElasticMetrics(IOpenTelemetryBuilder, IConfiguration, Action{MeterProviderBuilder})"/> overload
+	///   to customise the builder instead. This accepts an <see cref="Action{MeterProviderBuilder}"/> configuration callback and ensures any
+	///   customisations are applied before the OTLP exporter is added.
+	/// </para>
+	/// <para>
+	///   Alternatively, the <see cref="ElasticOpenTelemetryOptions.SkipOtlpExporter"/> <see href="https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/configuration#skipotlpexporter">option</see>
+	///   can be used to prevent automatic addition of the OTLP exporter, allowing you to add it manually at a later stage.
+	/// </para>
+	/// </returns>
+	public static IOpenTelemetryBuilder WithElasticMetrics(this IOpenTelemetryBuilder builder, IConfiguration configuration)
+	{
+#if NET
+		ArgumentNullException.ThrowIfNull(builder);
+		ArgumentNullException.ThrowIfNull(configuration);
+#else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+
+		if (configuration is null)
+			throw new ArgumentNullException(nameof(configuration));
+#endif
+
+		return builder.WithMetrics(mpb => mpb.WithElasticDefaultsCore(new(configuration), null, builder.Services, default));
+	}
+
+	/// <summary><inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder,IConfiguration)" /></summary>
+	/// <remarks><inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder, IConfiguration)" path="/remarks"/></remarks>
+	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder)" path="/param[@name='builder']"/></param>
+	/// <param name="configuration"><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder, IConfiguration)" path="/param[@name='configuration']"/></param>
+	/// <param name="configure"><inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder, Action{MeterProviderBuilder})" path="/param[@name='configure']"/></param>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configuration"/> is null.</exception>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configure"/> is null.</exception>
-	/// <returns><inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder)" /></returns>
+	/// <returns><inheritdoc cref="WithElasticMetrics(IOpenTelemetryBuilder, Action{MeterProviderBuilder})" path="/returns"/></returns>
 	public static IOpenTelemetryBuilder WithElasticMetrics(this IOpenTelemetryBuilder builder, IConfiguration configuration,
 		Action<MeterProviderBuilder> configure)
 	{
@@ -313,24 +602,50 @@ public static class OpenTelemetryBuilderExtensions
 			throw new ArgumentNullException(nameof(configure));
 #endif
 
-		return builder.WithMetrics(mpb =>
-			{
-				mpb.WithElasticDefaults(configuration, builder.Services);
-				configure?.Invoke(mpb);
-			});
+		var builderOptions = new BuilderOptions<MeterProviderBuilder> { UserProvidedConfigureBuilder = configure };
+		return builder.WithMetrics(mpb => mpb.WithElasticDefaultsCore(new(configuration), null, builder.Services, builderOptions));
 	}
 
 	/// <summary>
-	/// Adds tracing services into the <see cref="IOpenTelemetryBuilder"/> using Elastic Distribution of OpenTelemetry (EDOT) .NET defaults.
+	/// Adds tracing services into the <see cref="IOpenTelemetryBuilder"/> using Elastic Distribution of
+	/// OpenTelemetry (EDOT) .NET <see href="https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/setup/edot-defaults">defaults</see>.
 	/// </summary>
-	/// <param name="builder"><see cref="IOpenTelemetryBuilder"/>.</param>
 	/// <remarks>
-	/// Note: This is safe to be called multiple times and by library authors.
-	/// Only a single <see cref="TracerProvider"/> will be created for a given
-	/// <see cref="IServiceCollection"/>.
+	/// <para>
+	///   <b>Guidance:</b> Prefer using the <c>AddElasticOpenTelemetry</c> method on the <see cref="IHostApplicationBuilder"/>
+	///   or <see cref="IServiceCollection"/> rather than calling this method on the <see cref="IOpenTelemetryBuilder"/> directly.
+	/// </para>
+	/// <para>
+	///   The <c>WithElasticTracing</c> methods are primarily intended for advanced scenarios, non-host-based applications or when developing
+	///   libraries that need to customize the OpenTelemetry configuration.
+	/// </para>
+	/// <para>
+	///   <b>Recommendation:</b>When not using <c>AddElasticOpenTelemetry</c>, it is strongly recommended to use the
+	///   <see cref="WithElasticTracing(IOpenTelemetryBuilder, Action{TracerProviderBuilder})"/> overload instead. This accepts
+	///   an <see cref="Action{TracerProviderBuilder}"/> configuration callback and ensures any customisations are applied before
+	///   the OTLP exporter is added.
+	/// </para>
 	/// </remarks>
+	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder)" path="/param[@name='builder']"/></param>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
-	/// <returns>The supplied <see cref="IOpenTelemetryBuilder"/> for chaining calls.</returns>
+	/// <returns>
+	/// <para>
+	///   An instance of <see cref="IOpenTelemetryBuilder"/> that can be used to further configure the OpenTelemetry SDK.
+	/// </para>
+	/// <para>
+	///   <b>Warning:</b> Any further configuration applied via the returned <see cref="IOpenTelemetryBuilder"/> by calling <c>WithTracing</c> will
+	///   be applied <em>after</em> the OTLP exporter has been added to the <see cref="TracerProviderBuilder"/>.
+	///   </para>
+	/// <para>
+	///   <b>Recommendation:</b>It is strongly recommended to use the <see cref="WithElasticTracing(IOpenTelemetryBuilder, Action{TracerProviderBuilder})"/> overload
+	///   to customise the builder instead. This accepts an <see cref="Action{TracerProviderBuilder}"/> configuration callback and ensures any
+	///   customisations are applied before the OTLP exporter is added.
+	/// </para>
+	/// <para>
+	///   Alternatively, the <see cref="ElasticOpenTelemetryOptions.SkipOtlpExporter"/> <see href="https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/configuration#skipotlpexporter">option</see>
+	///   can be used to prevent automatic addition of the OTLP exporter, allowing you to add it manually at a later stage.
+	/// </para>
+	/// </returns>
 	public static IOpenTelemetryBuilder WithElasticTracing(this IOpenTelemetryBuilder builder)
 	{
 #if NET
@@ -343,41 +658,36 @@ public static class OpenTelemetryBuilderExtensions
 		return builder.WithTracing(m => m.WithElasticDefaults());
 	}
 
-	/// <summary>
-	/// <inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder)" />
-	/// </summary>
-	/// <remarks><inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder)" path="/remarks"/></remarks>
+	/// <summary><inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder)" /></summary>
+	/// <remarks>
+	/// <para>
+	///   <b>Guidance:</b> Prefer using the <c>AddElasticOpenTelemetry</c> method on the <see cref="IHostApplicationBuilder"/>
+	///   or <see cref="IServiceCollection"/> rather than calling this method on the <see cref="IOpenTelemetryBuilder"/> directly.
+	/// </para>
+	/// <para>
+	///   The <c>WithElasticTracing</c> methods are primarily intended for advanced scenarios, non-host-based applications or when developing
+	///   libraries that need to customize the OpenTelemetry configuration.
+	/// </para>
+	/// </remarks>
 	/// <param name="builder"><inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder)" path="/param[@name='builder']"/></param>
-	/// <param name="configuration">An <see cref="IConfiguration"/> instance from which to load the Elastic Distribution of
-	/// OpenTelemetry (EDOT) .NET options.</param>
-	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
-	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configuration"/> is null.</exception>
-	/// <returns><inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder)" /></returns>
-	public static IOpenTelemetryBuilder WithElasticTracing(this IOpenTelemetryBuilder builder, IConfiguration configuration)
-	{
-#if NET
-		ArgumentNullException.ThrowIfNull(builder);
-		ArgumentNullException.ThrowIfNull(configuration);
-#else
-		if (builder is null)
-			throw new ArgumentNullException(nameof(builder));
-
-		if (configuration is null)
-			throw new ArgumentNullException(nameof(configuration));
-#endif
-
-		return builder.WithTracing(tpb => tpb.WithElasticDefaults(configuration, builder.Services));
-	}
-
-	/// <summary>
-	/// Adds tracing services into the builder using Elastic defaults.
-	/// </summary>
-	/// <remarks><inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder)" path="/remarks"/></remarks>
-	/// <param name="builder"><inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder)" path="/param[@name='builder']"/></param>
-	/// <param name="configure"><see cref="TracerProviderBuilder"/> configuration callback.</param>
+	/// <param name="configure">
+	/// An <see cref="Action"/> used to further configure the <see cref="TracerProviderBuilder"/>.
+	/// This action is invoked after <see href="https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/setup/edot-defaults">EDOT .NET defaults</see>
+	/// have been applied, but before the OTLP exporter is added. This ensures that any custom processors run before the exporter.
+	/// </param>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configure"/> is null.</exception>
-	/// <returns><inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder)" /></returns>
+	/// <returns>
+	/// <para>
+	///   An instance of <see cref="IOpenTelemetryBuilder"/> that can be used to further configure the
+	///   OpenTelemetry SDK.
+	/// </para>
+	/// <para>
+	///   <b>Warning:</b> Any further configuration applied via the returned <see cref="IOpenTelemetryBuilder"/> by calling <c>WithTracing</c> will
+	///   be applied <em>after</em> the OTLP exporter has been added to the <see cref="TracerProviderBuilder"/>. Use the
+	///   <paramref name="configure"/> parameter to apply customisations before the exporter is added.
+	/// </para>
+	/// </returns>
 	public static IOpenTelemetryBuilder WithElasticTracing(this IOpenTelemetryBuilder builder, Action<TracerProviderBuilder> configure)
 	{
 #if NET
@@ -391,28 +701,78 @@ public static class OpenTelemetryBuilderExtensions
 			throw new ArgumentNullException(nameof(configure));
 #endif
 
-		return builder.WithTracing(tpb =>
-			{
-				tpb.WithElasticDefaults();
-				configure?.Invoke(tpb);
-			});
+		var builderOptions = new BuilderOptions<TracerProviderBuilder> { UserProvidedConfigureBuilder = configure };
+		return builder.WithTracing(tpb => tpb.WithElasticDefaultsCore(null, null, builder.Services, builderOptions));
 	}
 
 	/// <summary>
-	/// <inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder)" />
+	/// Adds tracing services into the <see cref="IOpenTelemetryBuilder"/> using Elastic Distribution of
+	/// OpenTelemetry (EDOT) .NET <see href="https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/setup/edot-defaults">defaults</see>.
 	/// </summary>
-	/// <remarks><inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder)" path="/remarks"/></remarks>
+	/// <remarks>
+	/// <para>
+	///   <b>Guidance:</b> Prefer using the <c>AddElasticOpenTelemetry</c> method on the <see cref="IHostApplicationBuilder"/>
+	///   or <see cref="IServiceCollection"/> rather than calling this method on the <see cref="IOpenTelemetryBuilder"/> directly.
+	/// </para>
+	/// <para>
+	///   The <c>WithElasticTracing</c> methods are primarily intended for advanced scenarios, non-host-based applications or when developing
+	///   libraries that need to customize the OpenTelemetry configuration.
+	/// </para>
+	/// <para>
+	///   <b>Recommendation:</b>When not using <c>AddElasticOpenTelemetry</c>, it is strongly recommended to use the
+	///   <see cref="WithElasticTracing(IOpenTelemetryBuilder, IConfiguration, Action{TracerProviderBuilder})"/> overload instead. This accepts
+	///   an <see cref="Action{TracerProviderBuilder}"/> configuration callback and ensures any customisations are applied before
+	///   the OTLP exporter is added.
+	/// </para>
+	/// </remarks>
 	/// <param name="builder"><inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder)" path="/param[@name='builder']"/></param>
-	/// <param name="configuration">
-	/// <inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder, IConfiguration)" path="/param[@name='configuration']"/>
-	/// </param>
-	/// <param name="configure">
-	/// <inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder, Action{TracerProviderBuilder})" path="/param[@name='configure']"/>
-	/// </param>
+	/// <param name="configuration"><inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder, IConfiguration)" path="/param[@name='configuration']"/></param>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configuration"/> is null.</exception>
+	/// <returns>
+	/// <para>
+	///   An instance of <see cref="IOpenTelemetryBuilder"/> that can be used to further configure the
+	///   OpenTelemetry SDK.
+	/// </para>
+	/// <para>
+	///   <b>Warning:</b> Any further configuration applied via the returned <see cref="IOpenTelemetryBuilder"/> by calling <c>WithTracing</c> will
+	///   be applied <em>after</em> the OTLP exporter has been added to the <see cref="TracerProviderBuilder"/>.
+	///   </para>
+	/// <para>
+	///   <b>Recommendation:</b>It is strongly recommended to use the <see cref="WithElasticTracing(IOpenTelemetryBuilder, IConfiguration, Action{TracerProviderBuilder})"/> overload
+	///   to customise the builder instead. This accepts an <see cref="Action{TracerProviderBuilder}"/> configuration callback and ensures any
+	///   customisations are applied before the OTLP exporter is added.
+	/// </para>
+	/// <para>
+	///   Alternatively, the <see cref="ElasticOpenTelemetryOptions.SkipOtlpExporter"/> <see href="https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/configuration#skipotlpexporter">option</see>
+	///   can be used to prevent automatic addition of the OTLP exporter, allowing you to add it manually at a later stage.
+	/// </para>
+	/// </returns>
+	public static IOpenTelemetryBuilder WithElasticTracing(this IOpenTelemetryBuilder builder, IConfiguration configuration)
+	{
+#if NET
+		ArgumentNullException.ThrowIfNull(builder);
+		ArgumentNullException.ThrowIfNull(configuration);
+#else
+		if (builder is null)
+			throw new ArgumentNullException(nameof(builder));
+
+		if (configuration is null)
+			throw new ArgumentNullException(nameof(configuration));
+#endif
+
+		return builder.WithTracing(tpb => tpb.WithElasticDefaultsCore(new(configuration), null, builder.Services, default));
+	}
+
+	/// <summary><inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder,IConfiguration)" /></summary>
+	/// <remarks><inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder, IConfiguration)" path="/remarks"/></remarks>
+	/// <param name="builder"><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder)" path="/param[@name='builder']"/></param>
+	/// <param name="configuration"><inheritdoc cref="WithElasticDefaults(IOpenTelemetryBuilder, IConfiguration)" path="/param[@name='configuration']"/></param>
+	/// <param name="configure"><inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder, Action{TracerProviderBuilder})" path="/param[@name='configure']"/></param>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configuration"/> is null.</exception>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="configure"/> is null.</exception>
-	/// <returns><inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder)" /></returns>
+	/// <returns><inheritdoc cref="WithElasticTracing(IOpenTelemetryBuilder, Action{TracerProviderBuilder})" path="/returns"/></returns>
 	public static IOpenTelemetryBuilder WithElasticTracing(this IOpenTelemetryBuilder builder, IConfiguration configuration,
 		Action<TracerProviderBuilder> configure)
 	{
@@ -431,21 +791,66 @@ public static class OpenTelemetryBuilderExtensions
 			throw new ArgumentNullException(nameof(configure));
 #endif
 
-		return builder.WithTracing(tpb =>
-		{
-			tpb.WithElasticDefaults(configuration, builder.Services);
-			configure?.Invoke(tpb);
-		});
+		var builderOptions = new BuilderOptions<TracerProviderBuilder> { UserProvidedConfigureBuilder = configure };
+		return builder.WithTracing(tpb => tpb.WithElasticDefaultsCore(new(configuration), null, builder.Services, builderOptions));
 	}
 
-	private static void ConfigureBuilder(IOpenTelemetryBuilder builder, BuilderState builderState, IServiceCollection? services)
+	/// <summary>
+	/// Internal core implementation for the various overloads of <c>WithElasticDefaults</c>.
+	/// May also be called by other internal methods that need to apply EDOT .NET defaults.
+	/// </summary>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	internal static IOpenTelemetryBuilder WithElasticDefaultsCore(
+		this IOpenTelemetryBuilder builder,
+		CompositeElasticOpenTelemetryOptions options,
+		in BuilderOptions<IOpenTelemetryBuilder> builderOptions)
 	{
-		var components = builderState.Components;
-		var options = builderState.Components.Options;
+		var callCount = Interlocked.Increment(ref WithElasticDefaultsCallCount);
 
+		// FullName may return null so we fallback to Name when required.
+		var providerBuilderName = builder.GetType().FullName ?? builder.GetType().Name;
+
+		var logger = SignalBuilder.GetLogger(builder, null, options, null);
+
+		if (callCount > 1)
+		{
+			logger.LogMultipleWithElasticDefaultsCallsWarning(callCount, providerBuilderName);
+		}
+
+		// If for some reason `WithElasticDefaults` is invoked with the `Signals` option set to
+		// none, we skip bootstrapping entirely. We log this as a warning since it's best to
+		// simply not call `WithElasticDefaults` in this scenario and it may indicate a misconfiguration.
+		if (options.Signals == Signals.None)
+		{
+			logger.LogSkippingBootstrapWarning();
+			return builder;
+		}
+
+		SignalBuilder.WithElasticDefaults(builder, options, null, builder.Services, builderOptions, ConfigureBuilder);
+
+		return builder;
+	}
+
+	private static void ConfigureBuilder(BuilderContext<IOpenTelemetryBuilder> builderContext)
+	{
+		var builder = builderContext.Builder;
+		var components = builderContext.BuilderState.Components;
+		var options = builderContext.BuilderState.Components.Options;
+		var builderState = builderContext.BuilderState;
+		var services = builderContext.Services;
+
+		// Configure tracing, if the signal is enabled.
 		if (options.Signals.HasFlagFast(Signals.Traces))
 		{
-			builder.WithTracing(tpb => tpb.WithElasticDefaults(components, builder.Services));
+			// When the user has provided their own configuration callback for the IOpenTelemetryBuilder
+			// we don't want WithElasticDefaults for the TracerProviderBuilder to add the OTLP exporter so
+			// we defer it until after this method runs the user-provided callback.
+			var builderOptions = new BuilderOptions<TracerProviderBuilder>
+			{
+				DeferAddOtlpExporter = builderContext.BuilderOptions.UserProvidedConfigureBuilder is not null
+			};
+
+			builder.WithTracing(tpb => tpb.WithElasticDefaultsCore(components.Options, components, services, builderOptions));
 		}
 		else
 		{
@@ -455,7 +860,15 @@ public static class OpenTelemetryBuilderExtensions
 
 		if (options.Signals.HasFlagFast(Signals.Metrics))
 		{
-			builder.WithMetrics(mpb => mpb.WithElasticDefaults(components, builder.Services));
+			// When the user has provided their own configuration callback for the IOpenTelemetryBuilder
+			// we don't want WithElasticDefaults for the MeterProviderBuilder to add the OTLP exporter so
+			// we defer it until after this method runs the user-provided callback.
+			var builderOptions = new BuilderOptions<MeterProviderBuilder>
+			{
+				DeferAddOtlpExporter = builderContext.BuilderOptions.UserProvidedConfigureBuilder is not null
+			};
+
+			builder.WithMetrics(mpb => mpb.WithElasticDefaultsCore(components.Options, components, builder.Services, builderOptions));
 		}
 		else
 		{
@@ -465,12 +878,55 @@ public static class OpenTelemetryBuilderExtensions
 
 		if (options.Signals.HasFlagFast(Signals.Logs))
 		{
-			builder.WithLogging(lpb => lpb.WithElasticDefaults(components, builder.Services));
+			// When the user has provided their own configuration callback for the IOpenTelemetryBuilder
+			// we don't want WithElasticDefaults for the MeterProviderBuilder to add the OTLP exporter so
+			// we defer it until after this method runs the user-provided callback.
+			var builderOptions = new BuilderOptions<LoggerProviderBuilder>
+			{
+				DeferAddOtlpExporter = builderContext.BuilderOptions.UserProvidedConfigureBuilder is not null
+			};
+
+			builder.WithLogging(lpb => lpb.WithElasticDefaultsCore(components.Options, components, builder.Services, builderOptions));
 		}
 		else
 		{
 			components.Logger.LogSignalDisabled(Signals.Logs.ToString().ToLower(),
 				nameof(IOpenTelemetryBuilder), builderState.InstanceIdentifier);
+		}
+
+		// FullName may return null so we fallback to Name when required.
+		var builderTypeName = builder.GetType().FullName ?? builder.GetType().Name;
+
+		if (builderContext.BuilderOptions.UserProvidedConfigureBuilder is not null)
+		{
+			// Run the user-provided builder configuration after the EDOT defaults have been applied.
+			builderContext.BuilderOptions.UserProvidedConfigureBuilder(builder);
+			components.Logger.LogInvokedConfigureAction(builderTypeName, builderState.InstanceIdentifier);
+
+			// Add OTLP exporters (if enabled) after user-provided configuration
+			HandleOtlpExporter(Signals.Traces, b => b.WithTracing(tpb => tpb.AddOtlpExporter()));
+			HandleOtlpExporter(Signals.Metrics, b => b.WithMetrics(tpb => tpb.AddOtlpExporter()));
+			HandleOtlpExporter(Signals.Logs, b => b.WithLogging(tpb => tpb.AddOtlpExporter()));
+		}
+
+		void HandleOtlpExporter(Signals signal, Action<IOpenTelemetryBuilder> configure)
+		{
+			// If the signal is enabled and the user provided their own configuration callback,
+			// we need to ensure the OTLP exporter is added after running the user-provided callback.
+			if (options.Signals.HasFlagFast(signal))
+			{
+				if (builderState.Components.Options.SkipOtlpExporter)
+				{
+					components.Logger.LogSkippedOtlpExporter(signal.ToString(), builderTypeName, builderState.InstanceIdentifier);
+				}
+				else
+				{
+					configure(builder);
+					components.Logger.LogAddedOtlpExporter(signal.ToString(), builderTypeName, builderState.InstanceIdentifier);
+				}
+			}
+
+			// NOTE: We don't log signal disabled here since that will already have been logged above.
 		}
 	}
 }

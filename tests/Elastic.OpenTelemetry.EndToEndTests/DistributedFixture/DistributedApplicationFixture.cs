@@ -6,7 +6,6 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Configuration;
-using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Nullean.Xunit.Partitions.Sdk;
 using Xunit.Abstractions;
 

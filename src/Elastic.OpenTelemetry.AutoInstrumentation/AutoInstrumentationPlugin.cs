@@ -43,6 +43,7 @@ public class AutoInstrumentationPlugin
 			builder.ConfigureResource(r => r.WithElasticDefaultsCore(_components, null, null));
 
 			builder.ConfigureServices(sc => sc.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions));
+			logger.LogConfiguredOtlpExporterOptions();
 
 			TracerProvderBuilderExtensions.AddActivitySourceWithLogging(builder, logger, "Elastic.Transport", "<n/a>");
 			TracerProvderBuilderExtensions.AddElasticProcessorsCore(builder, null, _components, null);
@@ -74,6 +75,7 @@ public class AutoInstrumentationPlugin
 			builder.ConfigureServices(sc => sc
 				.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions)
 				.Configure<MetricReaderOptions>(o => o.TemporalityPreference = MetricReaderTemporalityPreference.Delta));
+			logger.LogConfiguredOtlpExporterOptions();
 
 			logger.LogConfiguredSignalProvider(nameof(Signals.Metrics), nameof(MeterProviderBuilder), "<n/a>");
 
@@ -91,8 +93,7 @@ public class AutoInstrumentationPlugin
 	/// <summary>
 	/// To configure logs SDK (the method name is the same as for other logs options).
 	/// </summary>
-	public void ConfigureLogsOptions(OpenTelemetryLoggerOptions options) =>
-		options.WithElasticDefaults(_components.Logger);
+	public void ConfigureLogsOptions(OpenTelemetryLoggerOptions options) => options.WithElasticDefaults(_components.Logger);
 
 	/// <summary>
 	/// To configure Resource.
