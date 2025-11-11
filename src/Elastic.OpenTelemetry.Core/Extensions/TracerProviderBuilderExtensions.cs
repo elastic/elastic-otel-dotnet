@@ -5,7 +5,6 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry;
-using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Core;
 using Elastic.OpenTelemetry.Diagnostics;
 using Elastic.OpenTelemetry.Resources;
@@ -81,6 +80,9 @@ internal static class TracerProvderBuilderExtensions
 		ElasticOpenTelemetryComponents? components,
 		IServiceCollection? services)
 	{
+		// NOTE: This method doesn't currently add any processors and just configures the resource.
+		// Once we start adding processors, we might need to consider passing in the BuilderOptions
+
 		components ??= builderState?.Components;
 
 		var callCount = Interlocked.Increment(ref AddElasticProcessorsCallCount);
@@ -94,14 +96,22 @@ internal static class TracerProvderBuilderExtensions
 		{
 			// When we have existing builderState, this method is being invoked from the main WithElasticDefaults method.
 			// In that scenario, we skip configuring the resource, as it will have already been configured by the caller.
+			// We don't log here, as the main WithElasticDefaults method will log the complete set of processors added.
 			return builder;
 		}
 
-		return SignalBuilder.WithElasticDefaults(builder, Signals.Traces, components?.Options, components, null, ConfigureBuilder);
+		// This is sufficient as the configure method doesn't register anything but the resource, for now.
+		var builderOptions = new BuilderOptions<TracerProviderBuilder>();
+
+		return SignalBuilder.WithElasticDefaults(builder, components?.Options, components, services, builderOptions, ConfigureBuilder);
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		static void ConfigureBuilder(TracerProviderBuilder builder, BuilderState builderState, IServiceCollection? services)
+		static void ConfigureBuilder(BuilderContext<TracerProviderBuilder> builderContext)
 		{
+			var builder = builderContext.Builder;
+			var builderState = builderContext.BuilderState;
+			var services = builderContext.Services;
+
 			builder.ConfigureResource(r => r.WithElasticDefaultsCore(builderState, services, null));
 		}
 	}
@@ -109,6 +119,8 @@ internal static class TracerProvderBuilderExtensions
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private static TracerProviderBuilder LogAndAddProcessor(this TracerProviderBuilder builder, BaseProcessor<Activity> processor, BuilderState builderState)
 	{
+		// NOTE: This is not currently used but here for when we do have processors to register for any feature gaps we close.
+
 		builder.AddProcessor(processor);
 		builderState.Components.Logger.LogProcessorAdded(processor.GetType().ToString(), builderState.InstanceIdentifier);
 		return builder;

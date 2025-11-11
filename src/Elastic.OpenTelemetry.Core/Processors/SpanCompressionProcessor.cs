@@ -4,7 +4,6 @@
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry.Core;
-using Elastic.OpenTelemetry.Processors;
 using OpenTelemetry;
 
 #pragma warning disable IDE0130 // Namespace does not match folder structure

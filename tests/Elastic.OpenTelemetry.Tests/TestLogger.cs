@@ -22,9 +22,17 @@ public class TestLogger(ITestOutputHelper testOutputHelper) : ILogger
 	{
 		var message = LogFormatter.Format(logLevel, eventId, state, exception, formatter);
 		_messages.Add(message);
-		_testOutputHelper.WriteLine(message);
-		if (exception != null)
-			_testOutputHelper.WriteLine(exception.ToString());
+
+		try
+		{
+			_testOutputHelper.WriteLine(message);
+			if (exception != null)
+				_testOutputHelper.WriteLine(exception.ToString());
+		}
+		catch
+		{
+			// Swallow exceptions from the test output helper
+		}
 	}
 
 	private class NoopDisposable : IDisposable
