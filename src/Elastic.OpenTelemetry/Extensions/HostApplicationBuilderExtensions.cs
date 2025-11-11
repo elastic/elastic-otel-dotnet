@@ -163,7 +163,7 @@ public static class HostApplicationBuilderExtensions
 			throw new ArgumentNullException(nameof(options));
 #endif
 
-		builder.Services.AddElasticOpenTelemetryCore(new (builder.Configuration, options), default);
+		builder.Services.AddElasticOpenTelemetryCore(new(builder.Configuration, options), default);
 		return builder;
 	}
 
@@ -219,7 +219,7 @@ public static class HostApplicationBuilderExtensions
 			DeferAddOtlpExporter = false
 		};
 
-		builder.Services.AddElasticOpenTelemetryCore(new (builder.Configuration, options), builderOptions);
+		builder.Services.AddElasticOpenTelemetryCore(new(builder.Configuration, options), builderOptions);
 		return builder;
 	}
 }
