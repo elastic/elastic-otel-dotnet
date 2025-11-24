@@ -205,7 +205,7 @@ internal static class SignalBuilder
 		return File.Exists(Path.Combine(assemblyLocation, assemblyName));
 	}
 
-	[RequiresUnreferencedCode("Accesses assemblies and methods dynamically using refelction. This is by design and cannot be made trim compatible.")]
+	[RequiresUnreferencedCode("Accesses assemblies and methods dynamically using reflection. This is by design and cannot be made trim compatible.")]
 	internal static void AddInstrumentationViaReflection<T>(T builder, ElasticOpenTelemetryComponents components, ReadOnlySpan<InstrumentationAssemblyInfo> assemblyInfos, string builderInstanceId)
 			where T : class
 	{
@@ -218,7 +218,7 @@ internal static class SignalBuilder
 		AddInstrumentationViaReflection(builder, components.Logger, assemblyInfos, builderInstanceId);
 	}
 
-	[RequiresUnreferencedCode("Accesses assemblies and methods dynamically using refelction. This is by design and cannot be made trim compatible.")]
+	[RequiresUnreferencedCode("Accesses assemblies and methods dynamically using reflection. This is by design and cannot be made trim compatible.")]
 	internal static void AddInstrumentationViaReflection<T>(T builder, ILogger logger, ReadOnlySpan<InstrumentationAssemblyInfo> assemblyInfos, string builderInstanceId)
 		where T : class
 	{

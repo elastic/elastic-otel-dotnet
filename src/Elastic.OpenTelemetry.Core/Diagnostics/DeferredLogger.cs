@@ -24,6 +24,8 @@ internal sealed class DeferredLogger : ILogger
 	private readonly ConcurrentQueue<string> _logQueue = new();
 	private readonly ILogger? _additionalLogger;
 
+	private static readonly Lock Lock = new();
+
 	/// <summary>
 	/// Create an instance of <see cref="DeferredLogger"/>.
 	/// </summary>
@@ -34,11 +36,11 @@ internal sealed class DeferredLogger : ILogger
 	private DeferredLogger(CompositeElasticOpenTelemetryOptions options, ILogger? additionalLogger = null)
 	{
 		_isEnabled = options.GlobalLogEnabled && options.LogTargets.HasFlag(LogTargets.File);
-		_configuredLogLevel = options.LogLevel;
 
 		if (!_isEnabled)
 			return;
 
+		_configuredLogLevel = options.LogLevel;
 		_additionalLogger = additionalLogger;
 	}
 
@@ -48,6 +50,8 @@ internal sealed class DeferredLogger : ILogger
 
 	public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
 	{
+		_additionalLogger?.Log(logLevel, eventId, state, exception, formatter);
+
 		if (!IsEnabled(logLevel))
 			return;
 
@@ -57,15 +61,18 @@ internal sealed class DeferredLogger : ILogger
 			logLine = $"{logLine}{Environment.NewLine}{exception}";
 
 		_logQueue.Enqueue(logLine);
-
-		_additionalLogger?.Log(logLevel, eventId, state, exception, formatter);
 	}
 
-	internal void DrainLogQueue(StreamWriter streamWriter)
+	internal void DrainAndRelease(StreamWriter streamWriter)
 	{
-		while (_logQueue.TryDequeue(out var deferredLog))
+		using (Lock.EnterScope())
 		{
-			streamWriter.WriteLine(deferredLog);
+			while (_logQueue.TryDequeue(out var deferredLog))
+			{
+				streamWriter.WriteLine(deferredLog);
+			}
+
+			Instance = null;
 		}
 	}
 
@@ -73,12 +80,15 @@ internal sealed class DeferredLogger : ILogger
 
 	internal static ILogger GetOrCreate(CompositeElasticOpenTelemetryOptions options)
 	{
-		// We want, at most, one instance of DeferredLogger for the application.
-		// We only create a DeferredFileLogger if file logging is enabled
-		if (options.GlobalLogEnabled && options.LogTargets.HasFlag(LogTargets.File))
-			return Instance ??= new DeferredLogger(options, options.AdditionalLogger);
+		using (Lock.EnterScope())
+		{
+			// We want, at most, one instance of DeferredLogger for the application.
+			// We only create a DeferredFileLogger if file logging is enabled
+			if (options.GlobalLogEnabled && options.LogTargets.HasFlag(LogTargets.File))
+				return Instance ??= new DeferredLogger(options, options.AdditionalLogger);
 
-		return NullLogger.Instance;
+			return NullLogger.Instance;
+		}
 	}
 
 	internal static bool TryGetInstance([NotNullWhen(true)] out DeferredLogger? instance)
@@ -86,8 +96,6 @@ internal sealed class DeferredLogger : ILogger
 		instance = Instance;
 		return instance is not null;
 	}
-
-	internal static void ReleaseInstance() => Instance = null;
 
 	private class NullScope : IDisposable
 	{

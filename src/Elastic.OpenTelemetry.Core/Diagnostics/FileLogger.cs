@@ -60,8 +60,7 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 			// These appear before the preamble to ensure correct timestamping order.
 			if (DeferredLogger.TryGetInstance(out var deferredLogger))
 			{
-				deferredLogger.DrainLogQueue(_streamWriter);
-				DeferredLogger.ReleaseInstance();
+				deferredLogger.DrainAndRelease(_streamWriter);
 			}
 
 			WritingTask = Task.Run(async () =>
