@@ -7,6 +7,9 @@ using System.Diagnostics;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Core;
 using Microsoft.Extensions.Logging;
+#if NET || NETSTANDARD2_1
+using System.Runtime.CompilerServices;
+#endif
 
 namespace Elastic.OpenTelemetry.Diagnostics;
 
@@ -54,22 +57,26 @@ internal static partial class LoggerMessages
 		"times across all {Target} instances.")]
 	public static partial void LogWithElasticDefaultsCallCount(this ILogger logger, int callCount, string target);
 
+	[LoggerMessage(EventId = 12, EventName = "ConfiguredOtlpExporterOptions", Level = LogLevel.Debug, Message = "The `OtlpExporterOptions` have been configured to use the" +
+		"`ElasticUserAgentHandler` to set the EDOT .NET user agent.")]
+	public static partial void LogConfiguredOtlpExporterOptions(this ILogger logger);
+
 
 
 
 	[LoggerMessage(EventId = 20, EventName = "ConfiguredSignalProvider", Level = LogLevel.Debug, Message = "Configured EDOT defaults for {Signal} via the {ProviderBuilderType} (instance:{BuilderInstanceId}).")]
 	public static partial void LogConfiguredSignalProvider(this ILogger logger, string signal, string providerBuilderType, string builderInstanceId);
 
-	[LoggerMessage(EventId = 21, EventName = "SkippingOtlpExporter", Level = LogLevel.Information, Message = "Skipping OTLP exporter for {Signal} based on the provided `ElasticOpenTelemetryOptions` " +
+	[LoggerMessage(EventId = 21, EventName = "SkippedOtlpExporter", Level = LogLevel.Information, Message = "Skipped OTLP exporter for {Signal} based on the provided `ElasticOpenTelemetryOptions` " +
 		"via the {ProviderBuilderType} (instance:{BuilderInstanceId}).")]
-	public static partial void LogSkippingOtlpExporter(this ILogger logger, string signal, string providerBuilderType, string builderInstanceId);
+	public static partial void LogSkippedOtlpExporter(this ILogger logger, string signal, string providerBuilderType, string builderInstanceId);
 
-	[LoggerMessage(EventId = 22, EventName = "ProviderBuilderSignalDisabled", Level = LogLevel.Information, Message = "Skipping configuring and setting EDOT defaults for {Signal} on {ProviderBuilderType}" +
+	[LoggerMessage(EventId = 22, EventName = "ProviderBuilderSignalDisabled", Level = LogLevel.Information, Message = "Skipped configuring and setting EDOT defaults for {Signal} on {ProviderBuilderType}" +
 		"(instance:{BuilderInstanceId}), as these have been disabled via configuration.")]
 	public static partial void LogSignalDisabled(this ILogger logger, string signal, string providerBuilderType, string builderInstanceId);
 
 	[LoggerMessage(EventId = 23, EventName = "SkippingBootstrap", Level = LogLevel.Warning, Message = "Skipping EDOT bootstrap and provider configuration because the `Signals` configuration is set to `None`. " +
-		"This likely represents a misconfiguration. If you do not want to use the EDOT for any signals, avoid calling `WithElasticDefaults` on the builder.")]
+		"This likely represents a misconfiguration. If you do not want to use the EDOT for any signals, avoid calling `AddElasticOpenTelemetry` or `WithElasticDefaults` on the builder.")]
 	public static partial void LogSkippingBootstrapWarning(this ILogger logger);
 
 	[LoggerMessage(EventId = 24, EventName = "BuilderAlreadyConfigured", Level = LogLevel.Debug, Message = "The {ProviderBuilderType} (instance:{BuilderInstanceId}) has already been configured with EDOT defaults.")]
@@ -77,6 +84,16 @@ internal static partial class LoggerMessages
 
 	[LoggerMessage(EventId = 25, EventName = "ConfiguringBuilder", Level = LogLevel.Information, Message = "Configuring the {ProviderBuilderType} (instance:{BuilderInstanceId}) with EDOT defaults.")]
 	public static partial void LogConfiguringBuilder(this ILogger logger, string providerBuilderType, string builderInstanceId);
+
+	[LoggerMessage(EventId = 26, EventName = "AddedOtlpExporter", Level = LogLevel.Debug, Message = "Added OTLP exporter for {Signal} for {ProviderBuilderType} (instance:{BuilderInstanceId}).")]
+	public static partial void LogAddedOtlpExporter(this ILogger logger, string signal, string providerBuilderType, string builderInstanceId);
+
+	[LoggerMessage(EventId = 27, EventName = "InvokedConfigureAction", Level = LogLevel.Debug, Message = "Invoked user-provided builder configuration action on" +
+		" the {ProviderBuilderType} (instance:{BuilderInstanceId}).")]
+	public static partial void LogInvokedConfigureAction(this ILogger logger, string providerBuilderType, string builderInstanceId);
+
+	[LoggerMessage(EventId = 28, EventName = "DeferredOtlpExporter", Level = LogLevel.Debug, Message = "Deferred adding OTLP exporter on {ProviderBuilderType} (instance:{BuilderInstanceId}).")]
+	public static partial void LogDeferredOtlpExporter(this ILogger logger, string providerBuilderType, string builderInstanceId);
 
 
 
@@ -208,6 +225,11 @@ internal static partial class LoggerMessages
 		logger.LogDebug("Processor count: {ProcessorCount}", Environment.ProcessorCount);
 		logger.LogDebug("OS version: {OSVersion}", Environment.OSVersion);
 		logger.LogDebug("CLR version: {CLRVersion}", Environment.Version);
+#if NETFRAMEWORK || NETSTANDARD2_0
+		logger.LogDebug("Dynamic code supported: {IsDynamicCodeSupported}", true);
+#else
+		logger.LogDebug("Dynamic code supported: {IsDynamicCodeSupported}", RuntimeFeature.IsDynamicCodeSupported);
+#endif
 
 		string[] environmentVariables =
 		[

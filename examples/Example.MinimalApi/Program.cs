@@ -5,18 +5,41 @@
 using System.Diagnostics;
 using Example.MinimalApi;
 using OpenTelemetry;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 
-//builder.AddElasticOpenTelemetry();
+var options = new Elastic.OpenTelemetry.ElasticOpenTelemetryOptions()
+{
+	// You can customize options here if needed
+};
 
-// This will add the OpenTelemetry services using Elastic defaults
+//// Force small batch size and no delay for quicker exports in this example
+builder.Services.Configure<OtlpExporterOptions>(o =>
+{
+	o.BatchExportProcessorOptions.MaxExportBatchSize = 1;
+	o.BatchExportProcessorOptions.ScheduledDelayMilliseconds = 1;
+});
+
+//builder.Services.AddOpenTelemetry()
+//	.WithTracing(t => t
+//		.WithElasticDefaults(builder.Configuration, t => t
+//			.AddSource(Api.ActivitySourceName)
+//			.AddProcessor(new CustomProcessor())));
+
+builder.Services.AddOpenTelemetry()
+	.WithElasticTracing(builder.Configuration, t => t
+			.AddSource(Api.ActivitySourceName)
+			.AddProcessor(new CustomProcessor()));
+
+// Preferred method to add Elastic OpenTelemetry integration
+//builder.AddElasticOpenTelemetry(options, otelBuilder => otelBuilder
+//	.WithTracing(t => t
+//		.AddSource(Api.ActivitySourceName)
+//		.AddProcessor(new CustomProcessor())));
+
 builder.AddServiceDefaults();
-
-builder.Services
-	.AddHttpClient() // Adds IHttpClientFactory
-	.AddElasticOpenTelemetry() // Adds app specific tracing
-		.WithTracing(t => t.AddSource(Api.ActivitySourceName));
 
 var app = builder.Build();
 

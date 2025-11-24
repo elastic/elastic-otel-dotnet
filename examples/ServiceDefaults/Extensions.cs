@@ -18,7 +18,7 @@ public static class Extensions
 {
 	public static IHostApplicationBuilder AddServiceDefaults(this IHostApplicationBuilder builder)
 	{
-		builder.ConfigureOpenTelemetry();
+		//builder.ConfigureOpenTelemetry();
 
 		builder.AddDefaultHealthChecks();
 
@@ -48,8 +48,6 @@ public static class Extensions
 					tracing.SetSampler(new AlwaysOnSampler());
 				}
 			});
-
-		builder.AddOpenTelemetryExporters();
 
 		return builder;
 	}

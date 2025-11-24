@@ -45,6 +45,9 @@ internal static class OpenTelemetryLoggerOptionsExtensions
 		//   - https://github.com/open-telemetry/opentelemetry-collector-contrib/issues/39304
 		// options.IncludeScopes = true;
 
+		// TODO - Verify if we can configure the OTLP exporter to add the user agent header.
+		// See: https://github.com/elastic/elastic-otel-dotnet/issues/338
+
 		logger.LogConfiguredSignalProvider(nameof(Signals.Logs), nameof(OpenTelemetryLoggerOptions), "<n/a>");
 	}
 }

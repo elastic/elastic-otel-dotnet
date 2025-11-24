@@ -17,12 +17,11 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 	private readonly CancellationTokenSource _cancellationTokenSource = new();
 	private readonly StreamWriter _streamWriter;
 	private readonly LogLevel _configuredLogLevel;
+	private readonly LoggerExternalScopeProvider _scopeProvider;
 
 	private bool _disposed;
 
 	public bool FileLoggingEnabled { get; }
-
-	private readonly LoggerExternalScopeProvider _scopeProvider;
 
 	public FileLogger(CompositeElasticOpenTelemetryOptions options)
 	{
@@ -40,8 +39,8 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 		{
 			var process = Process.GetCurrentProcess();
 
-			// When ordered by filename, we see logs from the same process grouped, then ordered by oldest to newest, then the PID for that instance
-			var logFileName = $"EDOT.{process.ProcessName}_{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{process.Id}.log";
+			// This naming resembles the naming structure for OpenTelemetry log files.
+			var logFileName = $"edot-dotnet-{process.Id}-{process.ProcessName}-{DateTimeOffset.UtcNow:yyyyMMdd-hhMMssfffZ}.log";
 			var logDirectory = options.LogDirectory;
 
 			LogFilePath = Path.Combine(logDirectory, logFileName);
@@ -50,12 +49,19 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 				Directory.CreateDirectory(logDirectory);
 
 			// StreamWriter.Dispose disposes underlying stream too.
-			var stream = new FileStream(LogFilePath, FileMode.OpenOrCreate, FileAccess.Write);
+			var stream = new FileStream(LogFilePath, FileMode.Append, FileAccess.Write, FileShare.Read);
 
 			_streamWriter = new StreamWriter(stream, Encoding.UTF8);
 
 			_streamWriter.WriteLine("DateTime (UTC)           Thread  SpanId  Level         Message");
 			_streamWriter.WriteLine();
+
+			// Drain any deferred log entries captured before the file logger was initialized.
+			// These appear before the preamble to ensure correct timestamping order.
+			if (DeferredLogger.TryGetInstance(out var deferredLogger))
+			{
+				deferredLogger.DrainAndRelease(_streamWriter);
+			}
 
 			WritingTask = Task.Run(async () =>
 			{

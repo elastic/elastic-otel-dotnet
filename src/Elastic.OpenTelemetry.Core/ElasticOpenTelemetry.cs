@@ -24,6 +24,11 @@ internal static class ElasticOpenTelemetry
 	internal static ElasticOpenTelemetryComponents Bootstrap(SdkActivationMethod activationMethod) =>
 		Bootstrap(activationMethod, CompositeElasticOpenTelemetryOptions.DefaultOptions, null);
 
+	/// <summary>
+	/// This checks for any existing components on the IServiceCollection and reuse them if found.
+	/// It also attempts to used a shared components instance if available and suitable.
+	/// If neither are available, it will create a new instance.
+	/// </summary>
 	internal static ElasticOpenTelemetryComponents Bootstrap(CompositeElasticOpenTelemetryOptions options, IServiceCollection? services) =>
 		Bootstrap(SdkActivationMethod.NuGet, options, services);
 
