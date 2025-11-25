@@ -39,10 +39,7 @@ internal sealed class ElasticOpenTelemetryService(IServiceProvider serviceProvid
 
 	public async Task StoppedAsync(CancellationToken cancellationToken)
 	{
-		if (_components?.Logger is not null)
-			await _components.Logger.DisposeAsync().ConfigureAwait(false);
-
-		if (_components?.LoggingEventListener is not null)
-			await _components.LoggingEventListener.DisposeAsync().ConfigureAwait(false);
+		if (_components is not null)
+			await _components.DisposeAsync().ConfigureAwait(false);
 	}
 }

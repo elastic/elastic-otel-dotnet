@@ -19,7 +19,7 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 	private readonly LogLevel _configuredLogLevel;
 	private readonly LoggerExternalScopeProvider _scopeProvider;
 
-	private bool _disposed;
+	private int _disposed;
 
 	public bool FileLoggingEnabled { get; }
 
@@ -67,20 +67,53 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 			{
 				var cancellationToken = _cancellationTokenSource.Token;
 
-				while (!cancellationToken.IsCancellationRequested)
+				while (true)
 				{
-					await _logSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+					try
+					{
+						await _logSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+					}
+					catch (OperationCanceledException)
+					{
+						// Cancellation requested, exit the loop
+						break;
+					}
 
+					// Process all queued log entries
 					while (_logQueue.TryDequeue(out var logEntry))
 					{
-						await _streamWriter.WriteLineAsync(logEntry).ConfigureAwait(false);
+						// Check if disposal has started before writing
+						if (Volatile.Read(ref _disposed) == 1)
+							return;
+
+						try
+						{
+							await _streamWriter.WriteLineAsync(logEntry).ConfigureAwait(false);
+						}
+						catch (ObjectDisposedException)
+						{
+							// Stream was disposed during shutdown, exit gracefully
+							return;
+						}
 					}
 				}
 
 				// Flush remaining log entries before exiting
 				while (_logQueue.TryDequeue(out var logEntry))
 				{
-					await _streamWriter.WriteLineAsync(logEntry).ConfigureAwait(false);
+					// Check if disposal has started before writing
+					if (Volatile.Read(ref _disposed) == 1)
+						return;
+
+					try
+					{
+						await _streamWriter.WriteLineAsync(logEntry).ConfigureAwait(false);
+					}
+					catch (ObjectDisposedException)
+					{
+						// Stream was disposed, exit gracefully
+						return;
+					}
 				}
 			});
 
@@ -130,35 +163,59 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 
 	public void Dispose()
 	{
-		if (_disposed)
+		if (Interlocked.Exchange(ref _disposed, 1) != 0)
 			return;
 
 		_cancellationTokenSource.Cancel();
 		_logSemaphore.Release();
 
-		WritingTask?.Wait();
+		try
+		{
+			// Wait for the writing task to complete with a timeout to prevent hanging
+			WritingTask?.Wait(TimeSpan.FromSeconds(5));
+		}
+		catch (AggregateException ex) when (ex.InnerException is OperationCanceledException)
+		{
+			// Expected when cancellation token is triggered
+		}
+		catch (OperationCanceledException)
+		{
+			// Expected when cancellation token is triggered
+		}
 
 		_streamWriter.Dispose();
 		_logSemaphore.Dispose();
 		_cancellationTokenSource.Dispose();
-
-		_disposed = true;
 	}
 
 	public async ValueTask DisposeAsync()
 	{
-		if (_disposed)
+		if (Interlocked.Exchange(ref _disposed, 1) != 0)
 			return;
 
 		_cancellationTokenSource.Cancel();
 		_logSemaphore.Release();
 
-		await WritingTask.ConfigureAwait(false);
+		try
+		{
+			// Wait for the writing task to complete with a timeout to prevent hanging
+			await WritingTask.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+		}
+		catch (TimeoutException)
+		{
+			// Task didn't complete in time, proceed with disposal
+		}
+		catch (OperationCanceledException)
+		{
+			// Expected when cancellation token is triggered
+		}
 
+#if NET
+        await _streamWriter.DisposeAsync().ConfigureAwait(false);
+#else
 		_streamWriter.Dispose();
+#endif
 		_logSemaphore.Dispose();
 		_cancellationTokenSource.Dispose();
-
-		_disposed = true;
 	}
 }

@@ -57,33 +57,24 @@ let private pristineCheck (arguments:ParseResults<Build>) =
 
 let private runTests suite _ =
     let logger =
-        // use junit xml logging locally, github actions logs using console out formats
         match BuildServer.isGitHubActionsBuild with
         | true -> "--logger:\"GitHubActions;summary.includePassedTests=false;summary.includeNotFoundTests=false\""
-        | false ->
-            let testOutputPath = Paths.ArtifactPath "tests"
-            let junitOutput = Path.Combine(testOutputPath.FullName, "junit-{assembly}-{framework}-test-results.xml")
-            let loggerPathArgs = $"LogFilePath=%s{junitOutput}"
-            $"--logger:\"junit;%s{loggerPathArgs}\""
+        | false -> ""
+
     let filterArgs =
         match suite with
-        | All -> [ "--filter"; "FullyQualifiedName!~.EndToEndTests" ]
+        | All -> []
         | Skip_All -> ["--filter"; "FullyQualifiedName~.SKIPPING.ALL.TESTS"]
         | Unit ->  [ "--filter"; "FullyQualifiedName~.Tests" ]
         | Integration -> [ "--filter"; "FullyQualifiedName~.IntegrationTests" ]
-        | E2E -> [ "--filter"; "FullyQualifiedName~.EndToEndTests" ]
-        | Skip_E2E -> [ "--filter"; "FullyQualifiedName!~.EndToEndTests" ]
 
-    let settingsArg = ["-s"; "tests/.runsettings"]
     let tfmArgs = 
-      if OS.Current = Windows then [] 
-      elif suite.Equals(E2E) then ["-f"; "net8.0"]
-      else ["-f"; "net9.0"]
+      if OS.Current = Windows then []
+      else ["-f"; "net10.0"]
     exec {
         env (Map ["TEST_SUITE", suite.SuitName])
         run "dotnet" (
             ["test"; "-c"; "release"; "--no-restore"; "--no-build"; logger]
-            @ settingsArg
             @ filterArgs
             @ tfmArgs
             @ ["--"; "RunConfiguration.CollectSourceInformation=true"]
@@ -100,7 +91,7 @@ let private test (arguments:ParseResults<Build>) =
         | _ -> runTests suite arguments   
 
 let private validateLicenses _ =
-    let args = ["-t"; "-i"; "Elastic.OpenTelemetry.sln";
+    let args = ["-t"; "-i"; "Elastic.OpenTelemetry.slnx";
                 "--allowed-license-types";"build/allowed-licenses.json"; 
                 "--exclude-projects-matching"; "build/exclude-license-check.json"; "--ignored-packages"; "build/ignored-packages-license-check.json"
                 "-o"; "JsonPretty"]
@@ -172,7 +163,6 @@ let Setup (parsed:ParseResults<Build>) =
         | Compile -> Build.Step compile
         | Build -> Build.Cmd [Clean; CheckFormat; Compile] [] build
         
-        | End_To_End -> Build.Cmd [] [Build] <| runTests E2E
         | Integrate -> Build.Cmd [] [Build] <| runTests Integration
         | Unit_Test -> Build.Cmd [] [Build] <| runTests Unit
         | Test -> Build.Cmd [] [Build] test

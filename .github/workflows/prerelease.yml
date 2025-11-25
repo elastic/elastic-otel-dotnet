@@ -27,7 +27,7 @@ jobs:
         uses: ./.github/workflows/bootstrap
 
       - name: Test
-        run: ./build.sh test --test-suite=skip-e2e
+        run: ./build.sh test
 
       - run: ./build.sh release -c
         name: Release

@@ -16,5 +16,3 @@ app.MapGet("/http", static async ctx =>
 });
 
 app.Run();
-
-public partial class Program { }
