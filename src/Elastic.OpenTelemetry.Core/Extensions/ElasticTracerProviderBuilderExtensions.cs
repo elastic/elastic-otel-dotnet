@@ -20,7 +20,7 @@ namespace OpenTelemetry.Trace;
 /// Provides extension methods on the <see cref="TracerProviderBuilder"/> used to register
 /// the Elastic Distribution of OpenTelemetry (EDOT) .NET defaults.
 /// </summary>
-internal static class TracerProvderBuilderExtensions
+internal static class ElasticTracerProviderBuilderExtensions
 {
 	private static int AddElasticProcessorsCallCount;
 
