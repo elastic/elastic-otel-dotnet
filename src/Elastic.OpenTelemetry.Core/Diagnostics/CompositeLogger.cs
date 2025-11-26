@@ -28,16 +28,14 @@ internal sealed class CompositeLogger(CompositeElasticOpenTelemetryOptions optio
 	public void Dispose()
 	{
 		_isDisposed = true;
-		if (_additionalLogger is IDisposable ad)
-			ad.Dispose();
+		_additionalLogger = null;
 		FileLogger.Dispose();
 	}
 
 	public async ValueTask DisposeAsync()
 	{
 		_isDisposed = true;
-		if (_additionalLogger is IAsyncDisposable ad)
-			await ad.DisposeAsync().ConfigureAwait(false);
+		_additionalLogger = null;
 		await FileLogger.DisposeAsync().ConfigureAwait(false);
 	}
 

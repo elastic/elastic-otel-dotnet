@@ -16,7 +16,7 @@ open Fake.Tools.Git
 type Paths =
     static member Root =
         let mutable dir = DirectoryInfo(".")
-        while dir.GetFiles("*.sln").Length = 0 do dir <- dir.Parent
+        while dir.GetFiles("*.slnx").Length = 0 do dir <- dir.Parent
         Environment.CurrentDirectory <- dir.FullName
         dir
         
@@ -38,12 +38,12 @@ type Software =
     static member GithubMoniker = $"%s{Software.Organization}/%s{Software.Repository}"
     static member SignKey = "069ca2728db333c1"
     
-    static let queryPackageRef upstreamPackage distroPackage =
-        let path = Paths.SrcPath [distroPackage; $"{distroPackage}.csproj"]
+    static let queryPackageRef upstreamPackage =
+        let path = DirectoryInfo(Path.Combine(Paths.Root.FullName, "Directory.Packages.props"))
         let project = XDocument.Load(path.FullName)
-        let packageRef = project.XPathSelectElement($"//PackageReference[@Include = '{upstreamPackage}']")
+        let packageRef = project.XPathSelectElement $"//PackageVersion[@Include = '{upstreamPackage}']"
         let upstreamVersion = packageRef.Attribute("Version").Value
-        SemVer.parse(upstreamVersion)
+        SemVer.parse upstreamVersion
 
     static let restore =
         Lazy<unit>((fun _ -> exec { run "dotnet" "tool" "restore" }), LazyThreadSafetyMode.ExecutionAndPublication)
@@ -63,14 +63,11 @@ type Software =
     
     static member OpenTelemetryAutoInstrumentationVersion =
         let upstreamPackage = "OpenTelemetry.AutoInstrumentation";
-        let distroPackage = $"Elastic.{upstreamPackage}"
-        queryPackageRef upstreamPackage distroPackage
+        queryPackageRef upstreamPackage
         
     static member OpenTelemetryVersion =
         let upstreamPackage = "OpenTelemetry";
-        let distroPackage = $"Elastic.{upstreamPackage}"
-        queryPackageRef upstreamPackage distroPackage
-        
+        queryPackageRef upstreamPackage
 
 type OS =
     | OSX | Windows | Linux

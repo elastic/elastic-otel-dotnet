@@ -402,11 +402,11 @@ public static class TracerProviderBuilderExtensions
 		}
 		else
 		{
-			TracerProvderBuilderExtensions.AddActivitySourceWithLogging(builder, logger, "System.Net.Http", builderState.InstanceIdentifier);
+			Trace.ElasticTracerProviderBuilderExtensions.AddActivitySourceWithLogging(builder, logger, "System.Net.Http", builderState.InstanceIdentifier);
 		}
 #endif
 
-		TracerProvderBuilderExtensions.AddActivitySourceWithLogging(builder, logger, "Elastic.Transport", builderState.InstanceIdentifier);
+		Trace.ElasticTracerProviderBuilderExtensions.AddActivitySourceWithLogging(builder, logger, "Elastic.Transport", builderState.InstanceIdentifier);
 
 #if NET
 		if (RuntimeFeature.IsDynamicCodeSupported)
@@ -420,7 +420,7 @@ public static class TracerProviderBuilderExtensions
 			AddAspNetCoreInstrumentation(builder, builderState);
 		}
 
-		TracerProvderBuilderExtensions.AddElasticProcessorsCore(builder, builderState, null, services);
+		Trace.ElasticTracerProviderBuilderExtensions.AddElasticProcessorsCore(builder, builderState, null, services);
 
 		var userProvidedConfigureBuilder = builderContext.BuilderOptions.UserProvidedConfigureBuilder;
 		if (userProvidedConfigureBuilder is not null)

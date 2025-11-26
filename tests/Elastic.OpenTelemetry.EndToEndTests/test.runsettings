@@ -1,7 +1,0 @@
-<RunSettings>
-  <RunConfiguration>
-    <EnvironmentVariables>
-      <ELASTIC_OTEL_LOG_DIRECTORY></ELASTIC_OTEL_LOG_DIRECTORY>
-    </EnvironmentVariables>
-  </RunConfiguration>
-</RunSettings>

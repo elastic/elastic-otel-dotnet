@@ -15,6 +15,11 @@ public partial class InstrumentationScanningTests(WebApplicationFactory<WebApiDo
 	: IClassFixture<WebApplicationFactory<WebApiDotNet8.ProgramV8>>
 {
 	private readonly WebApplicationFactory<WebApiDotNet8.ProgramV8> _factory = factory;
+#elif NET9_0
+public partial class InstrumentationScanningTests(WebApplicationFactory<WebApiDotNet9.ProgramV9> factory, ITestOutputHelper output)
+	: IClassFixture<WebApplicationFactory<WebApiDotNet9.ProgramV9>>
+{
+	private readonly WebApplicationFactory<WebApiDotNet9.ProgramV9> _factory = factory;
 #else
 public partial class InstrumentationScanningTests(WebApplicationFactory<Program> factory, ITestOutputHelper output)
 	: IClassFixture<WebApplicationFactory<Program>>
@@ -29,7 +34,7 @@ public partial class InstrumentationScanningTests(WebApplicationFactory<Program>
 
 	[GeneratedRegex(@"^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}\]\[\d{6}\]\[-*\]\[Debug\]\s+Added contrib instrumentation 'HTTP' to MeterProviderBuilder*")]
 	private static partial Regex HttpMeterProviderBuilderRegex();
-#elif NET9_0
+#elif NET9_0_OR_GREATER
 	[GeneratedRegex(@"^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}\]\[\d{6}\]\[-*\]\[Debug\]\s+Added 'System.Net.Http' to TracerProviderBuilder.*")]
 	private static partial Regex HttpTracerProviderBuilderRegex();
 

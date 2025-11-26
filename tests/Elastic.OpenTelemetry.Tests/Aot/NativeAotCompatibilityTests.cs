@@ -3,7 +3,7 @@
 // See the LICENSE file in the project root for more information
 
 // Just testing on one platform for now to speed up tests
-#if NET9_0
+#if NET10_0
 using System.Runtime.InteropServices;
 using Xunit.Abstractions;
 

@@ -184,7 +184,7 @@ internal static partial class LoggerMessages
 
 #if NET8_0
 		logger.LogDebug("Matched TFM: {TargetFrameworkMoniker}", "net8.0");
-#elif NET9_0
+#elif NET9_0_OR_GREATER
 		logger.LogDebug("Matched TFM: {TargetFrameworkMoniker}", "net9.0");
 #elif NETSTANDARD2_0
 		logger.LogDebug("Matched TFM: {TargetFrameworkMoniker}", "netstandard2.0");
