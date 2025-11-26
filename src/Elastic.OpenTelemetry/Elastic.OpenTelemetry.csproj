@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
@@ -64,6 +64,13 @@
     <Compile Include="..\Elastic.OpenTelemetry.Core\**\*.cs" />
     <Content Remove="README.md" />
   </ItemGroup>
-  
+
+  <ItemGroup>
+    <ProjectReference Include="..\Elastic.OpenTelemetry.Configuration.Analyzer\Elastic.OpenTelemetry.Configuration.Analyzer.csproj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <OutputItemType>Analyzer</OutputItemType>
+    </ProjectReference>
+  </ItemGroup>
+
 </Project>
 
