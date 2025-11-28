@@ -9,16 +9,24 @@ using OpenTelemetry.Exporter;
 using System.Net.Http;
 #endif
 
+#pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace Elastic.OpenTelemetry.Exporters;
+#pragma warning restore IDE0130 // Namespace does not match folder structure
 
 internal static class OtlpExporterDefaults
 {
-	internal static readonly HttpMessageHandler Handler = new ElasticUserAgentHandler($"elastic-otlp-dotnet/{VersionHelper.InformationalVersion}");
+	private static string UserAgent => $"elastic-otlp-dotnet/{VersionHelper.InformationalVersion}";
 
-	public static void OtlpExporterOptions(OtlpExporterOptions options) =>
+	internal static void OtlpExporterOptions(OtlpExporterOptions options) =>
 		options.HttpClientFactory = () =>
 		{
-			var client = new HttpClient(Handler);
+			var client = new HttpClient(new ElasticUserAgentHandler(UserAgent));
 			return client;
 		};
+
+	internal static OtlpExporterOptions ConfigureElasticUserAgent(this OtlpExporterOptions options)
+	{
+		OtlpExporterOptions(options);
+		return options;
+	}
 }
