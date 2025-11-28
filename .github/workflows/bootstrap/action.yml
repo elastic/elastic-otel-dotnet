@@ -38,12 +38,6 @@ runs:
       uses: actions/setup-dotnet@v5
       with:
         global-json-file: ./global.json
-        # 6.x is required for the release-notes tool.
-        # 7.x is required for the dotnet-project-licenses tool.
-        dotnet-version: |
-            6.x
-            7.x
-            8.x
 
     - id: dotnet
       shell: bash
