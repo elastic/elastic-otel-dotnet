@@ -381,7 +381,7 @@ public static class LoggerProviderBuilderExtensions
 			if (services is null)
 			{
 				builder.ConfigureServices(sc => sc.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions));
-				logger.LogConfiguredOtlpExporterOptions();
+				logger.LogConfiguredOtlpExporterOptions("logs");
 			}
 
 			builder.ConfigureServices(sc => sc.Configure<OpenTelemetryLoggerOptions>(o => o.WithElasticDefaults(logger)));

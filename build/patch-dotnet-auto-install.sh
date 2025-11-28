@@ -56,7 +56,7 @@ else
 fi
 
 test -z "$OTEL_DOTNET_AUTO_HOME" && OTEL_DOTNET_AUTO_HOME="$HOME/.otel-dotnet-auto"
-test -z "$VERSION" && VERSION="v1.9.0"
+test -z "$VERSION" && VERSION="v1.13.0"
 
 DOWNLOAD_DIR="${DOWNLOAD_DIR:=${TMPDIR:=$(mktemp -d)}}"
 

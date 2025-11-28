@@ -379,7 +379,7 @@ public static class MeterProviderBuilderExtensions
 			if (services is null)
 			{
 				builder.ConfigureServices(sc => sc.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions));
-				logger.LogConfiguredOtlpExporterOptions();
+				logger.LogConfiguredOtlpExporterOptions("metrics");
 			}
 
 			builder.ConfigureServices(sc => sc.Configure<MetricReaderOptions>(o =>

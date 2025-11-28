@@ -1,5 +1,5 @@
-ARG OTEL_VERSION=1.12.0
-FROM mcr.microsoft.com/dotnet/runtime:9.0 AS base
+ARG OTEL_VERSION=1.13.0
+FROM mcr.microsoft.com/dotnet/runtime:10.0 AS base
 ARG TARGETPLATFORM
 ARG TARGETARCH
 ARG TARGETVARIANT

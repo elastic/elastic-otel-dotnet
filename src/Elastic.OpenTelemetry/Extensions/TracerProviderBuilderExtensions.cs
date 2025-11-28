@@ -383,7 +383,7 @@ public static class TracerProviderBuilderExtensions
 		if (services is null)
 		{
 			builder.ConfigureServices(sc => sc.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions));
-			logger.LogConfiguredOtlpExporterOptions();
+			logger.LogConfiguredOtlpExporterOptions("traces");
 		}
 
 #if NET9_0_OR_GREATER
