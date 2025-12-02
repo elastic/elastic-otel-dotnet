@@ -40,7 +40,7 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 			var process = Process.GetCurrentProcess();
 
 			// This naming resembles the naming structure for OpenTelemetry log files.
-			var logFileName = $"edot-dotnet-{process.Id}-{process.ProcessName}-{DateTimeOffset.UtcNow:yyyyMMdd-hhMMssfffZ}.log";
+			var logFileName = $"edot-dotnet-{process.Id}-{process.ProcessName}-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmssfffZ}.log";
 			var logDirectory = options.LogDirectory;
 
 			LogFilePath = Path.Combine(logDirectory, logFileName);

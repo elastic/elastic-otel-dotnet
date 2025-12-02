@@ -192,7 +192,11 @@ let stageArtifacts (assets:List<ReleaseAsset * FileInfo>) =
         
     stagedZips |> List.iter (fun (asset, path) ->
         
-        injectPluginFiles asset path "netstandard2.1" "net"
+        // We inject net8.0 as the minimum supported TFM version
+        // Previously we used netstandard2.1, but this causes issues with adding a handler for the HttpClient
+        // used for OTLP export as the SDK prefers the `Send` rather than `SendAsync` method which is only available in net8.0+ TFM
+        // Whe using netstandard2.1 there is no handler code to run so the default user agent is sent.
+        injectPluginFiles asset path "net8.0" "net"
         if asset.Name.EndsWith "-windows.zip" then
             injectPluginFiles asset path "net462" "netfx"
             
@@ -207,7 +211,8 @@ let stageArtifacts (assets:List<ReleaseAsset * FileInfo>) =
     stagedZips
 
 let redistribute (arguments:ParseResults<Build>) =
-    exec { run "dotnet" "build" "src/Elastic.OpenTelemetry.AutoInstrumentation/Elastic.OpenTelemetry.AutoInstrumentation.csproj" "-f" "netstandard2.1" "-c" "release" }
+    // We build net8.0 as the minimum supported TFM version - See above for details
+    exec { run "dotnet" "build" "src/Elastic.OpenTelemetry.AutoInstrumentation/Elastic.OpenTelemetry.AutoInstrumentation.csproj" "-f" "net8.0" "-c" "release" }
     exec { run "dotnet" "build" "src/Elastic.OpenTelemetry.AutoInstrumentation/Elastic.OpenTelemetry.AutoInstrumentation.csproj" "-f" "net462" "-c" "release" }
     let assets = downloadArtifacts arguments
     printfn ""

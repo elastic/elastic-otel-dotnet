@@ -316,7 +316,7 @@ public static class ServiceCollectionExtensions
 		var logger = DeferredLogger.GetOrCreate(options);
 
 		services.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions);
-		logger.LogConfiguredOtlpExporterOptions();
+		logger.LogConfiguredOtlpExporterOptions("all signals");
 
 		var builder = services.AddOpenTelemetry().WithElasticDefaultsCore(options, builderOptions);
 
