@@ -66,9 +66,9 @@ public class GlobalLogConfigurationTests
 	}
 
 	[Theory]
-	[InlineData("trace", LogLevel.Debug, true)]
-	[InlineData("Trace", LogLevel.Debug, true)]
-	[InlineData("TraCe", LogLevel.Debug, true)]
+	[InlineData("trace", LogLevel.Trace, true)]
+	[InlineData("Trace", LogLevel.Trace, true)]
+	[InlineData("TraCe", LogLevel.Trace, true)]
 	[InlineData("debug", LogLevel.Debug, true)]
 	[InlineData("info", LogLevel.Information, false)]
 	[InlineData("warn", LogLevel.Warning, false)]

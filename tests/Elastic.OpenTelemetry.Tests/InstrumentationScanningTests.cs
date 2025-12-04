@@ -29,16 +29,16 @@ public partial class InstrumentationScanningTests(WebApplicationFactory<Program>
 	private readonly ITestOutputHelper _output = output;
 
 #if NET8_0
-	[GeneratedRegex(@"^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}\]\[\d{6}\]\[-*\]\[Debug\]\s+Added contrib instrumentation 'HTTP' to TracerProviderBuilder*")]
+	[GeneratedRegex(@"^\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z\]\[\d{6}\]\[-*\]\[Debug\]\s+Added contrib instrumentation 'HTTP' to TracerProviderBuilder*")]
 	private static partial Regex HttpTracerProviderBuilderRegex();
 
-	[GeneratedRegex(@"^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}\]\[\d{6}\]\[-*\]\[Debug\]\s+Added contrib instrumentation 'HTTP' to MeterProviderBuilder*")]
+	[GeneratedRegex(@"^\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z\]\[\d{6}\]\[-*\]\[Debug\]\s+Added contrib instrumentation 'HTTP' to MeterProviderBuilder*")]
 	private static partial Regex HttpMeterProviderBuilderRegex();
 #elif NET9_0_OR_GREATER
-	[GeneratedRegex(@"^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}\]\[\d{6}\]\[-*\]\[Debug\]\s+Added 'System.Net.Http' to TracerProviderBuilder.*")]
+	[GeneratedRegex(@"^\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z\]\[\d{6}\]\[-*\]\[Debug\]\s+Added 'System.Net.Http' to TracerProviderBuilder.*")]
 	private static partial Regex HttpTracerProviderBuilderRegex();
 
-	[GeneratedRegex(@"^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}\]\[\d{6}\]\[-*\]\[Debug\]\s+Added 'System.Net.Http' meter to MeterProviderBuilder.*")]
+	[GeneratedRegex(@"^\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z\]\[\d{6}\]\[-*\]\[Debug\]\s+Added 'System.Net.Http' meter to MeterProviderBuilder.*")]
 	private static partial Regex HttpMeterProviderBuilderRegex();
 #endif
 
@@ -71,7 +71,7 @@ public partial class InstrumentationScanningTests(WebApplicationFactory<Program>
 	public async Task InstrumentationAssemblyScanning_AddsHttpInstrumentation()
 	{
 		// NOTE: When this runs on NET8, we expect the contrib library to be used.
-		// On NET9, the library dependency is not included with Elastic.OpenTelemetry,
+		// On NET9+, the library dependency is not included with Elastic.OpenTelemetry,
 		// so we expect the native instrumentation to be used.
 
 		var exportedItems = new List<Activity>();

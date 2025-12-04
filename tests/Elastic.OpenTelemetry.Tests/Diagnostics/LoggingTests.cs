@@ -13,10 +13,10 @@ public partial class LoggingTests(ITestOutputHelper output)
 {
 	private readonly ITestOutputHelper _output = output;
 
-	[GeneratedRegex(@"\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}\]\[\d{6}\]\[-*\]\[Information\]\s+Elastic Distribution of OpenTelemetry \(EDOT\) \.NET:.*")]
+	[GeneratedRegex(@"\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z\]\[\d{6}\]\[-*\]\[Information\]\s+Elastic Distribution of OpenTelemetry \(EDOT\) \.NET:.*")]
 	private static partial Regex EdotPreamble();
 
-	[GeneratedRegex(@"\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}\]\[\d{6}\]\[-*\]\[Debug\]\s+Reusing existing shared components\.\s+")]
+	[GeneratedRegex(@"\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z\]\[\d{6}\]\[-*\]\[Debug\]\s+Reusing existing shared components\.\s+")]
 	private static partial Regex UsingSharedComponents();
 
 	[Fact]
