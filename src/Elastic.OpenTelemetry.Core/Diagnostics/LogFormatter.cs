@@ -85,7 +85,7 @@ internal static class LogFormatter
 		}
 
 		builder.Append('[')
-			.Append(dateTime.ToString("yyyy-MM-dd HH:mm:ss.fff"))
+			.Append(dateTime.ToString("O"))
 			.Append("][")
 			.Append(threadId)
 			.Append("][")
@@ -95,7 +95,7 @@ internal static class LogFormatter
 			.Append(']');
 
 		var length = builder.Length;
-		var padding = 55 - length;
+		var padding = 60 - length;
 
 		for (var i = 0; i < padding; i++)
 			builder.Append(' ');

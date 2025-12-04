@@ -2,6 +2,7 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Core;
 using Microsoft.Extensions.Logging;
@@ -15,15 +16,31 @@ namespace Elastic.OpenTelemetry.Diagnostics;
 /// <remarks>
 /// If disposed, triggers disposal of the <see cref="Diagnostics.FileLogger"/>.
 /// </remarks>
-internal sealed class CompositeLogger(CompositeElasticOpenTelemetryOptions options) : IDisposable, IAsyncDisposable, ILogger
+internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 {
 	public const string LogCategory = "Elastic.OpenTelemetry";
 
-	public FileLogger FileLogger { get; } = new(options);
-	public StandardOutLogger ConsoleLogger { get; } = new(options);
+	internal Guid InstanceId { get; } = Guid.NewGuid();
 
-	private ILogger? _additionalLogger = options.AdditionalLogger;
+	public FileLogger FileLogger { get; }
+	public StandardOutLogger ConsoleLogger { get; }
+
+	private ILogger? _additionalLogger;
 	private bool _isDisposed;
+
+	public CompositeLogger(CompositeElasticOpenTelemetryOptions options)
+	{
+		if (BootstrapLogger.IsEnabled)
+		{
+			BootstrapLogger.LogWithStackTrace($"{nameof(CompositeLogger)}: Instance '{InstanceId}' created via ctor." +
+				$"{Environment.NewLine}    Invoked with `{nameof(CompositeElasticOpenTelemetryOptions)}` instance '{options.InstanceId}'.");
+		}
+
+		FileLogger = new(options);
+		ConsoleLogger = new(options);
+
+		_additionalLogger = options.AdditionalLogger;
+	}
 
 	public void Dispose()
 	{

@@ -6,6 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry.Configuration;
+using Elastic.OpenTelemetry.Core.Diagnostics;
 using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -139,9 +140,6 @@ internal static class SignalBuilder
 				return HandleExistingBuilderState(builder, providerBuilderName, existingBuilderState);
 			}
 
-			// We can't log to the file here as we don't yet have any bootstrapped components.
-			// Therefore, this message will only appear if the consumer provides an additional logger.
-			// This is fine as it's a trace level message for advanced debugging.
 			logger.LogNoExistingComponents(providerBuilderName, builderInstanceId);
 
 			options ??= CompositeElasticOpenTelemetryOptions.DefaultOptions;
@@ -151,6 +149,11 @@ internal static class SignalBuilder
 			// If neither are available, it will create a new instance.
 			components = ElasticOpenTelemetry.Bootstrap(options, services);
 			var builderState = new BuilderState(components, builderInstanceId);
+
+			// We will have flushed the deferred logger at this point so we can now use the final logger.
+			logger = components.Logger;
+
+			LoadedAssemblyLogHelper.LogLoadedAssemblies(components.Logger);
 
 			var builderContext = new BuilderContext<T>
 			{

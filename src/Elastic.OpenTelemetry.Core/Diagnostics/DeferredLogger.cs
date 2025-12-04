@@ -21,10 +21,11 @@ internal sealed class DeferredLogger : ILogger
 {
 	private readonly bool _isEnabled = false;
 	private readonly LogLevel _configuredLogLevel;
-	private readonly ConcurrentQueue<string> _logQueue = new();
 	private readonly ILogger? _additionalLogger;
 
 	private static readonly Lock Lock = new();
+
+	private ConcurrentQueue<string>? _logQueue = new();
 
 	/// <summary>
 	/// Create an instance of <see cref="DeferredLogger"/>.
@@ -52,7 +53,7 @@ internal sealed class DeferredLogger : ILogger
 	{
 		_additionalLogger?.Log(logLevel, eventId, state, exception, formatter);
 
-		if (!IsEnabled(logLevel))
+		if (!IsEnabled(logLevel) || _logQueue is null)
 			return;
 
 		var logLine = LogFormatter.Format(logLevel, eventId, state, exception, formatter);
@@ -61,18 +62,24 @@ internal sealed class DeferredLogger : ILogger
 			logLine = $"{logLine}{Environment.NewLine}{exception}";
 
 		_logQueue.Enqueue(logLine);
+
+		_additionalLogger?.Log(logLevel, eventId, state, exception, formatter);
 	}
 
 	internal void DrainAndRelease(StreamWriter streamWriter)
 	{
 		using (Lock.EnterScope())
 		{
+			if (_logQueue is null)
+				return;
+
 			while (_logQueue.TryDequeue(out var deferredLog))
 			{
 				streamWriter.WriteLine(deferredLog);
 			}
 
 			Instance = null;
+			_logQueue = null;
 		}
 	}
 

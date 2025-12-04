@@ -2,6 +2,7 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.Logging;
@@ -24,8 +25,13 @@ internal static class OpenTelemetryLoggerOptionsExtensions
 	/// <param name="logger">An <see cref="ILogger"/> to use for diagnostic logging.</param>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="options"/> is null.</exception>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="logger"/> is null.</exception>
-	public static void WithElasticDefaults(this OpenTelemetryLoggerOptions options, ILogger logger)
+	internal static void WithElasticDefaults(this OpenTelemetryLoggerOptions options, ILogger logger)
 	{
+		// We don't capture the stack trace here as we'll have that logged deeper in the call stack if needed.
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.Log($"{nameof(OpenTelemetryLoggerOptionsExtensions)}.{nameof(WithElasticDefaults)}(this OpenTelemetryLoggerOptions options, ILogger logger) invoked " +
+				$"on options with object hash '{RuntimeHelpers.GetHashCode(options)}'.");
+
 #if NET
 		ArgumentNullException.ThrowIfNull(options);
 		ArgumentNullException.ThrowIfNull(logger);
