@@ -2,28 +2,18 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
-using System.Buffers.Text;
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Tracing;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Elastic.OpenTelemetry.Configuration.Instrumentations;
 using Elastic.OpenTelemetry.Configuration.Parsers;
 using Elastic.OpenTelemetry.Core;
 using Elastic.OpenTelemetry.Diagnostics;
-using Google.Protobuf;
-using Google.Protobuf.Collections;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using OpAmp.Proto.V1;
-using OpenTelemetry.OpAmp.Client.Internal;
-using OpenTelemetry.OpAmp.Client.Internal.Listeners;
-using OpenTelemetry.OpAmp.Client.Internal.Listeners.Messages;
-using OpenTelemetry.OpAmp.Client.Internal.Transport.Http;
 using static System.Environment;
 using static System.Runtime.InteropServices.RuntimeInformation;
 using static Elastic.OpenTelemetry.Configuration.EnvironmentVariables;
@@ -31,12 +21,6 @@ using static Elastic.OpenTelemetry.Configuration.Parsers.SharedParsers;
 
 namespace Elastic.OpenTelemetry.Configuration;
 
-#if NET
-[JsonSerializable(typeof(Dictionary<string, string>))]
-internal partial class DictionaryStringStringJsonContext : JsonSerializerContext
-{
-}
-#endif
 
 /// <summary>
 /// Defines advanced options which can be used to finely-tune the behaviour of the Elastic
@@ -97,50 +81,50 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 		// This is temporarily used as a place to test OpAmp.
 		// We'll needa nicer way to have this run for all paths (or apply asynchronously later)
 
-		var configListener = new ConfigListener();
-		var frameProcessor = new FrameProcessor();
-		frameProcessor.Subscribe(configListener);
+		//var configListener = new ConfigListener();
+		//var frameProcessor = new FrameProcessor();
+		//frameProcessor.Subscribe(configListener);
 
-		var httpTransport = new PlainHttpTransport(new Uri("http://localhost:4320/v1/opamp"), frameProcessor);
+		//var httpTransport = new PlainHttpTransport(new Uri("http://localhost:4320/v1/opamp"), frameProcessor);
 
-		var uid = ByteString.CopyFrom(Guid.NewGuid().ToByteArray());
+		//var uid = ByteString.CopyFrom(Guid.NewGuid().ToByteArray());
 
-		var agentDescription = new AgentDescription();
+		//var agentDescription = new AgentDescription();
 
-		// TODO - This is a challenge as we need the service name before we can initialise the Otel SDK
-		// When not configured explicitly, the SDK uses internal logic to determine the name based on the app type.
-		agentDescription.IdentifyingAttributes.Add(new KeyValue() { Key = "service.name", Value = new AnyValue() { StringValue = "minimal-api-example-2" } });
+		//// TODO - This is a challenge as we need the service name before we can initialise the Otel SDK
+		//// When not configured explicitly, the SDK uses internal logic to determine the name based on the app type.
+		//agentDescription.IdentifyingAttributes.Add(new KeyValue() { Key = "service.name", Value = new AnyValue() { StringValue = "minimal-api-example-2" } });
 
-		var frame = new AgentToServer()
-		{
-			InstanceUid = uid,
-			Capabilities = (ulong)(AgentCapabilities.AcceptsRemoteConfig | AgentCapabilities.ReportsStatus),
-			AgentDescription = agentDescription
-		};
+		//var frame = new AgentToServer()
+		//{
+		//	InstanceUid = uid,
+		//	Capabilities = (ulong)(AgentCapabilities.AcceptsRemoteConfig | AgentCapabilities.ReportsStatus),
+		//	AgentDescription = agentDescription
+		//};
 
-		httpTransport.SendAsync(frame, CancellationToken.None).GetAwaiter().GetResult(); // temp blocking
+		//httpTransport.SendAsync(frame, CancellationToken.None).GetAwaiter().GetResult(); // temp blocking
 	}
 
-	private static ReadOnlySpan<byte> EmptyConfigBytes => "{}"u8;
+//	private static ReadOnlySpan<byte> EmptyConfigBytes => "{}"u8;
 
-	private class ConfigListener : IOpAmpListener<RemoteConfigMessage>
-	{
-		public void HandleMessage(RemoteConfigMessage message)
-		{
-			// TODO - Compare hash with previous (when polling)
+//	private class ConfigListener : IOpAmpListener<RemoteConfigMessage>
+//	{
+//		public void HandleMessage(RemoteConfigMessage message)
+//		{
+//			// TODO - Compare hash with previous (when polling)
 
-			if (message.RemoteConfig.Config.ConfigMap.TryGetValue("elastic", out var config))
-			{
-				if (config.Body.Span.SequenceEqual(EmptyConfigBytes))
-					return;
-#if NET
-				var jsonObject = JsonSerializer.Deserialize(config.Body.Span, DictionaryStringStringJsonContext.Default.DictionaryStringString);
-#else
-				var jsonObject = JsonSerializer.Deserialize<Dictionary<string, string>>(config.Body.Span);
-#endif
-			}
-		}
-	}
+//			if (message.RemoteConfig.Config.ConfigMap.TryGetValue("elastic", out var config))
+//			{
+//				if (config.Body.Span.SequenceEqual(EmptyConfigBytes))
+//					return;
+//#if NET
+//				var jsonObject = JsonSerializer.Deserialize(config.Body.Span, DictionaryStringStringJsonContext.Default.DictionaryStringString);
+//#else
+//				var jsonObject = JsonSerializer.Deserialize<Dictionary<string, string>>(config.Body.Span);
+//#endif
+//			}
+//		}
+//	}
 
 	internal CompositeElasticOpenTelemetryOptions(IDictionary? environmentVariables)
 	{

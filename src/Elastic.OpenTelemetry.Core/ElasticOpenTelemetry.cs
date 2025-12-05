@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry.Configuration;
+using Elastic.OpenTelemetry.Core.OpAmp;
 using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -149,6 +150,9 @@ internal static class ElasticOpenTelemetry
 			BootstrapLogger.Log($"{nameof(Bootstrap)}: CreateComponents invoked.");
 
 			var logger = new CompositeLogger(options);
+
+			var centralConfig = ElasticCentralConfiguration.CreateAsync
+
 			var eventListener = new LoggingEventListener(logger, options);
 			var components = new ElasticOpenTelemetryComponents(logger, eventListener, options);
 

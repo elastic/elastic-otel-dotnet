@@ -9,7 +9,7 @@
     <GenerateNuspecDependsOn>$(GenerateNuspecDependsOn);_ExcludeTargetFramework;_ExcludeTargetFrameworkDependency</GenerateNuspecDependsOn>
   </PropertyGroup>
 
-  <!-- This package doe not support netstandard2.1 and this target is only used for building the redistributable. -->
+  <!-- This package does not support netstandard2.1 and this target is only used for building the redistributable. -->
   <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.1'">
     <PackageReference Include="OpenTelemetry.AutoInstrumentation" GeneratePathProperty="true" PrivateAssets="contentfiles" />
   </ItemGroup>
@@ -24,6 +24,7 @@
 
   <!-- We need these dependencies when building agianst all targets. As they are private, we don't have to worry about them being packaged. -->
   <ItemGroup>
+    <PackageReference Include="OpenTelemetry.OpAmp.Client" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" PrivateAssets="all" />
     <PackageReference Include="Polyfill" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
     <PackageReference Include="NetEscapades.EnumGenerators" PrivateAssets="all" ExcludeAssets="runtime" />
@@ -48,15 +49,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Google.Protobuf" Version="3.31.1" />
-    <PackageReference Include="Grpc.Tools" Version="2.72.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="System.Collections.Immutable" Version="9.0.8" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Compile Include="..\Elastic.OpenTelemetry.Core\**\*.cs" />
     <Content Remove="README.md" />
   </ItemGroup>
@@ -72,10 +64,6 @@
     <Copy SourceFiles="$(PkgOpenTelemetry_AutoInstrumentation)/contentFiles/any/any/instrument.cmd" DestinationFiles="$(MSBuildThisFileDirectory)/_instrument.cmd" />
     <Copy SourceFiles="$(PkgOpenTelemetry_AutoInstrumentation)/contentFiles/any/any/instrument.sh" DestinationFiles="$(MSBuildThisFileDirectory)/_instrument.sh" />
   </Target>
-
-  <ItemGroup Condition="$(TargetFramework.StartsWith('netstandard2')) OR $(TargetFramework.StartsWith('net4'))">
-    <PackageReference Include="System.Text.Json" Version="8.0.5" />
-  </ItemGroup>
 
   <!-- 
   We require the netstandard2.1 target when building to include this in the redistributable of the auto-instrumentation zip file.
