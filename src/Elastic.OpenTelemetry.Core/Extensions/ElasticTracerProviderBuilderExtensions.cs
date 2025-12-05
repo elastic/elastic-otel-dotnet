@@ -35,7 +35,7 @@ internal static class ElasticTracerProviderBuilderExtensions
 	/// processors should be added.</param>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
 	/// <returns>The <see cref="TracerProviderBuilder"/> for chaining.</returns>
-	public static TracerProviderBuilder AddElasticProcessors(this TracerProviderBuilder builder)
+	internal static TracerProviderBuilder AddElasticProcessors(this TracerProviderBuilder builder)
 	{
 #if NET
 		ArgumentNullException.ThrowIfNull(builder);
@@ -62,7 +62,7 @@ internal static class ElasticTracerProviderBuilderExtensions
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="options"/> is null.</exception>
 	/// <returns>The <see cref="TracerProviderBuilder"/> for chaining.</returns>
-	public static TracerProviderBuilder AddElasticProcessors(this TracerProviderBuilder builder, ElasticOpenTelemetryOptions options)
+	internal static TracerProviderBuilder AddElasticProcessors(this TracerProviderBuilder builder, ElasticOpenTelemetryOptions options)
 	{
 #if NET
 		ArgumentNullException.ThrowIfNull(builder);

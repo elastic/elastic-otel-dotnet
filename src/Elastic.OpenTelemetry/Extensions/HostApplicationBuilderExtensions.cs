@@ -2,11 +2,12 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry;
 using Elastic.OpenTelemetry.Core;
+using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
@@ -22,6 +23,17 @@ namespace Microsoft.Extensions.Hosting;
 /// </summary>
 public static class HostApplicationBuilderExtensions
 {
+	// We define these statically for now. One important caveat is that if we add/modify methods, we need to update these accordingly.
+	// Since we don't expect to change the public API very often, this is an acceptable trade-off to avoid calculating this at runtime.
+	// We could consider a source generator to produce these automatically in the future if needed for all public methods in this class.
+	// These are used for diagnostics/logging purposes only.
+	private static readonly string ClassName = typeof(HostApplicationBuilderExtensions).FullName ?? nameof(HostApplicationBuilderExtensions);
+	private static readonly string AddElasticOpenTelemetryMethodNoArgs = $"{ClassName}.{nameof(AddElasticOpenTelemetry)}(this IHostApplicationBuilder builder)";
+	private static readonly string AddElasticOpenTelemetryMethodWithConfigureAction = $"{ClassName}.{nameof(AddElasticOpenTelemetry)}(this IHostApplicationBuilder builder, Action<IOpenTelemetryBuilder> configure)";
+	private static readonly string AddElasticOpenTelemetryMethodWithOptions = $"{ClassName}.{nameof(AddElasticOpenTelemetry)}(this IHostApplicationBuilder builder, ElasticOpenTelemetryOptions options)";
+	private static readonly string AddElasticOpenTelemetryMethodWithOptionsAndConfigureAction = $"{ClassName}.{nameof(AddElasticOpenTelemetry)}" +
+		"(this IHostApplicationBuilder builder, ElasticOpenTelemetryOptions options, Action<IOpenTelemetryBuilder> configure)";
+
 	/// <summary>
 	/// Registers the OpenTelemetry SDK with the application, configured with Elastic Distribution of OpenTelemetry (EDOT) .NET
 	/// <see href="https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/setup/edot-defaults">defaults</see> for traces,
@@ -53,14 +65,23 @@ public static class HostApplicationBuilderExtensions
 	/// <returns>The supplied <see cref="IHostApplicationBuilder"/> for chaining calls.</returns>
 	public static IHostApplicationBuilder AddElasticOpenTelemetry(this IHostApplicationBuilder builder)
 	{
+		// We don't capture the stack trace here as we'll have that logged deeper in the call stack if needed.
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.Log($"{AddElasticOpenTelemetryMethodNoArgs} invoked on builder with object hash '{RuntimeHelpers.GetHashCode(builder)}'.");
+
 #if NET
-        ArgumentNullException.ThrowIfNull(builder);
+		ArgumentNullException.ThrowIfNull(builder);
 #else
 		if (builder is null)
 			throw new ArgumentNullException(nameof(builder));
 #endif
 
-		builder.Services.AddElasticOpenTelemetry(builder.Configuration);
+		var builderOptions = new BuilderOptions<IOpenTelemetryBuilder>
+		{
+			CalleeName = AddElasticOpenTelemetryMethodNoArgs
+		};
+
+		builder.Services.AddElasticOpenTelemetryCore(new(builder.Configuration), builderOptions);
 
 		return builder;
 	}
@@ -95,6 +116,11 @@ public static class HostApplicationBuilderExtensions
 	{
 		// TODO - Breaking change: In a future major release, rename this parameter to 'configureBuilder' for clarity and consistency.
 		// This would be a source breaking change only but we'll reserve it for a major version to avoid disrupting consumers.
+
+		// We don't capture the stack trace here as we'll have that logged deeper in the call stack if needed.
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.Log($"{AddElasticOpenTelemetryMethodWithConfigureAction} invoked on builder with object hash '{RuntimeHelpers.GetHashCode(builder)}'.");
+
 #if NET
 		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(configure);
@@ -110,7 +136,8 @@ public static class HostApplicationBuilderExtensions
 		{
 			UserProvidedConfigureBuilder = configure,
 			// We don't set defer as we expect the callee to handle executing the configure action at the correct time.
-			DeferAddOtlpExporter = false
+			DeferAddOtlpExporter = false,
+			CalleeName = AddElasticOpenTelemetryMethodWithConfigureAction
 		};
 
 		builder.Services.AddElasticOpenTelemetryCore(new(builder.Configuration), builderOptions);
@@ -152,6 +179,10 @@ public static class HostApplicationBuilderExtensions
 	/// <returns><inheritdoc cref="AddElasticOpenTelemetry(IHostApplicationBuilder)" /></returns>
 	public static IHostApplicationBuilder AddElasticOpenTelemetry(this IHostApplicationBuilder builder, ElasticOpenTelemetryOptions options)
 	{
+		// We don't capture the stack trace here as we'll have that logged deeper in the call stack if needed.
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.Log($"{AddElasticOpenTelemetryMethodWithOptions} invoked on builder with object hash '{RuntimeHelpers.GetHashCode(builder)}'.");
+
 #if NET
         ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(options);
@@ -163,7 +194,12 @@ public static class HostApplicationBuilderExtensions
 			throw new ArgumentNullException(nameof(options));
 #endif
 
-		builder.Services.AddElasticOpenTelemetryCore(new(builder.Configuration, options), default);
+		var builderOptions = new BuilderOptions<IOpenTelemetryBuilder>
+		{
+			CalleeName = AddElasticOpenTelemetryMethodWithOptions
+		};
+
+		builder.Services.AddElasticOpenTelemetryCore(new(builder.Configuration, options), builderOptions);
 		return builder;
 	}
 
@@ -198,6 +234,10 @@ public static class HostApplicationBuilderExtensions
 	{
 		// TODO - Breaking change: In a future major release, rename this parameter to 'configureBuilder' for clarity and consistency.
 		// This would be a source breaking change only but we'll reserve it for a major version to avoid disrupting consumers.
+
+		// We don't capture the stack trace here as we'll have that logged deeper in the call stack if needed.
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.Log($"{AddElasticOpenTelemetryMethodWithOptionsAndConfigureAction} invoked on builder with object hash '{RuntimeHelpers.GetHashCode(builder)}'.");
 #if NET
 		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(options);
@@ -216,7 +256,8 @@ public static class HostApplicationBuilderExtensions
 		{
 			UserProvidedConfigureBuilder = configure,
 			// We don't set defer as we expect the callee to handle executing the configure action at the correct time.
-			DeferAddOtlpExporter = false
+			DeferAddOtlpExporter = false,
+			CalleeName = AddElasticOpenTelemetryMethodWithOptionsAndConfigureAction
 		};
 
 		builder.Services.AddElasticOpenTelemetryCore(new(builder.Configuration, options), builderOptions);

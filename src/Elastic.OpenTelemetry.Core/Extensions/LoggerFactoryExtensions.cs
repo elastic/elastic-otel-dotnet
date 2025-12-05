@@ -11,6 +11,6 @@ namespace Elastic.OpenTelemetry.Core;
 
 internal static class LoggerFactoryExtensions
 {
-	public static ILogger CreateElasticLogger(this ILoggerFactory loggerFactory) =>
+	internal static ILogger CreateElasticLogger(this ILoggerFactory loggerFactory) =>
 		loggerFactory.CreateLogger(CompositeLogger.LogCategory);
 }

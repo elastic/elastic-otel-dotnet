@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Core;
+using Elastic.OpenTelemetry.Core.Diagnostics;
 using Elastic.OpenTelemetry.Diagnostics;
 using Elastic.OpenTelemetry.Exporters;
 using Elastic.OpenTelemetry.Instrumentation;
@@ -17,6 +18,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry.Exporter;
+using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
@@ -31,6 +33,20 @@ namespace OpenTelemetry;
 /// </summary>
 public static class TracerProviderBuilderExtensions
 {
+	// We define these statically for now. One important caveat is that if we add/modify methods, we need to update these accordingly.
+	// Since we don't expect to change the public API very often, this is an acceptable trade-off to avoid calculating this at runtime.
+	// We could consider a source generator to produce these automatically in the future if needed for all public methods in this class.
+	// These are used for diagnostics/logging purposes only.
+	private static readonly string ClassName = typeof(TracerProviderBuilderExtensions).FullName ?? nameof(TracerProviderBuilderExtensions);
+	private static readonly string WithElasticDefaultsMethodNoArgs = $"{ClassName}.{nameof(WithElasticDefaults)}(this TracerProviderBuilder builder)";
+	private static readonly string WithElasticDefaultsMethodWithConfigureBuilderAction = $"{ClassName}.{nameof(WithElasticDefaults)}(this TracerProviderBuilder builder, Action<TracerProviderBuilder> configureBuilder)";
+	private static readonly string WithElasticDefaultsMethodWithOptions = $"{ClassName}.{nameof(WithElasticDefaults)}(this TracerProviderBuilder builder, ElasticOpenTelemetryOptions options)";
+	private static readonly string WithElasticDefaultsMethodWithOptionsAndConfigureBuilderAction = $"{ClassName}.{nameof(WithElasticDefaults)}" +
+		"(this TracerProviderBuilder builder, ElasticOpenTelemetryOptions options, Action<TracerProviderBuilder> configureBuilder)";
+	private static readonly string WithElasticDefaultsMethodWithIConfiguration = $"{ClassName}.{nameof(WithElasticDefaults)}(this TracerProviderBuilder builder, IConfiguration configuration)";
+	private static readonly string WithElasticDefaultsMethodWithIConfigurationAndConfigureBuilderAction = $"{ClassName}.{nameof(WithElasticDefaults)}" +
+		"(this TracerProviderBuilder builder, IConfiguration configuration, Action<TracerProviderBuilder> configureBuilder)";
+
 	private static int WithElasticDefaultsCallCount;
 
 	/// <summary>
@@ -82,14 +98,22 @@ public static class TracerProviderBuilderExtensions
 	/// </returns>
 	public static TracerProviderBuilder WithElasticDefaults(this TracerProviderBuilder builder)
 	{
+		// We don't capture the stack trace here as we'll have that logged deeper in the call stack if needed.
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.Log($"{WithElasticDefaultsMethodNoArgs} invoked on builder with object hash '{RuntimeHelpers.GetHashCode(builder)}'.");
+
 #if NET
 		ArgumentNullException.ThrowIfNull(builder);
 #else
 		if (builder is null)
 			throw new ArgumentNullException(nameof(builder));
 #endif
+		var builderOptions = new BuilderOptions<TracerProviderBuilder>
+		{
+			CalleeName = WithElasticDefaultsMethodNoArgs
+		};
 
-		return WithElasticDefaultsCore(builder, null, null, null, default);
+		return builder.WithElasticDefaultsCore(null, null, null, builderOptions);
 	}
 
 	/// <summary><inheritdoc cref="WithElasticDefaults(TracerProviderBuilder)" /></summary>
@@ -138,6 +162,10 @@ public static class TracerProviderBuilderExtensions
 	/// </returns>
 	public static TracerProviderBuilder WithElasticDefaults(this TracerProviderBuilder builder, Action<TracerProviderBuilder> configureBuilder)
 	{
+		// We don't capture the stack trace here as we'll have that logged deeper in the call stack if needed.
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.Log($"{WithElasticDefaultsMethodWithConfigureBuilderAction} invoked on builder with object hash '{RuntimeHelpers.GetHashCode(builder)}'.");
+
 #if NET
 		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(configureBuilder);
@@ -148,8 +176,13 @@ public static class TracerProviderBuilderExtensions
 		if (configureBuilder is null)
 			throw new ArgumentNullException(nameof(configureBuilder));
 #endif
-		var builderOptions = new BuilderOptions<TracerProviderBuilder> { UserProvidedConfigureBuilder = configureBuilder };
-		return WithElasticDefaultsCore(builder, null, null, null, builderOptions);
+		var builderOptions = new BuilderOptions<TracerProviderBuilder>
+		{
+			UserProvidedConfigureBuilder = configureBuilder,
+			CalleeName = WithElasticDefaultsMethodWithConfigureBuilderAction
+		};
+
+		return builder.WithElasticDefaultsCore(null, null, null, builderOptions);
 	}
 
 	/// <summary><inheritdoc cref="WithElasticDefaults(TracerProviderBuilder)" /></summary>
@@ -200,6 +233,11 @@ public static class TracerProviderBuilderExtensions
 	/// </returns>
 	public static TracerProviderBuilder WithElasticDefaults(this TracerProviderBuilder builder, ElasticOpenTelemetryOptions options)
 	{
+		// We don't capture the stack trace here as we'll have that logged deeper in the call stack if needed.
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.Log($"{WithElasticDefaultsMethodWithOptions} invoked on builder with object hash '{RuntimeHelpers.GetHashCode(builder)}'." +
+				$"{Environment.NewLine}    Invoked with `{nameof(ElasticOpenTelemetryOptions)}` instance '{options.InstanceId}'.");
+
 #if NET
 		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(options);
@@ -210,8 +248,12 @@ public static class TracerProviderBuilderExtensions
 		if (options is null)
 			throw new ArgumentNullException(nameof(options));
 #endif
+		var builderOptions = new BuilderOptions<TracerProviderBuilder>
+		{
+			CalleeName = WithElasticDefaultsMethodWithOptions
+		};
 
-		return WithElasticDefaultsCore(builder, new(options), null, null, default);
+		return WithElasticDefaultsCore(builder, new(options), null, null, builderOptions);
 	}
 
 	/// <summary><inheritdoc cref="WithElasticDefaults(TracerProviderBuilder)" /></summary>
@@ -226,6 +268,11 @@ public static class TracerProviderBuilderExtensions
 	public static TracerProviderBuilder WithElasticDefaults(this TracerProviderBuilder builder,
 		ElasticOpenTelemetryOptions options, Action<TracerProviderBuilder> configureBuilder)
 	{
+		// We don't capture the stack trace here as we'll have that logged deeper in the call stack if needed.
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.Log($"{WithElasticDefaultsMethodWithOptionsAndConfigureBuilderAction} invoked on builder with object hash '{RuntimeHelpers.GetHashCode(builder)}'." +
+				$"{Environment.NewLine}    Invoked with `{nameof(ElasticOpenTelemetryOptions)}` instance '{options.InstanceId}'.");
+
 #if NET
 		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(options);
@@ -240,8 +287,12 @@ public static class TracerProviderBuilderExtensions
 		if (configureBuilder is null)
 			throw new ArgumentNullException(nameof(configureBuilder));
 #endif
+		var builderOptions = new BuilderOptions<TracerProviderBuilder>
+		{
+			UserProvidedConfigureBuilder = configureBuilder,
+			CalleeName = WithElasticDefaultsMethodWithOptionsAndConfigureBuilderAction
+		};
 
-		var builderOptions = new BuilderOptions<TracerProviderBuilder> { UserProvidedConfigureBuilder = configureBuilder };
 		return WithElasticDefaultsCore(builder, new(options), null, null, builderOptions);
 	}
 
@@ -293,6 +344,10 @@ public static class TracerProviderBuilderExtensions
 	/// </returns>
 	public static TracerProviderBuilder WithElasticDefaults(this TracerProviderBuilder builder, IConfiguration configuration)
 	{
+		// We don't capture the stack trace here as we'll have that logged deeper in the call stack if needed.
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.Log($"{WithElasticDefaultsMethodWithIConfiguration} invoked on builder with object hash '{RuntimeHelpers.GetHashCode(builder)}'.");
+
 #if NET
 		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(configuration);
@@ -303,7 +358,12 @@ public static class TracerProviderBuilderExtensions
 		if (configuration is null)
 			throw new ArgumentNullException(nameof(configuration));
 #endif
-		return WithElasticDefaultsCore(builder, new(configuration), null, null, default);
+		var builderOptions = new BuilderOptions<TracerProviderBuilder>
+		{
+			CalleeName = WithElasticDefaultsMethodWithIConfiguration
+		};
+
+		return WithElasticDefaultsCore(builder, new(configuration), null, null, builderOptions);
 	}
 
 	/// <summary><inheritdoc cref="WithElasticDefaults(TracerProviderBuilder)" /></summary>
@@ -318,6 +378,10 @@ public static class TracerProviderBuilderExtensions
 	public static TracerProviderBuilder WithElasticDefaults(this TracerProviderBuilder builder,
 		IConfiguration configuration, Action<TracerProviderBuilder> configureBuilder)
 	{
+		// We don't capture the stack trace here as we'll have that logged deeper in the call stack if needed.
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.Log($"{WithElasticDefaultsMethodWithIConfigurationAndConfigureBuilderAction} invoked on builder with object hash '{RuntimeHelpers.GetHashCode(builder)}'.");
+
 #if NET
 		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(configuration);
@@ -332,7 +396,12 @@ public static class TracerProviderBuilderExtensions
 		if (configureBuilder is null)
 			throw new ArgumentNullException(nameof(configureBuilder));
 #endif
-		var builderOptions = new BuilderOptions<TracerProviderBuilder> { UserProvidedConfigureBuilder = configureBuilder };
+		var builderOptions = new BuilderOptions<TracerProviderBuilder>
+		{
+			UserProvidedConfigureBuilder = configureBuilder,
+			CalleeName = WithElasticDefaultsMethodWithIConfigurationAndConfigureBuilderAction
+		};
+
 		return WithElasticDefaultsCore(builder, new(configuration), null, null, builderOptions);
 	}
 
@@ -344,9 +413,38 @@ public static class TracerProviderBuilderExtensions
 		IServiceCollection? services,
 		in BuilderOptions<TracerProviderBuilder> builderOptions)
 	{
-		var logger = SignalBuilder.GetLogger(builder, components, options, null);
-
 		var callCount = Interlocked.Increment(ref WithElasticDefaultsCallCount);
+
+		// We don't capture the stack trace here as we'll have that logged deeper in the call stack if needed.
+		if (BootstrapLogger.IsEnabled)
+		{
+			BootstrapLogger.Log($"{nameof(TracerProviderBuilderExtensions)}.{nameof(WithElasticDefaultsCore)} invoked on builder with object hash '{RuntimeHelpers.GetHashCode(builder)}'." +
+				$" Invokation count: {callCount}.");
+
+			if (options is null)
+			{
+				BootstrapLogger.Log($"Invoked with `null` {nameof(CompositeElasticOpenTelemetryOptions)} instance.");
+			}
+			else
+			{
+				BootstrapLogger.Log($"Invoked with `{nameof(CompositeElasticOpenTelemetryOptions)}` instance '{options.InstanceId}'.");
+			}
+
+			if (components is null)
+			{
+				BootstrapLogger.Log($"Invoked with `null` {nameof(ElasticOpenTelemetryComponents)} instance.");
+			}
+			else
+			{
+				BootstrapLogger.Log($"Invoked with `{nameof(ElasticOpenTelemetryComponents)}` instance '{components.InstanceId}'.");
+			}
+
+			BootstrapLogger.Log($"Param `services` is {(services is null ? "`null`" : "not `null`")}");
+			BootstrapLogger.LogBuilderOptions(builderOptions, nameof(TracerProviderBuilderExtensions), nameof(WithElasticDefaultsCore));
+		}
+
+		var logger = SignalBuilder.GetLogger(builder, components, options, null);
+		logger.LogCallerInfo(builderOptions);
 
 		if (callCount > 1)
 		{
@@ -362,7 +460,6 @@ public static class TracerProviderBuilderExtensions
 
 	[UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026", Justification = "The call to AssemblyScanning.AddInstrumentationViaReflection` " +
 		"is guarded by a RuntimeFeature.IsDynamicCodeSupported` check and, therefore, this method is safe to call in AoT scenarios.")]
-
 	private static void ConfigureBuilder(BuilderContext<TracerProviderBuilder> builderContext)
 	{
 		var builder = builderContext.Builder;

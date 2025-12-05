@@ -12,6 +12,22 @@ namespace Elastic.OpenTelemetry.Diagnostics;
 
 internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 {
+	internal static readonly string FileNamePrefix = "edot-dotnet-";
+	internal static readonly string FileNameSuffix;
+
+	static FileLogger()
+	{
+		var process = Process.GetCurrentProcess();
+
+		if (process is null)
+		{
+			FileNameSuffix = $"unknown-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmssfffZ}.log";
+			return;
+		}
+
+		FileNameSuffix = $"{process.Id}-{process.ProcessName}-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmssfffZ}.log";
+	}
+
 	private readonly ConcurrentQueue<string> _logQueue = new();
 	private readonly SemaphoreSlim _logSemaphore = new(0);
 	private readonly CancellationTokenSource _cancellationTokenSource = new();
@@ -21,10 +37,18 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 
 	private int _disposed;
 
+	internal Guid InstanceId { get; } = Guid.NewGuid();
+
 	public bool FileLoggingEnabled { get; }
 
 	public FileLogger(CompositeElasticOpenTelemetryOptions options)
 	{
+		if (BootstrapLogger.IsEnabled)
+		{
+			BootstrapLogger.LogWithStackTrace($"{nameof(FileLogger)}: Instance '{InstanceId}' created via ctor." +
+				$"{Environment.NewLine}    Invoked with `{nameof(CompositeElasticOpenTelemetryOptions)}` instance '{options.InstanceId}'.");
+		}
+
 		_scopeProvider = new LoggerExternalScopeProvider();
 		_configuredLogLevel = options.LogLevel;
 		_streamWriter = StreamWriter.Null;
@@ -37,10 +61,8 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 
 		try
 		{
-			var process = Process.GetCurrentProcess();
-
 			// This naming resembles the naming structure for OpenTelemetry log files.
-			var logFileName = $"edot-dotnet-{process.Id}-{process.ProcessName}-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmssfffZ}.log";
+			var logFileName = $"{FileNamePrefix}{FileNameSuffix}";
 			var logDirectory = options.LogDirectory;
 
 			LogFilePath = Path.Combine(logDirectory, logFileName);
@@ -53,7 +75,7 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 
 			_streamWriter = new StreamWriter(stream, Encoding.UTF8);
 
-			_streamWriter.WriteLine("DateTime (UTC)           Thread  SpanId  Level         Message");
+			_streamWriter.WriteLine("DateTime (UTC)                Thread  SpanId  Level         Message");
 			_streamWriter.WriteLine();
 
 			// Drain any deferred log entries captured before the file logger was initialized.
@@ -128,6 +150,8 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 		}
 		catch (Exception ex)
 		{
+			BootstrapLogger.Log($"{nameof(FileLogger)}: [ERROR] An exception occurred while initializing the file logger: {ex.Message}.");
+
 			if (options?.AdditionalLogger is not null)
 				options?.AdditionalLogger.LogError(new EventId(530, "FileLoggingFailure"), ex, "Failed to set up file logging due to exception: {ExceptionMessage}.", ex.Message);
 			else
