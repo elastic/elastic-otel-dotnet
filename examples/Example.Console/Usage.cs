@@ -56,7 +56,7 @@ internal static class Usage
 		};
 
 		using var sdk = OpenTelemetrySdk.Create(builder => builder
-		   .WithElasticDefaults(options));
+		   .WithElasticDefaults());
 
 		//This is the most flexible approach for a consumer as they can include our processor(s)
 		//using var tracerProvider = Sdk.CreateTracerProviderBuilder()

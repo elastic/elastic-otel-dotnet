@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
@@ -52,8 +52,21 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
   </ItemGroup>
 
+  <ItemGroup Condition="$(TargetFramework.StartsWith('netstandard2')) OR $(TargetFramework.StartsWith('net4'))">
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+  </ItemGroup>
+
   <ItemGroup>
     <Reference Include="System.Net.Http" Condition="'$(TargetFramework)' == 'net462'" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.31.1" />
+    <PackageReference Include="Grpc.Tools" Version="2.72.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="System.Collections.Immutable" Version="9.0.8" />
   </ItemGroup>
   
   <ItemGroup>
@@ -63,6 +76,11 @@
   <ItemGroup>
     <Compile Include="..\Elastic.OpenTelemetry.Core\**\*.cs" />
     <Content Remove="README.md" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Protobuf Include="..\Elastic.OpenTelemetry.Core\OpAmp\Protos\anyvalue.proto" ProtoRoot="..\Elastic.OpenTelemetry.Core\OpAmp\Protos" Access="Internal" />
+    <Protobuf Include="..\Elastic.OpenTelemetry.Core\OpAmp\Protos\opamp.proto" ProtoRoot="..\Elastic.OpenTelemetry.Core\OpAmp\Protos" Access="Internal" />
   </ItemGroup>
   
 </Project>
