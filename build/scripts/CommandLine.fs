@@ -32,8 +32,6 @@ type Build =
     | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] GeneratePackages
     | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] ValidateLicenses
     | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] ValidatePackages
-    | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] GenerateReleaseNotes
-    | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] GenerateApiChanges
     | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] Redistribute
     | [<CliPrefix(CliPrefix.None);SubCommand>] Release
     
@@ -62,10 +60,8 @@ with
             | GeneratePackages
             | ValidateLicenses
             | ValidatePackages
-            | GenerateReleaseNotes
             | Compile 
             | Redistribute
-            | GenerateApiChanges -> "Undocumented, dependent target"
             
             // flags
             | Single_Target -> "Runs the provided sub command without running their dependencies"
