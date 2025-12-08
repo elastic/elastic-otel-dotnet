@@ -17,7 +17,6 @@ let private clean _ =
     exec { run "dotnet" "clean" "-c" "release" }
     let removeArtifacts folder = Shell.cleanDir (Paths.ArtifactPath folder).FullName
     removeArtifacts "package"
-    removeArtifacts "release-notes"
     removeArtifacts "tests"
     
 let private compile _ = exec { run "dotnet" "build" "-c" "release" }
@@ -110,50 +109,7 @@ let private validatePackages _ =
     |> Seq.iter (fun p ->
         exec { run "dotnet" (["nupkg-validator"; p] @ args) } 
     )
-
-let private generateApiChanges _ =
-    let packagesPath = Paths.ArtifactPath "package"
-    let output = Paths.RelativePathToRoot <| packagesPath.FullName
-    let currentVersion = Software.Version.NormalizeToShorter()
-    let nugetPackages =
-        packagesPath.GetFiles("*.nupkg", SearchOption.AllDirectories)
-        |> Seq.sortByDescending(fun f -> f.CreationTimeUtc)
-        |> Seq.map (fun p -> Path.GetFileNameWithoutExtension(Paths.RelativePathToRoot p.FullName).Replace("." + currentVersion, ""))
-    nugetPackages
-    |> Seq.iter(fun p ->
-        let outputFile = Path.Combine(output, $"breaking-changes-%s{p}.md")
-        let tfm = "net8.0" // We use net8.0 as AutoInstrumentation doesn't have a net9.0 target
-        let args =
-            [
-                "assembly-differ"
-                $"previous-nuget|%s{p}|%s{currentVersion}|%s{tfm}";
-                $"directory|.artifacts/bin/%s{p}/release_%s{tfm}";
-                "-a"; "true"; "--target"; p; "-f"; "github-comment"; "--output"; outputFile
-            ]
-        exec { run "dotnet" args }
-    )
     
-let private generateReleaseNotes (arguments:ParseResults<Build>) =
-    let currentVersion = Software.Version.NormalizeToShorter()
-    let releaseNotesPath = Paths.ArtifactPath "release-notes"
-    let output =
-        Paths.RelativePathToRoot <| Path.Combine(releaseNotesPath.FullName, $"release-notes-%s{currentVersion}.md")
-    let tokenArgs =
-        match arguments.TryGetResult Token with
-        | None -> []
-        | Some token -> ["--token"; token;]
-    let releaseNotesArgs =
-        (Software.GithubMoniker.Split("/") |> Seq.toList)
-        @ ["--version"; currentVersion
-           "--label"; "enhancement"; "Features"
-           "--label"; "bug"; "Fixes"
-           "--label"; "documentation"; "Documentation"
-        ] @ tokenArgs
-        @ ["--output"; output]
-        
-    let args = ["release-notes"] @ releaseNotesArgs
-    exec { run "dotnet" args }
-
 let Setup (parsed:ParseResults<Build>) =
     let wireCommandLine (t: Build) =
         match t with
@@ -172,7 +128,7 @@ let Setup (parsed:ParseResults<Build>) =
         | Release -> 
             Build.Cmd 
                 [PristineCheck; Build; Redistribute]
-                [ValidateLicenses; GeneratePackages; ValidatePackages; GenerateReleaseNotes; GenerateApiChanges]
+                [ValidateLicenses; GeneratePackages; ValidatePackages]
                 release
 
         | Format -> Build.Step format
@@ -183,8 +139,6 @@ let Setup (parsed:ParseResults<Build>) =
         | GeneratePackages -> Build.Step generatePackages
         | ValidateLicenses -> Build.Step validateLicenses
         | ValidatePackages -> Build.Step validatePackages
-        | GenerateReleaseNotes -> Build.Step generateReleaseNotes
-        | GenerateApiChanges -> Build.Step generateApiChanges
             
         // flags
         | Single_Target
