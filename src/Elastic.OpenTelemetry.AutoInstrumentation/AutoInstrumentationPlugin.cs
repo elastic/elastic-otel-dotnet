@@ -7,7 +7,6 @@ using Elastic.OpenTelemetry.Core;
 using Elastic.OpenTelemetry.Diagnostics;
 using Elastic.OpenTelemetry.Exporters;
 using Elastic.OpenTelemetry.Resources;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Exporter;
@@ -26,27 +25,44 @@ namespace Elastic.OpenTelemetry;
 /// </summary>
 public class AutoInstrumentationPlugin
 {
-	private readonly ElasticOpenTelemetryComponents _components;
+	// NOTE: We don't use nameof + string interpolation for the bootstrap log messages.
+	// This avoids cluttering the code with a check to see if bootstrap logging is enabled before the log message.
+	// This class will change rarely so the risk of renaming issues is low.
 
-	/// <inheritdoc cref="AutoInstrumentationPlugin"/>
-	public AutoInstrumentationPlugin() => _components = ElasticOpenTelemetry.Bootstrap(SdkActivationMethod.AutoInstrumentation);
+	private static readonly ElasticOpenTelemetryComponents Components;
+
+	static AutoInstrumentationPlugin()
+	{
+		BootstrapLogger.LogWithStackTrace("AutoInstrumentationPlugin: Initializing via static constructor");
+		Components = ElasticOpenTelemetry.Bootstrap(SdkActivationMethod.AutoInstrumentation, new(), null);
+	}
+
+	/// <summary>
+	/// Configure Resource Builder for Logs, Metrics and Traces
+	/// </summary>
+	/// <param name="builder"><see cref="ResourceBuilder"/> to configure</param>
+	/// <returns>Returns <see cref="ResourceBuilder"/> for chaining.</returns>
+	public ResourceBuilder ConfigureResource(ResourceBuilder builder)
+	{
+		BootstrapLogger.Log("AutoInstrumentationPlugin: ConfigureResource invoked");
+		builder.WithElasticDefaultsCore(Components, null, null);
+		return builder;
+	}
 
 	/// <summary>
 	/// To configure tracing SDK before Auto Instrumentation configured SDK.
 	/// </summary>
 	public TracerProviderBuilder BeforeConfigureTracerProvider(TracerProviderBuilder builder)
 	{
-		var logger = _components.Logger;
+		BootstrapLogger.Log("AutoInstrumentationPlugin: BeforeConfigureTracerProvider invoked");
+		var logger = Components.Logger;
 
 		try
 		{
-			builder.ConfigureResource(r => r.WithElasticDefaultsCore(_components, null, null));
+			logger.LogInformation("Configuring Elastic Distribution of OpenTelemetry .NET defaults for tracing auto-instrumentation.");
 
-			builder.ConfigureServices(sc => sc.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions));
-			logger.LogConfiguredOtlpExporterOptions();
-
-			TracerProvderBuilderExtensions.AddActivitySourceWithLogging(builder, logger, "Elastic.Transport", "<n/a>");
-			TracerProvderBuilderExtensions.AddElasticProcessorsCore(builder, null, _components, null);
+			ElasticTracerProviderBuilderExtensions.AddActivitySourceWithLogging(builder, logger, "Elastic.Transport", "<n/a>");
+			ElasticTracerProviderBuilderExtensions.AddElasticProcessorsCore(builder, null, Components, null);
 
 			logger.LogConfiguredSignalProvider("Traces", nameof(TracerProviderBuilder), "<n/a>");
 
@@ -62,42 +78,59 @@ public class AutoInstrumentationPlugin
 	}
 
 	/// <summary>
-	/// To configure metrics SDK before Auto Instrumentation configured SDK.
+	/// Configure traces OTLP exporter options.
 	/// </summary>
-	public MeterProviderBuilder BeforeConfigureMeterProvider(MeterProviderBuilder builder)
+	/// <param name="options">Otlp options.</param>
+	public void ConfigureTracesOptions(OtlpExporterOptions options)
 	{
-		var logger = _components.Logger;
+		BootstrapLogger.Log("AutoInstrumentationPlugin: ConfigureTracesOptions(OtlpExporterOptions) invoked");
+		ConfigureOtlpExporter(options, "traces");
+	}
 
-		try
-		{
-			builder.ConfigureResource(r => r.WithElasticDefaultsCore(_components, null, null));
+	/// <summary>
+	/// Configure metrics OTLP exporter options
+	/// </summary>
+	/// <param name="options">Otlp options</param>
+	public void ConfigureMetricsOptions(OtlpExporterOptions options)
+	{
+		BootstrapLogger.Log("AutoInstrumentationPlugin: ConfigureMetricsOptions(OtlpExporterOptions) invoked");
+		ConfigureOtlpExporter(options, "metrics");
+	}
 
-			builder.ConfigureServices(sc => sc
-				.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions)
-				.Configure<MetricReaderOptions>(o => o.TemporalityPreference = MetricReaderTemporalityPreference.Delta));
-			logger.LogConfiguredOtlpExporterOptions();
+	/// <summary>
+	/// Configure metrics OTLP exporter options
+	/// </summary>
+	/// <param name="options">Otlp options</param>
+	public void ConfigureMetricsOptions(MetricReaderOptions options)
+	{
+		BootstrapLogger.Log("AutoInstrumentationPlugin: ConfigureMetricsOptions(MetricReaderOptions) invoked");
+		var logger = Components.Logger;
+		options.TemporalityPreference = MetricReaderTemporalityPreference.Delta;
+		logger.LogInformation("Configured Elastic Distribution of OpenTelemetry .NET defaults for logging auto-instrumentation.");
+	}
 
-			logger.LogConfiguredSignalProvider(nameof(Signals.Metrics), nameof(MeterProviderBuilder), "<n/a>");
-
-			return builder;
-		}
-		catch (Exception ex)
-		{
-			logger.LogError(new EventId(521, "AutoInstrumentationTracerFailure"), ex,
-				"Failed to register EDOT defaults for metrics auto-instrumentation to the MeterProviderBuilder.");
-		}
-
-		return builder;
+	/// <summary>
+	/// Configure logging OTLP exporter options.
+	/// </summary>
+	/// <param name="options">Otlp options.</param>
+	public void ConfigureLogsOptions(OtlpExporterOptions options)
+	{
+		BootstrapLogger.Log("AutoInstrumentationPlugin: ConfigureLogsOptions(OtlpExporterOptions) invoked");
+		ConfigureOtlpExporter(options, "logs");
 	}
 
 	/// <summary>
 	/// To configure logs SDK (the method name is the same as for other logs options).
 	/// </summary>
-	public void ConfigureLogsOptions(OpenTelemetryLoggerOptions options) => options.WithElasticDefaults(_components.Logger);
+	public void ConfigureLogsOptions(OpenTelemetryLoggerOptions options)
+	{
+		BootstrapLogger.Log("AutoInstrumentationPlugin: ConfigureLogsOptions(OpenTelemetryLoggerOptions) invoked");
+		options.WithElasticDefaults(Components.Logger);
+	}
 
-	/// <summary>
-	/// To configure Resource.
-	/// </summary>
-	public ResourceBuilder ConfigureResource(ResourceBuilder builder) =>
-		builder.WithElasticDefaultsCore(_components, null, null);
+	private static void ConfigureOtlpExporter(OtlpExporterOptions options, string signal)
+	{
+		options.ConfigureElasticUserAgent();
+		Components.Logger.LogConfiguredOtlpExporterOptions(signal);
+	}
 }

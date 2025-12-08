@@ -16,6 +16,11 @@ namespace Elastic.OpenTelemetry;
 public class ElasticOpenTelemetryOptions
 {
 	/// <summary>
+	/// Used internally for bootstrap logging to identify this options instance.
+	/// </summary>
+	internal Guid InstanceId { get; } = Guid.NewGuid();
+
+	/// <summary>
 	/// The output directory where the Elastic Distribution of OpenTelemetry .NET will write log files.
 	/// </summary>
 	/// <remarks>

@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information
 
 using Elastic.OpenTelemetry.Core;
+using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -14,16 +15,28 @@ namespace Elastic.OpenTelemetry.Hosting;
 /// Used to attempt to attach an additional logger, typically in ASP.NET Core scenarios, so that logs
 /// are written to any configured destinations.
 /// </summary>
-internal sealed class ElasticOpenTelemetryService(IServiceProvider serviceProvider) : IHostedLifecycleService
+internal sealed class ElasticOpenTelemetryService : IHostedLifecycleService
 {
 	private ElasticOpenTelemetryComponents? _components;
+	private readonly IServiceProvider _serviceProvider;
+
+	public ElasticOpenTelemetryService(IServiceProvider serviceProvider)
+	{
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.Log($"{nameof(ElasticOpenTelemetryService)}: Created via ctor.");
+
+		_serviceProvider = serviceProvider;
+	}
 
 	public Task StartingAsync(CancellationToken cancellationToken)
 	{
-		var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
+		var loggerFactory = _serviceProvider.GetService<ILoggerFactory>();
 		var logger = loggerFactory?.CreateElasticLogger() ?? NullLogger.Instance;
 
-		_components = serviceProvider.GetService<ElasticOpenTelemetryComponents>();
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.Log($"{nameof(StartingAsync)}: Invoked.");
+
+		_components = _serviceProvider.GetService<ElasticOpenTelemetryComponents>();
 		_components?.SetAdditionalLogger(logger, ElasticOpenTelemetry.ActivationMethod);
 
 		return Task.CompletedTask;
@@ -39,10 +52,7 @@ internal sealed class ElasticOpenTelemetryService(IServiceProvider serviceProvid
 
 	public async Task StoppedAsync(CancellationToken cancellationToken)
 	{
-		if (_components?.Logger is not null)
-			await _components.Logger.DisposeAsync().ConfigureAwait(false);
-
-		if (_components?.LoggingEventListener is not null)
-			await _components.LoggingEventListener.DisposeAsync().ConfigureAwait(false);
+		if (_components is not null)
+			await _components.DisposeAsync().ConfigureAwait(false);
 	}
 }

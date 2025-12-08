@@ -12,6 +12,22 @@ namespace Elastic.OpenTelemetry.Diagnostics;
 
 internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 {
+	internal static readonly string FileNamePrefix = "edot-dotnet-";
+	internal static readonly string FileNameSuffix;
+
+	static FileLogger()
+	{
+		var process = Process.GetCurrentProcess();
+
+		if (process is null)
+		{
+			FileNameSuffix = $"unknown-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmssfffZ}.log";
+			return;
+		}
+
+		FileNameSuffix = $"{process.Id}-{process.ProcessName}-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmssfffZ}.log";
+	}
+
 	private readonly ConcurrentQueue<string> _logQueue = new();
 	private readonly SemaphoreSlim _logSemaphore = new(0);
 	private readonly CancellationTokenSource _cancellationTokenSource = new();
@@ -19,12 +35,20 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 	private readonly LogLevel _configuredLogLevel;
 	private readonly LoggerExternalScopeProvider _scopeProvider;
 
-	private bool _disposed;
+	private int _disposed;
+
+	internal Guid InstanceId { get; } = Guid.NewGuid();
 
 	public bool FileLoggingEnabled { get; }
 
 	public FileLogger(CompositeElasticOpenTelemetryOptions options)
 	{
+		if (BootstrapLogger.IsEnabled)
+		{
+			BootstrapLogger.LogWithStackTrace($"{nameof(FileLogger)}: Instance '{InstanceId}' created via ctor." +
+				$"{Environment.NewLine}    Invoked with `{nameof(CompositeElasticOpenTelemetryOptions)}` instance '{options.InstanceId}'.");
+		}
+
 		_scopeProvider = new LoggerExternalScopeProvider();
 		_configuredLogLevel = options.LogLevel;
 		_streamWriter = StreamWriter.Null;
@@ -37,10 +61,8 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 
 		try
 		{
-			var process = Process.GetCurrentProcess();
-
 			// This naming resembles the naming structure for OpenTelemetry log files.
-			var logFileName = $"edot-dotnet-{process.Id}-{process.ProcessName}-{DateTimeOffset.UtcNow:yyyyMMdd-hhMMssfffZ}.log";
+			var logFileName = $"{FileNamePrefix}{FileNameSuffix}";
 			var logDirectory = options.LogDirectory;
 
 			LogFilePath = Path.Combine(logDirectory, logFileName);
@@ -53,7 +75,7 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 
 			_streamWriter = new StreamWriter(stream, Encoding.UTF8);
 
-			_streamWriter.WriteLine("DateTime (UTC)           Thread  SpanId  Level         Message");
+			_streamWriter.WriteLine("DateTime (UTC)                Thread  SpanId  Level         Message");
 			_streamWriter.WriteLine();
 
 			// Drain any deferred log entries captured before the file logger was initialized.
@@ -67,20 +89,53 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 			{
 				var cancellationToken = _cancellationTokenSource.Token;
 
-				while (!cancellationToken.IsCancellationRequested)
+				while (true)
 				{
-					await _logSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+					try
+					{
+						await _logSemaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+					}
+					catch (OperationCanceledException)
+					{
+						// Cancellation requested, exit the loop
+						break;
+					}
 
+					// Process all queued log entries
 					while (_logQueue.TryDequeue(out var logEntry))
 					{
-						await _streamWriter.WriteLineAsync(logEntry).ConfigureAwait(false);
+						// Check if disposal has started before writing
+						if (Volatile.Read(ref _disposed) == 1)
+							return;
+
+						try
+						{
+							await _streamWriter.WriteLineAsync(logEntry).ConfigureAwait(false);
+						}
+						catch (ObjectDisposedException)
+						{
+							// Stream was disposed during shutdown, exit gracefully
+							return;
+						}
 					}
 				}
 
 				// Flush remaining log entries before exiting
 				while (_logQueue.TryDequeue(out var logEntry))
 				{
-					await _streamWriter.WriteLineAsync(logEntry).ConfigureAwait(false);
+					// Check if disposal has started before writing
+					if (Volatile.Read(ref _disposed) == 1)
+						return;
+
+					try
+					{
+						await _streamWriter.WriteLineAsync(logEntry).ConfigureAwait(false);
+					}
+					catch (ObjectDisposedException)
+					{
+						// Stream was disposed, exit gracefully
+						return;
+					}
 				}
 			});
 
@@ -95,6 +150,8 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 		}
 		catch (Exception ex)
 		{
+			BootstrapLogger.Log($"{nameof(FileLogger)}: [ERROR] An exception occurred while initializing the file logger: {ex.Message}.");
+
 			if (options?.AdditionalLogger is not null)
 				options?.AdditionalLogger.LogError(new EventId(530, "FileLoggingFailure"), ex, "Failed to set up file logging due to exception: {ExceptionMessage}.", ex.Message);
 			else
@@ -130,35 +187,59 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 
 	public void Dispose()
 	{
-		if (_disposed)
+		if (Interlocked.Exchange(ref _disposed, 1) != 0)
 			return;
 
 		_cancellationTokenSource.Cancel();
 		_logSemaphore.Release();
 
-		WritingTask?.Wait();
+		try
+		{
+			// Wait for the writing task to complete with a timeout to prevent hanging
+			WritingTask?.Wait(TimeSpan.FromSeconds(5));
+		}
+		catch (AggregateException ex) when (ex.InnerException is OperationCanceledException)
+		{
+			// Expected when cancellation token is triggered
+		}
+		catch (OperationCanceledException)
+		{
+			// Expected when cancellation token is triggered
+		}
 
 		_streamWriter.Dispose();
 		_logSemaphore.Dispose();
 		_cancellationTokenSource.Dispose();
-
-		_disposed = true;
 	}
 
 	public async ValueTask DisposeAsync()
 	{
-		if (_disposed)
+		if (Interlocked.Exchange(ref _disposed, 1) != 0)
 			return;
 
 		_cancellationTokenSource.Cancel();
 		_logSemaphore.Release();
 
-		await WritingTask.ConfigureAwait(false);
+		try
+		{
+			// Wait for the writing task to complete with a timeout to prevent hanging
+			await WritingTask.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+		}
+		catch (TimeoutException)
+		{
+			// Task didn't complete in time, proceed with disposal
+		}
+		catch (OperationCanceledException)
+		{
+			// Expected when cancellation token is triggered
+		}
 
+#if NET
+        await _streamWriter.DisposeAsync().ConfigureAwait(false);
+#else
 		_streamWriter.Dispose();
+#endif
 		_logSemaphore.Dispose();
 		_cancellationTokenSource.Dispose();
-
-		_disposed = true;
 	}
 }

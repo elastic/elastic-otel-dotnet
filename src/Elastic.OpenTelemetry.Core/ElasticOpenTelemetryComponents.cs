@@ -2,6 +2,7 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.Logging;
@@ -9,19 +10,41 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Elastic.OpenTelemetry.Core;
 
-internal sealed class ElasticOpenTelemetryComponents(
-	CompositeLogger logger,
-	LoggingEventListener loggingEventListener,
-	CompositeElasticOpenTelemetryOptions options) : IDisposable, IAsyncDisposable
+internal sealed class ElasticOpenTelemetryComponents : IDisposable, IAsyncDisposable
 {
-	public CompositeLogger Logger { get; } = logger;
-	public LoggingEventListener LoggingEventListener { get; } = loggingEventListener;
-	public CompositeElasticOpenTelemetryOptions Options { get; } = options;
+	internal Guid InstanceId { get; } = Guid.NewGuid();
+
+	public CompositeLogger Logger { get; }
+	public LoggingEventListener LoggingEventListener { get; }
+	public CompositeElasticOpenTelemetryOptions Options { get; }
+
+	public ElasticOpenTelemetryComponents(
+		CompositeLogger logger,
+		LoggingEventListener loggingEventListener,
+		CompositeElasticOpenTelemetryOptions options)
+	{
+		if (BootstrapLogger.IsEnabled)
+		{
+			BootstrapLogger.LogWithStackTrace($"{nameof(ElasticOpenTelemetryComponents)}: Instance '{InstanceId}' created via ctor." +
+				$"{Environment.NewLine}    Invoked with `{nameof(CompositeLogger)}` instance '{logger.InstanceId}'." +
+				$"{Environment.NewLine}    Invoked with `{nameof(OpenTelemetry.Diagnostics.LoggingEventListener)}` instance '{loggingEventListener.InstanceId}'." +
+				$"{Environment.NewLine}    Invoked with `{nameof(CompositeElasticOpenTelemetryOptions)}` instance '{options.InstanceId}'.");
+		}
+
+		Logger = logger;
+		LoggingEventListener = loggingEventListener;
+		Options = options;
+	}
 
 	internal void SetAdditionalLogger(ILogger logger, SdkActivationMethod activationMethod)
 	{
 		if (logger is not NullLogger)
+		{
+			if (BootstrapLogger.IsEnabled)
+				BootstrapLogger.Log($"{nameof(ElasticOpenTelemetryComponents)}: Setting additional logger.");
+
 			Logger.SetAdditionalLogger(logger, activationMethod, this);
+		}
 	}
 
 	public void Dispose()

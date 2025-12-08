@@ -20,7 +20,7 @@ namespace OpenTelemetry.Trace;
 /// Provides extension methods on the <see cref="TracerProviderBuilder"/> used to register
 /// the Elastic Distribution of OpenTelemetry (EDOT) .NET defaults.
 /// </summary>
-internal static class TracerProvderBuilderExtensions
+internal static class ElasticTracerProviderBuilderExtensions
 {
 	private static int AddElasticProcessorsCallCount;
 
@@ -35,7 +35,7 @@ internal static class TracerProvderBuilderExtensions
 	/// processors should be added.</param>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
 	/// <returns>The <see cref="TracerProviderBuilder"/> for chaining.</returns>
-	public static TracerProviderBuilder AddElasticProcessors(this TracerProviderBuilder builder)
+	internal static TracerProviderBuilder AddElasticProcessors(this TracerProviderBuilder builder)
 	{
 #if NET
 		ArgumentNullException.ThrowIfNull(builder);
@@ -62,7 +62,7 @@ internal static class TracerProvderBuilderExtensions
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="builder"/> is null.</exception>
 	/// <exception cref="ArgumentNullException">Thrown when the <paramref name="options"/> is null.</exception>
 	/// <returns>The <see cref="TracerProviderBuilder"/> for chaining.</returns>
-	public static TracerProviderBuilder AddElasticProcessors(this TracerProviderBuilder builder, ElasticOpenTelemetryOptions options)
+	internal static TracerProviderBuilder AddElasticProcessors(this TracerProviderBuilder builder, ElasticOpenTelemetryOptions options)
 	{
 #if NET
 		ArgumentNullException.ThrowIfNull(builder);

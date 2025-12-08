@@ -77,17 +77,19 @@ internal class ConfigurationParser
 				eventLogLevel = sectionLogLevel;
 		}
 
-		eventLevel = eventLogLevel switch
+		eventLevel = LogLevelToEventLevel(eventLogLevel);
+	}
+
+	internal static EventLevel LogLevelToEventLevel(LogLevel? eventLogLevel) =>
+		eventLogLevel switch
 		{
-			LogLevel.Trace => EventLevel.Verbose,
+			LogLevel.Trace or LogLevel.Debug => EventLevel.LogAlways,
 			LogLevel.Information => EventLevel.Informational,
 			LogLevel.Warning => EventLevel.Warning,
 			LogLevel.Error => EventLevel.Error,
 			LogLevel.Critical => EventLevel.Critical,
-
 			_ => EventLevel.Informational // fallback to info level
 		};
-	}
 
 	public void ParseSkipOtlpExporter(ConfigCell<bool?> skipOtlpExporter) =>
 		SetFromConfiguration(_configuration, skipOtlpExporter, BoolParser);

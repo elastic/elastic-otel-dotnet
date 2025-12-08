@@ -1,5 +1,5 @@
-ARG OTEL_VERSION=1.12.0
-FROM mcr.microsoft.com/dotnet/runtime:9.0 AS base
+ARG OTEL_VERSION=1.13.0
+FROM mcr.microsoft.com/dotnet/runtime:10.0 AS base
 ARG TARGETPLATFORM
 ARG TARGETARCH
 ARG TARGETVARIANT
@@ -18,7 +18,7 @@ ADD https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation/relea
 RUN chmod +x otel-dotnet-auto-install.sh
 RUN OTEL_DOTNET_AUTO_HOME="/app/otel" sh otel-dotnet-auto-install.sh
 
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build_example
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build_example
 ENV _PROJECT="Example.AutoInstrumentation"
 ENV _PROJECTPATH="${_PROJECT}/${_PROJECT}.csproj"
 WORKDIR /work
@@ -32,10 +32,11 @@ RUN dotnet build "${_PROJECT}.csproj" -c Release -o /app/build_example
 FROM build_example AS publish_example
 RUN dotnet publish "Example.AutoInstrumentation.csproj" -c Release -o /app/example /p:UseAppHost=false
 
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build_distro
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build_distro
 ENV _PROJECT="Elastic.OpenTelemetry"
 ENV _PROJECTPATH="${_PROJECT}/${_PROJECT}.csproj"
 WORKDIR /work
+COPY "Directory.Packages.props" "Directory.Packages.props"
 COPY ["src/${_PROJECTPATH}", "src/${_PROJECT}/"]
 RUN dotnet restore "src/${_PROJECTPATH}"
 COPY . .

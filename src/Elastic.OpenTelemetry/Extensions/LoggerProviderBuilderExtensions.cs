@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Core;
+using Elastic.OpenTelemetry.Core.Diagnostics;
 using Elastic.OpenTelemetry.Diagnostics;
 using Elastic.OpenTelemetry.Exporters;
 using Microsoft.Extensions.Configuration;
@@ -14,6 +15,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
@@ -29,6 +31,20 @@ namespace OpenTelemetry;
 /// </summary>
 public static class LoggerProviderBuilderExtensions
 {
+	// We define these statically for now. One important caveat is that if we add/modify methods, we need to update these accordingly.
+	// Since we don't expect to change the public API very often, this is an acceptable trade-off to avoid calculating this at runtime.
+	// We could consider a source generator to produce these automatically in the future if needed for all public methods in this class.
+	// These are used for diagnostics/logging purposes only.
+	private static readonly string ClassName = typeof(LoggerProviderBuilderExtensions).FullName ?? nameof(LoggerProviderBuilderExtensions);
+	private static readonly string WithElasticDefaultsMethodNoArgs = $"{ClassName}.{nameof(WithElasticDefaults)}(this LoggerProviderBuilder builder)";
+	private static readonly string WithElasticDefaultsMethodWithConfigureBuilderAction = $"{ClassName}.{nameof(WithElasticDefaults)}(this LoggerProviderBuilder builder, Action<LoggerProviderBuilder> configureBuilder)";
+	private static readonly string WithElasticDefaultsMethodWithOptions = $"{ClassName}.{nameof(WithElasticDefaults)}(this LoggerProviderBuilder builder, ElasticOpenTelemetryOptions options)";
+	private static readonly string WithElasticDefaultsMethodWithOptionsAndConfigureBuilderAction = $"{ClassName}.{nameof(WithElasticDefaults)}" +
+		"(this LoggerProviderBuilder builder, ElasticOpenTelemetryOptions options, Action<LoggerProviderBuilder> configureBuilder)";
+	private static readonly string WithElasticDefaultsMethodWithIConfiguration = $"{ClassName}.{nameof(WithElasticDefaults)}(this LoggerProviderBuilder builder, IConfiguration configuration)";
+	private static readonly string WithElasticDefaultsMethodWithIConfigurationAndConfigureBuilderAction = $"{ClassName}.{nameof(WithElasticDefaults)}" +
+		"(this LoggerProviderBuilder builder, IConfiguration configuration, Action<LoggerProviderBuilder> configureBuilder)";
+
 	/// <summary>
 	/// Used to track the number of times any variation of `WithElasticDefaults` is invoked by consuming
 	/// code across all <see cref="LoggerProviderBuilder"/> instances. This allows us to warn about potential
@@ -85,14 +101,22 @@ public static class LoggerProviderBuilderExtensions
 	/// </returns>
 	public static LoggerProviderBuilder WithElasticDefaults(this LoggerProviderBuilder builder)
 	{
+		// We don't capture the stack trace here as we'll have that logged deeper in the call stack if needed.
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.Log($"{WithElasticDefaultsMethodNoArgs} invoked on builder with object hash '{RuntimeHelpers.GetHashCode(builder)}'.");
+
 #if NET
 		ArgumentNullException.ThrowIfNull(builder);
 #else
 		if (builder is null)
 			throw new ArgumentNullException(nameof(builder));
 #endif
+		var builderOptions = new BuilderOptions<LoggerProviderBuilder>
+		{
+			CalleeName = WithElasticDefaultsMethodNoArgs
+		};
 
-		return WithElasticDefaultsCore(builder, null, null, null, default);
+		return WithElasticDefaultsCore(builder, null, null, null, builderOptions);
 	}
 
 	/// <summary><inheritdoc cref="WithElasticDefaults(LoggerProviderBuilder)" /></summary>
@@ -141,6 +165,10 @@ public static class LoggerProviderBuilderExtensions
 	/// </returns>
 	public static LoggerProviderBuilder WithElasticDefaults(this LoggerProviderBuilder builder, Action<LoggerProviderBuilder> configureBuilder)
 	{
+		// We don't capture the stack trace here as we'll have that logged deeper in the call stack if needed.
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.Log($"{WithElasticDefaultsMethodWithConfigureBuilderAction} invoked on builder with object hash '{RuntimeHelpers.GetHashCode(builder)}'.");
+
 #if NET
 		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(configureBuilder);
@@ -151,7 +179,12 @@ public static class LoggerProviderBuilderExtensions
 		if (configureBuilder is null)
 			throw new ArgumentNullException(nameof(configureBuilder));
 #endif
-		var builderOptions = new BuilderOptions<LoggerProviderBuilder> { UserProvidedConfigureBuilder = configureBuilder };
+		var builderOptions = new BuilderOptions<LoggerProviderBuilder>
+		{
+			UserProvidedConfigureBuilder = configureBuilder,
+			CalleeName = WithElasticDefaultsMethodWithConfigureBuilderAction
+		};
+
 		return WithElasticDefaultsCore(builder, null, null, null, builderOptions);
 	}
 
@@ -203,6 +236,11 @@ public static class LoggerProviderBuilderExtensions
 	/// </returns>
 	public static LoggerProviderBuilder WithElasticDefaults(this LoggerProviderBuilder builder, ElasticOpenTelemetryOptions options)
 	{
+		// We don't capture the stack trace here as we'll have that logged deeper in the call stack if needed.
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.Log($"{WithElasticDefaultsMethodWithOptions} invoked on builder with object hash '{RuntimeHelpers.GetHashCode(builder)}'." +
+				$"{Environment.NewLine}    Invoked with `{nameof(ElasticOpenTelemetryOptions)}` instance '{options.InstanceId}'.");
+
 #if NET
 		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(options);
@@ -213,8 +251,12 @@ public static class LoggerProviderBuilderExtensions
 		if (options is null)
 			throw new ArgumentNullException(nameof(options));
 #endif
+		var builderOptions = new BuilderOptions<LoggerProviderBuilder>
+		{
+			CalleeName = WithElasticDefaultsMethodWithOptions
+		};
 
-		return WithElasticDefaultsCore(builder, new(options), null, null, default);
+		return WithElasticDefaultsCore(builder, new(options), null, null, builderOptions);
 	}
 
 	/// <summary><inheritdoc cref="WithElasticDefaults(LoggerProviderBuilder)" /></summary>
@@ -229,6 +271,11 @@ public static class LoggerProviderBuilderExtensions
 	public static LoggerProviderBuilder WithElasticDefaults(this LoggerProviderBuilder builder,
 		ElasticOpenTelemetryOptions options, Action<LoggerProviderBuilder> configureBuilder)
 	{
+		// We don't capture the stack trace here as we'll have that logged deeper in the call stack if needed.
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.Log($"{WithElasticDefaultsMethodWithOptionsAndConfigureBuilderAction} invoked on builder with object hash '{RuntimeHelpers.GetHashCode(builder)}'." +
+				$"{Environment.NewLine}    Invoked with `{nameof(ElasticOpenTelemetryOptions)}` instance '{options.InstanceId}'.");
+
 #if NET
 		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(options);
@@ -243,7 +290,12 @@ public static class LoggerProviderBuilderExtensions
 		if (configureBuilder is null)
 			throw new ArgumentNullException(nameof(configureBuilder));
 #endif
-		var builderOptions = new BuilderOptions<LoggerProviderBuilder> { UserProvidedConfigureBuilder = configureBuilder };
+		var builderOptions = new BuilderOptions<LoggerProviderBuilder>
+		{
+			UserProvidedConfigureBuilder = configureBuilder,
+			CalleeName = WithElasticDefaultsMethodWithOptionsAndConfigureBuilderAction
+		};
+
 		return WithElasticDefaultsCore(builder, new(options), null, null, builderOptions);
 	}
 
@@ -295,6 +347,10 @@ public static class LoggerProviderBuilderExtensions
 	/// </returns>
 	public static LoggerProviderBuilder WithElasticDefaults(this LoggerProviderBuilder builder, IConfiguration configuration)
 	{
+		// We don't capture the stack trace here as we'll have that logged deeper in the call stack if needed.
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.Log($"{WithElasticDefaultsMethodWithIConfiguration} invoked on builder with object hash '{RuntimeHelpers.GetHashCode(builder)}'.");
+
 #if NET
 		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(configuration);
@@ -305,7 +361,12 @@ public static class LoggerProviderBuilderExtensions
 		if (configuration is null)
 			throw new ArgumentNullException(nameof(configuration));
 #endif
-		return WithElasticDefaultsCore(builder, new(configuration), null, null, default);
+		var builderOptions = new BuilderOptions<LoggerProviderBuilder>
+		{
+			CalleeName = WithElasticDefaultsMethodWithIConfiguration
+		};
+
+		return WithElasticDefaultsCore(builder, new(configuration), null, null, builderOptions);
 	}
 
 	/// <summary><inheritdoc cref="WithElasticDefaults(LoggerProviderBuilder)" /></summary>
@@ -320,6 +381,10 @@ public static class LoggerProviderBuilderExtensions
 	public static LoggerProviderBuilder WithElasticDefaults(this LoggerProviderBuilder builder,
 		IConfiguration configuration, Action<LoggerProviderBuilder> configureBuilder)
 	{
+		// We don't capture the stack trace here as we'll have that logged deeper in the call stack if needed.
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.Log($"{WithElasticDefaultsMethodWithIConfigurationAndConfigureBuilderAction} invoked on builder with object hash '{RuntimeHelpers.GetHashCode(builder)}'.");
+
 #if NET
 		ArgumentNullException.ThrowIfNull(builder);
 		ArgumentNullException.ThrowIfNull(configuration);
@@ -334,7 +399,12 @@ public static class LoggerProviderBuilderExtensions
 		if (configureBuilder is null)
 			throw new ArgumentNullException(nameof(configureBuilder));
 #endif
-		var builderOptions = new BuilderOptions<LoggerProviderBuilder> { UserProvidedConfigureBuilder = configureBuilder };
+		var builderOptions = new BuilderOptions<LoggerProviderBuilder>
+		{
+			UserProvidedConfigureBuilder = configureBuilder,
+			CalleeName = WithElasticDefaultsMethodWithIConfigurationAndConfigureBuilderAction
+		};
+
 		return WithElasticDefaultsCore(builder, new(configuration), null, null, builderOptions);
 	}
 
@@ -346,9 +416,38 @@ public static class LoggerProviderBuilderExtensions
 		IServiceCollection? services,
 		in BuilderOptions<LoggerProviderBuilder> builderOptions)
 	{
-		var logger = SignalBuilder.GetLogger(builder, components, options, null);
-
 		var callCount = Interlocked.Increment(ref WithElasticDefaultsCallCount);
+
+		// We don't capture the stack trace here as we'll have that logged deeper in the call stack if needed.
+		if (BootstrapLogger.IsEnabled)
+		{
+			BootstrapLogger.Log($"{ClassName}.{nameof(WithElasticDefaultsCore)} invoked on builder with object hash '{RuntimeHelpers.GetHashCode(builder)}'." +
+				$" Invokation count: {callCount}.");
+
+			if (options is null)
+			{
+				BootstrapLogger.Log($"Invoked with `null` {nameof(CompositeElasticOpenTelemetryOptions)} instance.");
+			}
+			else
+			{
+				BootstrapLogger.Log($"Invoked with `{nameof(CompositeElasticOpenTelemetryOptions)}` instance '{options.InstanceId}'.");
+			}
+
+			if (components is null)
+			{
+				BootstrapLogger.Log($"Invoked with `null` {nameof(ElasticOpenTelemetryComponents)} instance.");
+			}
+			else
+			{
+				BootstrapLogger.Log($"Invoked with `{nameof(ElasticOpenTelemetryComponents)}` instance '{components.InstanceId}'.");
+			}
+
+			BootstrapLogger.Log($"Param `services` is {(services is null ? "`null`" : "not `null`")}");
+			BootstrapLogger.LogBuilderOptions(builderOptions, nameof(LoggerProviderBuilder), nameof(WithElasticDefaultsCore));
+		}
+
+		var logger = SignalBuilder.GetLogger(builder, components, options, null);
+		logger.LogCallerInfo(builderOptions);
 
 		if (callCount > 1)
 		{
@@ -381,7 +480,7 @@ public static class LoggerProviderBuilderExtensions
 			if (services is null)
 			{
 				builder.ConfigureServices(sc => sc.Configure<OtlpExporterOptions>(OtlpExporterDefaults.OtlpExporterOptions));
-				logger.LogConfiguredOtlpExporterOptions();
+				logger.LogConfiguredOtlpExporterOptions("logs");
 			}
 
 			builder.ConfigureServices(sc => sc.Configure<OpenTelemetryLoggerOptions>(o => o.WithElasticDefaults(logger)));

@@ -5,6 +5,7 @@
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Tracing;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Elastic.OpenTelemetry.Configuration.Instrumentations;
 using Elastic.OpenTelemetry.Configuration.Parsers;
@@ -34,7 +35,21 @@ namespace Elastic.OpenTelemetry.Configuration;
 /// </remarks>
 internal sealed class CompositeElasticOpenTelemetryOptions
 {
-	private readonly EventLevel _eventLevel = EventLevel.Informational;
+	// These are the options that users can set via IConfiguration
+	private static readonly string[] ElasticOpenTelemetryConfigKeys =
+	[
+		nameof(LogDirectory),
+		nameof(LogLevel),
+		nameof(LogTargets),
+		nameof(SkipOtlpExporter),
+		nameof(SkipInstrumentationAssemblyScanning)
+	];
+
+	internal static CompositeElasticOpenTelemetryOptions DefaultOptions = new();
+
+	internal Guid InstanceId { get; } = Guid.NewGuid();
+
+	private readonly EventLevel _eventLevel = EventLevel.Warning;
 
 	private readonly ConfigCell<string?> _logDirectory = new(nameof(LogDirectory), null);
 	private readonly ConfigCell<LogTargets?> _logTargets = new(nameof(LogTargets), null);
@@ -50,9 +65,7 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 	private readonly ConfigCell<LogInstrumentations> _logging = new(nameof(Logging), LogInstrumentations.All);
 
 	private readonly IDictionary _environmentVariables;
-
-	internal static CompositeElasticOpenTelemetryOptions DefaultOptions = new();
-	internal static CompositeElasticOpenTelemetryOptions SkipOtlpOptions = new() { SkipOtlpExporter = true };
+	private readonly IConfiguration? _configuration;
 
 	/// <summary>
 	/// Creates a new instance of <see cref="CompositeElasticOpenTelemetryOptions"/> with properties
@@ -60,12 +73,20 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 	/// </summary>
 	internal CompositeElasticOpenTelemetryOptions() : this((IDictionary?)null)
 	{
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.LogWithStackTrace($"{nameof(CompositeElasticOpenTelemetryOptions)}: Instance '{InstanceId}' created via parameterless ctor.");
 	}
 
 	internal CompositeElasticOpenTelemetryOptions(IDictionary? environmentVariables)
 	{
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.LogWithStackTrace($"{nameof(CompositeElasticOpenTelemetryOptions)}: Instance '{InstanceId}' created via ctor `(IDictionary? environmentVariables)`.");
+
 		LogDirectoryDefault = GetDefaultLogDirectory();
 		_environmentVariables = environmentVariables ?? GetEnvironmentVariables();
+
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.Log($"CompositeElasticOpenTelemetryOptions(IDictionary): Read {_environmentVariables.Count} environment variables");
 
 		SetFromEnvironment(DOTNET_RUNNING_IN_CONTAINER, _runningInContainer, BoolParser);
 		SetFromEnvironment(OTEL_DOTNET_AUTO_LOG_DIRECTORY, _logDirectory, StringParser);
@@ -73,6 +94,11 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 		SetFromEnvironment(ELASTIC_OTEL_LOG_TARGETS, _logTargets, LogTargetsParser);
 		SetFromEnvironment(ELASTIC_OTEL_SKIP_OTLP_EXPORTER, _skipOtlpExporter, BoolParser);
 		SetFromEnvironment(ELASTIC_OTEL_SKIP_ASSEMBLY_SCANNING, _skipInstrumentationAssemblyScanning, BoolParser);
+
+		_eventLevel = ConfigurationParser.LogLevelToEventLevel(_logLevel.Value);
+
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.Log($"CompositeElasticOpenTelemetryOptions(IDictionary): Event log level set to: {_eventLevel}");
 
 		var parser = new EnvironmentParser(_environmentVariables);
 		parser.ParseInstrumentationVariables(_signals, _tracing, _metrics, _logging);
@@ -83,8 +109,20 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 	internal CompositeElasticOpenTelemetryOptions(IConfiguration? configuration, IDictionary? environmentVariables = null)
 		: this(environmentVariables)
 	{
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.LogWithStackTrace($"{nameof(CompositeElasticOpenTelemetryOptions)}: Instance '{InstanceId}' created via ctor `(IConfiguration? configuration, IDictionary? environmentVariables)`.");
+
 		if (configuration is null)
+		{
+			BootstrapLogger.Log($"CompositeElasticOpenTelemetryOptions: Param `configuration` was `null`.");
 			return;
+		}
+
+		if (environmentVariables is null)
+		{
+			BootstrapLogger.Log($"CompositeElasticOpenTelemetryOptions: Param `environmentVariables` was `null`.");
+			return;
+		}
 
 		var parser = new ConfigurationParser(configuration);
 
@@ -93,6 +131,8 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 		parser.ParseLogLevel(_logLevel, ref _eventLevel);
 		parser.ParseSkipOtlpExporter(_skipOtlpExporter);
 		parser.ParseSkipInstrumentationAssemblyScanning(_skipInstrumentationAssemblyScanning);
+
+		_configuration = configuration;
 	}
 
 	[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2026:RequiresUnreferencedCode", Justification = "Manually verified")]
@@ -100,6 +140,12 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 	internal CompositeElasticOpenTelemetryOptions(IConfiguration configuration, ElasticOpenTelemetryOptions options)
 		: this((IDictionary?)null)
 	{
+		if (BootstrapLogger.IsEnabled)
+		{
+			BootstrapLogger.LogWithStackTrace($"{nameof(CompositeElasticOpenTelemetryOptions)}: Instance '{InstanceId}'." +
+				$"{NewLine}    Invoked with `{nameof(ElasticOpenTelemetryOptions)}` instance '{options.InstanceId}'.");
+		}
+
 		var parser = new ConfigurationParser(configuration);
 
 		parser.ParseLogDirectory(_logDirectory);
@@ -107,6 +153,9 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 		parser.ParseLogLevel(_logLevel, ref _eventLevel);
 		parser.ParseSkipOtlpExporter(_skipOtlpExporter);
 		parser.ParseSkipInstrumentationAssemblyScanning(_skipInstrumentationAssemblyScanning);
+
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.Log($"{nameof(CompositeElasticOpenTelemetryOptions)}: Configuration binding from IConfiguration completed.");
 
 		if (options.SkipOtlpExporter.HasValue)
 			_skipOtlpExporter.Assign(options.SkipOtlpExporter.Value, ConfigSource.Options);
@@ -124,11 +173,23 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 			_skipInstrumentationAssemblyScanning.Assign(options.SkipInstrumentationAssemblyScanning.Value, ConfigSource.Options);
 
 		AdditionalLogger = options.AdditionalLogger ?? options.AdditionalLoggerFactory?.CreateElasticLogger();
+
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.Log($"{nameof(CompositeElasticOpenTelemetryOptions)}: Configuration binding from user-provided `ElasticOpenTelemetryOptions` completed.");
+
+		_configuration = configuration;
 	}
 
 	internal CompositeElasticOpenTelemetryOptions(ElasticOpenTelemetryOptions options)
 		: this((IDictionary?)null)
 	{
+		if (BootstrapLogger.IsEnabled)
+		{
+			BootstrapLogger.LogWithStackTrace($"{nameof(CompositeElasticOpenTelemetryOptions)}: Instance '{InstanceId}' created via ctor `(ElasticOpenTelemetryOptions options)`." +
+				$"{NewLine}    Invoked with `{nameof(ElasticOpenTelemetryOptions)}` instance '{options.InstanceId}' with hash '{RuntimeHelpers.GetHashCode(options)}'.");
+		}
+
+		// This should not happen, but just in case
 		if (options is null)
 			return;
 
@@ -151,10 +212,10 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 			_skipInstrumentationAssemblyScanning.Assign(options.SkipInstrumentationAssemblyScanning.Value, ConfigSource.Options);
 
 		AdditionalLogger = options.AdditionalLogger ?? options.AdditionalLoggerFactory?.CreateElasticLogger();
-	}
 
-	internal CompositeElasticOpenTelemetryOptions(IConfiguration configuration, ILoggerFactory loggerFactory) :
-		this(configuration) => AdditionalLogger = loggerFactory?.CreateElasticLogger();
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.Log($"{nameof(CompositeElasticOpenTelemetryOptions)}: Configuration binding from user-provided `ElasticOpenTelemetryOptions` completed.");
+	}
 
 	/// <summary>
 	/// Calculates whether global logging is enabled based on
@@ -182,13 +243,18 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 	{
 		const string applicationMoniker = "elastic-otel-dotnet";
 
+		string? directory;
+
 		if (IsOSPlatform(OSPlatform.Windows))
-			return Path.Combine(GetFolderPath(SpecialFolder.ApplicationData), "elastic", applicationMoniker);
+			directory = Path.Combine(GetFolderPath(SpecialFolder.ApplicationData), "elastic", applicationMoniker);
+		else if (IsOSPlatform(OSPlatform.OSX))
+			directory = Path.Combine(GetFolderPath(SpecialFolder.LocalApplicationData), "elastic", applicationMoniker);
+		else
+			directory = $"/var/log/elastic/{applicationMoniker}";
 
-		if (IsOSPlatform(OSPlatform.OSX))
-			return Path.Combine(GetFolderPath(SpecialFolder.LocalApplicationData), "elastic", applicationMoniker);
+		BootstrapLogger.Log($"Default log directory resolved to: {directory}");
 
-		return $"/var/log/elastic/{applicationMoniker}";
+		return directory;
 	}
 
 	/// <summary>
@@ -298,6 +364,7 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 			   LogLevel == other.LogLevel &&
 			   LogTargets == other.LogTargets &&
 			   SkipOtlpExporter == other.SkipOtlpExporter &&
+			   SkipInstrumentationAssemblyScanning == other.SkipInstrumentationAssemblyScanning &&
 			   Signals == other.Signals &&
 			   Tracing.SetEquals(other.Tracing) &&
 			   Metrics.SetEquals(other.Metrics) &&
@@ -312,6 +379,7 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 			^ LogLevel.GetHashCode()
 			^ LogTargets.GetHashCode()
 			^ SkipOtlpExporter.GetHashCode()
+			^ SkipInstrumentationAssemblyScanning.GetHashCode()
 			^ Signals.GetHashCode()
 			^ Tracing.GetHashCode()
 			^ Metrics.GetHashCode()
@@ -320,19 +388,14 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 #else
 		var hash1 = HashCode.Combine(LogDirectory, LogLevel, LogTargets, SkipOtlpExporter);
 		var hash2 = HashCode.Combine(Signals, Tracing, Metrics, Logging, AdditionalLogger);
-		return HashCode.Combine(hash1, hash2);
+		var hash3 = HashCode.Combine(SkipInstrumentationAssemblyScanning);
+		return HashCode.Combine(hash1, hash2, hash3);
 #endif
 	}
 
 	private void SetFromEnvironment<T>(string key, ConfigCell<T> field, Func<string?, T?> parser)
 	{
 		var safeValue = GetSafeEnvironmentVariable(key);
-
-		// 'Trace' does not exist in OTEL_LOG_LEVEL ensure we parse it to next granularity
-		// debug, NOTE that OpenTelemetry treats this as invalid and will parse to 'Information'
-		// We treat 'Debug' and 'Trace' as a signal global file logging should be enabled.
-		if (key.Equals("OTEL_LOG_LEVEL") && safeValue.Equals("trace", StringComparison.OrdinalIgnoreCase))
-			safeValue = "debug";
 
 		var value = parser(safeValue);
 
@@ -345,17 +408,78 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 	private string GetSafeEnvironmentVariable(string key)
 	{
 		var value = _environmentVariables.Contains(key) ? _environmentVariables[key]?.ToString() : null;
-		return value ?? string.Empty;
+		value ??= string.Empty;
+
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.Log($"{nameof(CompositeElasticOpenTelemetryOptions)}.{nameof(GetSafeEnvironmentVariable)}: Environment variable '{key}' = '{value}'");
+
+		return value;
 	}
 
 	internal void LogConfigSources(ILogger logger)
 	{
-		logger.LogDebug("Configured value for {Configuration}", _logDirectory);
-		logger.LogDebug("Configured value for {Configuration}", _logLevel);
-		logger.LogDebug("Configured value for {Configuration}", _skipOtlpExporter);
-		logger.LogDebug("Configured value for {Configuration}", _signals);
-		logger.LogDebug("Configured value for {Configuration}", _tracing);
-		logger.LogDebug("Configured value for {Configuration}", _metrics);
-		logger.LogDebug("Configured value for {Configuration}", _logging);
+		LogConfig(logger, _logTargets);
+		LogConfig(logger, _logDirectory);
+		LogConfig(logger, _logLevel);
+
+		LogConfig(logger, _signals);
+		LogConfig(logger, _tracing);
+		LogConfig(logger, _metrics);
+		LogConfig(logger, _logging);
+
+		LogConfig(logger, _skipOtlpExporter);
+		LogConfig(logger, _skipInstrumentationAssemblyScanning);
+
+		static void LogConfig<T>(ILogger logger, ConfigCell<T> cell)
+		{
+			// To reduce noise, we log as info only if not default, otherwise, log as debug
+			if (cell.Source == ConfigSource.Default)
+				logger.LogDebug("Configured value for {Configuration}", cell);
+			else
+				logger.LogInformation("Configured value for {Configuration}", cell);
+		}
+	}
+
+	internal void LogApplicationConfigurationValues(ILogger logger)
+	{
+		if (_configuration is null)
+			return;
+
+		if (_configuration is IConfigurationRoot configRoot)
+		{
+			if (configRoot != null)
+			{
+				foreach (var provider in configRoot.Providers)
+				{
+					var providerName = provider.ToString();
+
+					var keys = provider.GetChildKeys([], null);
+
+					foreach (var key in keys)
+					{
+						if (!key.StartsWith("OTEL_", StringComparison.Ordinal))
+							continue;
+
+						if (provider.TryGet(key, out var value) && value is not null)
+						{
+							if (SensitiveEnvironmentVariables.Contains(key))
+							{
+								value = "<redacted>";
+							}
+
+							logger.LogInformation("IConfiguration [{providerName}] '{Key}' = '{Value}'", providerName, key, value);
+						}
+					}
+
+					foreach (var key in ElasticOpenTelemetryConfigKeys)
+					{
+						if (provider.TryGet($"Elastic:OpenTelemetry:{key}", out var value) && value is not null)
+						{
+							logger.LogInformation("IConfiguration [{providerName}] '{Key}' = '{Value}'", providerName, key, value);
+						}
+					}
+				}
+			}
+		}
 	}
 }

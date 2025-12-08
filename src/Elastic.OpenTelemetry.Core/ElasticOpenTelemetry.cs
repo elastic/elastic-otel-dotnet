@@ -42,6 +42,16 @@ internal static class ElasticOpenTelemetry
 		CompositeElasticOpenTelemetryOptions options,
 		IServiceCollection? services)
 	{
+		var invocationCount = Interlocked.Increment(ref BootstrapCounter);
+
+		if (BootstrapLogger.IsEnabled)
+		{
+			BootstrapLogger.LogWithStackTrace($"{nameof(Bootstrap)}: Static ctor invoked with count {invocationCount}." +
+				$"{Environment.NewLine}    Invoked with `{nameof(CompositeElasticOpenTelemetryOptions)}` instance '{options.InstanceId}'.");
+
+			BootstrapLogger.Log($"{nameof(Bootstrap)}: Services is {(services is null ? "`null`" : "not `null`")}");
+		}
+
 		ActivationMethod = activationMethod;
 
 		ElasticOpenTelemetryComponents components;
@@ -49,12 +59,10 @@ internal static class ElasticOpenTelemetry
 		// We only expect this to be allocated a handful of times, generally once.
 		var stackTrace = new StackTrace(true);
 
-		var invocationCount = Interlocked.Increment(ref BootstrapCounter);
-
 		// Strictly speaking, we probably don't require locking here as the registration of
 		// OpenTelemetry is expected to run sequentially. That said, the overhead is low
 		// since this is called infrequently.
-		using (var scope = Lock.EnterScope())
+		using (Lock.EnterScope())
 		{
 			// If an IServiceCollection is provided, we attempt to access any existing
 			// components to reuse them before accessing any potential shared components.
@@ -62,15 +70,30 @@ internal static class ElasticOpenTelemetry
 			{
 				if (TryGetExistingComponentsFromServiceCollection(services, out var existingComponents))
 				{
+					if (BootstrapLogger.IsEnabled)
+					{
+						BootstrapLogger.Log($"{nameof(Bootstrap)}: Existing components instance '{existingComponents.InstanceId}' loaded from the `IServiceCollection`." +
+							$"{Environment.NewLine}   With `{nameof(CompositeLogger)}` instance '{existingComponents.Logger.InstanceId}'.");
+					}
+
 					existingComponents.Logger.LogBootstrapInvoked(invocationCount);
 					return existingComponents;
 				}
+
+				BootstrapLogger.Log($"{nameof(Bootstrap)}: No existing components available from the `IServiceCollection`.");
 			}
 
 			// We don't have components assigned for this IServiceCollection, attempt to use
 			// the existing SharedComponents, or create components.
 			if (TryGetSharedComponents(options, out var sharedComponents))
 			{
+				if (BootstrapLogger.IsEnabled)
+				{
+					BootstrapLogger.Log($"{nameof(Bootstrap)}: Existing components loaded from the shared components.");
+					BootstrapLogger.Log($"{nameof(Bootstrap)}: Existing ElasticOpenTelemetryComponents instance '{sharedComponents.InstanceId}'.");
+					BootstrapLogger.Log($"{nameof(Bootstrap)}: Existing CompositeLogger instance '{sharedComponents.Logger.InstanceId}'.");
+				}
+
 				components = sharedComponents;
 			}
 			else
@@ -123,9 +146,18 @@ internal static class ElasticOpenTelemetry
 			CompositeElasticOpenTelemetryOptions options,
 			StackTrace stackTrace)
 		{
+			BootstrapLogger.Log($"{nameof(Bootstrap)}: CreateComponents invoked.");
+
 			var logger = new CompositeLogger(options);
 			var eventListener = new LoggingEventListener(logger, options);
 			var components = new ElasticOpenTelemetryComponents(logger, eventListener, options);
+
+			if (BootstrapLogger.IsEnabled)
+			{
+				BootstrapLogger.Log($"{nameof(Bootstrap)}: Created new CompositeLogger instance '{logger.InstanceId}' via CreateComponents.");
+				BootstrapLogger.Log($"{nameof(Bootstrap)}: Created new LoggingEventListener instance '{eventListener.InstanceId}' via CreateComponents.");
+				BootstrapLogger.Log($"{nameof(Bootstrap)}: Created new ElasticOpenTelemetryComponents instance '{components.InstanceId}' via CreateComponents.");
+			}
 
 			logger.LogDistroPreamble(activationMethod, components);
 			logger.LogComponentsCreated(Environment.NewLine, stackTrace);

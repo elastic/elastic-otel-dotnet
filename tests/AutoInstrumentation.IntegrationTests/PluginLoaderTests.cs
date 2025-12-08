@@ -3,19 +3,66 @@
 // See the LICENSE file in the project root for more information
 
 using System.Runtime.InteropServices;
-using Nullean.Xunit.Partitions.Sdk;
+using DotNet.Testcontainers;
+using DotNet.Testcontainers.Builders;
+using DotNet.Testcontainers.Configurations;
+using DotNet.Testcontainers.Containers;
+using DotNet.Testcontainers.Images;
 using Xunit;
 
 namespace Elastic.OpenTelemetry.AutoInstrumentation.IntegrationTests;
 
-public class PluginLoaderTests(ExampleApplicationContainer exampleApplicationContainer) : IPartitionFixture<ExampleApplicationContainer>
+public class PluginLoaderTests : IAsyncLifetime
 {
+	private readonly IContainer _container;
+	private readonly IOutputConsumer _output;
+	private readonly IFutureDockerImage _image;
+
+	// docker build -t example.autoinstrumentation:latest -f examples/Example.AutoInstrumentation/Dockerfile . \
+	//   && docker run -it --rm -p 5000:8080 --name autoin example.autoinstrumentation:latest
+
+	public PluginLoaderTests()
+	{
+		ConsoleLogger.Instance.DebugLogLevelEnabled = true;
+		var directory = CommonDirectoryPath.GetSolutionDirectory();
+		_image = new ImageFromDockerfileBuilder()
+			.WithDockerfileDirectory(directory, string.Empty)
+			.WithDockerfile("examples/Example.AutoInstrumentation/Dockerfile")
+			.WithLogger(ConsoleLogger.Instance)
+			.WithBuildArgument("TARGETARCH", RuntimeInformation.ProcessArchitecture switch
+			{
+				Architecture.Arm64 => "arm64",
+				Architecture.X64 => "x64",
+				Architecture.X86 => "x86",
+				_ => "unsupported"
+			})
+			.Build();
+
+		_output = Consume.RedirectStdoutAndStderrToStream(new MemoryStream(), new MemoryStream());
+		_container = new ContainerBuilder()
+			.WithImage(_image)
+			.WithPortBinding(5000, 8080)
+			.WithLogger(ConsoleLogger.Instance)
+			.WithOutputConsumer(_output)
+			.Build();
+	}
+
+	public async Task InitializeAsync()
+	{
+		await _image.CreateAsync().ConfigureAwait(false);
+		await _container.StartAsync().ConfigureAwait(false);
+	}
+
+	public async Task DisposeAsync() => await _container.StopAsync().ConfigureAwait(false);
+
 	[NotWindowsCiFact]
 	public async Task ObserveDistributionPluginLoad()
 	{
 		await Task.Delay(TimeSpan.FromSeconds(3));
 
-		var output = exampleApplicationContainer.FailureTestOutput();
+		_output.Stdout.Seek(0, SeekOrigin.Begin);
+		using var streamReader = new StreamReader(_output.Stdout, leaveOpen: true);
+		var output = streamReader.ReadToEnd();
 
 		Assert.False(string.IsNullOrWhiteSpace(output));
 		Assert.Contains("Elastic Distribution of OpenTelemetry (EDOT) .NET:", output);

@@ -25,6 +25,6 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <PackageReference Include="MinVer" Version="5.0.0" PrivateAssets="all" />
+    <PackageReference Include="MinVer" PrivateAssets="all" />
   </ItemGroup>
 </Project>

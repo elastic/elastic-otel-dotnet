@@ -26,30 +26,30 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="OpenTelemetry" Version="1.12.0" />
-    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.12.0" />
-    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.12.0" />
+    <PackageReference Include="OpenTelemetry" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
     
     <!-- Required to add necessary resource attributes to drive the Observability UI -->
-    <PackageReference Include="OpenTelemetry.Resources.Host" Version="1.12.0-beta.1" />
-    <PackageReference Include="OpenTelemetry.Resources.ProcessRuntime" Version="1.12.0-beta.1" />
+    <PackageReference Include="OpenTelemetry.Resources.Host" />
+    <PackageReference Include="OpenTelemetry.Resources.ProcessRuntime" />
 
     <!-- Required to produce metrics used on the curated dashboard -->
-    <PackageReference Include="OpenTelemetry.Instrumentation.Process" Version="1.12.0-beta.1" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Process" />
 
     <!-- Not, required but we bring these in for a simpler OOB -->
-    <PackageReference Include="OpenTelemetry.Instrumentation.GrpcNetClient" Version="1.12.0-beta.1" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.SqlClient" Version="1.12.0-beta.2" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.GrpcNetClient" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.SqlClient" />
     
-    <PackageReference Include="Polyfill" Version="7.21.0" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
-    <PackageReference Include="NetEscapades.EnumGenerators" Version="1.0.0-beta09" PrivateAssets="all" ExcludeAssets="runtime" />
+    <PackageReference Include="Polyfill" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
+    <PackageReference Include="NetEscapades.EnumGenerators" PrivateAssets="all" ExcludeAssets="runtime" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' != 'net9.0'">
     <!-- We skip this on .NET 9, since we prefer to use the native instrumentation from the built in Meter -->
-    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.12.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
     <!-- We skip this on .NET 9, since we prefer to use the native instrumentation from the built in ActivitySource -->
-    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.12.0" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
   </ItemGroup>
 
   <ItemGroup>

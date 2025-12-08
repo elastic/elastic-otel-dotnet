@@ -2,11 +2,14 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
-using System.Buffers;
+using System.Collections;
 using System.Diagnostics;
+using System.Globalization;
+using System.Runtime.InteropServices;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Core;
 using Microsoft.Extensions.Logging;
+
 #if NET || NETSTANDARD2_1
 using System.Runtime.CompilerServices;
 #endif
@@ -57,9 +60,9 @@ internal static partial class LoggerMessages
 		"times across all {Target} instances.")]
 	public static partial void LogWithElasticDefaultsCallCount(this ILogger logger, int callCount, string target);
 
-	[LoggerMessage(EventId = 12, EventName = "ConfiguredOtlpExporterOptions", Level = LogLevel.Debug, Message = "The `OtlpExporterOptions` have been configured to use the" +
+	[LoggerMessage(EventId = 12, EventName = "ConfiguredOtlpExporterOptions", Level = LogLevel.Debug, Message = "The `OtlpExporterOptions` for {Signal} have been configured to use the" +
 		"`ElasticUserAgentHandler` to set the EDOT .NET user agent.")]
-	public static partial void LogConfiguredOtlpExporterOptions(this ILogger logger);
+	public static partial void LogConfiguredOtlpExporterOptions(this ILogger logger, string signal);
 
 
 
@@ -163,8 +166,6 @@ internal static partial class LoggerMessages
 	[LoggerMessage(EventId = 60, EventName = "DetectedIncludeScopes", Level = LogLevel.Warning, Message = "IncludeScopes is enabled and may cause export issues. See https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/troubleshooting.html#missing-log-records")]
 	internal static partial void LogDetectedIncludeScopesWarning(this ILogger logger);
 
-
-
 	public static void LogDistroPreamble(this ILogger logger, SdkActivationMethod activationMethod, ElasticOpenTelemetryComponents components)
 	{
 		// This occurs once per initialisation, so we don't use `LoggerMessage`s.
@@ -184,7 +185,7 @@ internal static partial class LoggerMessages
 
 #if NET8_0
 		logger.LogDebug("Matched TFM: {TargetFrameworkMoniker}", "net8.0");
-#elif NET9_0
+#elif NET9_0_OR_GREATER
 		logger.LogDebug("Matched TFM: {TargetFrameworkMoniker}", "net9.0");
 #elif NETSTANDARD2_0
 		logger.LogDebug("Matched TFM: {TargetFrameworkMoniker}", "netstandard2.0");
@@ -202,12 +203,15 @@ internal static partial class LoggerMessages
 
 			logger.LogDebug("Process ID: {ProcessId}", process.Id);
 			logger.LogDebug("Process name: {ProcessName}", process.ProcessName);
-
-			logger.LogDebug("Process started: {ProcessStartTime:yyyy-MM-dd HH:mm:ss.fff}", process.StartTime.ToUniversalTime());
+			logger.LogDebug("Process started: {ProcessStartTime:O}", process.StartTime.ToUniversalTime());
+			logger.LogDebug("Process working set: {WorkingSet} bytes", process.WorkingSet64);
+			logger.LogDebug("Thread count: {ThreadCount}", process.Threads.Count);
 		}
-		catch
+		catch (Exception ex)
 		{
 			// GetCurrentProcess can throw PlatformNotSupportedException
+			if (BootstrapLogger.IsEnabled)
+				BootstrapLogger.Log($"{nameof(LoggerMessage)}.{nameof(LogDistroPreamble)}: Unable to get current process information due to '{ex.Message}'.");
 		}
 
 #if NET
@@ -218,114 +222,137 @@ internal static partial class LoggerMessages
 		logger.LogDebug("Process path: {ProcessPath}", "<Not available on .NET Framework>");
 #endif
 
+		logger.LogDebug("Process architecture: {ProcessArchitecture}", RuntimeInformation.ProcessArchitecture);
+
+		logger.LogDebug("Current AppDomain name: {AppDomainName}", AppDomain.CurrentDomain.FriendlyName);
+		logger.LogDebug("Is default AppDomain: {IsDefaultAppDomain}", AppDomain.CurrentDomain.IsDefaultAppDomain());
+
 		logger.LogDebug("Machine name: {MachineName}", Environment.MachineName);
 		logger.LogDebug("Process username: {UserName}", Environment.UserName);
 		logger.LogDebug("User domain name: {UserDomainName}", Environment.UserDomainName);
+		logger.LogDebug("Application base directory: {BaseDirectory}", AppDomain.CurrentDomain.BaseDirectory);
 		logger.LogDebug("Command current directory: {CurrentDirectory}", Environment.CurrentDirectory);
 		logger.LogDebug("Processor count: {ProcessorCount}", Environment.ProcessorCount);
+		logger.LogDebug("GC is server GC: {IsServerGC}", System.Runtime.GCSettings.IsServerGC);
+
+		logger.LogDebug("OS architecture: {OSArchitecture}", RuntimeInformation.OSArchitecture);
+		logger.LogDebug("OS description: {OSDescription}", RuntimeInformation.OSDescription);
 		logger.LogDebug("OS version: {OSVersion}", Environment.OSVersion);
+
+		logger.LogDebug(".NET framework: {FrameworkDescription}", RuntimeInformation.FrameworkDescription);
 		logger.LogDebug("CLR version: {CLRVersion}", Environment.Version);
+
+		logger.LogDebug("Current culture: {CurrentCulture}", CultureInfo.CurrentCulture.Name);
+		logger.LogDebug("Current UI culture: {CurrentUICulture}", CultureInfo.CurrentUICulture.Name);
 #if NETFRAMEWORK || NETSTANDARD2_0
 		logger.LogDebug("Dynamic code supported: {IsDynamicCodeSupported}", true);
 #else
 		logger.LogDebug("Dynamic code supported: {IsDynamicCodeSupported}", RuntimeFeature.IsDynamicCodeSupported);
 #endif
 
-		string[] environmentVariables =
-		[
-			EnvironmentVariables.OTEL_DOTNET_AUTO_LOG_DIRECTORY,
-			EnvironmentVariables.OTEL_LOG_LEVEL,
-			EnvironmentVariables.ELASTIC_OTEL_LOG_TARGETS,
-			EnvironmentVariables.DOTNET_RUNNING_IN_CONTAINER,
-			EnvironmentVariables.ELASTIC_OTEL_SKIP_OTLP_EXPORTER,
-			EnvironmentVariables.OTEL_EXPORTER_OTLP_ENDPOINT,
-			EnvironmentVariables.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,
-			EnvironmentVariables.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT,
-			EnvironmentVariables.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT,
-			EnvironmentVariables.OTEL_EXPORTER_OTLP_TIMEOUT,
-			EnvironmentVariables.OTEL_EXPORTER_OTLP_TRACES_TIMEOUT,
-			EnvironmentVariables.OTEL_EXPORTER_OTLP_METRICS_TIMEOUT,
-			EnvironmentVariables.OTEL_EXPORTER_OTLP_LOGS_TIMEOUT,
-			EnvironmentVariables.OTEL_EXPORTER_OTLP_PROTOCOL,
-			EnvironmentVariables.OTEL_EXPORTER_OTLP_TRACES_PROTOCOL,
-			EnvironmentVariables.OTEL_EXPORTER_OTLP_METRICS_PROTOCOL,
-			EnvironmentVariables.OTEL_EXPORTER_OTLP_LOGS_PROTOCOL,
-		];
-
-		foreach (var variable in environmentVariables)
+		if (logger.IsEnabled(LogLevel.Information))
 		{
-			var envVarValue = Environment.GetEnvironmentVariable(variable);
+			LogPrefixedEnvironmentVariables(logger, "OTEL_");
+			LogPrefixedEnvironmentVariables(logger, "ELASTIC_OTEL_");
 
-			if (string.IsNullOrEmpty(envVarValue))
+			string[] microsoftEnvironmentVariables =
+			[
+				EnvironmentVariables.DOTNET_RUNNING_IN_CONTAINER,
+				"COR_ENABLE_PROFILING",
+				"COR_PROFILER",
+				"COR_PROFILER_PATH_32",
+				"COR_PROFILER_PATH_64",
+				"CORECLR_ENABLE_PROFILING",
+				"CORECLR_PROFILER",
+				"CORECLR_PROFILER_PATH",
+				"CORECLR_PROFILER_PATH_32",
+				"CORECLR_PROFILER_PATH_64",
+				"ASPNETCORE_HOSTINGSTARTUPASSEMBLIES",
+				"DOTNET_ADDITIONAL_DEPS",
+				"DOTNET_SHARED_STORE",
+				"DOTNET_STARTUP_HOOKS"
+			];
+
+			foreach (var variable in microsoftEnvironmentVariables)
 			{
-				logger.LogDebug("Environment variable '{EnvironmentVariable}' is not configured.", variable);
-			}
-			else
-			{
-				logger.LogDebug("Environment variable '{EnvironmentVariable}' = '{EnvironmentVariableValue}'.", variable, envVarValue);
+				var envVarValue = Environment.GetEnvironmentVariable(variable);
+
+				if (envVarValue is not null)
+					logger.LogDebug("Effective runtime environment variable '{EnvironmentVariable}' = '{EnvironmentVariableValue}'.", variable, envVarValue);
 			}
 		}
 
-		// This next set of env vars might include sensitive information, so we redact the values.
-		string[] headerEnvironmentVariables =
-		[
-			EnvironmentVariables.OTEL_EXPORTER_OTLP_HEADERS,
-			EnvironmentVariables.OTEL_EXPORTER_OTLP_TRACES_HEADERS,
-			EnvironmentVariables.OTEL_EXPORTER_OTLP_METRICS_HEADERS,
-			EnvironmentVariables.OTEL_EXPORTER_OTLP_LOGS_HEADERS,
-		];
+		components.Options.LogApplicationConfigurationValues(logger);
+		components.Options.LogConfigSources(logger);
 
-		foreach (var variable in headerEnvironmentVariables)
+		static void LogPrefixedEnvironmentVariables(ILogger logger, string prefix)
 		{
-			var envVarValue = Environment.GetEnvironmentVariable(variable);
+			if (!logger.IsEnabled(LogLevel.Information))
+				return;
 
-			const string redacted = "=<redacted>";
-
-			if (string.IsNullOrEmpty(envVarValue))
+			try
 			{
-				logger.LogDebug("Environment variable '{EnvironmentVariable}' is not configured.", variable);
-			}
-			else
-			{
-				var valueSpan = envVarValue.AsSpan();
-				var buffer = ArrayPool<char>.Shared.Rent(1024);
-				var bufferSpan = buffer.AsSpan();
-				var position = 0;
-				var count = 0;
-
-				while (true)
+				if (logger.IsEnabled(LogLevel.Debug))
 				{
-					var indexOfComma = valueSpan.IndexOf(',');
-					var header = valueSpan.Slice(0, indexOfComma > 0 ? indexOfComma : valueSpan.Length);
+					var systemEnvVars = Environment.GetEnvironmentVariables(EnvironmentVariableTarget.Machine);
 
-					var indexOfEquals = valueSpan.IndexOf('=');
-
-					if (indexOfEquals > 0)
+					foreach (DictionaryEntry entry in systemEnvVars)
 					{
-						var key = header.Slice(0, indexOfEquals);
-						var value = header.Slice(indexOfEquals + 1);
+						if (entry.Key is not string key || !key.StartsWith(prefix))
+							continue;
 
-						if (count++ > 0)
-							bufferSpan[position++] = ',';
-
-						key.CopyTo(bufferSpan.Slice(position));
-						position += key.Length;
-						redacted.AsSpan().CopyTo(bufferSpan.Slice(position));
-						position += redacted.Length;
+						var value = entry.Value?.ToString() ?? string.Empty;
+						logger.LogDebug("System-level environment variable '{EnvironmentVariable}' = '{EnvironmentVariableValue}'", key, value);
 					}
 
-					if (indexOfComma <= 0)
-						break;
+					var userEnvVars = Environment.GetEnvironmentVariables(EnvironmentVariableTarget.User);
 
-					valueSpan = valueSpan.Slice(indexOfComma + 1);
+					foreach (DictionaryEntry entry in userEnvVars)
+					{
+						if (entry.Key is not string key || !key.StartsWith(prefix))
+							continue;
+
+						var value = entry.Value?.ToString() ?? string.Empty;
+						logger.LogDebug("User-level environment variable '{EnvironmentVariable}' = '{EnvironmentVariableValue}'", key, value);
+					}
 				}
 
-				logger.LogDebug("Environment variable '{EnvironmentVariable}' = '{EnvironmentVariableValue}'.", variable, bufferSpan.Slice(0, position).ToString());
+				var allVars = Environment.GetEnvironmentVariables();
 
-				ArrayPool<char>.Shared.Return(buffer);
+				foreach (DictionaryEntry entry in allVars)
+				{
+					if (entry.Key is not string key || !key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+						continue;
+
+					var value = entry.Value?.ToString() ?? string.Empty;
+					var source = "unknown";
+
+					// Check process, user, and machine scopes
+					var processValue = Environment.GetEnvironmentVariable(key, EnvironmentVariableTarget.Process);
+					var userValue = Environment.GetEnvironmentVariable(key, EnvironmentVariableTarget.User);
+					var machineValue = Environment.GetEnvironmentVariable(key, EnvironmentVariableTarget.Machine);
+
+					if (!string.IsNullOrEmpty(processValue))
+						source = "process";
+					else if (!string.IsNullOrEmpty(userValue))
+						source = "user";
+					else if (!string.IsNullOrEmpty(machineValue))
+						source = "system";
+					else
+						source = "unknown";
+
+					if (EnvironmentVariables.SensitiveEnvironmentVariables.Contains(key, StringComparer.OrdinalIgnoreCase))
+					{
+						value = "<redacted>";
+					}
+
+					logger.LogInformation("Effective environment variable '{EnvironmentVariable}' = '{EnvironmentVariableValue}' (source: {Source})", key, value, source);
+				}
+			}
+			catch (Exception ex)
+			{
+				logger.LogError(ex, "An error occurred while reading environment variables with prefix '{Prefix}'.", prefix);
 			}
 		}
-
-		components.Options.LogConfigSources(logger);
 	}
 }

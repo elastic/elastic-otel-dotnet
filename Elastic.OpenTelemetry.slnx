@@ -1,0 +1,54 @@
+<Solution>
+  <Folder Name="/examples/">
+    <Project Path="examples/AppHost/AppHost.csproj" />
+    <Project Path="examples/Example.AspNetCore.Mvc/Example.AspNetCore.Mvc.csproj" />
+    <Project Path="examples/Example.AspNetCore.WebApiAot/Example.AspNetCore.WebApiAot.csproj" />
+    <Project Path="examples/Example.AutoInstrumentation/Example.AutoInstrumentation.csproj" />
+    <Project Path="examples/Example.Console/Example.Console.csproj" />
+    <Project Path="examples/Example.MinimalApi/Example.MinimalApi.csproj" />
+    <Project Path="examples/Example.WorkerService/Example.WorkerService.csproj" />
+    <Project Path="examples/ServiceDefaults/ServiceDefaults.csproj" />
+  </Folder>
+  <Folder Name="/examples/k8s/">
+    <File Path="examples/k8s/elastic-otel-dotnet.yml" />
+    <File Path="examples/k8s/my-dotnet-application.yml" />
+    <File Path="examples/k8s/README.md" />
+  </Folder>
+  <Folder Name="/misc/">
+    <File Path=".dockerignore" />
+    <File Path=".editorconfig" />
+    <File Path=".gitignore" />
+    <File Path="build.bat" />
+    <File Path="build.sh" />
+    <File Path="CONTRIBUTING.md" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="Dockerfile" />
+    <File Path="dotnet-tools.json" />
+    <File Path="global.json" />
+    <File Path="LICENSE.txt" />
+    <File Path="NOTICE.txt" />
+    <File Path="nuget.config" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <File Path="src/Directory.Build.props" />
+    <Project Path="src/Elastic.OpenTelemetry.AutoInstrumentation/Elastic.OpenTelemetry.AutoInstrumentation.csproj" />
+    <Project Path="src/Elastic.OpenTelemetry.Core/Elastic.OpenTelemetry.Core.csproj" />
+    <Project Path="src/Elastic.OpenTelemetry/Elastic.OpenTelemetry.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <File Path="tests/.runsettings" />
+    <File Path="tests/Directory.Build.props" />
+    <File Path="tests/xunit.runner.json" />
+    <Project Path="tests/AutoInstrumentation.IntegrationTests/AutoInstrumentation.IntegrationTests.csproj" />
+    <Project Path="tests/Elastic.OpenTelemetry.Tests/Elastic.OpenTelemetry.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/applications/">
+    <Project Path="test-applications/WebApi/WebApi.csproj" />
+    <Project Path="test-applications/WebApiDotNet8/WebApiDotNet8.csproj" />
+    <Project Path="test-applications/WebApiDotNet9/WebApiDotNet9.csproj" />
+  </Folder>
+  <Project Path=".github/.github.csproj" />
+  <Project Path="build/build.fsproj" />
+</Solution>
