@@ -24,7 +24,7 @@ public sealed class ElasticChainingAnalyzer : DiagnosticAnalyzer
 	private static readonly DiagnosticDescriptor Rule = new(
 		DiagnosticId,
 		"WithElastic called after AddElasticOpenTelemetry",
-        "Avoid calling '{0}' after or inside 'AddElasticOpenTelemetry'. It is discouraged.",
+		"Avoid calling '{0}' after or inside 'AddElasticOpenTelemetry'. It is discouraged.",
 		"Usage",
 		DiagnosticSeverity.Warning,
 		isEnabledByDefault: true);

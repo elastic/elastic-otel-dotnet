@@ -36,6 +36,7 @@
     <Project Path="src/Elastic.OpenTelemetry.AutoInstrumentation/Elastic.OpenTelemetry.AutoInstrumentation.csproj" />
     <Project Path="src/Elastic.OpenTelemetry.Core/Elastic.OpenTelemetry.Core.csproj" />
     <Project Path="src/Elastic.OpenTelemetry/Elastic.OpenTelemetry.csproj" />
+	<Project Path="src/Elastic.OpenTelemetry.Configuration.Analyzer/Elastic.OpenTelemetry.Configuration.Analyzer.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <File Path="tests/.runsettings" />
@@ -43,6 +44,7 @@
     <File Path="tests/xunit.runner.json" />
     <Project Path="tests/AutoInstrumentation.IntegrationTests/AutoInstrumentation.IntegrationTests.csproj" />
     <Project Path="tests/Elastic.OpenTelemetry.Tests/Elastic.OpenTelemetry.Tests.csproj" />
+	<Project Path="tests/Elastic.OpenTelemetry.Analyzer.Tests/Elastic.OpenTelemetry.Analyzer.Tests.csproj" />
   </Folder>
   <Folder Name="/tests/applications/">
     <Project Path="test-applications/WebApi/WebApi.csproj" />
