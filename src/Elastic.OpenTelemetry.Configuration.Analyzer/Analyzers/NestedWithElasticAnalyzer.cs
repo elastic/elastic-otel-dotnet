@@ -21,7 +21,7 @@ public sealed class NestedWithElasticAnalyzer : DiagnosticAnalyzer
 	/// The unique diagnostic ID for this analyzer.
 	/// </summary>
 	public const string DiagnosticId = "EDOT002";
-	private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+	private static readonly DiagnosticDescriptor Rule = new(
 		DiagnosticId,
 		"Nested WithElastic method call",
 		"Avoid calling '{0}' inside another 'WithElastic*' method. It is discouraged.",
@@ -32,7 +32,7 @@ public sealed class NestedWithElasticAnalyzer : DiagnosticAnalyzer
 	/// <summary>
 	/// Gets the set of supported diagnostics for this analyzer.
 	/// </summary>
-	public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
+	public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [Rule];
 
 	/// <summary>
 	/// Initializes the analyzer and registers the syntax node action for invocation expressions.

@@ -8,7 +8,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 
-namespace Elastic.OpenTelemetry.Configuration.Analyzer;
+namespace Elastic.OpenTelemetry.Configuration.Analyzer.Analyzers;
 
 /// <summary>
 /// Roslyn analyzer that raises a warning if a method starting with 'WithElastic' is called
@@ -21,9 +21,9 @@ public sealed class ElasticChainingAnalyzer : DiagnosticAnalyzer
 	/// The unique diagnostic ID for this analyzer.
 	/// </summary>
 	public const string DiagnosticId = "EDOT001";
-	private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+	private static readonly DiagnosticDescriptor Rule = new(
 		DiagnosticId,
-		"WithElastic called after AddElasticOpenTelemetry or AddOpenTelemetry",
+		"WithElastic called after AddElasticOpenTelemetry",
         "Avoid calling '{0}' after or inside 'AddElasticOpenTelemetry'. It is discouraged.",
 		"Usage",
 		DiagnosticSeverity.Warning,
@@ -32,7 +32,7 @@ public sealed class ElasticChainingAnalyzer : DiagnosticAnalyzer
 	/// <summary>
 	/// The diagnostic descriptor that defines the rule, including ID, title, message, category, and severity.
 	/// </summary>
-	public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
+	public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [Rule];
 
 	/// <summary>
 	/// Initializes the analyzer and registers the syntax node action.

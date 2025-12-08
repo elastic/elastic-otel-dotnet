@@ -71,6 +71,5 @@
       <OutputItemType>Analyzer</OutputItemType>
     </ProjectReference>
   </ItemGroup>
-
 </Project>
 

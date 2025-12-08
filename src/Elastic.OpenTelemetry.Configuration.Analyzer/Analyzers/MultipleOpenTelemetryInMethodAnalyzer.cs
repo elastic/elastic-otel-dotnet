@@ -23,7 +23,7 @@ public sealed class MultipleOpenTelemetryInMethodAnalyzer : DiagnosticAnalyzer
 	/// The unique diagnostic ID for this analyzer.
 	/// </summary>
 	public const string DiagnosticId = "EDOT003";
-	private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
+	private static readonly DiagnosticDescriptor Rule = new(
 		DiagnosticId,
 		"Multiple AddOpenTelemetry/AddElasticOpenTelemetry calls in the same method or file",
 		"Avoid calling the methods AddOpenTelemetry or AddElasticOpenTelemetry more than once in the same method or top-level statements. It is discouraged.",
@@ -34,7 +34,7 @@ public sealed class MultipleOpenTelemetryInMethodAnalyzer : DiagnosticAnalyzer
 	/// <summary>
 	/// Gets the set of supported diagnostics for this analyzer.
 	/// </summary>
-	public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
+	public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [Rule];
 
 	/// <summary>
 	/// Initializes the analyzer and registers the syntax node actions for method declarations and compilation units.
