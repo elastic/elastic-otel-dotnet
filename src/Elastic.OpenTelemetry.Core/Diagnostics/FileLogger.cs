@@ -32,14 +32,14 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 	private readonly SemaphoreSlim _logSemaphore = new(0);
 	private readonly CancellationTokenSource _cancellationTokenSource = new();
 	private readonly StreamWriter _streamWriter;
-	private readonly LogLevel _configuredLogLevel;
 	private readonly LoggerExternalScopeProvider _scopeProvider;
+	private readonly CompositeElasticOpenTelemetryOptions _options;
 
 	private int _disposed;
 
 	internal Guid InstanceId { get; } = Guid.NewGuid();
 
-	public bool FileLoggingEnabled { get; }
+	internal bool FileLoggingEnabled { get; }
 
 	public FileLogger(CompositeElasticOpenTelemetryOptions options)
 	{
@@ -50,7 +50,6 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 		}
 
 		_scopeProvider = new LoggerExternalScopeProvider();
-		_configuredLogLevel = options.LogLevel;
 		_streamWriter = StreamWriter.Null;
 
 		WritingTask = Task.CompletedTask;
@@ -177,7 +176,7 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 		_logSemaphore.Release();
 	}
 
-	public bool IsEnabled(LogLevel logLevel) => FileLoggingEnabled && _configuredLogLevel <= logLevel;
+	public bool IsEnabled(LogLevel logLevel) => FileLoggingEnabled && _options.LogLevel <= logLevel;
 
 	public IDisposable BeginScope<TState>(TState state) where TState : notnull => _scopeProvider.Push(state);
 

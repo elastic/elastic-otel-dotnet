@@ -11,6 +11,7 @@ using System.Text;
 using Elastic.OpenTelemetry.Configuration.Instrumentations;
 using Elastic.OpenTelemetry.Configuration.Parsers;
 using Elastic.OpenTelemetry.Core;
+using Elastic.OpenTelemetry.Core.OpAmp;
 using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -35,7 +36,7 @@ namespace Elastic.OpenTelemetry.Configuration;
 /// Options initialised via property initializers take precedence over bound values.
 /// Environment variables take precedence over <see cref="IConfiguration"/> values.
 /// </remarks>
-internal sealed class CompositeElasticOpenTelemetryOptions
+internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurationSubscriber
 {
 	// These are the options that users can set via IConfiguration
 	private static readonly string[] ElasticOpenTelemetryConfigKeys =
@@ -403,6 +404,8 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 		get => _logging.Value ?? LogInstrumentations.All;
 		init => _logging.Assign(value, ConfigSource.Property);
 	}
+
+	Action<RemoteConfiguration> ICentralConfigurationSubscriber.OnConfiguration => throw new NotImplementedException();
 
 	public override bool Equals(object? obj)
 	{
