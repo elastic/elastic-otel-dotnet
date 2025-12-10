@@ -49,6 +49,8 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 				$"{Environment.NewLine}    Invoked with `{nameof(CompositeElasticOpenTelemetryOptions)}` instance '{options.InstanceId}'.");
 		}
 
+		_options = options;
+
 		_scopeProvider = new LoggerExternalScopeProvider();
 		_streamWriter = StreamWriter.Null;
 

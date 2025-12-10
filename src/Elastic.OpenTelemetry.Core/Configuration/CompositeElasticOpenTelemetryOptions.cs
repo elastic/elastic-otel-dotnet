@@ -4,14 +4,11 @@
 
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
-using System.Diagnostics.Tracing;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
 using Elastic.OpenTelemetry.Configuration.Instrumentations;
 using Elastic.OpenTelemetry.Configuration.Parsers;
 using Elastic.OpenTelemetry.Core;
-using Elastic.OpenTelemetry.Core.OpAmp;
 using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -51,8 +48,6 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 	internal static CompositeElasticOpenTelemetryOptions DefaultOptions = new();
 
 	internal Guid InstanceId { get; } = Guid.NewGuid();
-
-	private readonly EventLevel _eventLevel = EventLevel.Warning;
 
 	private readonly ConfigCell<string?> _logDirectory = new(nameof(LogDirectory), null);
 	private readonly ConfigCell<LogTargets?> _logTargets = new(nameof(LogTargets), null);
@@ -145,11 +140,6 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 		SetFromEnvironment(ELASTIC_OTEL_SKIP_OTLP_EXPORTER, _skipOtlpExporter, BoolParser);
 		SetFromEnvironment(ELASTIC_OTEL_SKIP_ASSEMBLY_SCANNING, _skipInstrumentationAssemblyScanning, BoolParser);
 
-		_eventLevel = ConfigurationParser.LogLevelToEventLevel(_logLevel.Value);
-
-		if (BootstrapLogger.IsEnabled)
-			BootstrapLogger.Log($"CompositeElasticOpenTelemetryOptions(IDictionary): Event log level set to: {_eventLevel}");
-
 		var parser = new EnvironmentParser(_environmentVariables);
 		parser.ParseInstrumentationVariables(_signals, _tracing, _metrics, _logging);
 	}
@@ -178,7 +168,7 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 
 		parser.ParseLogDirectory(_logDirectory);
 		parser.ParseLogTargets(_logTargets);
-		parser.ParseLogLevel(_logLevel, ref _eventLevel);
+		parser.ParseLogLevel(_logLevel);
 		parser.ParseSkipOtlpExporter(_skipOtlpExporter);
 		parser.ParseSkipInstrumentationAssemblyScanning(_skipInstrumentationAssemblyScanning);
 
@@ -200,7 +190,7 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 
 		parser.ParseLogDirectory(_logDirectory);
 		parser.ParseLogTargets(_logTargets);
-		parser.ParseLogLevel(_logLevel, ref _eventLevel);
+		parser.ParseLogLevel(_logLevel);
 		parser.ParseSkipOtlpExporter(_skipOtlpExporter);
 		parser.ParseSkipInstrumentationAssemblyScanning(_skipInstrumentationAssemblyScanning);
 
@@ -277,14 +267,26 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 		{
 			var level = _logLevel.Value;
 			var targets = _logTargets.Value;
+
+			// Determine if logging is initially active based on:
+			// - Log level being Debug or more verbose (lower value)
+			// - Log directory being explicitly configured
+			// - Log targets having a value
 			var isActive = level is <= LogLevel.Debug || !string.IsNullOrWhiteSpace(_logDirectory.Value) || targets.HasValue;
+
+			// If none of the above conditions are met, return false immediately
 			if (!isActive)
 				return isActive;
 
+			// If log level is explicitly set to None, disable logging
 			if (level is LogLevel.None)
 				isActive = false;
+
+			// If log targets is explicitly set to None, disable logging
 			else if (targets is LogTargets.None)
 				isActive = false;
+
+			// Return the final determination of whether global logging should be enabled
 			return isActive;
 		}
 	}
@@ -322,11 +324,6 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 		get => _logDirectory.Value ?? LogDirectoryDefault;
 		init => _logDirectory.Assign(value, ConfigSource.Property);
 	}
-
-	/// <summary>
-	/// Used by <see cref="LoggingEventListener"/> to determine the appropiate event level to subscribe to
-	/// </summary>
-	internal EventLevel EventLogLevel => _eventLevel;
 
 	/// <inheritdoc cref="ElasticOpenTelemetryOptions.LogLevel"/>
 	public LogLevel LogLevel
@@ -404,8 +401,6 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 		get => _logging.Value ?? LogInstrumentations.All;
 		init => _logging.Assign(value, ConfigSource.Property);
 	}
-
-	Action<RemoteConfiguration> ICentralConfigurationSubscriber.OnConfiguration => throw new NotImplementedException();
 
 	public override bool Equals(object? obj)
 	{
@@ -534,4 +529,7 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 			}
 		}
 	}
+
+	public void OnConfiguration(RemoteConfiguration remoteConfiguration) =>
+		_logLevel.Assign(remoteConfiguration.LogLevel, ConfigSource.CentralConfiguration);
 }

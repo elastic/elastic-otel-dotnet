@@ -2,6 +2,7 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using System.Collections.Concurrent;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.Logging;
@@ -66,18 +67,16 @@ internal sealed record class RemoteConfiguration(LogLevel LogLevel);
 
 internal interface ICentralConfigurationSubscriber
 {
-	Action<RemoteConfiguration> OnConfiguration { get; }
+	void OnConfiguration(RemoteConfiguration remoteConfiguration);
 }
 
 internal sealed class CentralConfiguration : IDisposable
 {
 	private readonly CompositeLogger _logger;
 	private readonly OpAmpClient _client;
-	private readonly List<ICentralConfigurationSubscriber> _subscribers = [];
-	private readonly Lock _lock = new();
-
-	private bool _disposed;
+	private readonly ConcurrentBag<ICentralConfigurationSubscriber> _subscribers = [];
 	private readonly CancellationTokenSource? _cts;
+	private bool _disposed;
 
 	internal CentralConfiguration(CentralConfigurationOptions options, CompositeLogger logger)
 	{
@@ -129,13 +128,7 @@ internal sealed class CentralConfiguration : IDisposable
 		}
 	}
 
-	internal void Subscribe(ICentralConfigurationSubscriber subscriber)
-	{
-		using (_lock.EnterScope())
-		{
-			_subscribers.Add(subscriber);
-		}
-	}
+	internal void Subscribe(ICentralConfigurationSubscriber subscriber) => _subscribers.Add(subscriber);
 
 	private void Dispose(bool disposing)
 	{

@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information
 
 using System.Diagnostics.CodeAnalysis;
-using System.Diagnostics.Tracing;
 using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -56,7 +55,7 @@ internal class ConfigurationParser
 	public void ParseLogTargets(ConfigCell<LogTargets?> logTargets) =>
 		SetFromConfiguration(_configuration, logTargets, LogTargetsParser);
 
-	public void ParseLogLevel(ConfigCell<LogLevel?> logLevel, ref EventLevel eventLevel)
+	public void ParseLogLevel(ConfigCell<LogLevel?> logLevel)
 	{
 		SetFromConfiguration(_configuration, logLevel, LogLevelParser);
 
@@ -65,31 +64,7 @@ internal class ConfigurationParser
 			var level = LogLevelHelpers.ToLogLevel(LoggingSectionLogLevel!);
 			logLevel.Assign(level, ConfigSource.IConfiguration);
 		}
-
-		// this is used to ensure LoggingEventListener matches our log level by using the lowest
-		// of our configured loglevel or the default logging section's level.
-		var eventLogLevel = logLevel.Value;
-		if (!string.IsNullOrEmpty(LoggingSectionLogLevel))
-		{
-			var sectionLogLevel = LogLevelHelpers.ToLogLevel(LoggingSectionLogLevel!) ?? LogLevel.None;
-
-			if (sectionLogLevel < eventLogLevel)
-				eventLogLevel = sectionLogLevel;
-		}
-
-		eventLevel = LogLevelToEventLevel(eventLogLevel);
 	}
-
-	internal static EventLevel LogLevelToEventLevel(LogLevel? eventLogLevel) =>
-		eventLogLevel switch
-		{
-			LogLevel.Trace or LogLevel.Debug => EventLevel.LogAlways,
-			LogLevel.Information => EventLevel.Informational,
-			LogLevel.Warning => EventLevel.Warning,
-			LogLevel.Error => EventLevel.Error,
-			LogLevel.Critical => EventLevel.Critical,
-			_ => EventLevel.Informational // fallback to info level
-		};
 
 	public void ParseSkipOtlpExporter(ConfigCell<bool?> skipOtlpExporter) =>
 		SetFromConfiguration(_configuration, skipOtlpExporter, BoolParser);
