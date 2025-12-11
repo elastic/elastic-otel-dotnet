@@ -21,6 +21,8 @@ internal interface ICentralConfigurationSubscriber
 
 internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 {
+	private const int OpAmpBlockingStartTimeoutMilliseconds = 500;
+
 	private readonly CompositeLogger _logger;
 	private readonly OpAmpClient _client;
 	private readonly ConcurrentBag<ICentralConfigurationSubscriber> _subscribers = [];
@@ -81,8 +83,12 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 
 		var startTask = centralConfig.StartAsync();
 
-		if (startTask.IsCompleted)
+		// Wait for up to 500ms for the task to complete
+		var completedInTime = startTask.Wait(TimeSpan.FromMilliseconds(OpAmpBlockingStartTimeoutMilliseconds));
+
+		if (completedInTime)
 		{
+			// Task completed within the timeout
 			if (startTask.IsFaulted)
 			{
 				logger.LogError(startTask.Exception, "Failed to start Central Configuration client.");
@@ -95,8 +101,9 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 			return true;
 		}
 
-		// We don't await the task here to avoid blocking the caller.
-		// The caller must check the IsStarted property before using the CentralConfiguration instance and block if necessary.
+		// Task did not complete within 500ms, continue asynchronously
+		logger.LogDebug("Central Configuration client is starting asynchronously (exceeded 500ms wait).");
+
 		_ = startTask.ContinueWith(task =>
 		{
 			if (task.IsFaulted)
