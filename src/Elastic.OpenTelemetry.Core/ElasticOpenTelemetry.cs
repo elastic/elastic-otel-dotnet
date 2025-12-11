@@ -6,9 +6,9 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry.Configuration;
-using Elastic.OpenTelemetry.Core.OpAmp;
 using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Elastic.OpenTelemetry.Core;
 
@@ -151,10 +151,16 @@ internal static class ElasticOpenTelemetry
 
 			var logger = new CompositeLogger(options);
 
-			var centralConfig = ElasticCentralConfiguration.CreateAsync
+			CentralConfiguration? centralConfiguration = null;
+
+			if (options.IsOpAmpEnabled())
+			{
+				logger.LogInformation($"{nameof(Bootstrap)}: OpAmp is enabled. Initialising Elastic Central Configuration.");
+				// TODO - Create instance
+			}
 
 			var eventListener = new LoggingEventListener(logger, options);
-			var components = new ElasticOpenTelemetryComponents(logger, eventListener, options);
+			var components = new ElasticOpenTelemetryComponents(options, logger, eventListener, centralConfiguration);
 
 			if (BootstrapLogger.IsEnabled)
 			{

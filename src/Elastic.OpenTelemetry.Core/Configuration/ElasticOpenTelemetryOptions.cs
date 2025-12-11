@@ -77,4 +77,27 @@ public class ElasticOpenTelemetryOptions
 	/// </summary>
 	/// <remarks>When unset, this defaults to <c>false</c>.</remarks>
 	public bool? SkipInstrumentationAssemblyScanning { get; init; }
+
+	/// <summary>
+	/// The server endpoint for the OpenTelemetry Protocol (OTLP) over HTTP.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	///   This should be a gateway collector running the Elastic APM Config Extension, which connects to
+	///   the Elastic Observability instance storing the central configuration.
+	/// </para>
+	/// <para>
+	///   See <see href="https://www.elastic.co/docs/reference/opentelemetry/central-configuration">central configuration</see>
+	///   documentation for more information.
+	/// </para>
+	/// </remarks>
+	public string? OpAmpEndpoint { get; init; }
+
+	/// <summary>
+	/// A comma-separated list of HTTP headers to include in requests to the OpAmp server.
+	/// </summary>
+	/// <remarks>
+	/// The primary use case is to use this to provide authentication headers required by the OpAmp server.
+	/// </remarks>
+	public string? OpAmpHeaders { get; init; }
 }

@@ -4,6 +4,7 @@
 
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Elastic.OpenTelemetry.Configuration.Instrumentations;
@@ -18,7 +19,6 @@ using static Elastic.OpenTelemetry.Configuration.EnvironmentVariables;
 using static Elastic.OpenTelemetry.Configuration.Parsers.SharedParsers;
 
 namespace Elastic.OpenTelemetry.Configuration;
-
 
 /// <summary>
 /// Defines advanced options which can be used to finely-tune the behaviour of the Elastic
@@ -35,6 +35,10 @@ namespace Elastic.OpenTelemetry.Configuration;
 /// </remarks>
 internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurationSubscriber
 {
+	private const string ServiceNameResourceAttributeKey = "service.name";
+	private const string ServiceVersionResourceAttributeKey = "service.name";
+	private const string AuthorizationHeaderPrefix = "Authorization=ApiKey";
+
 	// These are the options that users can set via IConfiguration
 	private static readonly string[] ElasticOpenTelemetryConfigKeys =
 	[
@@ -42,7 +46,9 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 		nameof(LogLevel),
 		nameof(LogTargets),
 		nameof(SkipOtlpExporter),
-		nameof(SkipInstrumentationAssemblyScanning)
+		nameof(SkipInstrumentationAssemblyScanning),
+		nameof(OpAmpEndpoint),
+		nameof(OpAmpHeaders)
 	];
 
 	internal static CompositeElasticOpenTelemetryOptions DefaultOptions = new();
@@ -51,19 +57,26 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 
 	private readonly ConfigCell<string?> _logDirectory = new(nameof(LogDirectory), null);
 	private readonly ConfigCell<LogTargets?> _logTargets = new(nameof(LogTargets), null);
-
 	private readonly ConfigCell<LogLevel?> _logLevel = new(nameof(LogLevel), LogLevel.Warning);
 	private readonly ConfigCell<bool?> _skipOtlpExporter = new(nameof(SkipOtlpExporter), false);
 	private readonly ConfigCell<bool?> _skipInstrumentationAssemblyScanning = new(nameof(SkipInstrumentationAssemblyScanning), false);
 	private readonly ConfigCell<bool?> _runningInContainer = new(nameof(_runningInContainer), false);
+
+	private readonly ConfigCell<string?> _opAmpEndpoint = new(nameof(OpAmpEndpoint), null);
+	private readonly ConfigCell<string?> _opAmpHeaders = new(nameof(ServiceName), null);
 
 	private readonly ConfigCell<Signals?> _signals = new(nameof(Signals), Signals.All);
 	private readonly ConfigCell<TraceInstrumentations> _tracing = new(nameof(Tracing), TraceInstrumentations.All);
 	private readonly ConfigCell<MetricInstrumentations> _metrics = new(nameof(Metrics), MetricInstrumentations.All);
 	private readonly ConfigCell<LogInstrumentations> _logging = new(nameof(Logging), LogInstrumentations.All);
 
+	// These are not settable via IConfiguration or ElasticOpenTelemetryOptions, only env vars
+	private readonly ConfigCell<string?> _resourceAttributes = new(nameof(ResourceAttributes), null);
+
 	private readonly IDictionary _environmentVariables;
 	private readonly IConfiguration? _configuration;
+
+	private bool? _isOpAmpEnabled;
 
 	/// <summary>
 	/// Creates a new instance of <see cref="CompositeElasticOpenTelemetryOptions"/> with properties
@@ -73,61 +86,24 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 	{
 		if (BootstrapLogger.IsEnabled)
 			BootstrapLogger.LogWithStackTrace($"{nameof(CompositeElasticOpenTelemetryOptions)}: Instance '{InstanceId}' created via parameterless ctor.");
-
-		// This is temporarily used as a place to test OpAmp.
-		// We'll needa nicer way to have this run for all paths (or apply asynchronously later)
-
-		//var configListener = new ConfigListener();
-		//var frameProcessor = new FrameProcessor();
-		//frameProcessor.Subscribe(configListener);
-
-		//var httpTransport = new PlainHttpTransport(new Uri("http://localhost:4320/v1/opamp"), frameProcessor);
-
-		//var uid = ByteString.CopyFrom(Guid.NewGuid().ToByteArray());
-
-		//var agentDescription = new AgentDescription();
-
-		//// TODO - This is a challenge as we need the service name before we can initialise the Otel SDK
-		//// When not configured explicitly, the SDK uses internal logic to determine the name based on the app type.
-		//agentDescription.IdentifyingAttributes.Add(new KeyValue() { Key = "service.name", Value = new AnyValue() { StringValue = "minimal-api-example-2" } });
-
-		//var frame = new AgentToServer()
-		//{
-		//	InstanceUid = uid,
-		//	Capabilities = (ulong)(AgentCapabilities.AcceptsRemoteConfig | AgentCapabilities.ReportsStatus),
-		//	AgentDescription = agentDescription
-		//};
-
-		//httpTransport.SendAsync(frame, CancellationToken.None).GetAwaiter().GetResult(); // temp blocking
 	}
 
-//	private static ReadOnlySpan<byte> EmptyConfigBytes => "{}"u8;
-
-//	private class ConfigListener : IOpAmpListener<RemoteConfigMessage>
-//	{
-//		public void HandleMessage(RemoteConfigMessage message)
-//		{
-//			// TODO - Compare hash with previous (when polling)
-
-//			if (message.RemoteConfig.Config.ConfigMap.TryGetValue("elastic", out var config))
-//			{
-//				if (config.Body.Span.SequenceEqual(EmptyConfigBytes))
-//					return;
-//#if NET
-//				var jsonObject = JsonSerializer.Deserialize(config.Body.Span, DictionaryStringStringJsonContext.Default.DictionaryStringString);
-//#else
-//				var jsonObject = JsonSerializer.Deserialize<Dictionary<string, string>>(config.Body.Span);
-//#endif
-//			}
-//		}
-//	}
-
+	/// <summary>
+	/// Creates a new instance of <see cref="CompositeElasticOpenTelemetryOptions"/> with properties
+	/// bound from environment variables.
+	/// </summary>
 	internal CompositeElasticOpenTelemetryOptions(IDictionary? environmentVariables)
 	{
 		if (BootstrapLogger.IsEnabled)
 			BootstrapLogger.LogWithStackTrace($"{nameof(CompositeElasticOpenTelemetryOptions)}: Instance '{InstanceId}' created via ctor `(IDictionary? environmentVariables)`.");
 
+		if (environmentVariables is null)
+		{
+			BootstrapLogger.Log($"CompositeElasticOpenTelemetryOptions: Param `environmentVariables` was `null`.");
+		}
+
 		LogDirectoryDefault = GetDefaultLogDirectory();
+
 		_environmentVariables = environmentVariables ?? GetEnvironmentVariables();
 
 		if (BootstrapLogger.IsEnabled)
@@ -139,9 +115,15 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 		SetFromEnvironment(ELASTIC_OTEL_LOG_TARGETS, _logTargets, LogTargetsParser);
 		SetFromEnvironment(ELASTIC_OTEL_SKIP_OTLP_EXPORTER, _skipOtlpExporter, BoolParser);
 		SetFromEnvironment(ELASTIC_OTEL_SKIP_ASSEMBLY_SCANNING, _skipInstrumentationAssemblyScanning, BoolParser);
+		SetFromEnvironment(ELASTIC_OTEL_OPAMP_ENDPOINT, _opAmpEndpoint, StringParser);
+		SetFromEnvironment(ELASTIC_OTEL_OPAMP_HEADERS, _opAmpHeaders, StringParser);
+		SetFromEnvironment(OTEL_RESOURCE_ATTRIBUTES, _resourceAttributes, StringParser);
 
 		var parser = new EnvironmentParser(_environmentVariables);
 		parser.ParseInstrumentationVariables(_signals, _tracing, _metrics, _logging);
+
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.Log($"{nameof(CompositeElasticOpenTelemetryOptions)}: Configuration binding from environment variables completed.");
 	}
 
 	[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2026:RequiresUnreferencedCode", Justification = "Manually verified")]
@@ -158,12 +140,14 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 			return;
 		}
 
-		if (environmentVariables is null)
-		{
-			BootstrapLogger.Log($"CompositeElasticOpenTelemetryOptions: Param `environmentVariables` was `null`.");
-			return;
-		}
+		AssignFromIConfiguration(configuration);
 
+		// We store this so we can log any application configuration values later, if needed.
+		_configuration = configuration;
+	}
+
+	private void AssignFromIConfiguration(IConfiguration configuration)
+	{
 		var parser = new ConfigurationParser(configuration);
 
 		parser.ParseLogDirectory(_logDirectory);
@@ -171,8 +155,11 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 		parser.ParseLogLevel(_logLevel);
 		parser.ParseSkipOtlpExporter(_skipOtlpExporter);
 		parser.ParseSkipInstrumentationAssemblyScanning(_skipInstrumentationAssemblyScanning);
+		parser.ParseOpAmpEndpoint(_opAmpEndpoint);
+		parser.ParseResourceAttributes(_resourceAttributes);
 
-		_configuration = configuration;
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.Log($"{nameof(CompositeElasticOpenTelemetryOptions)}: Configuration binding from IConfiguration completed.");
 	}
 
 	[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2026:RequiresUnreferencedCode", Justification = "Manually verified")]
@@ -186,37 +173,10 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 				$"{NewLine}    Invoked with `{nameof(ElasticOpenTelemetryOptions)}` instance '{options.InstanceId}'.");
 		}
 
-		var parser = new ConfigurationParser(configuration);
+		AssignFromIConfiguration(configuration);
+		AssignFromElasticOpenTelemetryOptions(options);
 
-		parser.ParseLogDirectory(_logDirectory);
-		parser.ParseLogTargets(_logTargets);
-		parser.ParseLogLevel(_logLevel);
-		parser.ParseSkipOtlpExporter(_skipOtlpExporter);
-		parser.ParseSkipInstrumentationAssemblyScanning(_skipInstrumentationAssemblyScanning);
-
-		if (BootstrapLogger.IsEnabled)
-			BootstrapLogger.Log($"{nameof(CompositeElasticOpenTelemetryOptions)}: Configuration binding from IConfiguration completed.");
-
-		if (options.SkipOtlpExporter.HasValue)
-			_skipOtlpExporter.Assign(options.SkipOtlpExporter.Value, ConfigSource.Options);
-
-		if (!string.IsNullOrEmpty(options.LogDirectory))
-			_logDirectory.Assign(options.LogDirectory, ConfigSource.Options);
-
-		if (options.LogLevel.HasValue)
-			_logLevel.Assign(options.LogLevel.Value, ConfigSource.Options);
-
-		if (options.LogTargets.HasValue)
-			_logTargets.Assign(options.LogTargets.Value, ConfigSource.Options);
-
-		if (options.SkipInstrumentationAssemblyScanning.HasValue)
-			_skipInstrumentationAssemblyScanning.Assign(options.SkipInstrumentationAssemblyScanning.Value, ConfigSource.Options);
-
-		AdditionalLogger = options.AdditionalLogger ?? options.AdditionalLoggerFactory?.CreateElasticLogger();
-
-		if (BootstrapLogger.IsEnabled)
-			BootstrapLogger.Log($"{nameof(CompositeElasticOpenTelemetryOptions)}: Configuration binding from user-provided `ElasticOpenTelemetryOptions` completed.");
-
+		// We store this so we can log any application configuration values later, if needed.
 		_configuration = configuration;
 	}
 
@@ -229,12 +189,17 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 				$"{NewLine}    Invoked with `{nameof(ElasticOpenTelemetryOptions)}` instance '{options.InstanceId}' with hash '{RuntimeHelpers.GetHashCode(options)}'.");
 		}
 
+		// Having configured the base settings from env vars, we now override anything that was
+		// explicitly configured in the user provided options.
+
+		AssignFromElasticOpenTelemetryOptions(options);
+	}
+
+	private void AssignFromElasticOpenTelemetryOptions(ElasticOpenTelemetryOptions options)
+	{
 		// This should not happen, but just in case
 		if (options is null)
 			return;
-
-		// Having configured the base settings from env vars, we now override anything that was
-		// explicitly configured in the user provided options.
 
 		if (options.SkipOtlpExporter.HasValue)
 			_skipOtlpExporter.Assign(options.SkipOtlpExporter.Value, ConfigSource.Options);
@@ -250,6 +215,9 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 
 		if (options.SkipInstrumentationAssemblyScanning.HasValue)
 			_skipInstrumentationAssemblyScanning.Assign(options.SkipInstrumentationAssemblyScanning.Value, ConfigSource.Options);
+
+		if (options.OpAmpEndpoint is not null)
+			_opAmpEndpoint.Assign(options.OpAmpEndpoint, ConfigSource.Options);
 
 		AdditionalLogger = options.AdditionalLogger ?? options.AdditionalLoggerFactory?.CreateElasticLogger();
 
@@ -319,21 +287,21 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 	internal string LogDirectoryDefault { get; }
 
 	/// <inheritdoc cref="ElasticOpenTelemetryOptions.LogDirectory"/>
-	public string LogDirectory
+	internal string LogDirectory
 	{
 		get => _logDirectory.Value ?? LogDirectoryDefault;
 		init => _logDirectory.Assign(value, ConfigSource.Property);
 	}
 
 	/// <inheritdoc cref="ElasticOpenTelemetryOptions.LogLevel"/>
-	public LogLevel LogLevel
+	internal LogLevel LogLevel
 	{
 		get => _logLevel.Value ?? LogLevel.Warning;
 		init => _logLevel.Assign(value, ConfigSource.Property);
 	}
 
 	/// <inheritdoc cref="ElasticOpenTelemetryOptions.LogTargets"/>
-	public LogTargets LogTargets
+	internal LogTargets LogTargets
 	{
 		get => _logTargets.Value ?? (GlobalLogEnabled
 			? _runningInContainer.Value.HasValue && _runningInContainer.Value.Value ? LogTargets.StdOut : LogTargets.File
@@ -342,17 +310,41 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 	}
 
 	/// <inheritdoc cref="ElasticOpenTelemetryOptions.SkipOtlpExporter"/>
-	public bool SkipOtlpExporter
+	internal bool SkipOtlpExporter
 	{
 		get => _skipOtlpExporter.Value ?? false;
 		init => _skipOtlpExporter.Assign(value, ConfigSource.Property);
 	}
 
 	/// <inheritdoc cref="ElasticOpenTelemetryOptions.SkipInstrumentationAssemblyScanning"/>
-	public bool SkipInstrumentationAssemblyScanning
+	internal bool SkipInstrumentationAssemblyScanning
 	{
 		get => _skipInstrumentationAssemblyScanning.Value ?? false;
 		init => _skipInstrumentationAssemblyScanning.Assign(value, ConfigSource.Property);
+	}
+
+	/// <inheritdoc cref="ElasticOpenTelemetryOptions.OpAmpEndpoint"/>
+	internal string? OpAmpEndpoint
+	{
+		get => _opAmpEndpoint.Value ?? null;
+		init => _opAmpEndpoint.Assign(value, ConfigSource.Property);
+	}
+
+	/// <inheritdoc cref="ElasticOpenTelemetryOptions.OpAmpHeaders"/>
+	internal string? OpAmpHeaders
+	{
+		get => _opAmpHeaders.Value ?? null;
+		init => _opAmpHeaders.Assign(value, ConfigSource.Property);
+	}
+
+	internal string? ServiceName { get; private set; }
+
+	internal string? ServiceVersion { get; private set; }
+
+	internal string? ResourceAttributes
+	{
+		get => _opAmpEndpoint.Value ?? null;
+		init => _opAmpEndpoint.Assign(value, ConfigSource.Property);
 	}
 
 	public ILogger? AdditionalLogger { get; internal set; }
@@ -416,6 +408,9 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 			   Tracing.SetEquals(other.Tracing) &&
 			   Metrics.SetEquals(other.Metrics) &&
 			   Logging.SetEquals(other.Logging) &&
+			   OpAmpEndpoint == other.OpAmpEndpoint &&
+			   OpAmpHeaders == other.OpAmpHeaders &&
+			   ResourceAttributes == other.ResourceAttributes &&
 			   ReferenceEquals(AdditionalLogger, other.AdditionalLogger);
 	}
 
@@ -423,21 +418,83 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 	{
 #if NET462 || NETSTANDARD2_0
 		return LogDirectory.GetHashCode()
-			^ LogLevel.GetHashCode()
-			^ LogTargets.GetHashCode()
-			^ SkipOtlpExporter.GetHashCode()
-			^ SkipInstrumentationAssemblyScanning.GetHashCode()
-			^ Signals.GetHashCode()
-			^ Tracing.GetHashCode()
-			^ Metrics.GetHashCode()
-			^ Logging.GetHashCode()
-			^ (AdditionalLogger?.GetHashCode() ?? 0);
+			 ^ LogLevel.GetHashCode()
+			 ^ LogTargets.GetHashCode()
+			 ^ SkipOtlpExporter.GetHashCode()
+			 ^ SkipInstrumentationAssemblyScanning.GetHashCode()
+			 ^ Signals.GetHashCode()
+			 ^ Tracing.GetHashCode()
+			 ^ Metrics.GetHashCode()
+			 ^ Logging.GetHashCode()
+			 ^ (OpAmpEndpoint?.GetHashCode() ?? 0)
+			 ^ (OpAmpHeaders?.GetHashCode() ?? 0)
+			 ^ (ResourceAttributes?.GetHashCode() ?? 0)
+			 ^ (AdditionalLogger?.GetHashCode() ?? 0);
 #else
 		var hash1 = HashCode.Combine(LogDirectory, LogLevel, LogTargets, SkipOtlpExporter);
 		var hash2 = HashCode.Combine(Signals, Tracing, Metrics, Logging, AdditionalLogger);
-		var hash3 = HashCode.Combine(SkipInstrumentationAssemblyScanning);
+		var hash3 = HashCode.Combine(SkipInstrumentationAssemblyScanning, OpAmpEndpoint, OpAmpHeaders, ResourceAttributes);
 		return HashCode.Combine(hash1, hash2, hash3);
 #endif
+	}
+
+	internal bool IsOpAmpEnabled()
+	{
+		// If we've already evaluated the configuration, return the cached value.
+		if (_isOpAmpEnabled.HasValue)
+			return _isOpAmpEnabled.Value;
+
+		// OpAMP requires an endpoint, an auth header and resource attributes to function.
+		if (string.IsNullOrEmpty(OpAmpEndpoint) || string.IsNullOrEmpty(OpAmpHeaders) || string.IsNullOrEmpty(ResourceAttributes))
+		{
+			return SetAndReturn(false);
+		}
+
+		if (!OpAmpHeaders!.Contains(AuthorizationHeaderPrefix, StringComparison.OrdinalIgnoreCase))
+		{
+			return SetAndReturn(false);
+		}
+
+		// OpAMP requires at minimum the service.name to be set so central configuration can locate the correct configuration.
+		ServiceName = ExtractValueForKey(ResourceAttributes!, ServiceNameResourceAttributeKey);
+
+		if (string.IsNullOrEmpty(ServiceName))
+		{
+			return SetAndReturn(false);
+		}
+
+		// Optionally extract and cache service version if present
+		ServiceVersion = ExtractValueForKey(ResourceAttributes!, ServiceVersionResourceAttributeKey);
+
+		return SetAndReturn(true);
+
+		bool SetAndReturn(bool value)
+		{
+			_isOpAmpEnabled = value;
+			return value;
+		}
+	}
+
+	private static string? ExtractValueForKey(string input, string key)
+	{
+		if (string.IsNullOrEmpty(input))
+			return null;
+
+		var span = input.AsSpan();
+
+		var index = span.IndexOf(key, StringComparison.Ordinal);
+
+		if (index == -1)
+			return null;
+
+		span = span[(index + key.Length)..];
+
+		if (span.Length == 0 || span[0] != '=')
+			return null;
+
+		index = span.IndexOf(',');
+
+		return index == -1 ? span[1..].ToString() : span.Slice(1, index).ToString();
 	}
 
 	private void SetFromEnvironment<T>(string key, ConfigCell<T> field, Func<string?, T?> parser)
@@ -476,6 +533,10 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 
 		LogConfig(logger, _skipOtlpExporter);
 		LogConfig(logger, _skipInstrumentationAssemblyScanning);
+
+		LogConfig(logger, _opAmpEndpoint);
+		// TODO - Log headers but redact auth header value
+		LogConfig(logger, _resourceAttributes);
 
 		static void LogConfig<T>(ILogger logger, ConfigCell<T> cell)
 		{

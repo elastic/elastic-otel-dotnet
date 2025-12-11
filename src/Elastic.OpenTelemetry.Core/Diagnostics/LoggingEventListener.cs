@@ -143,7 +143,7 @@ internal sealed
 			{
 				_subscribedEventSources.Add(eventSource);
 			}
-			
+
 			EnableEvents(eventSource, _eventLevel, EventKeywords.All);
 
 			_logger.LogDebug("LoggingEventListener subscribed to '{EventSourceName}' at level '{EventLevel}'", eventSource.Name, _eventLevel);

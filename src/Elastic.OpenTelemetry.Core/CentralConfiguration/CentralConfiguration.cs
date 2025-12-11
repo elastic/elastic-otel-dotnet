@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information
 
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.Logging;
@@ -11,58 +12,6 @@ using OpenTelemetry.OpAmp.Client.Settings;
 
 namespace Elastic.OpenTelemetry.Core;
 
-internal sealed class CentralConfigurationOptions
-{
-	internal CentralConfigurationOptions()
-	{
-		var opAmpEndpoint = Environment.GetEnvironmentVariable(EnvironmentVariables.ELASTIC_OTEL_OPAMP_ENDPOINT);
-		var resourceAttributes = Environment.GetEnvironmentVariable(EnvironmentVariables.OTEL_RESOURCE_ATTRIBUTES);
-
-		if (string.IsNullOrEmpty(opAmpEndpoint) || string.IsNullOrEmpty(resourceAttributes))
-		{
-			return;
-		}
-
-		var serviceName = string.Empty;
-		var serviceVersion = string.Empty;
-
-		// TODO - Optimise parsing
-		var attributes = resourceAttributes.Split(',', StringSplitOptions.RemoveEmptyEntries);
-
-		foreach (var attribute in attributes)
-		{
-			if (serviceName != string.Empty && serviceVersion != string.Empty)
-				break;
-
-			if (!string.IsNullOrEmpty(attribute))
-			{
-				var keyAndValue = attribute.Split('=');
-
-				if (keyAndValue.Length != 2)
-					continue;
-
-				if (keyAndValue[0] == "service.name")
-				{
-					serviceName = keyAndValue[1];
-					continue;
-				}
-
-				if (keyAndValue[0] == "service.version")
-				{
-					serviceVersion = keyAndValue[1];
-					continue;
-				}
-			}
-		}
-	}
-
-	internal string OpAmpEndpoint { get; init; } = string.Empty;
-	internal string ServiceName { get; init; } = string.Empty;
-	internal string ServiceVersion { get; init; } = string.Empty;
-
-	internal bool IsEnabled => !string.IsNullOrEmpty(OpAmpEndpoint) && !string.IsNullOrEmpty(ServiceName);
-}
-
 internal sealed record class RemoteConfiguration(LogLevel LogLevel);
 
 internal interface ICentralConfigurationSubscriber
@@ -70,65 +19,104 @@ internal interface ICentralConfigurationSubscriber
 	void OnConfiguration(RemoteConfiguration remoteConfiguration);
 }
 
-internal sealed class CentralConfiguration : IDisposable
+internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 {
 	private readonly CompositeLogger _logger;
 	private readonly OpAmpClient _client;
 	private readonly ConcurrentBag<ICentralConfigurationSubscriber> _subscribers = [];
-	private readonly CancellationTokenSource? _cts;
+
 	private bool _disposed;
 
-	internal CentralConfiguration(CentralConfigurationOptions options, CompositeLogger logger)
+	private CentralConfiguration(CompositeElasticOpenTelemetryOptions options, CompositeLogger logger)
 	{
 		_logger = logger;
+
+		// TODO - Configure HttpClient once supported by  OpAmpClient.
+		// TODO - Subscribe to configuration updates and notify subscribers once supported by OpAmpClient.
+
 		_client = new OpAmpClient(opts =>
 		{
-			opts.ServerUrl = new Uri(options.OpAmpEndpoint);
-			opts.ConnectionType = ConnectionType.WebSocket;
+			opts.ServerUrl = new Uri(options.OpAmpEndpoint!);
+			opts.ConnectionType = ConnectionType.Http;
 
 			// Add custom resources to help the server identify your client.
-			opts.Identification.AddIdentifyingAttribute("application.name", options.ServiceName);
+			opts.Identification.AddIdentifyingAttribute("application.name", options.ServiceName!);
 
-			if (options.ServiceVersion != string.Empty)
-				opts.Identification.AddIdentifyingAttribute("application.version", options.ServiceVersion);
+			if (!string.IsNullOrEmpty(options.ServiceVersion))
+				opts.Identification.AddIdentifyingAttribute("application.version", options.ServiceVersion!);
 
 			opts.Heartbeat.IsEnabled = false;
 		});
-
-		_cts = new CancellationTokenSource();
-
-		_cts.Token.Register(async () =>
-		{
-			_logger.LogInformation("CentralConfiguration worker thread is stopping.");
-
-			await _client.StopAsync().ConfigureAwait(false);
-		});
-
-		Task.Run(() => WorkerLoopAsync(_cts.Token));
 	}
 
-	private async Task WorkerLoopAsync(CancellationToken cancellationToken)
+	internal bool IsStarted { get; private set; }
+
+	private async Task StartAsync()
 	{
-		try
+		if (IsStarted)
 		{
-			await _client.StartAsync(cancellationToken).ConfigureAwait(false);
-			
-			while (!cancellationToken.IsCancellationRequested)
-			{
-				// Example: poll for configuration changes or handle responses
-				// This is a placeholder for actual response handling logic
-				// You may need to subscribe to events or poll the client
+			return;
+		}
 
-				await Task.Delay(1000, cancellationToken).ConfigureAwait(false);
-			}
-		}
-		catch (Exception ex)
-		{
-			_logger.LogError(ex, "CentralConfiguration worker thread encountered an error");
-		}
+		await _client.StartAsync().ConfigureAwait(false);
+
+		IsStarted = true;
 	}
 
-	internal void Subscribe(ICentralConfigurationSubscriber subscriber) => _subscribers.Add(subscriber);
+	internal static bool TryCreateAndStart(CompositeElasticOpenTelemetryOptions options, CompositeLogger logger, [NotNullWhen(true)] out CentralConfiguration? centralConfig)
+	{
+		centralConfig = null;
+
+		if (options.IsOpAmpEnabled() is false)
+		{
+			return false;
+		}
+
+		logger.LogDebug("Central Configuration is enabled. OpAmp Endpoint: {OpAmpEndpoint}, Service Name: {ServiceName}, Service Version: {ServiceVersion}",
+			options.OpAmpEndpoint,
+			options.ServiceName,
+			options.ServiceVersion);
+
+		centralConfig = new CentralConfiguration(options, logger);
+
+		var startTask = centralConfig.StartAsync();
+
+		if (startTask.IsCompleted)
+		{
+			if (startTask.IsFaulted)
+			{
+				logger.LogError(startTask.Exception, "Failed to start Central Configuration client.");
+
+				centralConfig = null;
+				return false;
+			}
+
+			logger.LogInformation("Central Configuration client started successfully.");
+			return true;
+		}
+
+		// We don't await the task here to avoid blocking the caller.
+		// The caller must check the IsStarted property before using the CentralConfiguration instance and block if necessary.
+		_ = startTask.ContinueWith(task =>
+		{
+			if (task.IsFaulted)
+			{
+				logger.LogError(task.Exception, "Failed to start Central Configuration client.");
+			}
+			else
+			{
+				logger.LogInformation("Central Configuration client started successfully.");
+			}
+		}, TaskScheduler.Default);
+
+		return true;
+	}
+
+	internal void Subscribe(ICentralConfigurationSubscriber subscriber)
+	{
+		_subscribers.Add(subscriber);
+		_logger.LogDebug("Subscriber of type '{SubscriberType}' added to Central Configuration. Total subscribers: {SubscriberCount}", subscriber.GetType().Name, _subscribers.Count);
+	}
 
 	private void Dispose(bool disposing)
 	{
@@ -136,7 +124,7 @@ internal sealed class CentralConfiguration : IDisposable
 		{
 			if (disposing)
 			{
-				_cts?.Cancel();
+				_subscribers.Clear();
 				_client.Dispose();
 			}
 
@@ -148,5 +136,17 @@ internal sealed class CentralConfiguration : IDisposable
 	{
 		Dispose(disposing: true);
 		GC.SuppressFinalize(this);
+	}
+
+	public ValueTask DisposeAsync()
+	{
+		Dispose(disposing: true);
+		GC.SuppressFinalize(this);
+
+#if NET
+		return ValueTask.CompletedTask;
+#else
+		return new ValueTask(Task.CompletedTask);
+#endif
 	}
 }

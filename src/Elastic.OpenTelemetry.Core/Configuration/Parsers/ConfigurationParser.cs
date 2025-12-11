@@ -19,7 +19,7 @@ internal class ConfigurationParser
 
 	internal string? LoggingSectionLogLevel { get; }
 
-	public ConfigurationParser(IConfiguration configuration)
+	internal ConfigurationParser(IConfiguration configuration)
 	{
 		_configuration = configuration;
 
@@ -49,13 +49,13 @@ internal class ConfigurationParser
 		cell.Assign(parsed, ConfigSource.IConfiguration);
 	}
 
-	public void ParseLogDirectory(ConfigCell<string?> logDirectory) =>
+	internal void ParseLogDirectory(ConfigCell<string?> logDirectory) =>
 		SetFromConfiguration(_configuration, logDirectory, StringParser);
 
-	public void ParseLogTargets(ConfigCell<LogTargets?> logTargets) =>
+	internal void ParseLogTargets(ConfigCell<LogTargets?> logTargets) =>
 		SetFromConfiguration(_configuration, logTargets, LogTargetsParser);
 
-	public void ParseLogLevel(ConfigCell<LogLevel?> logLevel)
+	internal void ParseLogLevel(ConfigCell<LogLevel?> logLevel)
 	{
 		SetFromConfiguration(_configuration, logLevel, LogLevelParser);
 
@@ -66,9 +66,26 @@ internal class ConfigurationParser
 		}
 	}
 
-	public void ParseSkipOtlpExporter(ConfigCell<bool?> skipOtlpExporter) =>
+	internal void ParseSkipOtlpExporter(ConfigCell<bool?> skipOtlpExporter) =>
 		SetFromConfiguration(_configuration, skipOtlpExporter, BoolParser);
 
-	public void ParseSkipInstrumentationAssemblyScanning(ConfigCell<bool?> skipInstrumentationAssemblyScanning) =>
+	internal void ParseSkipInstrumentationAssemblyScanning(ConfigCell<bool?> skipInstrumentationAssemblyScanning) =>
 		SetFromConfiguration(_configuration, skipInstrumentationAssemblyScanning, BoolParser);
+
+	internal void ParseOpAmpEndpoint(ConfigCell<string?> otlpEndpoint) =>
+		SetFromConfiguration(_configuration, otlpEndpoint, StringParser);
+
+	internal void ParseResourceAttributes(ConfigCell<string?> resourceAttributes)
+	{
+		var lookup = _configuration.GetValue<string>(EnvironmentVariables.OTEL_RESOURCE_ATTRIBUTES);
+
+		if (lookup is null)
+			return;
+
+		var parsed = StringParser(lookup);
+		if (parsed is null)
+			return;
+
+		resourceAttributes.Assign(parsed, ConfigSource.IConfiguration);
+	}
 }
