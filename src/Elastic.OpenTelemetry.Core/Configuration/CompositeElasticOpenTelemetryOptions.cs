@@ -36,7 +36,7 @@ namespace Elastic.OpenTelemetry.Configuration;
 internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurationSubscriber
 {
 	private const string ServiceNameResourceAttributeKey = "service.name";
-	private const string ServiceVersionResourceAttributeKey = "service.name";
+	private const string ServiceVersionResourceAttributeKey = "service.version";
 	private const string AuthorizationHeaderPrefix = "Authorization=ApiKey";
 
 	// These are the options that users can set via IConfiguration
@@ -63,7 +63,7 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 	private readonly ConfigCell<bool?> _runningInContainer = new(nameof(_runningInContainer), false);
 
 	private readonly ConfigCell<string?> _opAmpEndpoint = new(nameof(OpAmpEndpoint), null);
-	private readonly ConfigCell<string?> _opAmpHeaders = new(nameof(ServiceName), null);
+	private readonly ConfigCell<string?> _opAmpHeaders = new(nameof(OpAmpHeaders), null);
 
 	private readonly ConfigCell<Signals?> _signals = new(nameof(Signals), Signals.All);
 	private readonly ConfigCell<TraceInstrumentations> _tracing = new(nameof(Tracing), TraceInstrumentations.All);
@@ -160,6 +160,7 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 		parser.ParseSkipInstrumentationAssemblyScanning(_skipInstrumentationAssemblyScanning);
 		parser.ParseOpAmpEndpoint(_opAmpEndpoint);
 		parser.ParseResourceAttributes(_resourceAttributes);
+		parser.ParseOpAmpHeaders(_opAmpHeaders);
 
 		if (BootstrapLogger.IsEnabled)
 			BootstrapLogger.Log($"{nameof(CompositeElasticOpenTelemetryOptions)}: Configuration binding from IConfiguration completed.");
@@ -503,7 +504,7 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 
 		index = span.IndexOf(',');
 
-		return index == -1 ? span[1..].ToString() : span.Slice(1, index).ToString();
+		return index == -1 ? span[1..].ToString() : span[1..index].ToString();
 	}
 
 	private void SetFromEnvironment<T>(string key, ConfigCell<T> field, Func<string?, T?> parser)

@@ -72,8 +72,8 @@ internal class ConfigurationParser
 	internal void ParseSkipInstrumentationAssemblyScanning(ConfigCell<bool?> skipInstrumentationAssemblyScanning) =>
 		SetFromConfiguration(_configuration, skipInstrumentationAssemblyScanning, BoolParser);
 
-	internal void ParseOpAmpEndpoint(ConfigCell<string?> otlpEndpoint) =>
-		SetFromConfiguration(_configuration, otlpEndpoint, StringParser);
+	internal void ParseOpAmpEndpoint(ConfigCell<string?> opAmpEndpoint) =>
+		SetFromConfiguration(_configuration, opAmpEndpoint, StringParser);
 
 	internal void ParseResourceAttributes(ConfigCell<string?> resourceAttributes)
 	{
@@ -88,4 +88,7 @@ internal class ConfigurationParser
 
 		resourceAttributes.Assign(parsed, ConfigSource.IConfiguration);
 	}
+
+	internal void ParseOpAmpHeaders(ConfigCell<string?> opAmpHeaders) =>
+		SetFromConfiguration(_configuration, opAmpHeaders, StringParser);
 }
