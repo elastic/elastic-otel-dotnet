@@ -10,8 +10,8 @@ using static Elastic.OpenTelemetry.Configuration.Parsers.SharedParsers;
 
 namespace Elastic.OpenTelemetry.Configuration.Parsers;
 
-[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2026:RequiresUnreferencedCode", Justification = "Manually verified")]
-[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL3050:RequiresDynamicCode", Justification = "Manually verified")]
+//[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2026:RequiresUnreferencedCode", Justification = "Manually verified")]
+//[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL3050:RequiresDynamicCode", Justification = "Manually verified")]
 internal class ConfigurationParser
 {
 	private readonly IConfiguration _configuration;

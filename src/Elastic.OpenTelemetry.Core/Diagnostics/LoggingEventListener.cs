@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information
 
 using System.Diagnostics.Tracing;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using Elastic.OpenTelemetry.Configuration;
@@ -46,8 +45,6 @@ internal sealed
 			BootstrapLogger.LogWithStackTrace($"{nameof(LoggingEventListener)}: Instance '{InstanceId}' created via ctor." +
 				$"{Environment.NewLine}    Invoked with `{nameof(CompositeLogger)}` instance '{logger.InstanceId}'." +
 				$"{Environment.NewLine}    Invoked with `{nameof(CompositeElasticOpenTelemetryOptions)}` instance '{options.InstanceId}'.");
-
-			BootstrapLogger.Log($"{nameof(LoggingEventListener)}: {nameof(CompositeElasticOpenTelemetryOptions)}.{nameof(CompositeElasticOpenTelemetryOptions.EventLogLevel)} = '{options.EventLogLevel}'");
 		}
 
 		_logger = logger;

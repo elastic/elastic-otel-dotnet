@@ -27,6 +27,7 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 	private readonly OpAmpClient _client;
 	private readonly ConcurrentBag<ICentralConfigurationSubscriber> _subscribers = [];
 
+	private volatile bool _isStarted;
 	private bool _disposed;
 
 	private CentralConfiguration(CompositeElasticOpenTelemetryOptions options, CompositeLogger logger)
@@ -51,18 +52,18 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 		});
 	}
 
-	internal bool IsStarted { get; private set; }
+	internal bool IsStarted => _isStarted;
 
 	private async Task StartAsync()
 	{
-		if (IsStarted)
+		if (_isStarted)
 		{
 			return;
 		}
 
 		await _client.StartAsync().ConfigureAwait(false);
 
-		IsStarted = true;
+		_isStarted = true;
 	}
 
 	internal static bool TryCreateAndStart(CompositeElasticOpenTelemetryOptions options, CompositeLogger logger, [NotNullWhen(true)] out CentralConfiguration? centralConfig)
@@ -125,29 +126,29 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 		_logger.LogDebug("Subscriber of type '{SubscriberType}' added to Central Configuration. Total subscribers: {SubscriberCount}", subscriber.GetType().Name, _subscribers.Count);
 	}
 
-	private void Dispose(bool disposing)
-	{
-		if (!_disposed)
-		{
-			if (disposing)
-			{
-				_subscribers.Clear();
-				_client.Dispose();
-			}
-
-			_disposed = true;
-		}
-	}
-
 	public void Dispose()
 	{
-		Dispose(disposing: true);
+		if (_disposed)
+			return;
+
+		_subscribers.Clear();
+		_client.Dispose();
+		_disposed = true;
 		GC.SuppressFinalize(this);
 	}
 
 	public ValueTask DisposeAsync()
 	{
-		Dispose(disposing: true);
+		if (_disposed)
+#if NET
+			return ValueTask.CompletedTask;
+#else
+			return new ValueTask(Task.CompletedTask);
+#endif
+
+		_subscribers.Clear();
+		_client.Dispose();
+		_disposed = true;
 		GC.SuppressFinalize(this);
 
 #if NET

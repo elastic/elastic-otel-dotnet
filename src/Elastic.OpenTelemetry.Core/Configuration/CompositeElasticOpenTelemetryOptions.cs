@@ -92,6 +92,9 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 	/// Creates a new instance of <see cref="CompositeElasticOpenTelemetryOptions"/> with properties
 	/// bound from environment variables.
 	/// </summary>
+	/// <remarks>
+	/// This is intended for use only during unit testing.
+	/// </remarks>
 	internal CompositeElasticOpenTelemetryOptions(IDictionary? environmentVariables)
 	{
 		if (BootstrapLogger.IsEnabled)
@@ -126,8 +129,8 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 			BootstrapLogger.Log($"{nameof(CompositeElasticOpenTelemetryOptions)}: Configuration binding from environment variables completed.");
 	}
 
-	[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2026:RequiresUnreferencedCode", Justification = "Manually verified")]
-	[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL3050:RequiresDynamicCode", Justification = "Manually verified")]
+	//[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2026:RequiresUnreferencedCode", Justification = "Manually verified")]
+	//[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL3050:RequiresDynamicCode", Justification = "Manually verified")]
 	internal CompositeElasticOpenTelemetryOptions(IConfiguration? configuration, IDictionary? environmentVariables = null)
 		: this(environmentVariables)
 	{
@@ -162,10 +165,8 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 			BootstrapLogger.Log($"{nameof(CompositeElasticOpenTelemetryOptions)}: Configuration binding from IConfiguration completed.");
 	}
 
-	[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2026:RequiresUnreferencedCode", Justification = "Manually verified")]
-	[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL3050:RequiresDynamicCode", Justification = "Manually verified")]
-	internal CompositeElasticOpenTelemetryOptions(IConfiguration configuration, ElasticOpenTelemetryOptions options)
-		: this((IDictionary?)null)
+	internal CompositeElasticOpenTelemetryOptions(IConfiguration configuration, ElasticOpenTelemetryOptions options, IDictionary? environmentVariables)
+		: this(environmentVariables)
 	{
 		if (BootstrapLogger.IsEnabled)
 		{
@@ -179,6 +180,11 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 		// We store this so we can log any application configuration values later, if needed.
 		_configuration = configuration;
 	}
+
+	//[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2026:RequiresUnreferencedCode", Justification = "Manually verified")]
+	//[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL3050:RequiresDynamicCode", Justification = "Manually verified")]
+	internal CompositeElasticOpenTelemetryOptions(IConfiguration configuration, ElasticOpenTelemetryOptions options)
+		: this(configuration, options, null) { }
 
 	internal CompositeElasticOpenTelemetryOptions(ElasticOpenTelemetryOptions options)
 		: this((IDictionary?)null)
@@ -218,6 +224,9 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 
 		if (options.OpAmpEndpoint is not null)
 			_opAmpEndpoint.Assign(options.OpAmpEndpoint, ConfigSource.Options);
+
+		if (options.OpAmpHeaders is not null)
+			_opAmpHeaders.Assign(options.OpAmpHeaders, ConfigSource.Options);
 
 		AdditionalLogger = options.AdditionalLogger ?? options.AdditionalLoggerFactory?.CreateElasticLogger();
 
@@ -343,8 +352,8 @@ internal sealed class CompositeElasticOpenTelemetryOptions : ICentralConfigurati
 
 	internal string? ResourceAttributes
 	{
-		get => _opAmpEndpoint.Value ?? null;
-		init => _opAmpEndpoint.Assign(value, ConfigSource.Property);
+		get => _resourceAttributes.Value ?? null;
+		init => _resourceAttributes.Assign(value, ConfigSource.Property);
 	}
 
 	public ILogger? AdditionalLogger { get; internal set; }
