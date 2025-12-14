@@ -19,7 +19,7 @@ runs:
         git fetch --prune --unshallow --tags
         git tag --list
         
-    - uses: actions/cache@v4
+    - uses: actions/cache@v5
       with:
         path: ~/.nuget/packages
         key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.[cf]sproj*') }}
@@ -29,7 +29,7 @@ runs:
     # ensures we don't hit GitHub releases all the time to download the OpenTelemetry auto instrumentation assets
     # if not available they will be download in .artifacts/otel-distribution/{otel-version}
     - name: Cache OpenTelemetry Distribution
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: .artifacts/otel-distribution
         key: otel-distribution
