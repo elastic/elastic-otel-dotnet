@@ -66,10 +66,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Elastic.OpenTelemetry.Configuration.Analyzer\Elastic.OpenTelemetry.Configuration.Analyzer.csproj">
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-      <OutputItemType>Analyzer</OutputItemType>
-    </ProjectReference>
+    <None Include="..\..\.artifacts\bin\Elastic.OpenTelemetry.Configuration.Analyzer\release\Elastic.OpenTelemetry.Configuration.Analyzer.dll"
+          Pack="true"
+          PackagePath="analyzers/dotnet/cs/" />
   </ItemGroup>
 </Project>
 
