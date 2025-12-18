@@ -191,6 +191,22 @@ Allows EDOT .NET to be used without the instrumentation assembly scanning featur
 | Environment variable | `ELASTIC_OTEL_SKIP_ASSEMBLY_SCANNING` |
 | `IConfiguration` integration | `Elastic:OpenTelemetry:SkipInstrumentationAssemblyScanning` |
 
+### TLS configuration for OTLP endpoint
+
+To secure the connection to the OTLP endpoint using TLS, you can configure the following environment variables as documented in the [OpenTelemetry OTLP Exporter specification](https://opentelemetry.io/docs/specs/otel/protocol/exporter/):
+
+| Option | Description |
+|---|---|
+| `OTEL_EXPORTER_OTLP_CERTIFICATE` | Path to a PEM-encoded file containing the trusted certificate(s) to verify the server's TLS credentials. |
+| `OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE` | Path to a PEM-encoded file containing the client certificate for mTLS. |
+| `OTEL_EXPORTER_OTLP_CLIENT_KEY` | Path to a PEM-encoded file containing the client's private key for mTLS. |
+
+Signal-specific variants are also supported: `OTEL_EXPORTER_OTLP_{TRACES,METRICS,LOGS}_CERTIFICATE`, `OTEL_EXPORTER_OTLP_{TRACES,METRICS,LOGS}_CLIENT_CERTIFICATE`, and `OTEL_EXPORTER_OTLP_{TRACES,METRICS,LOGS}_CLIENT_KEY`.
+
+:::{note}
+Central configuration via OpAMP is not yet supported in EDOT .NET. Therefore, TLS configuration for OpAMP endpoint is not available.
+:::
+
 ## Prevent logs export
 
 To prevent logs from being exported, set `OTEL_LOGS_EXPORTER` to `none`. However, application logs might still be gathered and exported by the Collector through the `filelog` receiver.
