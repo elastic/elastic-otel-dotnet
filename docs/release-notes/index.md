@@ -27,6 +27,12 @@ To check for security updates, go to [Security announcements for the Elastic sta
 % ### Fixes [edot-dotnet-X.X.X-fixes]
 % *
 
+## 1.2.1 [edot-dotnet-1.2.1-release-notes]
+
+### Fixes [edot-dotnet-1.2.1-fixes]
+
+- Ensure environment variable resource attributes apply after EDOT defaults. [#368](https://github.com/elastic/elastic-otel-dotnet/pull/368)
+
 ## 1.2.0 [edot-dotnet-1.2.0-release-notes]
 
 ### Features and enhancements [edot-dotnet-1.2.0-features-enhancements]
