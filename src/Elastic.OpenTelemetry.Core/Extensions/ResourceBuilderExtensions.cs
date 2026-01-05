@@ -68,6 +68,9 @@ internal static class ResourceBuilderExtensions
 					}
 				}
 
+				// Ensures that environment variables are added last so they can override any previously set attributes.
+				builder.AddEnvironmentVariableDetector();
+
 				configure?.Invoke(builder, builderState);
 			});
 	}
