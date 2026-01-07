@@ -17,8 +17,7 @@ products:
 
 EDOT .NET is a distribution of OpenTelemetry .NET SDK. It inherits all the [supported](opentelemetry://reference/compatibility/nomenclature.md) technologies from the [upstream SDK](https://github.com/open-telemetry/opentelemetry-dotnet).
 
-:::{note}
-**Understanding auto-instrumentation scope**
+:::{note} - Understanding auto-instrumentation scope
 
 Auto-instrumentation automatically captures telemetry for the frameworks and libraries listed on this page. However, it cannot instrument:
 
