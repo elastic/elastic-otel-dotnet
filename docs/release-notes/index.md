@@ -27,6 +27,12 @@ To check for security updates, go to [Security announcements for the Elastic sta
 % ### Fixes [edot-dotnet-X.X.X-fixes]
 % *
 
+## 1.2.2 [edot-dotnet-1.2.2-release-notes]
+
+### Fixes [edot-dotnet-1.2.2-fixes]
+
+- Fix file logging when configured in `appSettings`. [#370](https://github.com/elastic/elastic-otel-dotnet/pull/370)
+
 ## 1.2.1 [edot-dotnet-1.2.1-release-notes]
 
 ### Fixes [edot-dotnet-1.2.1-fixes]
