@@ -80,7 +80,14 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 	internal CompositeElasticOpenTelemetryOptions(IDictionary? environmentVariables)
 	{
 		if (BootstrapLogger.IsEnabled)
+		{
 			BootstrapLogger.LogWithStackTrace($"{nameof(CompositeElasticOpenTelemetryOptions)}: Instance '{InstanceId}' created via ctor `(IDictionary? environmentVariables)`.");
+
+			if (environmentVariables is null)
+			{
+				BootstrapLogger.Log($"CompositeElasticOpenTelemetryOptions(IDictionary): Param `environmentVariables` was `null`.");
+			}
+		}
 
 		LogDirectoryDefault = GetDefaultLogDirectory();
 		_environmentVariables = environmentVariables ?? GetEnvironmentVariables();
@@ -115,12 +122,6 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 		if (configuration is null)
 		{
 			BootstrapLogger.Log($"CompositeElasticOpenTelemetryOptions: Param `configuration` was `null`.");
-			return;
-		}
-
-		if (environmentVariables is null)
-		{
-			BootstrapLogger.Log($"CompositeElasticOpenTelemetryOptions: Param `environmentVariables` was `null`.");
 			return;
 		}
 
