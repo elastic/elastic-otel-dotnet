@@ -6,13 +6,13 @@ namespace Elastic.OpenTelemetry.Configuration;
 
 internal class ConfigCell<T>
 {
-	internal ConfigCell(string key, T value)
+	internal ConfigCell(string key, T? value)
 	{
 		Key = key;
 		Value = value;
 	}
 
-	internal ConfigCell(string key, T value, Func<T, T> valueRedactor)
+	internal ConfigCell(string key, T? value, Func<T?, T?> valueRedactor)
 	{
 		Key = key;
 		Value = value;
@@ -21,9 +21,9 @@ internal class ConfigCell<T>
 
 	internal string Key { get; }
 
-	internal Func<T, T> ValueRedactor { get; } = original => original;
+	internal Func<T?, T?> ValueRedactor { get; } = original => original;
 
-	internal T Value { get; private set; }
+	internal T? Value { get; private set; }
 
 	internal ConfigSource Source { get; private set; } = ConfigSource.Default;
 
@@ -45,5 +45,5 @@ internal class ConfigCell<T>
 		Source = source;
 	}
 
-	public override string ToString() => $"{Key}: '{ValueRedactor(Value)}' from [{Source}]";
+	public override string ToString() => $"{Key}: '{(Value == null ? "<null>" : ValueRedactor(Value))}' from [{Source}]";
 }

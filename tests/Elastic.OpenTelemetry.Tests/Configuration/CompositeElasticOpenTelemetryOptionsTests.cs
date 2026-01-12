@@ -14,7 +14,7 @@ namespace Elastic.OpenTelemetry.Tests.Configuration;
 
 public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 {
-	private const int ExpectedLogsLength = 11;
+	private const int ExpectedLogsLength = 12;
 
 	[Fact]
 	public void DefaultCtor_SetsExpectedDefaults_WhenNoEnvironmentVariablesAreConfigured()
@@ -363,6 +363,26 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 		});
 
 		Assert.NotEqual(options1, options2);
+	}
+
+	[Fact]
+	public void LogValueRedaction_WorksAsExpected()
+	{
+		var options = new ElasticOpenTelemetryOptions
+		{
+			OpAmpClientOptions = new OpAmpClientOptions
+			{
+				Endpoint = "http://my-endpoint.com",
+				Headers = "Custom=123,Authorization=ApiKey ABC123,Custom2=ABC"
+			}
+		};
+
+		var sut = new CompositeElasticOpenTelemetryOptions(options);
+		var logger = new TestLogger(output);
+
+		sut.LogConfigSources(logger);
+
+		Assert.Contains(logger.Messages, s => s.EndsWith("Configured value for OpAmpHeaders: 'Custom=123,Authorization=<redacted>,Custom2=ABC' from [Options]", StringComparison.Ordinal));
 	}
 
 	[Theory]
