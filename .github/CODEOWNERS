@@ -1,4 +1,4 @@
-* @elastic/apm-agent-net
-/.github/workflows/ @elastic/apm-agent-net @elastic/observablt-ci
+/.github/workflows/ @elastic/observablt-ci
+/.github/actions/ @elastic/observablt-ci
 *.md @elastic/ingest-docs
 /docs/ @elastic/ingest-docs
