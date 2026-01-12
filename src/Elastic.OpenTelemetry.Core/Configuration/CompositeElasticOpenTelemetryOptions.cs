@@ -551,7 +551,7 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 		LogConfig(logger, _skipInstrumentationAssemblyScanning);
 
 		LogConfig(logger, _opAmpEndpoint);
-		// TODO - Log headers but redact auth header value
+		LogConfig(logger, _opAmpHeaders);
 		LogConfig(logger, _resourceAttributes);
 
 		static void LogConfig<T>(ILogger logger, ConfigCell<T> cell)
