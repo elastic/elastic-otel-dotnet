@@ -9,5 +9,6 @@ internal static class ResourceSemanticConventions
 	public const string AttributeTelemetryDistroVersion = "telemetry.distro.version";
 
 	public const string AttributeServiceName = "service.name";
+	public const string AttributeServiceVersion = "service.version";
 	public const string AttributeServiceInstanceId = "service.instance.id";
 }

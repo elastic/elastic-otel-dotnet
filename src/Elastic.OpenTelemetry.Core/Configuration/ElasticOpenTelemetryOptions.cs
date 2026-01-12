@@ -77,4 +77,7 @@ public class ElasticOpenTelemetryOptions
 	/// </summary>
 	/// <remarks>When unset, this defaults to <c>false</c>.</remarks>
 	public bool? SkipInstrumentationAssemblyScanning { get; init; }
+
+	/// <inheritdoc cref="OpAmpClientOptions"/>
+	public OpAmpClientOptions OpAmpClientOptions { get; init; } = new();
 }
