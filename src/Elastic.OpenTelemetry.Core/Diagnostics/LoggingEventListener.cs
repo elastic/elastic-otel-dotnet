@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information
 
 using System.Diagnostics.Tracing;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using Elastic.OpenTelemetry.Configuration;
@@ -20,7 +19,7 @@ internal sealed
 #endif
 	class LoggingEventListener : EventListener, IAsyncDisposable
 {
-	public const string OpenTelemetrySdkEventSourceNamePrefix = "OpenTelemetry-";
+	public const string OpenTelemetryEventSourceNamePrefix = "OpenTelemetry-";
 
 	private const string TraceParentRegularExpressionString = "^\\d{2}-[a-f0-9]{32}-[a-f0-9]{16}-\\d{2}$";
 #if NET8_0_OR_GREATER
@@ -32,9 +31,10 @@ internal sealed
 #endif
 
 	private readonly CompositeLogger _logger;
-	private readonly EventLevel _eventLevel;
 	private readonly List<EventSource>? _eventSourcesBeforeConstructor = [];
+	private readonly List<EventSource> _subscribedEventSources = [];
 	private readonly Lock _lock = new();
+	private readonly EventLevel _eventLevel = EventLevel.Informational;
 
 	public LoggingEventListener(CompositeLogger logger, CompositeElasticOpenTelemetryOptions options)
 	{
@@ -43,12 +43,10 @@ internal sealed
 			BootstrapLogger.LogWithStackTrace($"{nameof(LoggingEventListener)}: Instance '{InstanceId}' created via ctor." +
 				$"{Environment.NewLine}    Invoked with `{nameof(CompositeLogger)}` instance '{logger.InstanceId}'." +
 				$"{Environment.NewLine}    Invoked with `{nameof(CompositeElasticOpenTelemetryOptions)}` instance '{options.InstanceId}'.");
-
-			BootstrapLogger.Log($"{nameof(LoggingEventListener)}: {nameof(CompositeElasticOpenTelemetryOptions)}.{nameof(CompositeElasticOpenTelemetryOptions.EventLogLevel)} = '{options.EventLogLevel}'");
 		}
 
 		_logger = logger;
-		_eventLevel = options.EventLogLevel;
+		_eventLevel = LogLevelToEventLevel(options.LogLevel);
 
 		_logger.LogDebug("LoggingEventListener event level set to: `{EventLevel}`", _eventLevel.ToString());
 
@@ -64,11 +62,28 @@ internal sealed
 		{
 			foreach (var eventSource in eventSources)
 			{
-				_logger.LogDebug("LoggingEventListener subscribed to: {EventSourceName}", eventSource.Name);
+				using (_lock.EnterScope())
+				{
+					_subscribedEventSources.Add(eventSource);
+				}
+
 				EnableEvents(eventSource, _eventLevel, EventKeywords.All);
+
+				_logger.LogDebug("LoggingEventListener subscribed to '{EventSourceName}' at level '{EventLevel}'", eventSource.Name, _eventLevel);
 			}
 		}
 	}
+
+	private static EventLevel LogLevelToEventLevel(LogLevel? eventLogLevel) =>
+		eventLogLevel switch
+		{
+			LogLevel.Trace or LogLevel.Debug => EventLevel.LogAlways,
+			LogLevel.Information => EventLevel.Informational,
+			LogLevel.Warning => EventLevel.Warning,
+			LogLevel.Error => EventLevel.Error,
+			LogLevel.Critical => EventLevel.Critical,
+			_ => EventLevel.Informational // fallback to info level
+		};
 
 	internal Guid InstanceId { get; } = Guid.NewGuid();
 
@@ -88,7 +103,7 @@ internal sealed
 		// When instantiating an EventListener, the callbacks to OnEventSourceCreated and OnEventWritten can happen before the constructor has completed.
 		// Take care when you initialize instance members used in those callbacks.
 		// See https://learn.microsoft.com/dotnet/api/system.diagnostics.tracing.eventlistener
-		if (eventSource.Name.StartsWith(OpenTelemetrySdkEventSourceNamePrefix, StringComparison.OrdinalIgnoreCase))
+		if (eventSource.Name.StartsWith(OpenTelemetryEventSourceNamePrefix, StringComparison.OrdinalIgnoreCase))
 		{
 			if (_eventSourcesBeforeConstructor is not null)
 			{
@@ -102,8 +117,14 @@ internal sealed
 				}
 			}
 
-			_logger.LogDebug("LoggingEventListener subscribed to: {EventSourceName}", eventSource.Name);
+			using (_lock.EnterScope())
+			{
+				_subscribedEventSources.Add(eventSource);
+			}
+
 			EnableEvents(eventSource, _eventLevel, EventKeywords.All);
+
+			_logger.LogDebug("LoggingEventListener subscribed to '{EventSourceName}' at level '{EventLevel}'", eventSource.Name, _eventLevel);
 		}
 
 		base.OnEventSourceCreated(eventSource);
@@ -111,7 +132,7 @@ internal sealed
 
 	protected override void OnEventWritten(EventWrittenEventArgs eventData)
 	{
-		if (!eventData.EventSource.Name.StartsWith(OpenTelemetrySdkEventSourceNamePrefix, StringComparison.OrdinalIgnoreCase))
+		if (!eventData.EventSource.Name.StartsWith(OpenTelemetryEventSourceNamePrefix, StringComparison.OrdinalIgnoreCase))
 		{
 			// Workaround for https://github.com/dotnet/runtime/issues/31927
 			// EventCounters are published to all EventListeners, regardless of
@@ -159,7 +180,7 @@ internal sealed
 		{
 			string? spanId = null;
 
-			if (eventData.EventSource.Name.StartsWith(OpenTelemetrySdkEventSourceNamePrefix) && eventData.Message is not null)
+			if (eventData.EventSource.Name.StartsWith(OpenTelemetryEventSourceNamePrefix) && eventData.Message is not null)
 			{
 				builder.Append($"OTEL-SDK ({eventData.EventSource.Name}): [{threadId}] ");
 

@@ -65,17 +65,17 @@ internal class EnvironmentParser(IDictionary environmentVariables)
 		var traceEnabled = Configured(traces);
 		var (optedTraces, traceInstrumentations) = EnabledTraceInstrumentations(traceEnabled);
 		if (optedTraces)
-			tracingCell.Assign(new TraceInstrumentations(traceInstrumentations), ConfigSource.Environment);
+			tracingCell.AssignFromEnvironmentVariable(new TraceInstrumentations(traceInstrumentations));
 
 		var metricEnabled = Configured(metrics);
 		var (optedMetrics, metricInstrumentations) = EnabledMetricInstrumentations(metricEnabled);
 		if (optedMetrics)
-			metricsCell.Assign(new MetricInstrumentations(metricInstrumentations), ConfigSource.Environment);
+			metricsCell.AssignFromEnvironmentVariable(new MetricInstrumentations(metricInstrumentations));
 
 		var logEnabled = Configured(logs);
 		var (optedLogs, logInstrumentations) = EnabledLogInstrumentations(logEnabled);
 		if (optedLogs)
-			loggingCell.Assign(new LogInstrumentations(logInstrumentations), ConfigSource.Environment);
+			loggingCell.AssignFromEnvironmentVariable(new LogInstrumentations(logInstrumentations));
 
 		var signals = defaultSignals;
 
@@ -95,9 +95,9 @@ internal class EnvironmentParser(IDictionary environmentVariables)
 			signals &= ~Signals.Metrics;
 
 		if (logs.HasValue || traces.HasValue || traces.HasValue || allEnabled.HasValue)
-			signalsCell.Assign(signals, ConfigSource.Environment);
+			signalsCell.AssignFromEnvironmentVariable(signals);
 
 		if (optedLogs || optedMetrics || optedTraces)
-			signalsCell.Assign(signals, ConfigSource.Environment);
+			signalsCell.AssignFromEnvironmentVariable(signals);
 	}
 }

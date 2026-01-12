@@ -9,6 +9,8 @@ internal static class EnvironmentVariables
 	internal const string ELASTIC_OTEL_SKIP_OTLP_EXPORTER = nameof(ELASTIC_OTEL_SKIP_OTLP_EXPORTER);
 	internal const string ELASTIC_OTEL_SKIP_ASSEMBLY_SCANNING = nameof(ELASTIC_OTEL_SKIP_ASSEMBLY_SCANNING);
 	internal const string ELASTIC_OTEL_LOG_TARGETS = nameof(ELASTIC_OTEL_LOG_TARGETS);
+	internal const string ELASTIC_OTEL_OPAMP_ENDPOINT = nameof(ELASTIC_OTEL_OPAMP_ENDPOINT);
+	internal const string ELASTIC_OTEL_OPAMP_HEADERS = nameof(ELASTIC_OTEL_OPAMP_HEADERS);
 
 	internal const string OTEL_DOTNET_AUTO_LOG_DIRECTORY = nameof(OTEL_DOTNET_AUTO_LOG_DIRECTORY);
 	internal const string OTEL_LOG_LEVEL = nameof(OTEL_LOG_LEVEL);
@@ -39,6 +41,8 @@ internal static class EnvironmentVariables
 	internal const string OTEL_EXPORTER_OTLP_TRACES_HEADERS = nameof(OTEL_EXPORTER_OTLP_TRACES_HEADERS);
 	internal const string OTEL_EXPORTER_OTLP_METRICS_HEADERS = nameof(OTEL_EXPORTER_OTLP_METRICS_HEADERS);
 	internal const string OTEL_EXPORTER_OTLP_LOGS_HEADERS = nameof(OTEL_EXPORTER_OTLP_LOGS_HEADERS);
+
+	internal const string OTEL_RESOURCE_ATTRIBUTES = nameof(OTEL_RESOURCE_ATTRIBUTES);
 
 	internal static readonly string[] SensitiveEnvironmentVariables =
 	[

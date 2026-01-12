@@ -20,7 +20,7 @@ internal class ConfigurationParser
 
 	internal string? LoggingSectionLogLevel { get; }
 
-	public ConfigurationParser(IConfiguration configuration)
+	internal ConfigurationParser(IConfiguration configuration)
 	{
 		_configuration = configuration;
 
@@ -33,13 +33,15 @@ internal class ConfigurationParser
 			LoggingSectionLogLevel = configuration.GetValue<string>("Logging:LogLevel:Default");
 	}
 
-	private static void SetFromConfiguration<T>(IConfiguration configuration, ConfigCell<T> cell, Func<string, T?> parser)
+	private static void SetFromConfiguration<T>(IConfiguration configuration, ConfigCell<T> cell, Func<string, T?> parser, string? subsection = null)
 	{
 		//environment configuration takes precedence, assume already configured
 		if (cell.Source == ConfigSource.Environment)
 			return;
 
-		var lookup = configuration.GetValue<string>($"{ConfigurationSection}:{cell.Key}");
+		var fullKey = subsection is null ? $"{ConfigurationSection}:{cell.Key}" : $"{ConfigurationSection}:{subsection}:{cell.Key}";
+
+		var lookup = configuration.GetValue<string>(fullKey);
 		if (lookup is null)
 			return;
 
@@ -47,37 +49,50 @@ internal class ConfigurationParser
 		if (parsed is null)
 			return;
 
-		cell.Assign(parsed, ConfigSource.IConfiguration);
+		cell.AssignFromConfiguration(parsed);
 	}
 
-	public void ParseLogDirectory(ConfigCell<string?> logDirectory) =>
+	internal void ParseLogDirectory(ConfigCell<string?> logDirectory) =>
 		SetFromConfiguration(_configuration, logDirectory, StringParser);
 
-	public void ParseLogTargets(ConfigCell<LogTargets?> logTargets) =>
+	internal void ParseLogTargets(ConfigCell<LogTargets?> logTargets) =>
 		SetFromConfiguration(_configuration, logTargets, LogTargetsParser);
 
-	public void ParseLogLevel(ConfigCell<LogLevel?> logLevel, ref EventLevel eventLevel)
+	internal void ParseLogLevel(ConfigCell<LogLevel?> logLevel)
 	{
 		SetFromConfiguration(_configuration, logLevel, LogLevelParser);
 
 		if (!string.IsNullOrEmpty(LoggingSectionLogLevel) && logLevel.Source == ConfigSource.Default)
 		{
 			var level = LogLevelHelpers.ToLogLevel(LoggingSectionLogLevel!);
-			logLevel.Assign(level, ConfigSource.IConfiguration);
+			logLevel.AssignFromConfiguration(level);
 		}
+	}
 
-		// this is used to ensure LoggingEventListener matches our log level by using the lowest
-		// of our configured loglevel or the default logging section's level.
-		var eventLogLevel = logLevel.Value;
-		if (!string.IsNullOrEmpty(LoggingSectionLogLevel))
-		{
-			var sectionLogLevel = LogLevelHelpers.ToLogLevel(LoggingSectionLogLevel!) ?? LogLevel.None;
+	public void ParseSkipOtlpExporter(ConfigCell<bool?> skipOtlpExporter) =>
+		SetFromConfiguration(_configuration, skipOtlpExporter, BoolParser);
 
-			if (sectionLogLevel < eventLogLevel)
-				eventLogLevel = sectionLogLevel;
-		}
+	public void ParseSkipInstrumentationAssemblyScanning(ConfigCell<bool?> skipInstrumentationAssemblyScanning) =>
+		SetFromConfiguration(_configuration, skipInstrumentationAssemblyScanning, BoolParser);
 
-		eventLevel = LogLevelToEventLevel(eventLogLevel);
+	internal void ParseOpAmpEndpoint(ConfigCell<string?> opAmpEndpoint) =>
+		SetFromConfiguration(_configuration, opAmpEndpoint, StringParser);
+
+	internal void ParseOpAmpHeaders(ConfigCell<string?> opAmpHeaders) =>
+		SetFromConfiguration(_configuration, opAmpHeaders, StringParser);
+
+	internal void ParseResourceAttributes(ConfigCell<string?> resourceAttributes)
+	{
+		var lookup = _configuration.GetValue<string>(EnvironmentVariables.OTEL_RESOURCE_ATTRIBUTES);
+
+		if (lookup is null)
+			return;
+
+		var parsed = StringParser(lookup);
+		if (parsed is null)
+			return;
+
+		resourceAttributes.AssignFromConfiguration(parsed);
 	}
 
 	internal static EventLevel LogLevelToEventLevel(LogLevel? eventLogLevel) =>
@@ -90,10 +105,4 @@ internal class ConfigurationParser
 			LogLevel.Critical => EventLevel.Critical,
 			_ => EventLevel.Informational // fallback to info level
 		};
-
-	public void ParseSkipOtlpExporter(ConfigCell<bool?> skipOtlpExporter) =>
-		SetFromConfiguration(_configuration, skipOtlpExporter, BoolParser);
-
-	public void ParseSkipInstrumentationAssemblyScanning(ConfigCell<bool?> skipInstrumentationAssemblyScanning) =>
-		SetFromConfiguration(_configuration, skipInstrumentationAssemblyScanning, BoolParser);
 }

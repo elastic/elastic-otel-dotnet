@@ -3,10 +3,10 @@
 // See the LICENSE file in the project root for more information
 
 using System.Collections;
-using System.Diagnostics.Tracing;
 using System.Text;
 using Elastic.OpenTelemetry.Configuration;
 using Xunit.Abstractions;
+
 using static Elastic.OpenTelemetry.Configuration.EnvironmentVariables;
 using static Elastic.OpenTelemetry.Diagnostics.LogLevelHelpers;
 
@@ -14,7 +14,7 @@ namespace Elastic.OpenTelemetry.Tests.Configuration;
 
 public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 {
-	private const int ExpectedLogsLength = 9;
+	private const int ExpectedLogsLength = 11;
 
 	[Fact]
 	public void DefaultCtor_SetsExpectedDefaults_WhenNoEnvironmentVariablesAreConfigured()
@@ -111,7 +111,6 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 		Assert.Equal(ToLogLevel(fileLogLevel), sut.LogLevel);
 		Assert.True(sut.SkipOtlpExporter);
 		Assert.True(sut.SkipInstrumentationAssemblyScanning);
-		Assert.Equal(EventLevel.Warning, sut.EventLogLevel);
 		Assert.Equal(LogLevel.Critical, sut.LogLevel);
 
 		var logger = new TestLogger(output);
@@ -158,7 +157,6 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 		Assert.Equal(@"C:\Temp", sut.LogDirectory);
 		Assert.Equal(ToLogLevel(loggingSectionLogLevel), sut.LogLevel);
 		Assert.True(sut.SkipOtlpExporter);
-		Assert.Equal(EventLevel.Warning, sut.EventLogLevel);
 		Assert.Equal(LogLevel.Warning, sut.LogLevel);
 
 		var logger = new TestLogger(output);
@@ -202,7 +200,6 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 		Assert.Equal(@"C:\Temp", sut.LogDirectory);
 		Assert.Equal(ToLogLevel(loggingSectionDefaultLogLevel), sut.LogLevel);
 		Assert.True(sut.SkipOtlpExporter);
-		Assert.Equal(EventLevel.Informational, sut.EventLogLevel);
 
 		var logger = new TestLogger(output);
 
@@ -366,5 +363,389 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 		});
 
 		Assert.NotEqual(options1, options2);
+	}
+
+	[Theory]
+	[MemberData(nameof(OpAmpIsEnabledTestData))]
+	public void IsOpAmpEnabled_ReturnsExpectedValue(IConfiguration configuration, ElasticOpenTelemetryOptions options, IDictionary dictionary, bool isEnabled)
+	{
+		var sut = new CompositeElasticOpenTelemetryOptions(configuration, options, dictionary);
+		Assert.Equal(isEnabled, sut.IsOpAmpEnabled());
+	}
+
+	public static IEnumerable<object[]> OpAmpIsEnabledTestData =>
+	[
+		[
+			new ConfigurationBuilder().Build(),
+			new ElasticOpenTelemetryOptions(),
+			new Hashtable
+			{
+				{ ELASTIC_OTEL_OPAMP_ENDPOINT, "http://my-collector-endpoint-from-env-vars.com" }
+			},
+			false
+		],
+		[
+			new ConfigurationBuilder().Build(),
+			new ElasticOpenTelemetryOptions(),
+			new Hashtable
+			{
+				{ ELASTIC_OTEL_OPAMP_ENDPOINT, "http://my-collector-endpoint-from-env-vars.com" },
+				{ ELASTIC_OTEL_OPAMP_HEADERS, "Authorization=ApiKey ABC123" },
+				{ OTEL_RESOURCE_ATTRIBUTES, "service.name=env-var-service" }
+			},
+			true
+		],
+		[
+			new ConfigurationBuilder().Build(),
+			new ElasticOpenTelemetryOptions(),
+			new Hashtable
+			{
+				{ ELASTIC_OTEL_OPAMP_ENDPOINT, "http://my-collector-endpoint-from-env-vars.com" },
+				{ ELASTIC_OTEL_OPAMP_HEADERS, "Authorization=ApiKey ABC123" },
+				{ OTEL_RESOURCE_ATTRIBUTES, "service.version=1.0.0" }
+			},
+			false
+		],
+		[
+			new ConfigurationBuilder().Build(),
+			new ElasticOpenTelemetryOptions(),
+			new Hashtable
+			{
+				{ ELASTIC_OTEL_OPAMP_ENDPOINT, "http://my-collector-endpoint-from-env-vars.com" },
+				{ ELASTIC_OTEL_OPAMP_HEADERS, "CustomHeader=ABV123" },
+				{ OTEL_RESOURCE_ATTRIBUTES, "service.version=1.0.0,service.name=env-var-service" }
+			},
+			false
+		],
+		[
+			new ConfigurationBuilder().Build(),
+			new ElasticOpenTelemetryOptions(),
+			new Hashtable
+			{
+				{ ELASTIC_OTEL_OPAMP_HEADERS, "Authorization=ApiKey ABC123" },
+				{ OTEL_RESOURCE_ATTRIBUTES, "service.name=env-var-service" }
+			},
+			false
+		],
+		[
+			new ConfigurationBuilder().Build(),
+			new ElasticOpenTelemetryOptions(),
+			new Hashtable
+			{
+				{ ELASTIC_OTEL_OPAMP_ENDPOINT, "http://my-collector-endpoint-from-env-vars.com" },
+				{ OTEL_RESOURCE_ATTRIBUTES, "service.name=env-var-service" }
+			},
+			false
+		],
+		[
+			new ConfigurationBuilder().Build(),
+			new ElasticOpenTelemetryOptions(),
+			new Hashtable
+			{
+				{ ELASTIC_OTEL_OPAMP_ENDPOINT, "http://my-collector-endpoint-from-env-vars.com" },
+				{ ELASTIC_OTEL_OPAMP_HEADERS, "Authorization=ApiKey ABC123" }
+			},
+			false
+		],
+		[
+			new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+			{
+				{ "Elastic:OpenTelemetry:OpAmpEndpoint", "http://my-collector-endpoint-from-config.com" },
+				{ "Elastic:OpenTelemetry:OpAmpHeaders", "Authorization=ApiKey ABC123" },
+				{ "OTEL_RESOURCE_ATTRIBUTES", "service.name=env-var-service" }
+			}).Build(),
+			new ElasticOpenTelemetryOptions(),
+			new Hashtable(),
+			true
+		],
+		[
+			new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+			{
+				{ "Elastic:OpenTelemetry:OpAmpHeaders", "Authorization=ApiKey ABC123" },
+				{ "OTEL_RESOURCE_ATTRIBUTES", "service.name=env-var-service" }
+			}).Build(),
+			new ElasticOpenTelemetryOptions(),
+			new Hashtable(),
+			false
+		],
+		[
+			new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+			{
+				{ "Elastic:OpenTelemetry:OpAmpEndpoint", "http://my-collector-endpoint-from-config.com" },
+				{ "OTEL_RESOURCE_ATTRIBUTES", "service.name=env-var-service" }
+			}).Build(),
+			new ElasticOpenTelemetryOptions(),
+			new Hashtable(),
+			false
+		],
+		[
+			new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+			{
+				{ "Elastic:OpenTelemetry:OpAmpEndpoint", "http://my-collector-endpoint-from-config.com" },
+				{ "Elastic:OpenTelemetry:OpAmpHeaders", "Authorization=ApiKey ABC123" }
+			}).Build(),
+			new ElasticOpenTelemetryOptions(),
+			new Hashtable(),
+			false
+		],
+		[
+			new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+			{
+				{ "OTEL_RESOURCE_ATTRIBUTES", "service.name=env-var-service" }
+			}).Build(),
+			new ElasticOpenTelemetryOptions()
+			{
+				OpAmpClientOptions = new OpAmpClientOptions()
+				{
+					Endpoint = "http://my-collector-endpoint-from-options.com",
+					Headers = "Authorization=ApiKey ABC123"
+				}
+			},
+			new Hashtable(),
+			true
+		],
+		[
+			new ConfigurationBuilder().Build(),
+			new ElasticOpenTelemetryOptions()
+			{
+				OpAmpClientOptions = new OpAmpClientOptions()
+				{
+					Endpoint = "http://my-collector-endpoint-from-options.com",
+					Headers = "Authorization=ApiKey ABC123"
+				}
+			},
+			new Hashtable
+			{
+				{ OTEL_RESOURCE_ATTRIBUTES, "service.name=env-var-service" }
+			},
+			true
+		],
+		[
+			new ConfigurationBuilder().Build(),
+			new ElasticOpenTelemetryOptions()
+			{
+				OpAmpClientOptions = new OpAmpClientOptions()
+				{
+					Endpoint = "http://my-collector-endpoint-from-options.com"
+				}
+			},
+			new Hashtable
+			{
+				{ OTEL_RESOURCE_ATTRIBUTES, "service.name=env-var-service" }
+			},
+			false
+		],
+		[
+			new ConfigurationBuilder().Build(),
+			new ElasticOpenTelemetryOptions()
+			{
+				OpAmpClientOptions = new OpAmpClientOptions()
+				{
+					Endpoint = "http://my-collector-endpoint-from-options.com"
+				}
+			},
+			new Hashtable
+			{
+				{ OTEL_RESOURCE_ATTRIBUTES, "service.name=env-var-service" }
+			},
+			false
+		],
+		[
+			new ConfigurationBuilder().Build(),
+			new ElasticOpenTelemetryOptions()
+			{
+				OpAmpClientOptions = new OpAmpClientOptions
+				{
+					Headers = "Authorization=ApiKey ABC123"
+				}
+			},
+			new Hashtable
+			{
+				{ OTEL_RESOURCE_ATTRIBUTES, "service.name=env-var-service" }
+			},
+			false
+		],
+		[
+			new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+			{
+				{ "Elastic:OpenTelemetry:OpAmpEndpoint", "http://my-collector-endpoint-from-config.com" },
+			}).Build(),
+			new ElasticOpenTelemetryOptions()
+			{
+				OpAmpClientOptions = new OpAmpClientOptions
+				{
+					Headers = "Authorization=ApiKey ABC123"
+				}
+			},
+			new Hashtable
+			{
+				{ OTEL_RESOURCE_ATTRIBUTES, "service.name=env-var-service" }
+			},
+			true
+		],
+		[
+			new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+			{
+				{ "Elastic:OpenTelemetry:OpAmpHeaders", "Authorization=ApiKey ABC123" },
+			}).Build(),
+			new ElasticOpenTelemetryOptions()
+			{
+				OpAmpClientOptions = new OpAmpClientOptions
+				{
+					Endpoint = "http://my-collector-endpoint-from-options.com"
+				}
+			},
+			new Hashtable
+			{
+				{ OTEL_RESOURCE_ATTRIBUTES, "service.name=env-var-service" }
+			},
+			true
+		],
+		[
+			new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+			{
+				{ "Elastic:OpenTelemetry:OpAmpHeaders", "NoAuth=True" },
+			}).Build(),
+			new ElasticOpenTelemetryOptions()
+			{
+				OpAmpClientOptions = new OpAmpClientOptions
+				{
+					Endpoint = "http://my-collector-endpoint-from-options.com"
+				}
+			},
+			new Hashtable
+			{
+				{ OTEL_RESOURCE_ATTRIBUTES, "service.name=env-var-service" }
+			},
+			false
+		],
+		[
+			new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+			{
+				{ "Elastic:OpenTelemetry:OpAmpHeaders", "Authorization=ApiKey ABC123" },
+			}).Build(),
+			new ElasticOpenTelemetryOptions()
+			{
+				OpAmpClientOptions = new OpAmpClientOptions
+				{
+					Endpoint = "http://my-collector-endpoint-from-options.com"
+				}
+			},
+			new Hashtable
+			{
+				{ OTEL_RESOURCE_ATTRIBUTES, "service.version=1.0.0" }
+			},
+			false
+		]
+	];
+
+	[Fact]
+	public void OpAmpEndpoint_EnvVarsTakePrecedenceOverIConfiguration()
+	{
+		const string expectedEndpoint = "http://my-collector-endpoint-from-env-vars.com";
+
+		var config = new ConfigurationBuilder()
+			.AddInMemoryCollection(new Dictionary<string, string?>
+			{
+				{ "ELASTIC_OTEL_OPAMP_ENDPOINT", "http://my-collector-endpoint-from-iconfiguration.com" }
+			})
+			.Build();
+
+		var environmentVariables = new Hashtable
+		{
+			{ ELASTIC_OTEL_OPAMP_ENDPOINT, expectedEndpoint }
+		};
+
+		var sut = new CompositeElasticOpenTelemetryOptions(config, environmentVariables);
+
+		Assert.Equal(expectedEndpoint, sut.OpAmpEndpoint);
+	}
+
+	[Fact]
+	public void ResourceAttributes_CanBeSetFromIConfiguration()
+	{
+		const string expectedServiceName = "my-service";
+		const string expectedServiceVersion = "1.0.0";
+		const string expectedAttributes = $"service.name={expectedServiceName},service.version={expectedServiceVersion}";
+
+		var config = new ConfigurationBuilder()
+			.AddInMemoryCollection(new Dictionary<string, string?>
+			{
+				{ "OTEL_RESOURCE_ATTRIBUTES", expectedAttributes }
+			})
+			.Build();
+
+		// The endpoint and headers are required to enable OpAMP
+		var sut = new CompositeElasticOpenTelemetryOptions(config, new ElasticOpenTelemetryOptions
+		{
+			OpAmpClientOptions = new OpAmpClientOptions()
+			{
+				Endpoint = "http://localhost",
+				Headers = "Authorization=ApiKey ABC123"
+			}
+		});
+
+		Assert.Equal(expectedAttributes, sut.ResourceAttributes);
+
+		Assert.Null(sut.ServiceName);
+		Assert.Null(sut.ServiceVersion);
+
+		sut.IsOpAmpEnabled();
+
+		Assert.Equal(expectedServiceName, sut.ServiceName);
+		Assert.Equal(expectedServiceVersion, sut.ServiceVersion);
+	}
+
+	[Fact]
+	public void EnvironmentVariables_AreUsedWhenSet()
+	{
+		const string expectedLogDirectory = "C:\\EnvVar";
+		const string expectedOpAmpEndpoint = "http://my-collector-endpoint-from-env-vars.com";
+		const string expectedResourceAttributes = "service.name=env-var-service";
+		const string expectedLogTargets = "file";
+		const string expectedOpAmpHeaders = "api-key=env-var-api-key";
+
+		var beforeLogDirectory = Environment.GetEnvironmentVariable(OTEL_DOTNET_AUTO_LOG_DIRECTORY);
+		var beforeLogLevel = Environment.GetEnvironmentVariable(OTEL_LOG_LEVEL);
+		var beforeSkipOtlpExporter = Environment.GetEnvironmentVariable(ELASTIC_OTEL_SKIP_OTLP_EXPORTER);
+		var beforeSkipAssemblyScanning = Environment.GetEnvironmentVariable(ELASTIC_OTEL_SKIP_ASSEMBLY_SCANNING);
+		var beforeOpAmpEndpoint = Environment.GetEnvironmentVariable(ELASTIC_OTEL_OPAMP_ENDPOINT);
+		var beforeResourceAttributes = Environment.GetEnvironmentVariable(OTEL_RESOURCE_ATTRIBUTES);
+		var beforeTargets = Environment.GetEnvironmentVariable(ELASTIC_OTEL_LOG_TARGETS);
+		var beforeOpAmpHeaders = Environment.GetEnvironmentVariable(ELASTIC_OTEL_OPAMP_HEADERS);
+
+		try
+		{
+			Environment.SetEnvironmentVariable(OTEL_DOTNET_AUTO_LOG_DIRECTORY, expectedLogDirectory);
+			Environment.SetEnvironmentVariable(OTEL_LOG_LEVEL, "Debug");
+			Environment.SetEnvironmentVariable(ELASTIC_OTEL_SKIP_OTLP_EXPORTER, "true");
+			Environment.SetEnvironmentVariable(ELASTIC_OTEL_SKIP_ASSEMBLY_SCANNING, "true");
+			Environment.SetEnvironmentVariable(ELASTIC_OTEL_OPAMP_ENDPOINT, expectedOpAmpEndpoint);
+			Environment.SetEnvironmentVariable(OTEL_RESOURCE_ATTRIBUTES, expectedResourceAttributes);
+			Environment.SetEnvironmentVariable(ELASTIC_OTEL_LOG_TARGETS, expectedLogTargets);
+			Environment.SetEnvironmentVariable(ELASTIC_OTEL_OPAMP_HEADERS, expectedOpAmpHeaders);
+
+			var sut = new CompositeElasticOpenTelemetryOptions();
+
+			Assert.Equal(expectedLogDirectory, sut.LogDirectory);
+			Assert.Equal(LogLevel.Debug, sut.LogLevel);
+			Assert.True(sut.SkipOtlpExporter);
+			Assert.True(sut.SkipInstrumentationAssemblyScanning);
+			Assert.Equal(expectedOpAmpEndpoint, sut.OpAmpEndpoint);
+			Assert.Equal(expectedResourceAttributes, sut.ResourceAttributes);
+			Assert.Equal(expectedLogTargets, sut.LogTargets.ToString(), ignoreCase: true);
+			Assert.Equal(expectedOpAmpHeaders, sut.OpAmpHeaders);
+		}
+		finally
+		{
+			Environment.SetEnvironmentVariable(OTEL_DOTNET_AUTO_LOG_DIRECTORY, beforeLogDirectory);
+			Environment.SetEnvironmentVariable(OTEL_LOG_LEVEL, beforeLogLevel);
+			Environment.SetEnvironmentVariable(ELASTIC_OTEL_SKIP_OTLP_EXPORTER, beforeSkipOtlpExporter);
+			Environment.SetEnvironmentVariable(ELASTIC_OTEL_SKIP_ASSEMBLY_SCANNING, beforeSkipAssemblyScanning);
+			Environment.SetEnvironmentVariable(ELASTIC_OTEL_OPAMP_ENDPOINT, beforeOpAmpEndpoint);
+			Environment.SetEnvironmentVariable(OTEL_RESOURCE_ATTRIBUTES, beforeResourceAttributes);
+			Environment.SetEnvironmentVariable(ELASTIC_OTEL_LOG_TARGETS, beforeTargets);
+			Environment.SetEnvironmentVariable(ELASTIC_OTEL_OPAMP_HEADERS, beforeOpAmpHeaders);
+		}
 	}
 }
