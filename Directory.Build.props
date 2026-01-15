@@ -17,6 +17,7 @@
     <MinVerMinimumMajorMinor>0.1</MinVerMinimumMajorMinor>
     <LangVersion>latest</LangVersion>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>EDOT001;EDOT002;EDOT003</WarningsNotAsErrors>
     <UseArtifactsOutput>true</UseArtifactsOutput>
     <SolutionRoot>$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), build.bat))</SolutionRoot>
     <ArtifactsPath>$(MSBuildThisFileDirectory).artifacts</ArtifactsPath>
