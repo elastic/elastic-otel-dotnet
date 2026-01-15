@@ -79,7 +79,10 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 	public void SetAdditionalLogger(ILogger logger, SdkActivationMethod activationMethod, ElasticOpenTelemetryComponents components)
 	{
 		if (HasAdditionalLogger)
+		{
+			components.Logger.LogWarning("An additional ILogger has already been set on the CompositeLogger. Ignoring subsequent attempt to set an additional ILogger.");
 			return;
+		}
 
 		components.Logger.LogInformation("Added additional ILogger to composite logger.");
 

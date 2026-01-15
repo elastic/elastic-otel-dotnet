@@ -6,23 +6,29 @@ using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using Elastic.OpenTelemetry.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Elastic.OpenTelemetry.Diagnostics;
 
-internal readonly record struct DeferredLogEntry(LogLevel LogLevel, string Message);
+internal readonly record struct DeferredLogEntry(
+	LogLevel LogLevel,
+	EventId EventId,
+	object? State,
+	Exception? Exception,
+	Func<object?, Exception?, string> Formatter
+);
 
 /// <summary>
 /// Used to capture log entries before the file logger is initialized.
 /// </summary>
 /// <remarks>
-/// Log entries are stored in a concurrent queue and drained to the first file logger that is available.
-/// Log entries are only captured if file logging is enabled in the options.
+/// The logger instance is static and shared across the application domain.
+/// The deferral period is limited to 10 seconds after the first use of the logger.
+/// After this period, if the logger has not been drained, it will automatically release its resources.
 /// </remarks>
 internal sealed class DeferredLogger : ILogger
 {
 	private readonly System.Timers.Timer _autoCloseTimer;
-
-	private readonly ILogger? _additionalLogger;
 
 	private static readonly Lock Lock = new();
 
@@ -31,13 +37,8 @@ internal sealed class DeferredLogger : ILogger
 	/// <summary>
 	/// Create an instance of <see cref="DeferredLogger"/>.
 	/// </summary>
-	/// <param name="additionalLogger">An optional additional logger to which log entries will be written. For example,
-	/// this may be available in ASP.NET Core scenarios and ensures the early log entries are sent to other sinks, such
-	/// as the console, when available.</param>
-	private DeferredLogger(ILogger? additionalLogger = null)
+	private DeferredLogger()
 	{
-		_additionalLogger = additionalLogger;
-
 		_autoCloseTimer = new System.Timers.Timer(10_000); // 10 seconds in milliseconds
 		_autoCloseTimer.Elapsed += (_, _) =>
 		{
@@ -68,22 +69,20 @@ internal sealed class DeferredLogger : ILogger
 	public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
 	{
 		var queue = _logQueue;
+
 		if (queue is null)
 			return;
 
-		_additionalLogger?.Log(logLevel, eventId, state, exception, formatter);
-
-		var logLine = LogFormatter.Format(logLevel, eventId, state, exception, formatter);
-
-		if (exception is not null)
-			logLine = $"{logLine}{Environment.NewLine}{exception}";
-
-		var logEntry = new DeferredLogEntry(logLevel, logLine);
+		var logEntry = new DeferredLogEntry(logLevel, eventId, state, exception, BoxedFormatter);
 
 		queue.Enqueue(logEntry);
+
+		// While not ideal, boxing is the only way to store the state for deferred logging
+		// and should be suitable for the short period needed before this logger is drained.
+		string BoxedFormatter(object? s, Exception? e) => formatter((TState)s!, e);
 	}
 
-	internal void DrainAndRelease(StreamWriter streamWriter, LogLevel logLevel)
+	internal void DrainAndRelease(ILogger logger)
 	{
 		using (Lock.EnterScope())
 		{
@@ -92,8 +91,12 @@ internal sealed class DeferredLogger : ILogger
 
 			while (_logQueue.TryDequeue(out var deferredLog))
 			{
-				if (logLevel <= deferredLog.LogLevel)
-					streamWriter.WriteLine(deferredLog.Message);
+				logger.Log(
+					deferredLog.LogLevel,
+					deferredLog.EventId,
+					deferredLog.State,
+					deferredLog.Exception,
+					deferredLog.Formatter);
 			}
 
 			// Only clear the static instance if it's still pointing to this instance
@@ -112,9 +115,15 @@ internal sealed class DeferredLogger : ILogger
 
 	internal static ILogger GetOrCreate(CompositeElasticOpenTelemetryOptions options)
 	{
+		// We can skip creating the deferred logger if file logging is disabled in the local configuration
+		// and OpAmp is not enabled. When OpAmp is enabled, we may need to log the earlier log entries once
+		// we have a log level from central config.
+		if (options.GlobalLogEnabled is false && options.IsOpAmpEnabled() is false)
+			return NullLogger.Instance;
+
 		using (Lock.EnterScope())
 		{
-			return Instance ??= new DeferredLogger(options.AdditionalLogger);
+			return Instance ??= new DeferredLogger();
 		}
 	}
 

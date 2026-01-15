@@ -195,7 +195,10 @@ internal static class ElasticOpenTelemetry
 				// TODO - Log
 			}
 
-			logger.FileLogger.LogDeferred();
+			if (DeferredLogger.TryGetInstance(out var deferredLogger))
+			{
+				deferredLogger.DrainAndRelease(logger);
+			}
 
 			var eventListener = new LoggingEventListener(logger, options);
 			var components = new ElasticOpenTelemetryComponents(logger, eventListener, options);

@@ -174,14 +174,6 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 
 	public IDisposable BeginScope<TState>(TState state) where TState : notnull => _scopeProvider.Push(state);
 
-	public void LogDeferred()
-	{
-		if (DeferredLogger.TryGetInstance(out var deferredLogger))
-		{
-			deferredLogger.DrainAndRelease(_streamWriter, _options.LogLevel);
-		}
-	}
-
 	public string? LogFilePath { get; }
 
 	public Task WritingTask { get; }
