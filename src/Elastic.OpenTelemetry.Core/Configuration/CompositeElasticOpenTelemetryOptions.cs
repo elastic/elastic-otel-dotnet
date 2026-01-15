@@ -86,6 +86,7 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 	private readonly ConfigCell<MetricInstrumentations> _metrics = new(nameof(Metrics), MetricInstrumentations.All);
 	private readonly ConfigCell<LogInstrumentations> _logging = new(nameof(Logging), LogInstrumentations.All);
 	private readonly ConfigCell<string?> _resourceAttributes = new(nameof(ResourceAttributes), null);
+	private readonly ConfigCell<string?> _serviceName = new(nameof(ServiceName), null);
 
 	private readonly IDictionary _environmentVariables;
 	private readonly IConfiguration? _configuration;
@@ -336,9 +337,13 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 		init => _opAmpHeaders.AssignFromProperty(value);
 	}
 
-	internal string? ServiceName { get; private set; }
-
 	internal string? ServiceVersion { get; private set; }
+
+	internal string? ServiceName
+	{
+		get => _serviceName.Value ?? null;
+		private set => _serviceName.AssignFromProperty(value);
+	}
 
 	internal string? ResourceAttributes
 	{
@@ -353,7 +358,7 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 			return _isOpAmpEnabled.Value;
 
 		// OpAMP requires an endpoint, an auth header and resource attributes to function.
-		if (string.IsNullOrEmpty(OpAmpEndpoint) || string.IsNullOrEmpty(OpAmpHeaders) || string.IsNullOrEmpty(ResourceAttributes))
+		if (string.IsNullOrEmpty(OpAmpEndpoint) || string.IsNullOrEmpty(OpAmpHeaders) || (string.IsNullOrEmpty(ResourceAttributes) && string.IsNullOrEmpty(ServiceName)))
 		{
 			return SetAndReturn(false);
 		}
@@ -364,7 +369,8 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 		}
 
 		// OpAMP requires at minimum the service.name to be set so central configuration can locate the correct configuration.
-		ServiceName = ExtractValueForKey(ResourceAttributes!, ResourceSemanticConventions.AttributeServiceName);
+		if (string.IsNullOrEmpty(ServiceName))
+			ServiceName = ExtractValueForKey(ResourceAttributes!, ResourceSemanticConventions.AttributeServiceName);
 
 		if (string.IsNullOrEmpty(ServiceName))
 		{
@@ -423,6 +429,7 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 			   Logging.SetEquals(other.Logging) &&
 			   OpAmpEndpoint == other.OpAmpEndpoint &&
 			   OpAmpHeaders == other.OpAmpHeaders &&
+			   ServiceName == other.ServiceName &&
 			   ResourceAttributes == other.ResourceAttributes &&
 			   ReferenceEquals(AdditionalLogger, other.AdditionalLogger);
 	}
@@ -439,11 +446,15 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 			^ Tracing.GetHashCode()
 			^ Metrics.GetHashCode()
 			^ Logging.GetHashCode()
+			^ (OpAmpEndpoint?.GetHashCode() ?? 0)
+			^ (OpAmpHeaders?.GetHashCode() ?? 0)
+			^ (ServiceName?.GetHashCode() ?? 0)
+			^ (ResourceAttributes?.GetHashCode() ?? 0)
 			^ (AdditionalLogger?.GetHashCode() ?? 0);
 #else
 		var hash1 = HashCode.Combine(LogDirectory, LogLevel, LogTargets, SkipOtlpExporter);
 		var hash2 = HashCode.Combine(Signals, Tracing, Metrics, Logging, AdditionalLogger);
-		var hash3 = HashCode.Combine(SkipInstrumentationAssemblyScanning, OpAmpEndpoint, OpAmpHeaders, ResourceAttributes);
+		var hash3 = HashCode.Combine(SkipInstrumentationAssemblyScanning, OpAmpEndpoint, OpAmpHeaders, ResourceAttributes, ServiceName);
 		return HashCode.Combine(hash1, hash2, hash3);
 #endif
 	}
@@ -459,6 +470,7 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 		parser.ParseSkipInstrumentationAssemblyScanning(_skipInstrumentationAssemblyScanning);
 		parser.ParseOpAmpEndpoint(_opAmpEndpoint);
 		parser.ParseResourceAttributes(_resourceAttributes);
+		parser.ParseServiceName(_serviceName);
 		parser.ParseOpAmpHeaders(_opAmpHeaders);
 
 		if (BootstrapLogger.IsEnabled)
@@ -556,6 +568,7 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 		LogConfig(logger, _opAmpEndpoint);
 		LogConfig(logger, _opAmpHeaders);
 		LogConfig(logger, _resourceAttributes);
+		LogConfig(logger, _serviceName);
 
 		static void LogConfig<T>(ILogger logger, ConfigCell<T> cell)
 		{

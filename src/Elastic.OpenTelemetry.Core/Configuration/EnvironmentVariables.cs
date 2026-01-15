@@ -42,6 +42,7 @@ internal static class EnvironmentVariables
 	internal const string OTEL_EXPORTER_OTLP_METRICS_HEADERS = nameof(OTEL_EXPORTER_OTLP_METRICS_HEADERS);
 	internal const string OTEL_EXPORTER_OTLP_LOGS_HEADERS = nameof(OTEL_EXPORTER_OTLP_LOGS_HEADERS);
 
+	internal const string OTEL_SERVICE_NAME = nameof(OTEL_SERVICE_NAME);
 	internal const string OTEL_RESOURCE_ATTRIBUTES = nameof(OTEL_RESOURCE_ATTRIBUTES);
 
 	internal static readonly string[] SensitiveEnvironmentVariables =

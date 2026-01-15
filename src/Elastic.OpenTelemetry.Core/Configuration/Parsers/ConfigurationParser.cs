@@ -95,6 +95,20 @@ internal class ConfigurationParser
 		resourceAttributes.AssignFromConfiguration(parsed);
 	}
 
+	internal void ParseServiceName(ConfigCell<string?> serviceName)
+	{
+		var lookup = _configuration.GetValue<string>(EnvironmentVariables.OTEL_SERVICE_NAME);
+
+		if (lookup is null)
+			return;
+
+		var parsed = StringParser(lookup);
+		if (parsed is null)
+			return;
+
+		serviceName.AssignFromConfiguration(parsed);
+	}
+
 	internal static EventLevel LogLevelToEventLevel(LogLevel? eventLogLevel) =>
 		eventLogLevel switch
 		{
