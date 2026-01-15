@@ -22,6 +22,10 @@
     <PackageReference Include="OpenTelemetry" PrivateAssets="all" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="OpenTelemetry.OpAmp.Client" />
+  </ItemGroup>
+
   <!-- We need these dependencies when building agianst all targets. As they are private, we don't have to worry about them being packaged. -->
   <ItemGroup>
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" PrivateAssets="all" />

@@ -6,9 +6,10 @@ using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using Elastic.OpenTelemetry.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Elastic.OpenTelemetry.Diagnostics;
+
+internal readonly record struct DeferredLogEntry(LogLevel LogLevel, string Message);
 
 /// <summary>
 /// Used to capture log entries before the file logger is initialized.
@@ -19,54 +20,70 @@ namespace Elastic.OpenTelemetry.Diagnostics;
 /// </remarks>
 internal sealed class DeferredLogger : ILogger
 {
-	private readonly bool _isEnabled = false;
-	private readonly LogLevel _configuredLogLevel;
+	private readonly System.Timers.Timer _autoCloseTimer;
+
 	private readonly ILogger? _additionalLogger;
 
 	private static readonly Lock Lock = new();
 
-	private ConcurrentQueue<string>? _logQueue = new();
+	private ConcurrentQueue<DeferredLogEntry>? _logQueue = new();
 
 	/// <summary>
 	/// Create an instance of <see cref="DeferredLogger"/>.
 	/// </summary>
-	/// <param name="options">The options used to configure the logger.</param>
 	/// <param name="additionalLogger">An optional additional logger to which log entries will be written. For example,
 	/// this may be available in ASP.NET Core scenarios and ensures the early log entries are sent to other sinks, such
 	/// as the console, when available.</param>
-	private DeferredLogger(CompositeElasticOpenTelemetryOptions options, ILogger? additionalLogger = null)
+	private DeferredLogger(ILogger? additionalLogger = null)
 	{
-		_isEnabled = options.GlobalLogEnabled && options.LogTargets.HasFlag(LogTargets.File);
-
-		if (!_isEnabled)
-			return;
-
-		_configuredLogLevel = options.LogLevel;
 		_additionalLogger = additionalLogger;
+
+		_autoCloseTimer = new System.Timers.Timer(10_000); // 10 seconds in milliseconds
+		_autoCloseTimer.Elapsed += (_, _) =>
+		{
+			using (Lock.EnterScope())
+			{
+				if (_logQueue is null)
+					return;
+
+				// Only clear the static instance if it's still pointing to this instance
+				if (ReferenceEquals(Instance, this))
+					Instance = null;
+
+				_logQueue = null;
+			}
+			
+			// Dispose timer outside the lock to avoid potential deadlocks
+			_autoCloseTimer.Stop();
+			_autoCloseTimer.Dispose();
+		};
+		_autoCloseTimer.AutoReset = false;
+		_autoCloseTimer.Start();
 	}
 
 	public IDisposable BeginScope<TState>(TState state) where TState : notnull => NullScope.Instance;
 
-	public bool IsEnabled(LogLevel logLevel) => _isEnabled && _configuredLogLevel <= logLevel;
+	public bool IsEnabled(LogLevel logLevel) => _logQueue is not null;
 
 	public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
 	{
-		_additionalLogger?.Log(logLevel, eventId, state, exception, formatter);
-
-		if (!IsEnabled(logLevel) || _logQueue is null)
+		var queue = _logQueue;
+		if (queue is null)
 			return;
+
+		_additionalLogger?.Log(logLevel, eventId, state, exception, formatter);
 
 		var logLine = LogFormatter.Format(logLevel, eventId, state, exception, formatter);
 
 		if (exception is not null)
 			logLine = $"{logLine}{Environment.NewLine}{exception}";
 
-		_logQueue.Enqueue(logLine);
+		var logEntry = new DeferredLogEntry(logLevel, logLine);
 
-		_additionalLogger?.Log(logLevel, eventId, state, exception, formatter);
+		queue.Enqueue(logEntry);
 	}
 
-	internal void DrainAndRelease(StreamWriter streamWriter)
+	internal void DrainAndRelease(StreamWriter streamWriter, LogLevel logLevel)
 	{
 		using (Lock.EnterScope())
 		{
@@ -75,12 +92,20 @@ internal sealed class DeferredLogger : ILogger
 
 			while (_logQueue.TryDequeue(out var deferredLog))
 			{
-				streamWriter.WriteLine(deferredLog);
+				if (logLevel <= deferredLog.LogLevel)
+					streamWriter.WriteLine(deferredLog.Message);
 			}
 
-			Instance = null;
+			// Only clear the static instance if it's still pointing to this instance
+			if (ReferenceEquals(Instance, this))
+				Instance = null;
+				
 			_logQueue = null;
 		}
+		
+		// Stop and dispose the timer outside the lock
+		_autoCloseTimer.Stop();
+		_autoCloseTimer.Dispose();
 	}
 
 	private static DeferredLogger? Instance;
@@ -89,12 +114,7 @@ internal sealed class DeferredLogger : ILogger
 	{
 		using (Lock.EnterScope())
 		{
-			// We want, at most, one instance of DeferredLogger for the application.
-			// We only create a DeferredFileLogger if file logging is enabled
-			if (options.GlobalLogEnabled && options.LogTargets.HasFlag(LogTargets.File))
-				return Instance ??= new DeferredLogger(options, options.AdditionalLogger);
-
-			return NullLogger.Instance;
+			return Instance ??= new DeferredLogger(options.AdditionalLogger);
 		}
 	}
 

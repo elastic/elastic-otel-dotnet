@@ -29,6 +29,7 @@
     <PackageReference Include="OpenTelemetry" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.OpAmp.Client" />
     
     <!-- Required to add necessary resource attributes to drive the Observability UI -->
     <PackageReference Include="OpenTelemetry.Resources.Host" />

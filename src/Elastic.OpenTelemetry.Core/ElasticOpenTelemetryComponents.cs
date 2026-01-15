@@ -2,7 +2,6 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
-using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.Logging;
@@ -14,9 +13,9 @@ internal sealed class ElasticOpenTelemetryComponents : IDisposable, IAsyncDispos
 {
 	internal Guid InstanceId { get; } = Guid.NewGuid();
 
-	public CompositeLogger Logger { get; }
-	public LoggingEventListener LoggingEventListener { get; }
-	public CompositeElasticOpenTelemetryOptions Options { get; }
+	internal CompositeLogger Logger { get; }
+	internal LoggingEventListener LoggingEventListener { get; }
+	internal CompositeElasticOpenTelemetryOptions Options { get; }
 
 	public ElasticOpenTelemetryComponents(
 		CompositeLogger logger,

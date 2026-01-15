@@ -114,12 +114,12 @@ internal static class BootstrapLogger
 
 			LastActivityUtc = DateTime.UtcNow;
 			AutoCloseTimer = new System.Timers.Timer(60_000); // 1 minute in milliseconds
-			AutoCloseTimer.Elapsed += (_, __) => CheckAndDisposeLogger();
+			AutoCloseTimer.Elapsed += (_, _) => CheckAndDisposeLogger();
 			AutoCloseTimer.AutoReset = true;
 			AutoCloseTimer.Start();
 
 			AppDomain.CurrentDomain.ProcessExit += (_, __) => DisposeLogger();
-			Console.CancelKeyPress += (_, __) => DisposeLogger();
+			Console.CancelKeyPress += (_, _) => DisposeLogger();
 		}
 		catch
 		{

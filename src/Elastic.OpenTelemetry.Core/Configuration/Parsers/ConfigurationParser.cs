@@ -33,13 +33,13 @@ internal class ConfigurationParser
 			LoggingSectionLogLevel = configuration.GetValue<string>("Logging:LogLevel:Default");
 	}
 
-	private static void SetFromConfiguration<T>(IConfiguration configuration, ConfigCell<T> cell, Func<string, T?> parser, string? subsection = null)
+	private static void SetFromConfiguration<T>(IConfiguration configuration, ConfigCell<T> cell, Func<string, T?> parser)
 	{
 		//environment configuration takes precedence, assume already configured
 		if (cell.Source == ConfigSource.Environment)
 			return;
 
-		var fullKey = subsection is null ? $"{ConfigurationSection}:{cell.Key}" : $"{ConfigurationSection}:{subsection}:{cell.Key}";
+		var fullKey = $"{ConfigurationSection}:{cell.Key}";
 
 		var lookup = configuration.GetValue<string>(fullKey);
 		if (lookup is null)

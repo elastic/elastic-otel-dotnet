@@ -12,6 +12,7 @@
   <ItemGroup>
     <PackageReference Include="OpenTelemetry" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.OpAmp.Client" />
     <PackageReference Include="OpenTelemetry.Resources.Host" />
     <PackageReference Include="OpenTelemetry.Resources.ProcessRuntime" />
     <PackageReference Include="Polyfill" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />

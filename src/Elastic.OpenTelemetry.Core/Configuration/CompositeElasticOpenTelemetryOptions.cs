@@ -14,6 +14,7 @@ using Elastic.OpenTelemetry.Diagnostics;
 using Elastic.OpenTelemetry.SemanticConventions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using OpenTelemetry.OpAmp.Client.Messages;
 using static System.Environment;
 using static System.Runtime.InteropServices.RuntimeInformation;
 using static Elastic.OpenTelemetry.Configuration.EnvironmentVariables;
@@ -381,6 +382,8 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 			return value;
 		}
 	}
+
+	internal void SetLogLevelFromCentralConfig(LogLevel level) => _logLevel.AssignFromCentralConfig(level);
 
 	private static string? ExtractValueForKey(string input, string key)
 	{

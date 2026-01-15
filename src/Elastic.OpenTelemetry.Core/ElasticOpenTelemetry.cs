@@ -6,8 +6,10 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry.Configuration;
+using Elastic.OpenTelemetry.Core.Configuration;
 using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Elastic.OpenTelemetry.Core;
 
@@ -147,8 +149,54 @@ internal static class ElasticOpenTelemetry
 			StackTrace stackTrace)
 		{
 			BootstrapLogger.Log($"{nameof(Bootstrap)}: CreateComponents invoked.");
-
+			
 			var logger = new CompositeLogger(options);
+
+			var centralConfig = new CentralConfiguration(options, logger);
+			var remoteConfig = centralConfig.WaitForRemoteConfig(30000);
+
+			if (remoteConfig is not null && remoteConfig.AgentConfigMap.ContainsKey("elastic"))
+			{
+				// TODO - Log
+
+				var config = remoteConfig.AgentConfigMap["elastic"];
+
+				if (config.ContentType == "application/json")
+				{
+					var body = config.Body;
+
+					var utf8JsonSpan = "\"log_level\":\""u8;
+
+					var index = body.IndexOf(utf8JsonSpan);
+
+					// NOTE, this DOES NOT handle pretty-print JSON with new lines and spaces
+
+					if (index >= 0)
+					{
+						var logLevelStart = index + utf8JsonSpan.Length;
+
+						var logLevelEnd = body[logLevelStart..].IndexOf((byte)'"');
+						if (logLevelEnd == -1)
+							logLevelEnd = body.Length;
+
+						var logLevelBytes = body[logLevelStart..][..logLevelEnd];
+						var logLevelString = System.Text.Encoding.UTF8.GetString(logLevelBytes);
+						if (Enum.TryParse<LogLevel>(logLevelString, true, out var logLevel))
+						{
+							options.SetLogLevelFromCentralConfig(logLevel);
+						}
+					}
+				}
+
+				//options.SetLogLevelFromCentralConfig(LogLevel.Trace);
+			}
+			else
+			{
+				// TODO - Log
+			}
+
+			logger.FileLogger.LogDeferred();
+
 			var eventListener = new LoggingEventListener(logger, options);
 			var components = new ElasticOpenTelemetryComponents(logger, eventListener, options);
 

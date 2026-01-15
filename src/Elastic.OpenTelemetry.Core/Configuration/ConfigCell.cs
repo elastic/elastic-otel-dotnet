@@ -2,6 +2,9 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using Google.Protobuf.WellKnownTypes;
+using Microsoft.Extensions.Logging;
+
 namespace Elastic.OpenTelemetry.Configuration;
 
 internal class ConfigCell<T>
@@ -38,6 +41,9 @@ internal class ConfigCell<T>
 
 	internal void AssignFromProperty(T value) =>
 		Assign(value, ConfigSource.Property);
+
+	internal void AssignFromCentralConfig(T value) =>
+		Assign(value, ConfigSource.CentralConfig);
 
 	private void Assign(T value, ConfigSource source)
 	{

@@ -9,11 +9,8 @@ namespace Elastic.OpenTelemetry.Diagnostics;
 
 internal sealed class StandardOutLogger(CompositeElasticOpenTelemetryOptions options) : ILogger
 {
-	private readonly LogLevel _configuredLogLevel = options.LogLevel;
-
+	private readonly CompositeElasticOpenTelemetryOptions _options = options;
 	private readonly LoggerExternalScopeProvider _scopeProvider = new();
-
-	private bool StandardOutLoggingEnabled { get; } = options.GlobalLogEnabled && options.LogTargets.HasFlag(LogTargets.StdOut);
 
 	public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
 	{
@@ -29,7 +26,7 @@ internal sealed class StandardOutLogger(CompositeElasticOpenTelemetryOptions opt
 	}
 
 	// We skip logging for any log level higher (numerically) than the configured log level
-	public bool IsEnabled(LogLevel logLevel) => StandardOutLoggingEnabled && _configuredLogLevel <= logLevel;
+	public bool IsEnabled(LogLevel logLevel) => _options.GlobalLogEnabled && _options.LogTargets.HasFlag(LogTargets.StdOut) && _options.LogLevel <= logLevel;
 
 	public IDisposable BeginScope<TState>(TState state) where TState : notnull => _scopeProvider.Push(state);
 }

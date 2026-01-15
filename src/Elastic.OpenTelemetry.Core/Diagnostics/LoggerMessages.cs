@@ -9,6 +9,8 @@ using System.Runtime.InteropServices;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Core;
 using Microsoft.Extensions.Logging;
+using System.IO;
+
 
 #if NET || NETSTANDARD2_1
 using System.Runtime.CompilerServices;

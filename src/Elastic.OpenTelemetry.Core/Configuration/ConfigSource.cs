@@ -11,5 +11,6 @@ internal enum ConfigSource
 				 // ReSharper disable once InconsistentNaming
 	IConfiguration, // Bound from an IConfiguration instance
 	Property, // Set via property initializer
-	Options // Set via user provided ElasticOpenTelemetryOptions
+	Options, // Set via user provided ElasticOpenTelemetryOptions
+	CentralConfig // Set via a central configuration source
 }
