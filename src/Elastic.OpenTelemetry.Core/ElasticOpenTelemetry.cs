@@ -155,7 +155,7 @@ internal static class ElasticOpenTelemetry
 			if (options.IsOpAmpEnabled())
 			{
 				var centralConfig = new CentralConfiguration(options, logger);
-				var remoteConfig = centralConfig.WaitForRemoteConfig(30000);
+				var remoteConfig = centralConfig.WaitForRemoteConfig(3000); // Wait up to 3 seconds for a response
 
 				if (remoteConfig is not null && remoteConfig.AgentConfigMap.ContainsKey("elastic"))
 				{
