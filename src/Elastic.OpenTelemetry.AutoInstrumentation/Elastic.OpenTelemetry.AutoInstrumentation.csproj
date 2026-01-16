@@ -7,11 +7,15 @@
     <IsPackable>true</IsPackable>
     <PolyPublic>true</PolyPublic>
     <GenerateNuspecDependsOn>$(GenerateNuspecDependsOn);_ExcludeTargetFramework;_ExcludeTargetFrameworkDependency</GenerateNuspecDependsOn>
+    <!-- Use isolated ALC for OpAmp client to avoid version conflicts in profiler-loaded scenarios.
+         Note: This makes OpAmp support non-AoT compatible for this package, but AutoInstrumentation
+         already has AoT limitations due to the profiler loading mechanism. 
+         Only enabled for frameworks that support AssemblyLoadContext (net8.0+, netstandard2.1). -->
   </PropertyGroup>
 
-  <PropertyGroup>
-    <!-- ILMerge configuration for internalizing Google.Protobuf and OpenTelemetry.OpAmp.Client -->
-    <ILMergeInputAssemblies>Google.Protobuf;OpenTelemetry.OpAmp.Client</ILMergeInputAssemblies>
+  <!-- Define USE_ISOLATED_OPAMP_CLIENT only for frameworks that support AssemblyLoadContext -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0' OR '$(TargetFramework)' == 'netstandard2.1'">
+    <DefineConstants>$(DefineConstants);USE_ISOLATED_OPAMP_CLIENT</DefineConstants>
   </PropertyGroup>
 
   <!-- This package does not support netstandard2.1 and this target is only used for building the redistributable. -->
@@ -36,8 +40,6 @@
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" PrivateAssets="all" />
     <PackageReference Include="Polyfill" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
     <PackageReference Include="NetEscapades.EnumGenerators" PrivateAssets="all" ExcludeAssets="runtime" />
-    <!-- ILMerge tooling for assembly internalization -->
-    <PackageReference Include="ILMerge" ExcludeAssets="runtime" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.1'">
@@ -85,58 +87,5 @@
     <ItemGroup>
       <_FrameworksWithSuppressedDependencies Include="netstandard2.1" />
     </ItemGroup>
-  </Target>
-
-  <!-- ILMerge Target: Internalizes and repacks Google.Protobuf and OpenTelemetry.OpAmp.Client into this assembly -->
-  <!-- This target merges Google.Protobuf and OpenTelemetry.OpAmp.Client into the main assembly 
-       with /internalize to avoid version conflicts and reduce redistributable size when packaged in the zip file. -->
-  <Target Name="ILMerge" AfterTargets="Build">
-    <PropertyGroup>
-      <ILMergePath>$(NuGetPackageRoot)\ilmerge\3.0.41\tools\net452</ILMergePath>
-      <ILMergeExe>$(ILMergePath)\ILMerge.exe</ILMergeExe>
-      <GoogleProtobufDll>$(OutputPath)Google.Protobuf.dll</GoogleProtobufDll>
-      <OpAmpClientDll>$(OutputPath)OpenTelemetry.OpAmp.Client.dll</OpAmpClientDll>
-      <MainAssemblyDll>$(OutputPath)Elastic.OpenTelemetry.AutoInstrumentation.dll</MainAssemblyDll>
-      <MergedAssemblyDll>$(OutputPath)Elastic.OpenTelemetry.AutoInstrumentation.merged.dll</MergedAssemblyDll>
-      <ILMergeLogFile>$(OutputPath)ilmerge.log</ILMergeLogFile>
-    </PropertyGroup>
-
-    <!-- For AutoInstrumentation, only merge Google.Protobuf since OpAmp references are indirect -->
-    <PropertyGroup Condition="Exists('$(GoogleProtobufDll)')">
-      <ILMergeCommand>&quot;$(ILMergeExe)&quot; /log:&quot;$(ILMergeLogFile)&quot; /internalize /targetplatform:v4 /lib:&quot;$(OutputPath.TrimEnd('\'))&quot; /out:&quot;$(MergedAssemblyDll)&quot; &quot;$(MainAssemblyDll)&quot; &quot;$(GoogleProtobufDll)&quot;</ILMergeCommand>
-      <ShouldMerge>true</ShouldMerge>
-    </PropertyGroup>
-
-    <Message Text="ILMerge: Attempting to merge Google.Protobuf..." Importance="high" Condition="'$(ShouldMerge)' == 'true'" />
-    <Message Text="ILMerge exe: $(ILMergeExe)" Importance="high" Condition="'$(ShouldMerge)' == 'true'" />
-    <Message Text="Main assembly: $(MainAssemblyDll)" Importance="high" Condition="'$(ShouldMerge)' == 'true'" />
-    <Message Text="Protobuf: $(GoogleProtobufDll)" Importance="high" Condition="'$(ShouldMerge)' == 'true'" />
-
-    <!-- Run ILMerge to merge the assemblies - FAIL on error so we can see what's wrong -->
-    <Exec 
-      Command="$(ILMergeCommand)" 
-      Condition="'$(ShouldMerge)' == 'true'"
-      ContinueOnError="false" />
-
-    <!-- Check if merge succeeded -->
-    <PropertyGroup>
-      <MergedSuccess>false</MergedSuccess>
-      <MergedSuccess Condition="Exists('$(MergedAssemblyDll)')">true</MergedSuccess>
-    </PropertyGroup>
-
-    <Message Text="ILMerge: Merged file created successfully" Importance="high" Condition="'$(MergedSuccess)' == 'true'" />
-    <Message Text="ILMerge: WARNING - Merged file was not created!" Importance="high" Condition="'$(MergedSuccess)' != 'true'" />
-
-    <!-- Replace original assembly with merged version only if merge succeeded -->
-    <Exec Command="move /Y &quot;$(MergedAssemblyDll)&quot; &quot;$(MainAssemblyDll)&quot;" 
-      Condition="'$(MergedSuccess)' == 'true'"
-      ContinueOnError="false" />
-
-    <!-- Remove the now-internalized dependency assemblies only if merge succeeded -->
-    <Delete Files="$(GoogleProtobufDll)" Condition="'$(MergedSuccess)' == 'true'" />
-    
-    <Message Text="ILMerge: Completed - Google.Protobuf merged into Elastic.OpenTelemetry.AutoInstrumentation.dll" Importance="high" Condition="'$(MergedSuccess)' == 'true'" />
-    <Message Text="ILMerge: OpenTelemetry.OpAmp.Client is included separately (cannot be merged)" Importance="high" />
-    <Message Text="ILMerge: Check $(ILMergeLogFile) for details" Importance="high" Condition="Exists('$(ILMergeLogFile)')" />
   </Target>
 </Project>

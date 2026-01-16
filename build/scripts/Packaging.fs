@@ -213,6 +213,7 @@ let stageArtifacts (assets:List<ReleaseAsset * FileInfo>) =
 let redistribute (arguments:ParseResults<Build>) =
     // We build net8.0 as the minimum supported TFM version - See above for details
     exec { run "dotnet" "build" "src/Elastic.OpenTelemetry.AutoInstrumentation/Elastic.OpenTelemetry.AutoInstrumentation.csproj" "-f" "net8.0" "-c" "release" }
+    exec { run "dotnet" "build" "src/Elastic.OpenTelemetry.AutoInstrumentation/Elastic.OpenTelemetry.AutoInstrumentation.csproj" "-f" "netstandard2.1" "-c" "release" }
     exec { run "dotnet" "build" "src/Elastic.OpenTelemetry.AutoInstrumentation/Elastic.OpenTelemetry.AutoInstrumentation.csproj" "-f" "net462" "-c" "release" }
     let assets = downloadArtifacts arguments
     printfn ""
