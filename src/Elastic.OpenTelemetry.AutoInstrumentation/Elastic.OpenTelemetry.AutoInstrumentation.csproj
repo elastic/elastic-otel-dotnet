@@ -11,6 +11,8 @@
          Note: This makes OpAmp support non-AoT compatible for this package, but AutoInstrumentation
          already has AoT limitations due to the profiler loading mechanism. 
          Only enabled for frameworks that support AssemblyLoadContext (net8.0+, netstandard2.1). -->
+    <!-- Exclude ALC files only from frameworks that don't support AssemblyLoadContext (net462 only) -->
+    <DefaultItemExcludes Condition="'$(TargetFramework)' == 'net462'">$(DefaultItemExcludes);../Elastic.OpenTelemetry.Core/Configuration/IsolatedOpAmpLoadContext.cs;../Elastic.OpenTelemetry.Core/Configuration/OpAmpIsolationInitializer.cs</DefaultItemExcludes>
   </PropertyGroup>
 
   <!-- Define USE_ISOLATED_OPAMP_CLIENT only for frameworks that support AssemblyLoadContext -->
