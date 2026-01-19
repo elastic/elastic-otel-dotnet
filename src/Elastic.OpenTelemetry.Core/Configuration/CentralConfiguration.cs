@@ -256,10 +256,45 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 			
 			// Wrap the dynamically loaded client to avoid cross-ALC type casting
 			dynamic client = isolatedClient;
-			client.Subscribe<RemoteConfigMessage>(_remoteConfigListener);
-			_client = new IsolatedOpAmpClientWrapper(isolatedClient);
 			
-			_logger.LogInformation("OpAmp client successfully initialized from isolated ALC");
+			// Use reflection to call Subscribe<RemoteConfigMessage> since RemoteConfigMessage comes from the isolated ALC
+#pragma warning disable IL2075 // Suppress due to reflection-based type loading in isolated context
+#pragma warning disable IL3050 // Suppress due to dynamic code used in guarded code path
+#pragma warning disable IL2060 // Suppress due to dynamic generic method construction
+			var remoteConfigMessageType = opAmpAssembly.GetType("OpenTelemetry.OpAmp.Client.Messages.RemoteConfigMessage")
+				?? throw new InvalidOperationException("RemoteConfigMessage type not found in isolated assembly");
+			
+			var subscribeMethod = opAmpClientType.GetMethod("Subscribe", 
+				System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance,
+				null,
+				new[] { typeof(object) },
+				null)
+				?? throw new InvalidOperationException("Subscribe method not found on OpAmpClient");
+
+			// Try to get the generic Subscribe<T> method
+			var genericSubscribeMethods = opAmpClientType.GetMethods(
+				System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+				.Where(m => m.Name == "Subscribe" && m.IsGenericMethodDefinition)
+				.ToList();
+
+			if (genericSubscribeMethods.Count > 0)
+			{
+				// Make the generic method: Subscribe<RemoteConfigMessage>
+				var genericSubscribeMethod = genericSubscribeMethods[0].MakeGenericMethod(remoteConfigMessageType);
+				genericSubscribeMethod.Invoke(isolatedClient, new[] { _remoteConfigListener });
+				_logger.LogDebug("Called Subscribe<RemoteConfigMessage> via reflection");
+			}
+			else
+			{
+				// Fallback to non-generic Subscribe if generic version doesn't exist
+				subscribeMethod.Invoke(isolatedClient, new[] { _remoteConfigListener });
+				_logger.LogDebug("Called Subscribe via reflection (non-generic)");
+			}
+#pragma warning restore IL2060
+#pragma warning restore IL3050
+#pragma warning restore IL2075
+			
+			_client = new IsolatedOpAmpClientWrapper(isolatedClient);
 		}
 		catch (Exception ex)
 		{
