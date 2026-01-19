@@ -2,7 +2,10 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using System;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.Logging;
@@ -16,14 +19,40 @@ using System.Net.Http;
 
 namespace Elastic.OpenTelemetry.Core.Configuration;
 
+internal interface IOpAmpClient : IDisposable
+{
+	Task StartAsync(CancellationToken cancellationToken = default);
+}
+
+internal sealed class WrappedOpAmpClient : IOpAmpClient
+{
+	private readonly OpAmpClient _client;
+
+	internal WrappedOpAmpClient(OpAmpClient client) => _client = client;
+
+	public Task StartAsync(CancellationToken cancellationToken = default) => _client.StartAsync(cancellationToken);
+
+	public void Dispose() => _client.Dispose();
+}
+
+internal sealed class EmptyOpAmpClient : IOpAmpClient
+{
+	public Task StartAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+	public void Dispose()
+	{
+		// No-op
+	}
+}
+
 internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 {
 	private const int OpAmpBlockingStartTimeoutMilliseconds = 500;
 
 	private static string UserAgent => $"elastic-opamp-dotnet/{VersionHelper.InformationalVersion}";
 
-	private readonly CompositeLogger _logger;
-	private readonly OpAmpClient _client;
+	private readonly ILogger _logger;
+	private readonly IOpAmpClient _client;
 	private readonly RemoteConfigMessageListener _remoteConfigListener;
 	private readonly ConcurrentBag<ICentralConfigurationSubscriber> _subscribers = [];
 	private readonly CancellationTokenSource _startupCancellationTokenSource;
@@ -33,7 +62,9 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 	private volatile bool _startupFailed;
 	private bool _disposed;
 
-	internal CentralConfiguration(CompositeElasticOpenTelemetryOptions options, CompositeLogger logger)
+	[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2026: RequiresUnreferencedCode", Justification = "Reflection calls" +
+	 " are guarded by a RuntimeFeature.IsDynamicCodeSupported` check and therefore this method is safe to call in AoT scenarios")]
+	internal CentralConfiguration(CompositeElasticOpenTelemetryOptions options, ILogger logger)
 	{
 		if (options.IsOpAmpEnabled() is false)
 		{
@@ -43,13 +74,87 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 		_logger = logger;
 		_startupCancellationTokenSource = new CancellationTokenSource();
 		_remoteConfigListener = new RemoteConfigMessageListener();
-		
-#if NET8_0_OR_GREATER
+
+#if NET8_0_OR_GREATER //&& USE_ISOLATED_OPAMP_CLIENT
+
+		if (!RuntimeFeature.IsDynamicCodeSupported)
+		{
+			_client = new EmptyOpAmpClient();
+			_startupTask = Task.CompletedTask;
+			_isStarted = false;
+			_startupFailed = true;
+
+			_logger.LogError("Dynamic code is not supported in the current runtime. OpAmp client will not be initialized.");
+
+			return;
+		}
+
 		// Initialize isolated loading of OpAmp dependencies to prevent version conflicts
-		OpAmpIsolationInitializer.Initialize();
-#endif
-		
-		_client = new OpAmpClient(opts =>
+		_logger.LogDebug("Initializing OpAmp client in isolated load context to prevent dependency version conflicts.");
+
+		var loadContext = new OpAmpLoadContext(logger);
+
+		var opAmpAssembly = loadContext.LoadFromAssemblyName(new System.Reflection.AssemblyName("OpenTelemetry.OpAmp.Client"));
+
+		if (opAmpAssembly is null)
+		{
+			_client = new EmptyOpAmpClient();
+			_startupTask = Task.CompletedTask;
+			_isStarted = false;
+			_startupFailed = true;
+
+			_logger.LogError("Failed to load OpenTelemetry.OpAmp.Client assembly in isolated load context. OpAmp client will not be initialized.");
+
+			return;
+		}
+		else
+		{
+			var opAmpClientType = opAmpAssembly.GetType("OpenTelemetry.OpAmp.Client.OpAmpClient");
+			if (opAmpClientType is null)
+			{
+				_logger.LogError("Failed to get OpAmpClient type from OpenTelemetry.OpAmp.Client assembly.");
+			}
+			else
+			{
+				var client = (OpAmpClient)Activator.CreateInstance(opAmpClientType, new object[]
+				{
+					new Action<OpAmpClientOptions>(opts =>
+					{
+						opts.ServerUrl = new Uri(options.OpAmpEndpoint!);
+						opts.ConnectionType = ConnectionType.Http;
+						opts.HttpClientFactory = () =>
+						{
+							var client = new HttpClient();
+							client.DefaultRequestHeaders.Add("User-Agent", UserAgent);
+							var userHeaders = options.OpAmpHeaders!.Split(',');
+							foreach (var header in userHeaders)
+							{
+								var parts = header.Split(['='], 2);
+								if (parts.Length == 2)
+								{
+									var key = parts[0].Trim();
+									var value = parts[1].Trim();
+									client.DefaultRequestHeaders.Add(key, value);
+								}
+							}
+							return client;
+						};
+						// Add custom resources to help the server identify your client.
+						opts.Identification.AddIdentifyingAttribute("application.name", options.ServiceName!);
+						if (!string.IsNullOrEmpty(options.ServiceVersion))
+							opts.Identification.AddIdentifyingAttribute("application.version", options.ServiceVersion!);
+						opts.Heartbeat.IsEnabled = false;
+					})
+				})!;
+				client.Subscribe(_remoteConfigListener);
+
+				_client = new WrappedOpAmpClient(client);
+			}
+		}
+#else
+		_logger.LogDebug("Initializing OpAmp client from default context.");
+
+		var client = new OpAmpClient(opts =>
 		{
 			opts.ServerUrl = new Uri(options.OpAmpEndpoint!);
 			opts.ConnectionType = ConnectionType.Http;
@@ -84,9 +189,12 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 			opts.Heartbeat.IsEnabled = false;
 		});
 
-		_client.Subscribe(_remoteConfigListener);
+		client.Subscribe(_remoteConfigListener);
 
-		_startupTask = InitializeStartupAsync();
+		_client = new WrappedOpAmpClient(client);
+#endif
+
+			_startupTask = InitializeStartupAsync();
 	}
 
 	private async Task InitializeStartupAsync()
