@@ -30,7 +30,7 @@ internal sealed class OpAmpLoadContext : AssemblyLoadContext
 	private readonly AssemblyDependencyResolver? _resolver = null;
 	private readonly string? _otelInstallationPath = null;
 
-	public OpAmpLoadContext(ILogger logger)
+	public OpAmpLoadContext(ILogger logger) : base("ElasticOpenTelemetryIsolatedOpAmp", isCollectible: false)
 	{
 		_logger = logger;
 
@@ -44,15 +44,17 @@ internal sealed class OpAmpLoadContext : AssemblyLoadContext
 			return;
 		}
 
-		_otelInstallationPath = Path.Join(otelInstallationPath, "net");
+		_otelInstallationPath = Path.Join(otelInstallationPath, "net", GetType().Assembly.GetName().Name);
 
 		// TODO - Check path exists
 
-		_logger.LogDebug("OpAmpLoadContext: Initializing isolated load context for OpenTelemetry OpAmp dependencies from '{OtelInstallationPath}'",
+		_logger.LogDebug("OpAmpLoadContext: Initializing isolated load context for OpenTelemetry OpAmp dependencies for '{OtelInstallationPath}'",
 			otelInstallationPath ?? "<null>");
 
 		_resolver = new AssemblyDependencyResolver(otelInstallationPath!);
 	}
+
+	public string? OtelInstallationPath => _otelInstallationPath;
 
 	[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2026: RequiresUnreferencedCode", Justification = "The calls to this ALC will be guarded by a runtime check")]
 	protected override Assembly? Load(AssemblyName assemblyName)

@@ -101,9 +101,63 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 		// Initialize isolated loading of OpAmp dependencies to prevent version conflicts
 		_logger.LogDebug("Initializing OpAmp client in isolated load context to prevent dependency version conflicts.");
 
+		var appProtobufVersion = typeof(Google.Protobuf.MessageParser).Assembly.GetName().Version;
+		_logger.LogDebug("Application Protobuf Version: {appProtobufVersion}", appProtobufVersion);
+
 		var loadContext = new OpAmpLoadContext(logger);
 
-		var opAmpAssembly = loadContext.LoadFromAssemblyName(new System.Reflection.AssemblyName("OpenTelemetry.OpAmp.Client"));
+		System.Reflection.Assembly? opAmpAssembly = null;
+
+		try
+		{
+			opAmpAssembly = loadContext.LoadFromAssemblyPath(Path.Join(loadContext.OtelInstallationPath, "OpenTelemetry.OpAmp.Client.dll"));
+			_logger.LogDebug("Loaded OpenTelemetry.OpAmp.Client assembly from isolated load context.");
+		}
+		catch (Exception ex)
+		{
+			_logger.LogDebug(ex, "Failed to load OpenTelemetry.OpAmp.Client via LoadFromAssemblyPath. Attempting to resolve path directly.");
+		}
+
+		try
+		{
+			opAmpAssembly = loadContext.LoadFromAssemblyPath(Path.Join(loadContext.OtelInstallationPath, "Google.Protobuf.dll"));
+			_logger.LogDebug("Loaded Google.Protobuf assembly from isolated load context.");
+		}
+		catch (Exception ex)
+		{
+			_logger.LogDebug(ex, "Failed to load Google.Protobuf.dll via LoadFromAssemblyPath. Attempting to resolve path directly.");
+		}
+
+		// If LoadFromAssemblyName failed, try to resolve the path directly from common locations
+		if (opAmpAssembly is null)
+		{
+			var potentialPaths = new List<string>
+			{
+				Path.Combine(AppContext.BaseDirectory, "OpenTelemetry.OpAmp.Client.dll"),
+				Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "OpenTelemetry.OpAmp.Client.dll"),
+			};
+
+			// Check the instrumentation directory if available
+			var otelInstallDir = Environment.GetEnvironmentVariable("OTEL_DOTNET_AUTO_INSTALL_DIR");
+			if (!string.IsNullOrEmpty(otelInstallDir))
+			{
+				potentialPaths.Add(Path.Combine(otelInstallDir, "net", "OpenTelemetry.OpAmp.Client.dll"));
+			}
+
+			var foundPath = potentialPaths.FirstOrDefault(p => File.Exists(p));
+			if (foundPath != null)
+			{
+				try
+				{
+					_logger.LogDebug("Attempting to load OpenTelemetry.OpAmp.Client from path: {Path}", foundPath);
+					opAmpAssembly = loadContext.LoadFromAssemblyPath(foundPath);
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "Failed to load OpenTelemetry.OpAmp.Client from path: {Path}", foundPath);
+				}
+			}
+		}
 
 		if (opAmpAssembly is null)
 		{
