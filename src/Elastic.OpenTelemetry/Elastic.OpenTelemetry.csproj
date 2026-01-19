@@ -49,9 +49,6 @@
     
     <PackageReference Include="Polyfill" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
     <PackageReference Include="NetEscapades.EnumGenerators" PrivateAssets="all" ExcludeAssets="runtime" />
-    
-    <!-- ILMerge tooling for assembly internalization -->
-    <PackageReference Include="ILMerge" ExcludeAssets="runtime" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' != 'net9.0'">
@@ -74,59 +71,5 @@
     <Content Remove="README.md" />
   </ItemGroup>
 
-  <!-- ILMerge Target: Internalizes and repacks Google.Protobuf and OpenTelemetry.OpAmp.Client into this assembly -->
-  <!-- This target merges Google.Protobuf and OpenTelemetry.OpAmp.Client into the main assembly 
-       with /internalize to avoid version conflicts with consuming applications. -->
-  <Target Name="ILMerge" AfterTargets="Build">
-    <PropertyGroup>
-      <ILMergePath>$(NuGetPackageRoot)\ilmerge\3.0.41\tools\net452</ILMergePath>
-      <ILMergeExe>$(ILMergePath)\ILMerge.exe</ILMergeExe>
-      <GoogleProtobufDll>$(OutputPath)Google.Protobuf.dll</GoogleProtobufDll>
-      <OpAmpClientDll>$(OutputPath)OpenTelemetry.OpAmp.Client.dll</OpAmpClientDll>
-      <MainAssemblyDll>$(OutputPath)Elastic.OpenTelemetry.dll</MainAssemblyDll>
-      <MergedAssemblyDll>$(OutputPath)Elastic.OpenTelemetry.merged.dll</MergedAssemblyDll>
-      <ILMergeLogFile>$(OutputPath)ilmerge.log</ILMergeLogFile>
-    </PropertyGroup>
-
-    <!-- Check for required assemblies and build command with /lib to resolve transitive dependencies -->
-    <PropertyGroup Condition="Exists('$(GoogleProtobufDll)') AND Exists('$(OpAmpClientDll)')">
-      <ILMergeCommand>&quot;$(ILMergeExe)&quot; /log:&quot;$(ILMergeLogFile)&quot; /internalize /targetplatform:v4 /lib:&quot;$(OutputPath.TrimEnd('\'))&quot; /out:&quot;$(MergedAssemblyDll)&quot; &quot;$(MainAssemblyDll)&quot; &quot;$(GoogleProtobufDll)&quot; &quot;$(OpAmpClientDll)&quot;</ILMergeCommand>
-      <ShouldMerge>true</ShouldMerge>
-    </PropertyGroup>
-
-    <Message Text="ILMerge: Attempting to merge assemblies..." Importance="high" Condition="'$(ShouldMerge)' == 'true'" />
-    <Message Text="ILMerge exe: $(ILMergeExe)" Importance="high" Condition="'$(ShouldMerge)' == 'true'" />
-    <Message Text="Main assembly: $(MainAssemblyDll)" Importance="high" Condition="'$(ShouldMerge)' == 'true'" />
-    <Message Text="Protobuf: $(GoogleProtobufDll)" Importance="high" Condition="'$(ShouldMerge)' == 'true'" />
-    <Message Text="OpAmp: $(OpAmpClientDll)" Importance="high" Condition="'$(ShouldMerge)' == 'true'" />
-
-    <!-- Run ILMerge to merge the assemblies - FAIL on error so we can see what's wrong -->
-    <Exec 
-      Command="$(ILMergeCommand)" 
-      Condition="'$(ShouldMerge)' == 'true'"
-      ContinueOnError="false" />
-
-    <!-- Check if merge succeeded -->
-    <PropertyGroup>
-      <MergedSuccess>false</MergedSuccess>
-      <MergedSuccess Condition="Exists('$(MergedAssemblyDll)')">true</MergedSuccess>
-    </PropertyGroup>
-
-    <Message Text="ILMerge: Merged file created successfully" Importance="high" Condition="'$(MergedSuccess)' == 'true'" />
-    <Message Text="ILMerge: WARNING - Merged file was not created!" Importance="high" Condition="'$(MergedSuccess)' != 'true'" />
-
-    <!-- Replace original assembly with merged version only if merge succeeded -->
-    <Exec Command="move /Y &quot;$(MergedAssemblyDll)&quot; &quot;$(MainAssemblyDll)&quot;" 
-      Condition="'$(MergedSuccess)' == 'true'"
-      ContinueOnError="false" />
-
-    <!-- Remove the now-internalized dependency assemblies only if merge succeeded -->
-    <Delete Files="$(GoogleProtobufDll)" Condition="'$(MergedSuccess)' == 'true'" />
-    <Delete Files="$(OpAmpClientDll)" Condition="'$(MergedSuccess)' == 'true'" />
-    
-    <Message Text="ILMerge: Completed - Google.Protobuf and OpenTelemetry.OpAmp.Client merged into Elastic.OpenTelemetry.dll" Importance="high" Condition="'$(MergedSuccess)' == 'true'" />
-    <Message Text="ILMerge: Check $(ILMergeLogFile) for details" Importance="high" Condition="Exists('$(ILMergeLogFile)')" />
-  </Target>
-  
 </Project>
 

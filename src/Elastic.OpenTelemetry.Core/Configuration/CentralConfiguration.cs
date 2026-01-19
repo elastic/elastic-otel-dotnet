@@ -102,60 +102,61 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 		_logger.LogDebug("Initializing OpAmp client in isolated load context to prevent dependency version conflicts.");
 
 		var appProtobufVersion = typeof(Google.Protobuf.MessageParser).Assembly.GetName().Version;
-		_logger.LogDebug("Application Protobuf Version: {appProtobufVersion}", appProtobufVersion);
+		_logger.LogDebug("Application Protobuf Version: {AppProtobufVersion}", appProtobufVersion);
 
 		var loadContext = new OpAmpLoadContext(logger);
 
+		// IMPORTANT: Load Google.Protobuf FIRST before OpAmpClient
+		// This ensures that when OpAmpClient is loaded, it will use the Protobuf from the isolated ALC
+		System.Reflection.Assembly? protobufAssembly = null;
 		System.Reflection.Assembly? opAmpAssembly = null;
 
-		try
-		{
-			opAmpAssembly = loadContext.LoadFromAssemblyPath(Path.Join(loadContext.OtelInstallationPath, "OpenTelemetry.OpAmp.Client.dll"));
-			_logger.LogDebug("Loaded OpenTelemetry.OpAmp.Client assembly from isolated load context.");
-		}
-		catch (Exception ex)
-		{
-			_logger.LogDebug(ex, "Failed to load OpenTelemetry.OpAmp.Client via LoadFromAssemblyPath. Attempting to resolve path directly.");
-		}
+		// Step 1: Pre-load Google.Protobuf into the isolated ALC
+		_logger.LogDebug("Pre-loading Google.Protobuf into isolated ALC...");
 
-		try
+		if (!string.IsNullOrEmpty(loadContext.OtelInstallationPath))
 		{
-			opAmpAssembly = loadContext.LoadFromAssemblyPath(Path.Join(loadContext.OtelInstallationPath, "Google.Protobuf.dll"));
-			_logger.LogDebug("Loaded Google.Protobuf assembly from isolated load context.");
-		}
-		catch (Exception ex)
-		{
-			_logger.LogDebug(ex, "Failed to load Google.Protobuf.dll via LoadFromAssemblyPath. Attempting to resolve path directly.");
-		}
-
-		// If LoadFromAssemblyName failed, try to resolve the path directly from common locations
-		if (opAmpAssembly is null)
-		{
-			var potentialPaths = new List<string>
-			{
-				Path.Combine(AppContext.BaseDirectory, "OpenTelemetry.OpAmp.Client.dll"),
-				Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "OpenTelemetry.OpAmp.Client.dll"),
-			};
-
-			// Check the instrumentation directory if available
-			var otelInstallDir = Environment.GetEnvironmentVariable("OTEL_DOTNET_AUTO_INSTALL_DIR");
-			if (!string.IsNullOrEmpty(otelInstallDir))
-			{
-				potentialPaths.Add(Path.Combine(otelInstallDir, "net", "OpenTelemetry.OpAmp.Client.dll"));
-			}
-
-			var foundPath = potentialPaths.FirstOrDefault(p => File.Exists(p));
-			if (foundPath != null)
+			var protobufPath = Path.Combine(loadContext.OtelInstallationPath, "Google.Protobuf.dll");
+			if (File.Exists(protobufPath))
 			{
 				try
 				{
-					_logger.LogDebug("Attempting to load OpenTelemetry.OpAmp.Client from path: {Path}", foundPath);
-					opAmpAssembly = loadContext.LoadFromAssemblyPath(foundPath);
+					protobufAssembly = loadContext.LoadFromAssemblyPath(protobufPath);
+					var loadedVersion = protobufAssembly.GetName().Version;
+					_logger.LogDebug("Successfully loaded Google.Protobuf from isolated ALC. Version: {LoadedVersion}", loadedVersion);
 				}
 				catch (Exception ex)
 				{
-					_logger.LogError(ex, "Failed to load OpenTelemetry.OpAmp.Client from path: {Path}", foundPath);
+					_logger.LogError(ex, "Failed to load Google.Protobuf from path: {ProtobufPath}", protobufPath);
 				}
+			}
+			else
+			{
+				_logger.LogWarning("Google.Protobuf.dll not found at: {ProtobufPath}", protobufPath);
+			}
+		}
+
+		// Step 2: Load OpenTelemetry.OpAmp.Client
+		_logger.LogDebug("Loading OpenTelemetry.OpAmp.Client from isolated ALC...");
+
+		if (!string.IsNullOrEmpty(loadContext.OtelInstallationPath))
+		{
+			var opAmpPath = Path.Combine(loadContext.OtelInstallationPath, "OpenTelemetry.OpAmp.Client.dll");
+			if (File.Exists(opAmpPath))
+			{
+				try
+				{
+					opAmpAssembly = loadContext.LoadFromAssemblyPath(opAmpPath);
+					_logger.LogDebug("Successfully loaded OpenTelemetry.OpAmp.Client from isolated ALC.");
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "Failed to load OpenTelemetry.OpAmp.Client from path: {OpAmpPath}", opAmpPath);
+				}
+			}
+			else
+			{
+				_logger.LogWarning("OpenTelemetry.OpAmp.Client.dll not found at: {OpAmpPath}", opAmpPath);
 			}
 		}
 

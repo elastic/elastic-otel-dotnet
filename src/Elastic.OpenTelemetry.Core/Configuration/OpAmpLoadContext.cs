@@ -51,7 +51,7 @@ internal sealed class OpAmpLoadContext : AssemblyLoadContext
 		_logger.LogDebug("OpAmpLoadContext: Initializing isolated load context for OpenTelemetry OpAmp dependencies for '{OtelInstallationPath}'",
 			otelInstallationPath ?? "<null>");
 
-		_resolver = new AssemblyDependencyResolver(otelInstallationPath!);
+		//_resolver = new AssemblyDependencyResolver(otelInstallationPath!);
 	}
 
 	public string? OtelInstallationPath => _otelInstallationPath;
@@ -59,15 +59,10 @@ internal sealed class OpAmpLoadContext : AssemblyLoadContext
 	[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2026: RequiresUnreferencedCode", Justification = "The calls to this ALC will be guarded by a runtime check")]
 	protected override Assembly? Load(AssemblyName assemblyName)
 	{
-		if (_resolver is null)
-		{
-			// Fallback to default resolution if resolver is not initialized
-			_logger.LogDebug("OpAmpLoadContext is not initialized. Falling back to default resolution for '{AssemblyName}'",
-				assemblyName.Name);
+		_logger.LogDebug("OpAmpLoadContext.Load() called for assembly: '{AssemblyName}' version {Version}", 
+			assemblyName.Name, assemblyName.Version);
 
-			return null;
-		}
-
+		// Only intercept known problematic assemblies that need isolation
 		if (assemblyName.Name is not "Google.Protobuf" and not "OpenTelemetry.OpAmp.Client")
 		{
 			_logger.LogDebug("OpAmpLoadContext: Assembly '{AssemblyName}' is not targeted for isolation. Falling back to default resolution.",
@@ -76,19 +71,56 @@ internal sealed class OpAmpLoadContext : AssemblyLoadContext
 			return null;
 		}
 
-		var assemblyPath = _resolver.ResolveAssemblyToPath(assemblyName);
-
-		if (assemblyPath is not null)
+		if (_resolver is null)
 		{
-			_logger.LogDebug("OpAmpLoadContext: Resolving assembly '{AssemblyName}' to path '{AssemblyPath}'",
-				assemblyName.Name, assemblyPath);
+			_logger.LogDebug("OpAmpLoadContext: Resolver is not initialized for '{AssemblyName}'. Attempting direct path resolution.",
+				assemblyName.Name);
 
-			return LoadFromAssemblyPath(assemblyPath);
+			// Try direct path resolution if resolver is not initialized
+			if (!string.IsNullOrEmpty(_otelInstallationPath))
+			{
+				var assemblyPath = Path.Combine(_otelInstallationPath, $"{assemblyName.Name}.dll");
+				if (File.Exists(assemblyPath))
+				{
+					try
+					{
+						_logger.LogDebug("OpAmpLoadContext: Loading '{AssemblyName}' from path: {AssemblyPath}", 
+							assemblyName.Name, assemblyPath);
+						return LoadFromAssemblyPath(assemblyPath);
+					}
+					catch (Exception ex)
+					{
+						_logger.LogError(ex, "OpAmpLoadContext: Failed to load '{AssemblyName}' from {AssemblyPath}", 
+							assemblyName.Name, assemblyPath);
+					}
+				}
+			}
+
+			return null;
+		}
+
+		var resolvedPath = _resolver.ResolveAssemblyToPath(assemblyName);
+
+		if (resolvedPath is not null)
+		{
+			_logger.LogDebug("OpAmpLoadContext: Resolver resolved '{AssemblyName}' to path: {ResolvedPath}",
+				assemblyName.Name, resolvedPath);
+
+			try
+			{
+				return LoadFromAssemblyPath(resolvedPath);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "OpAmpLoadContext: Failed to load '{AssemblyName}' from resolved path: {ResolvedPath}", 
+					assemblyName.Name, resolvedPath);
+				throw;
+			}
 		}
 		else
 		{
-			_logger.LogWarning("OpAmpLoadContext: Failed to resolve assembly '{AssemblyName}' using the resolver. Falling back to default resolution.",
-				assemblyName.Name);
+			_logger.LogWarning("OpAmpLoadContext: Resolver could not resolve '{AssemblyName}' version {Version}. Falling back to default resolution.",
+				assemblyName.Name, assemblyName.Version);
 		}
 
 		return null;
