@@ -257,39 +257,43 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 			// Wrap the dynamically loaded client to avoid cross-ALC type casting
 			dynamic client = isolatedClient;
 			
-			// Use reflection to call Subscribe<RemoteConfigMessage> since RemoteConfigMessage comes from the isolated ALC
+			// Use dynamic invocation to avoid type checking issues with the bridge across ALCs
+			// The bridge implements HandleMessage which is what Subscribe expects
 #pragma warning disable IL2075 // Suppress due to reflection-based type loading in isolated context
 #pragma warning disable IL3050 // Suppress due to dynamic code used in guarded code path
 #pragma warning disable IL2060 // Suppress due to dynamic generic method construction
 			var remoteConfigMessageType = opAmpAssembly.GetType("OpenTelemetry.OpAmp.Client.Messages.RemoteConfigMessage")
 				?? throw new InvalidOperationException("RemoteConfigMessage type not found in isolated assembly");
 			
-			var subscribeMethod = opAmpClientType.GetMethod("Subscribe", 
-				System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance,
-				null,
-				new[] { typeof(object) },
-				null)
-				?? throw new InvalidOperationException("Subscribe method not found on OpAmpClient");
-
-			// Try to get the generic Subscribe<T> method
+			// Get the generic Subscribe<T> method
 			var genericSubscribeMethods = opAmpClientType.GetMethods(
 				System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
 				.Where(m => m.Name == "Subscribe" && m.IsGenericMethodDefinition)
 				.ToList();
 
-			if (genericSubscribeMethods.Count > 0)
+			if (genericSubscribeMethods.Count == 0)
 			{
-				// Make the generic method: Subscribe<RemoteConfigMessage>
-				var genericSubscribeMethod = genericSubscribeMethods[0].MakeGenericMethod(remoteConfigMessageType);
-				genericSubscribeMethod.Invoke(isolatedClient, new[] { _remoteConfigListener });
-				_logger.LogDebug("Called Subscribe<RemoteConfigMessage> via reflection");
+				throw new InvalidOperationException($"No generic Subscribe<T> method found on OpAmpClient. Available methods: {string.Join(", ", opAmpClientType.GetMethods().Select(m => m.Name).Distinct())}");
 			}
-			else
-			{
-				// Fallback to non-generic Subscribe if generic version doesn't exist
-				subscribeMethod.Invoke(isolatedClient, new[] { _remoteConfigListener });
-				_logger.LogDebug("Called Subscribe via reflection (non-generic)");
-			}
+
+			// Make the generic method: Subscribe<RemoteConfigMessage>
+			var genericSubscribeMethod = genericSubscribeMethods[0].MakeGenericMethod(remoteConfigMessageType);
+			
+			// Use reflection invoke instead of dynamic to avoid generic type inference issues
+			// Pass the bridge as an object - reflection handles the conversion
+#if NET8_0_OR_GREATER
+			var bridge = new IsolatedALCRemoteConfigMessageListenerBridge(_remoteConfigListener);
+			
+#pragma warning disable IL2055 // Suppress due to dynamic generic type construction in guarded code path
+			// Use reflection invoke directly with the already-specific generic method
+			// genericSubscribeMethod is Subscribe<RemoteConfigMessage> with the type parameter already bound
+			// Invoke with the bridge - reflection should handle structural compatibility
+			genericSubscribeMethod.Invoke(isolatedClient, new object[] { bridge });
+#pragma warning restore IL2055
+#else
+			genericSubscribeMethod.Invoke(isolatedClient, new object[] { _remoteConfigListener });
+#endif
+			_logger.LogDebug("Called Subscribe<RemoteConfigMessage> via reflection invoke");
 #pragma warning restore IL2060
 #pragma warning restore IL3050
 #pragma warning restore IL2075
@@ -453,114 +457,114 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 	}
 #endif
 
-	private async Task InitializeStartupAsync()
+private async Task InitializeStartupAsync()
+{
+	try
 	{
-		try
-		{
-			await _client.StartAsync(_startupCancellationTokenSource.Token).ConfigureAwait(false);
-			_isStarted = true;
-		}
-		catch (OperationCanceledException)
-		{
-			_startupFailed = true;
-		}
-		catch (Exception ex)
-		{
-			_logger.LogError(ex, "OpAmp client startup failed");
-			_startupFailed = true;
-		}
+		await _client.StartAsync(_startupCancellationTokenSource.Token).ConfigureAwait(false);
+		_isStarted = true;
 	}
-
-	internal bool IsStarted => _isStarted;
-
-	internal bool StartupFailed => _startupFailed;
-
-	internal async ValueTask WaitForStartupAsync(int timeoutMilliseconds = OpAmpBlockingStartTimeoutMilliseconds)
+	catch (OperationCanceledException)
 	{
-		try
-		{
-			using var timeoutCts = new CancellationTokenSource(timeoutMilliseconds);
-			using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token);
-
-			await Task.WhenAny(
-				_startupTask,
-				_remoteConfigListener.FirstMessageReceivedTask
-			).ConfigureAwait(false);
-		}
-		catch (OperationCanceledException)
-		{
-			_logger.LogDebug("Startup wait timeout after {TimeoutMilliseconds}ms", timeoutMilliseconds);
-		}
-		catch (Exception ex)
-		{
-			_logger.LogError(ex, "Error waiting for startup");
-		}
+		_startupFailed = true;
 	}
-
-	internal RemoteConfigMessage? WaitForRemoteConfig(int timeoutMilliseconds = OpAmpBlockingStartTimeoutMilliseconds)
+	catch (Exception ex)
 	{
-		try
-		{
-			var task = _remoteConfigListener.FirstMessageReceivedTask;
-			if (task.Wait(timeoutMilliseconds))
-			{
-				return task.Result;
-			}
-
-			_logger.LogDebug("Timeout waiting for remote config after {TimeoutMilliseconds}ms", timeoutMilliseconds);
-			return null;
-		}
-		catch (AggregateException ex) when (ex.InnerException is OperationCanceledException)
-		{
-			_logger.LogDebug("Cancelled waiting for remote config");
-			return null;
-		}
-		catch (Exception ex)
-		{
-			_logger.LogError(ex, "Error waiting for remote config");
-			return null;
-		}
+		_logger.LogError(ex, "OpAmp client startup failed");
+		_startupFailed = true;
 	}
+}
 
-	internal void Subscribe(ICentralConfigurationSubscriber subscriber)
+internal bool IsStarted => _isStarted;
+
+internal bool StartupFailed => _startupFailed;
+
+internal async ValueTask WaitForStartupAsync(int timeoutMilliseconds = OpAmpBlockingStartTimeoutMilliseconds)
+{
+	try
 	{
-		_subscribers.Add(subscriber);
-		_logger.LogDebug("Subscriber of type '{SubscriberType}' added to Central Configuration. Total subscribers: {SubscriberCount}", subscriber.GetType().Name, _subscribers.Count);
+		using var timeoutCts = new CancellationTokenSource(timeoutMilliseconds);
+		using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token);
+
+		await Task.WhenAny(
+			_startupTask,
+			_remoteConfigListener.FirstMessageReceivedTask
+		).ConfigureAwait(false);
 	}
-
-	public void Dispose()
+	catch (OperationCanceledException)
 	{
-		if (_disposed)
-			return;
-
-		_startupCancellationTokenSource.Cancel();
-		_subscribers.Clear();
-		_client.Dispose();
-		_startupCancellationTokenSource.Dispose();
-		_disposed = true;
-		GC.SuppressFinalize(this);
+		_logger.LogDebug("Startup wait timeout after {TimeoutMilliseconds}ms", timeoutMilliseconds);
 	}
-
-	public ValueTask DisposeAsync()
+	catch (Exception ex)
 	{
-		if (_disposed)
-#if NET
-			return ValueTask.CompletedTask;
-#else
-			return new ValueTask(Task.CompletedTask);
-#endif
+		_logger.LogError(ex, "Error waiting for startup");
+	}
+}
 
-		_startupCancellationTokenSource.Cancel();
-		_subscribers.Clear();
-		_client.Dispose();
-		_startupCancellationTokenSource.Dispose();
-		_disposed = true;
-		GC.SuppressFinalize(this);
+internal RemoteConfigMessage? WaitForRemoteConfig(int timeoutMilliseconds = OpAmpBlockingStartTimeoutMilliseconds)
+{
+	try
+	{
+		var task = _remoteConfigListener.FirstMessageReceivedTask;
+		if (task.Wait(timeoutMilliseconds))
+		{
+			return task.Result;
+		}
 
+		_logger.LogDebug("Timeout waiting for remote config after {TimeoutMilliseconds}ms", timeoutMilliseconds);
+		return null;
+	}
+	catch (AggregateException ex) when (ex.InnerException is OperationCanceledException)
+	{
+		_logger.LogDebug("Cancelled waiting for remote config");
+		return null;
+	}
+	catch (Exception ex)
+	{
+		_logger.LogError(ex, "Error waiting for remote config");
+		return null;
+	}
+}
+
+internal void Subscribe(ICentralConfigurationSubscriber subscriber)
+{
+	_subscribers.Add(subscriber);
+	_logger.LogDebug("Subscriber of type '{SubscriberType}' added to Central Configuration. Total subscribers: {SubscriberCount}", subscriber.GetType().Name, _subscribers.Count);
+}
+
+public void Dispose()
+{
+	if (_disposed)
+		return;
+
+	_startupCancellationTokenSource.Cancel();
+	_subscribers.Clear();
+	_client.Dispose();
+	_startupCancellationTokenSource.Dispose();
+	_disposed = true;
+	GC.SuppressFinalize(this);
+}
+
+public ValueTask DisposeAsync()
+{
+	if (_disposed)
 #if NET
 		return ValueTask.CompletedTask;
 #else
 		return new ValueTask(Task.CompletedTask);
 #endif
-	}
+
+	_startupCancellationTokenSource.Cancel();
+	_subscribers.Clear();
+	_client.Dispose();
+	_startupCancellationTokenSource.Dispose();
+	_disposed = true;
+	GC.SuppressFinalize(this);
+
+#if NET
+	return ValueTask.CompletedTask;
+#else
+	return new ValueTask(Task.CompletedTask);
+#endif
+}
 }

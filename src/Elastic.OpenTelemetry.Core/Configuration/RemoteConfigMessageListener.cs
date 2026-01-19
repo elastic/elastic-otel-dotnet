@@ -19,3 +19,36 @@ internal class RemoteConfigMessageListener : IOpAmpListener<RemoteConfigMessage>
 
 	internal Task<RemoteConfigMessage> FirstMessageReceivedTask => _firstMessageReceived.Task;
 }
+
+#if NET8_0_OR_GREATER
+/// <summary>
+/// Bridge adapter for RemoteConfigMessageListener to work with isolated ALC OpAmpClient.
+/// This is needed because RemoteConfigMessageListener implements IOpAmpListener from the default ALC,
+/// but the isolated ALCs OpAmpClient expects listeners from the isolated ALC.
+/// These are different types across ALCs, so this adapter uses dynamic invocation to forward calls.
+/// </summary>
+[System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic invocation is only used when IsDynamicCodeSupported is true")]
+internal class IsolatedALCRemoteConfigMessageListenerBridge
+{
+	private readonly RemoteConfigMessageListener _listener;
+
+	internal IsolatedALCRemoteConfigMessageListenerBridge(RemoteConfigMessageListener listener) => _listener = listener;
+
+	/// <summary>
+	/// Forwards HandleMessage calls from the isolated ALC to the default ALC listener.
+	/// The message parameter is from the isolated ALC but is structurally identical.
+	/// </summary>
+	public void HandleMessage(dynamic message)
+	{
+		try
+		{
+			// Forward to listener - works because messages are structurally identical across ALCs
+			_listener.HandleMessage((RemoteConfigMessage)message);
+		}
+		catch (Exception ex)
+		{
+			System.Diagnostics.Debug.WriteLine($"IsolatedALCRemoteConfigMessageListenerBridge.HandleMessage failed: {ex.Message}");
+		}
+	}
+}
+#endif
