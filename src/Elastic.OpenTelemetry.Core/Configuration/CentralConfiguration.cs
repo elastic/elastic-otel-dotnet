@@ -72,6 +72,8 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 		_startupCancellationTokenSource = new CancellationTokenSource();
 		_remoteConfigListener = new RemoteConfigMessageListener();
 
+		_logger.LogDebug("CentralConfiguration constructor starting. OpAmp enabled check...");
+
 		if (options.IsOpAmpEnabled() is false)
 		{
 			_client = new EmptyOpAmpClient();
@@ -93,86 +95,111 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 			_isStarted = false;
 			_startupFailed = true;
 
-			_logger.LogError("Dynamic code is not supported in the current runtime. OpAmp client will not be initialized.");
+			_logger.LogError("Dynamic code is not supported on the current runtime. OpAmp client will not be initialized.");
 
 			return;
 		}
 
-		// Initialize isolated loading of OpAmp dependencies to prevent version conflicts
-		_logger.LogDebug("Initializing OpAmp client in isolated load context to prevent dependency version conflicts.");
-
-		var appProtobufVersion = typeof(Google.Protobuf.MessageParser).Assembly.GetName().Version;
-		_logger.LogDebug("Application Protobuf Version: {AppProtobufVersion}", appProtobufVersion);
-
-		var loadContext = new OpAmpLoadContext(logger);
-
-		// IMPORTANT: Load Google.Protobuf FIRST before OpAmpClient
-		// This ensures that when OpAmpClient is loaded, it will use the Protobuf from the isolated ALC
-		System.Reflection.Assembly? protobufAssembly = null;
-		System.Reflection.Assembly? opAmpAssembly = null;
-
-		// Step 1: Pre-load Google.Protobuf into the isolated ALC
-		_logger.LogDebug("Pre-loading Google.Protobuf into isolated ALC...");
-
-		if (!string.IsNullOrEmpty(loadContext.OtelInstallationPath))
+		try
 		{
-			var protobufPath = Path.Combine(loadContext.OtelInstallationPath, "Google.Protobuf.dll");
-			if (File.Exists(protobufPath))
+			// Initialize isolated loading of OpAmp dependencies to prevent version conflicts
+			_logger.LogDebug("Initializing OpAmp client in isolated load context to prevent dependency version conflicts.");
+
+			var appProtobufVersion = typeof(Google.Protobuf.MessageParser).Assembly.GetName().Version;
+			_logger.LogDebug("Application Protobuf Version: {AppProtobufVersion}", appProtobufVersion);
+
+			var loadContext = new OpAmpLoadContext(logger);
+			_logger.LogDebug("OpAmpLoadContext created successfully");
+
+			// IMPORTANT: Load Google.Protobuf FIRST before OpAmpClient
+			// This ensures that when OpAmpClient is loaded, it will use the Protobuf from the isolated ALC
+			System.Reflection.Assembly? protobufAssembly = null;
+			System.Reflection.Assembly? opAmpAssembly = null;
+
+			// Step 1: Pre-load Google.Protobuf into the isolated ALC
+			_logger.LogDebug("Pre-loading Google.Protobuf into isolated ALC...");
+
+			if (!string.IsNullOrEmpty(loadContext.OtelInstallationPath))
 			{
-				try
+				var protobufPath = Path.Combine(loadContext.OtelInstallationPath, "Google.Protobuf.dll");
+				_logger.LogDebug("Attempting to load Google.Protobuf from: {ProtobufPath}", protobufPath);
+				
+				if (File.Exists(protobufPath))
 				{
-					protobufAssembly = loadContext.LoadFromAssemblyPath(protobufPath);
-					var loadedVersion = protobufAssembly.GetName().Version;
-					_logger.LogDebug("Successfully loaded Google.Protobuf from isolated ALC. Version: {LoadedVersion}", loadedVersion);
+					try
+					{
+						protobufAssembly = loadContext.LoadFromAssemblyPath(protobufPath);
+						var loadedVersion = protobufAssembly.GetName().Version;
+						_logger.LogDebug("Successfully loaded Google.Protobuf from isolated ALC. Version: {LoadedVersion}", loadedVersion);
+						_logger.LogDebug("  File: {Path}", protobufPath);
+						_logger.LogDebug("  Expected version: 3.31.1.0");
+						
+						if (loadedVersion?.ToString() != "3.31.1.0")
+						{
+							_logger.LogWarning("Google.Protobuf version mismatch. Expected 3.31.1.0 but got {LoadedVersion}. " +
+								"This may cause assembly binding issues.", loadedVersion);
+						}
+					}
+					catch (FileLoadException fex)
+					{
+						_logger.LogError(fex, "FileLoadException loading Google.Protobuf - likely manifest version mismatch. " +
+							"The DLL at {ProtobufPath} has an internal version that doesn't match expectations.", protobufPath);
+						throw;
+					}
+					catch (Exception ex)
+					{
+						_logger.LogError(ex, "Failed to load Google.Protobuf from path: {ProtobufPath}", protobufPath);
+						throw;
+					}
 				}
-				catch (Exception ex)
+				else
 				{
-					_logger.LogError(ex, "Failed to load Google.Protobuf from path: {ProtobufPath}", protobufPath);
+					_logger.LogWarning("Google.Protobuf.dll not found at: {ProtobufPath}", protobufPath);
 				}
 			}
 			else
 			{
-				_logger.LogWarning("Google.Protobuf.dll not found at: {ProtobufPath}", protobufPath);
+				_logger.LogWarning("OtelInstallationPath is null or empty. Cannot pre-load Google.Protobuf.");
 			}
-		}
 
-		// Step 2: Load OpenTelemetry.OpAmp.Client
-		_logger.LogDebug("Loading OpenTelemetry.OpAmp.Client from isolated ALC...");
+			// Step 2: Load OpenTelemetry.OpAmp.Client
+			_logger.LogDebug("Loading OpenTelemetry.OpAmp.Client from isolated ALC...");
 
-		if (!string.IsNullOrEmpty(loadContext.OtelInstallationPath))
-		{
-			var opAmpPath = Path.Combine(loadContext.OtelInstallationPath, "OpenTelemetry.OpAmp.Client.dll");
-			if (File.Exists(opAmpPath))
+			if (!string.IsNullOrEmpty(loadContext.OtelInstallationPath))
 			{
-				try
+				var opAmpPath = Path.Combine(loadContext.OtelInstallationPath, "OpenTelemetry.OpAmp.Client.dll");
+				_logger.LogDebug("Attempting to load OpenTelemetry.OpAmp.Client from: {OpAmpPath}", opAmpPath);
+				
+				if (File.Exists(opAmpPath))
 				{
-					opAmpAssembly = loadContext.LoadFromAssemblyPath(opAmpPath);
-					_logger.LogDebug("Successfully loaded OpenTelemetry.OpAmp.Client from isolated ALC.");
+					try
+					{
+						opAmpAssembly = loadContext.LoadFromAssemblyPath(opAmpPath);
+						_logger.LogDebug("Successfully loaded OpenTelemetry.OpAmp.Client from isolated ALC.");
+					}
+					catch (Exception ex)
+					{
+						_logger.LogError(ex, "Failed to load OpenTelemetry.OpAmp.Client from path: {OpAmpPath}", opAmpPath);
+						throw;
+					}
 				}
-				catch (Exception ex)
+				else
 				{
-					_logger.LogError(ex, "Failed to load OpenTelemetry.OpAmp.Client from path: {OpAmpPath}", opAmpPath);
+					_logger.LogWarning("OpenTelemetry.OpAmp.Client.dll not found at: {OpAmpPath}", opAmpPath);
 				}
 			}
-			else
+
+			if (opAmpAssembly is null)
 			{
-				_logger.LogWarning("OpenTelemetry.OpAmp.Client.dll not found at: {OpAmpPath}", opAmpPath);
+				_logger.LogError("Failed to load OpenTelemetry.OpAmp.Client assembly in isolated load context. OpAmp client will not be initialized.");
+				_client = new EmptyOpAmpClient();
+				_startupTask = Task.CompletedTask;
+				_isStarted = false;
+				_startupFailed = true;
+
+				return;
 			}
-		}
 
-		if (opAmpAssembly is null)
-		{
-			_client = new EmptyOpAmpClient();
-			_startupTask = Task.CompletedTask;
-			_isStarted = false;
-			_startupFailed = true;
-
-			_logger.LogError("Failed to load OpenTelemetry.OpAmp.Client assembly in isolated load context. OpAmp client will not be initialized.");
-
-			return;
-		}
-		else
-		{
 			var opAmpClientType = opAmpAssembly.GetType("OpenTelemetry.OpAmp.Client.OpAmpClient");
 			if (opAmpClientType is null)
 			{
@@ -195,25 +222,24 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 				return;
 			}
 
-			try
-			{
-				// Create a delegate with the correct signature from the isolated ALC
-				var configDelegate = CreateConfigurationDelegate(optionsType, opAmpAssembly, options);
+			// Create a delegate with the correct signature from the isolated ALC
+			var configDelegate = CreateConfigurationDelegate(optionsType, opAmpAssembly, options);
 #pragma warning disable IL2072 // Suppress due to reflection-based type loading in isolated context
-				var client = (OpAmpClient)Activator.CreateInstance(opAmpClientType, configDelegate)!;
+			var client = (OpAmpClient)Activator.CreateInstance(opAmpClientType, configDelegate)!;
 #pragma warning restore IL2072
-				client.Subscribe(_remoteConfigListener);
-				_client = new WrappedOpAmpClient(client);
-			}
-			catch (Exception ex)
-			{
-				_logger.LogError(ex, "Failed to create OpAmpClient from isolated context.");
-				_client = new EmptyOpAmpClient();
-				_startupTask = Task.CompletedTask;
-				_isStarted = false;
-				_startupFailed = true;
-				return;
-			}
+			client.Subscribe(_remoteConfigListener);
+			_client = new WrappedOpAmpClient(client);
+			
+			_logger.LogInformation("OpAmp client successfully initialized from isolated ALC");
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Exception during isolated ALC OpAmp client initialization. Falling back to EmptyOpAmpClient.");
+			_client = new EmptyOpAmpClient();
+			_startupTask = Task.CompletedTask;
+			_isStarted = false;
+			_startupFailed = true;
+			return;
 		}
 #else
 		_logger.LogDebug("Initializing OpAmp client from default context.");

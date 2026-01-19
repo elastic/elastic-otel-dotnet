@@ -21,7 +21,7 @@ namespace Elastic.OpenTelemetry.Core.Configuration;
 /// 
 /// Once an assembly is loaded in this context, its dependencies are resolved within this
 /// context as well, preventing version conflicts with the default ALC.
-/// 
+///
 /// Note: This class is only compiled for .NET 8 and newer frameworks that support AssemblyLoadContext.
 /// </summary>
 internal sealed class OpAmpLoadContext : AssemblyLoadContext
@@ -51,10 +51,72 @@ internal sealed class OpAmpLoadContext : AssemblyLoadContext
 		_logger.LogDebug("OpAmpLoadContext: Initializing isolated load context for OpenTelemetry OpAmp dependencies for '{OtelInstallationPath}'",
 			otelInstallationPath ?? "<null>");
 
-		//_resolver = new AssemblyDependencyResolver(otelInstallationPath!);
+		_resolver = new AssemblyDependencyResolver(otelInstallationPath!);
+		
+		// Hook into AssemblyResolve to handle version mismatches
+		Resolving += OnAssemblyResolve;
 	}
 
 	public string? OtelInstallationPath => _otelInstallationPath;
+
+	private System.Reflection.Assembly? OnAssemblyResolve(AssemblyLoadContext context, AssemblyName assemblyName)
+	{
+		if (assemblyName.Name is not "Google.Protobuf" and not "OpenTelemetry.OpAmp.Client")
+		{
+			return null;
+		}
+
+		_logger.LogDebug("OpAmpLoadContext.OnAssemblyResolve() called for: '{AssemblyName}' version {Version}",
+			assemblyName.Name, assemblyName.Version);
+
+		// Try to load from the resolver first
+		if (_resolver is not null)
+		{
+			try
+			{
+				var resolvedPath = _resolver.ResolveAssemblyToPath(assemblyName);
+				if (resolvedPath is not null && File.Exists(resolvedPath))
+				{
+					_logger.LogDebug("OpAmpLoadContext.OnAssemblyResolve: Resolver found '{AssemblyName}' at {ResolvedPath}",
+						assemblyName.Name, resolvedPath);
+#pragma warning disable IL2026
+					return LoadFromAssemblyPath(resolvedPath);
+#pragma warning restore IL2026
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.LogWarning(ex, "OpAmpLoadContext.OnAssemblyResolve: Resolver failed for '{AssemblyName}'", assemblyName.Name);
+			}
+		}
+
+		// Fallback: try direct path resolution
+		if (!string.IsNullOrEmpty(_otelInstallationPath))
+		{
+			var assemblyPath = Path.Combine(_otelInstallationPath, $"{assemblyName.Name}.dll");
+			if (File.Exists(assemblyPath))
+			{
+				try
+				{
+					_logger.LogDebug("OpAmpLoadContext.OnAssemblyResolve: Loading '{AssemblyName}' from direct path: {AssemblyPath}",
+						assemblyName.Name, assemblyPath);
+#pragma warning disable IL2026
+					return LoadFromAssemblyPath(assemblyPath);
+#pragma warning restore IL2026
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "OpAmpLoadContext.OnAssemblyResolve: Failed to load '{AssemblyName}' from {AssemblyPath}",
+						assemblyName.Name, assemblyPath);
+				}
+			}
+		}
+
+		_logger.LogDebug("OpAmpLoadContext.OnAssemblyResolve: Could not resolve '{AssemblyName}' version {Version}",
+			assemblyName.Name, assemblyName.Version);
+
+		return null;
+	}
 
 	[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2026: RequiresUnreferencedCode", Justification = "The calls to this ALC will be guarded by a runtime check")]
 	protected override Assembly? Load(AssemblyName assemblyName)
@@ -86,7 +148,9 @@ internal sealed class OpAmpLoadContext : AssemblyLoadContext
 					{
 						_logger.LogDebug("OpAmpLoadContext: Loading '{AssemblyName}' from path: {AssemblyPath}", 
 							assemblyName.Name, assemblyPath);
+#pragma warning disable IL2026
 						return LoadFromAssemblyPath(assemblyPath);
+#pragma warning restore IL2026
 					}
 					catch (Exception ex)
 					{
