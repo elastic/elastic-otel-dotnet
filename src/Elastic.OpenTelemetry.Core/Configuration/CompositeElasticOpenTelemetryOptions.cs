@@ -14,6 +14,7 @@ using Elastic.OpenTelemetry.Diagnostics;
 using Elastic.OpenTelemetry.SemanticConventions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using OpenTelemetry.OpAmp.Client.Messages;
 using static System.Environment;
 using static System.Runtime.InteropServices.RuntimeInformation;
@@ -351,35 +352,47 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 		init => _resourceAttributes.AssignFromProperty(value);
 	}
 
-	internal bool IsOpAmpEnabled()
+	internal bool IsOpAmpEnabled(ILogger? logger = null)
 	{
+		logger ??= NullLogger.Instance;
+
 		// If we've already evaluated the configuration, return the cached value.
 		if (_isOpAmpEnabled.HasValue)
+		{
+			logger.LogDebug("OpAMP enabled cached value: {IsOpAmpEnabled}", _isOpAmpEnabled.Value);
 			return _isOpAmpEnabled.Value;
+		}
 
 		// OpAMP requires an endpoint, an auth header and resource attributes to function.
 		if (string.IsNullOrEmpty(OpAmpEndpoint) || string.IsNullOrEmpty(OpAmpHeaders) || (string.IsNullOrEmpty(ResourceAttributes) && string.IsNullOrEmpty(ServiceName)))
 		{
+			logger.LogDebug("OpAMP required environment variables were not present");
 			return SetAndReturn(false);
 		}
 
 		if (!OpAmpHeaders!.Contains(ApiKeyAuthorizationHeaderPrefix, StringComparison.OrdinalIgnoreCase))
 		{
+			logger.LogDebug("OpAMP required authorization header not present");
 			return SetAndReturn(false);
 		}
 
 		// OpAMP requires at minimum the service.name to be set so central configuration can locate the correct configuration.
 		if (string.IsNullOrEmpty(ServiceName))
+		{
+			logger.LogDebug("OpAMP setting service name from resource attributes");
 			ServiceName = ExtractValueForKey(ResourceAttributes!, ResourceSemanticConventions.AttributeServiceName);
+		}
 
 		if (string.IsNullOrEmpty(ServiceName))
 		{
+			logger.LogDebug("OpAMP required service name not present");
 			return SetAndReturn(false);
 		}
 
 		// Optionally extract and cache service version if present
 		ServiceVersion = ExtractValueForKey(ResourceAttributes!, ResourceSemanticConventions.AttributeServiceVersion);
 
+		logger.LogDebug("OpAMP is enabled via configuration");
 		return SetAndReturn(true);
 
 		bool SetAndReturn(bool value)

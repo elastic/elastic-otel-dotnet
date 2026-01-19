@@ -152,14 +152,16 @@ internal static class ElasticOpenTelemetry
 			
 			var logger = new CompositeLogger(options);
 
-			if (options.IsOpAmpEnabled())
+			if (options.IsOpAmpEnabled(logger))
 			{
+				logger.LogInformation("OpAmp is enabled, attempting to fetch central configuration");
+
 				var centralConfig = new CentralConfiguration(options, logger);
 				var remoteConfig = centralConfig.WaitForRemoteConfig(3000); // Wait up to 3 seconds for a response
 
 				if (remoteConfig is not null && remoteConfig.AgentConfigMap.ContainsKey("elastic"))
 				{
-					// TODO - Log
+					logger.LogInformation("Central configuration fetched successfully");
 
 					var config = remoteConfig.AgentConfigMap["elastic"];
 

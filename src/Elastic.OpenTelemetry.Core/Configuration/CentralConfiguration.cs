@@ -2,19 +2,21 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
-using System;
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
 using Elastic.OpenTelemetry.Configuration;
-using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry.OpAmp.Client;
 using OpenTelemetry.OpAmp.Client.Messages;
-using OpenTelemetry.OpAmp.Client.Settings;
 
 #if NETFRAMEWORK
 using System.Net.Http;
+#endif
+
+#if NET8_0_OR_GREATER && USE_ISOLATED_OPAMP_CLIENT
+using System.Runtime.CompilerServices;
+#else
+using OpenTelemetry.OpAmp.Client.Settings;
 #endif
 
 namespace Elastic.OpenTelemetry.Core.Configuration;
@@ -66,17 +68,24 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 	 " are guarded by a RuntimeFeature.IsDynamicCodeSupported` check and therefore this method is safe to call in AoT scenarios")]
 	internal CentralConfiguration(CompositeElasticOpenTelemetryOptions options, ILogger logger)
 	{
-		if (options.IsOpAmpEnabled() is false)
-		{
-			// TODO
-		}
-
 		_logger = logger;
 		_startupCancellationTokenSource = new CancellationTokenSource();
 		_remoteConfigListener = new RemoteConfigMessageListener();
 
-#if NET8_0_OR_GREATER //&& USE_ISOLATED_OPAMP_CLIENT
+		if (options.IsOpAmpEnabled() is false)
+		{
+			_client = new EmptyOpAmpClient();
+			_startupTask = Task.CompletedTask;
+			_isStarted = false;
 
+			_logger.LogDebug("OpAmp is not enabled in the provided options. Central Configuration will not be initialized.");
+
+			return;
+		}
+
+		_logger.LogInformation("Initializing Central Configuration with OpAmp endpoint: {OpAmpEndpoint}", options.OpAmpEndpoint);
+
+#if NET8_0_OR_GREATER && USE_ISOLATED_OPAMP_CLIENT
 		if (!RuntimeFeature.IsDynamicCodeSupported)
 		{
 			_client = new EmptyOpAmpClient();
@@ -113,42 +122,42 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 			if (opAmpClientType is null)
 			{
 				_logger.LogError("Failed to get OpAmpClient type from OpenTelemetry.OpAmp.Client assembly.");
+				_client = new EmptyOpAmpClient();
+				_startupTask = Task.CompletedTask;
+				_isStarted = false;
+				_startupFailed = true;
+				return;
 			}
-			else
-			{
-				var client = (OpAmpClient)Activator.CreateInstance(opAmpClientType, new object[]
-				{
-					new Action<OpAmpClientOptions>(opts =>
-					{
-						opts.ServerUrl = new Uri(options.OpAmpEndpoint!);
-						opts.ConnectionType = ConnectionType.Http;
-						opts.HttpClientFactory = () =>
-						{
-							var client = new HttpClient();
-							client.DefaultRequestHeaders.Add("User-Agent", UserAgent);
-							var userHeaders = options.OpAmpHeaders!.Split(',');
-							foreach (var header in userHeaders)
-							{
-								var parts = header.Split(['='], 2);
-								if (parts.Length == 2)
-								{
-									var key = parts[0].Trim();
-									var value = parts[1].Trim();
-									client.DefaultRequestHeaders.Add(key, value);
-								}
-							}
-							return client;
-						};
-						// Add custom resources to help the server identify your client.
-						opts.Identification.AddIdentifyingAttribute("application.name", options.ServiceName!);
-						if (!string.IsNullOrEmpty(options.ServiceVersion))
-							opts.Identification.AddIdentifyingAttribute("application.version", options.ServiceVersion!);
-						opts.Heartbeat.IsEnabled = false;
-					})
-				})!;
-				client.Subscribe(_remoteConfigListener);
 
+			var optionsType = opAmpAssembly.GetType("OpenTelemetry.OpAmp.Client.Settings.OpAmpClientOptions");
+			if (optionsType is null)
+			{
+				_logger.LogError("Failed to get OpAmpClientOptions type from OpenTelemetry.OpAmp.Client assembly.");
+				_client = new EmptyOpAmpClient();
+				_startupTask = Task.CompletedTask;
+				_isStarted = false;
+				_startupFailed = true;
+				return;
+			}
+
+			try
+			{
+				// Create a delegate with the correct signature from the isolated ALC
+				var configDelegate = CreateConfigurationDelegate(optionsType, opAmpAssembly, options);
+#pragma warning disable IL2072 // Suppress due to reflection-based type loading in isolated context
+				var client = (OpAmpClient)Activator.CreateInstance(opAmpClientType, configDelegate)!;
+#pragma warning restore IL2072
+				client.Subscribe(_remoteConfigListener);
 				_client = new WrappedOpAmpClient(client);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Failed to create OpAmpClient from isolated context.");
+				_client = new EmptyOpAmpClient();
+				_startupTask = Task.CompletedTask;
+				_isStarted = false;
+				_startupFailed = true;
+				return;
 			}
 		}
 #else
@@ -194,8 +203,108 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 		_client = new WrappedOpAmpClient(client);
 #endif
 
-			_startupTask = InitializeStartupAsync();
+		_startupTask = InitializeStartupAsync();
 	}
+
+#if NET8_0_OR_GREATER && USE_ISOLATED_OPAMP_CLIENT
+	[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "Dynamic code is only used when IsDynamicCodeSupported is true")]
+	[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic code is only used when IsDynamicCodeSupported is true")]
+	[UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "Dynamic code is only used when IsDynamicCodeSupported is true")]
+	[UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "Dynamic code is only used when IsDynamicCodeSupported is true")]
+	private Delegate CreateConfigurationDelegate(Type optionsType, System.Reflection.Assembly opAmpAssembly, CompositeElasticOpenTelemetryOptions options)
+	{
+		var actionType = typeof(Action<>).MakeGenericType(optionsType);
+		
+		// Create a method info for a helper that takes dynamic and configures it
+		var helperMethod = typeof(CentralConfiguration).GetMethod(
+			nameof(ConfigureOptionsInstance),
+			System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static
+		) ?? throw new InvalidOperationException("Helper method not found");
+
+		// Create delegate: (OpAmpClientOptions opts) => ConfigureOptionsInstance((dynamic)opts, options)
+		var optionsParam = System.Linq.Expressions.Expression.Parameter(optionsType, "opts");
+		var callExpression = System.Linq.Expressions.Expression.Call(
+			helperMethod,
+			System.Linq.Expressions.Expression.Convert(optionsParam, typeof(object)),
+			System.Linq.Expressions.Expression.Constant(options),
+			System.Linq.Expressions.Expression.Constant(opAmpAssembly)
+		);
+
+		var lambdaExpression = System.Linq.Expressions.Expression.Lambda(actionType, callExpression, optionsParam);
+		return lambdaExpression.Compile();
+	}
+
+	[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "Dynamic code is only used when IsDynamicCodeSupported is true")]
+	[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic code is only used when IsDynamicCodeSupported is true")]
+	[UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "Dynamic code is only used when IsDynamicCodeSupported is true")]
+	private static void ConfigureOptionsInstance(object optionsObj, CompositeElasticOpenTelemetryOptions options, System.Reflection.Assembly opAmpAssembly)
+	{
+		var optionsType = optionsObj.GetType();
+
+		// opts.ServerUrl = new Uri(options.OpAmpEndpoint!);
+		var serverUrlProp = optionsType.GetProperty("ServerUrl", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+			?? throw new InvalidOperationException("ServerUrl property not found");
+		serverUrlProp.SetValue(optionsObj, new Uri(options.OpAmpEndpoint!));
+
+		// opts.ConnectionType = ConnectionType.Http;
+		var connectionTypeProp = optionsType.GetProperty("ConnectionType", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+			?? throw new InvalidOperationException("ConnectionType property not found");
+		var connectionTypeType = opAmpAssembly.GetType("OpenTelemetry.OpAmp.Client.Settings.ConnectionType")
+			?? throw new InvalidOperationException("ConnectionType enum not found");
+		var httpFieldValue = connectionTypeType.GetField("Http", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+			?.GetValue(null) ?? throw new InvalidOperationException("ConnectionType.Http not found");
+		connectionTypeProp.SetValue(optionsObj, httpFieldValue);
+
+		// opts.HttpClientFactory = () => { ... }
+		var factoryProp = optionsType.GetProperty("HttpClientFactory", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+			?? throw new InvalidOperationException("HttpClientFactory property not found");
+		
+		Func<HttpClient> factory = () =>
+		{
+			var client = new HttpClient();
+			client.DefaultRequestHeaders.Add("User-Agent", UserAgent);
+
+			var userHeaders = options.OpAmpHeaders!.Split(',');
+			foreach (var header in userHeaders)
+			{
+				var parts = header.Split(['='], 2);
+				if (parts.Length == 2)
+				{
+					var key = parts[0].Trim();
+					var value = parts[1].Trim();
+					client.DefaultRequestHeaders.Add(key, value);
+				}
+			}
+
+			return client;
+		};
+		factoryProp.SetValue(optionsObj, factory);
+
+		// opts.Identification.AddIdentifyingAttribute(...)
+		var identificationProp = optionsType.GetProperty("Identification", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+			?? throw new InvalidOperationException("Identification property not found");
+		var identification = identificationProp.GetValue(optionsObj)
+			?? throw new InvalidOperationException("Identification instance not found");
+
+		var addAttrMethod = identification.GetType().GetMethod("AddIdentifyingAttribute", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance, null, new[] { typeof(string), typeof(string) }, null)
+			?? throw new InvalidOperationException("AddIdentifyingAttribute method not found");
+
+		addAttrMethod.Invoke(identification, new object[] { "application.name", options.ServiceName! });
+
+		if (!string.IsNullOrEmpty(options.ServiceVersion))
+			addAttrMethod.Invoke(identification, new object[] { "application.version", options.ServiceVersion! });
+
+		// opts.Heartbeat.IsEnabled = false;
+		var heartbeatProp = optionsType.GetProperty("Heartbeat", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+			?? throw new InvalidOperationException("Heartbeat property not found");
+		var heartbeat = heartbeatProp.GetValue(optionsObj)
+			?? throw new InvalidOperationException("Heartbeat instance not found");
+
+		var isEnabledProp = heartbeat.GetType().GetProperty("IsEnabled", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+			?? throw new InvalidOperationException("IsEnabled property not found");
+		isEnabledProp.SetValue(heartbeat, false);
+	}
+#endif
 
 	private async Task InitializeStartupAsync()
 	{

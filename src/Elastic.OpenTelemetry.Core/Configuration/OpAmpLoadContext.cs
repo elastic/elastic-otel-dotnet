@@ -4,7 +4,6 @@
 
 #if NET8_0_OR_GREATER// && USE_ISOLATED_OPAMP_CLIENT
 
-using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.Loader;
@@ -29,6 +28,7 @@ internal sealed class OpAmpLoadContext : AssemblyLoadContext
 {
 	private readonly ILogger _logger;
 	private readonly AssemblyDependencyResolver? _resolver = null;
+	private readonly string? _otelInstallationPath = null;
 
 	public OpAmpLoadContext(ILogger logger)
 	{
@@ -44,10 +44,14 @@ internal sealed class OpAmpLoadContext : AssemblyLoadContext
 			return;
 		}
 
+		_otelInstallationPath = Path.Join(otelInstallationPath, "net");
+
+		// TODO - Check path exists
+
 		_logger.LogDebug("OpAmpLoadContext: Initializing isolated load context for OpenTelemetry OpAmp dependencies from '{OtelInstallationPath}'",
 			otelInstallationPath ?? "<null>");
 
-		_resolver = new AssemblyDependencyResolver(Path.Join(otelInstallationPath, "net"));
+		_resolver = new AssemblyDependencyResolver(otelInstallationPath!);
 	}
 
 	[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2026: RequiresUnreferencedCode", Justification = "The calls to this ALC will be guarded by a runtime check")]
