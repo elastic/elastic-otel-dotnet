@@ -430,7 +430,7 @@ internal async ValueTask WaitForStartupAsync(int timeoutMilliseconds = OpAmpBloc
 	}
 }
 
-internal RemoteConfigMessage? WaitForRemoteConfig(int timeoutMilliseconds = OpAmpBlockingStartTimeoutMilliseconds)
+internal string? WaitForRemoteConfig(int timeoutMilliseconds = OpAmpBlockingStartTimeoutMilliseconds)
 {
 	try
 	{

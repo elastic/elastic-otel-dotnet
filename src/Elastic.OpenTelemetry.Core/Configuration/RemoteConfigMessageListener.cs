@@ -2,6 +2,7 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using Google.Protobuf;
 using OpenTelemetry.OpAmp.Client.Listeners;
 using OpenTelemetry.OpAmp.Client.Messages;
 
@@ -13,9 +14,9 @@ namespace Elastic.OpenTelemetry.Core.Configuration;
 
 internal class RemoteConfigMessageListener : IOpAmpListener<RemoteConfigMessage>
 {
-	private readonly TaskCompletionSource<RemoteConfigMessage> _firstMessageReceived = new();
+	private readonly TaskCompletionSource<string> _firstMessageReceived = new();
 
-	public void HandleMessage(RemoteConfigMessage message) => _firstMessageReceived.TrySetResult(message);
+	public void HandleMessage(RemoteConfigMessage message) { }
 
 	/// <summary>
 	/// Handles messages received from the isolated OpAmp abstractions layer.
@@ -31,7 +32,10 @@ internal class RemoteConfigMessageListener : IOpAmpListener<RemoteConfigMessage>
 				// For now, log that we received it
 				// In a full implementation, you would deserialize and create the RemoteConfigMessage
 				var json = System.Text.Encoding.UTF8.GetString(jsonPayload);
+
 				System.Diagnostics.Debug.WriteLine($"Received RemoteConfigMessage payload: {json}");
+
+				_firstMessageReceived.TrySetResult(json);
 			}
 		}
 		catch (Exception ex)
@@ -40,7 +44,7 @@ internal class RemoteConfigMessageListener : IOpAmpListener<RemoteConfigMessage>
 		}
 	}
 
-	internal Task<RemoteConfigMessage> FirstMessageReceivedTask => _firstMessageReceived.Task;
+	internal Task<string> FirstMessageReceivedTask => _firstMessageReceived.Task;
 }
 
 #if NET8_0_OR_GREATER

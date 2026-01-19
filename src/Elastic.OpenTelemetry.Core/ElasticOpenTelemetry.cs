@@ -159,39 +159,44 @@ internal static class ElasticOpenTelemetry
 				var centralConfig = new CentralConfiguration(options, logger);
 				var remoteConfig = centralConfig.WaitForRemoteConfig(3000); // Wait up to 3 seconds for a response
 
-				if (remoteConfig is not null && remoteConfig.AgentConfigMap.ContainsKey("elastic"))
+				if (remoteConfig is not null)
 				{
-					logger.LogInformation("Central configuration fetched successfully");
 
-					var config = remoteConfig.AgentConfigMap["elastic"];
-
-					if (config.ContentType == "application/json")
-					{
-						var body = config.Body;
-
-						var utf8JsonSpan = "\"log_level\":\""u8;
-
-						var index = body.IndexOf(utf8JsonSpan);
-
-						// NOTE, this DOES NOT handle pretty-print JSON with new lines and spaces
-
-						if (index >= 0)
-						{
-							var logLevelStart = index + utf8JsonSpan.Length;
-
-							var logLevelEnd = body[logLevelStart..].IndexOf((byte)'"');
-							if (logLevelEnd == -1)
-								logLevelEnd = body.Length;
-
-							var logLevelBytes = body[logLevelStart..][..logLevelEnd];
-							var logLevelString = System.Text.Encoding.UTF8.GetString(logLevelBytes);
-							if (Enum.TryParse<LogLevel>(logLevelString, true, out var logLevel))
-							{
-								options.SetLogLevelFromCentralConfig(logLevel);
-							}
-						}
-					}
 				}
+
+				//if (remoteConfig is not null && remoteConfig.AgentConfigMap.ContainsKey("elastic"))
+				//{
+				//	logger.LogInformation("Central configuration fetched successfully");
+
+				//	var config = remoteConfig.AgentConfigMap["elastic"];
+
+				//	if (config.ContentType == "application/json")
+				//	{
+				//		var body = config.Body;
+
+				//		var utf8JsonSpan = "\"log_level\":\""u8;
+
+				//		var index = body.IndexOf(utf8JsonSpan);
+
+				//		// NOTE, this DOES NOT handle pretty-print JSON with new lines and spaces
+
+				//		if (index >= 0)
+				//		{
+				//			var logLevelStart = index + utf8JsonSpan.Length;
+
+				//			var logLevelEnd = body[logLevelStart..].IndexOf((byte)'"');
+				//			if (logLevelEnd == -1)
+				//				logLevelEnd = body.Length;
+
+				//			var logLevelBytes = body[logLevelStart..][..logLevelEnd];
+				//			var logLevelString = System.Text.Encoding.UTF8.GetString(logLevelBytes);
+				//			if (Enum.TryParse<LogLevel>(logLevelString, true, out var logLevel))
+				//			{
+				//				options.SetLogLevelFromCentralConfig(logLevel);
+				//			}
+				//		}
+				//	}
+				//}
 			}
 
 			if (DeferredLogger.TryGetInstance(out var deferredLogger))
