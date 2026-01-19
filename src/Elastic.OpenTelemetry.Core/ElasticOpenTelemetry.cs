@@ -164,6 +164,13 @@ internal static class ElasticOpenTelemetry
 
 				}
 
+				// TODO
+				// We should create a general interface around IOpAmpClient to allow any of our implementations to
+				// support subscribing the new remote config (and the first message signal) + send messages.
+				// For auto-instrumentation on NET 8, we will have to use the ALC inside that abstraction.
+				// For other scenarios, we can use the client with less indirection.
+				// We need to share as much code and logic as we can though.
+
 				//if (remoteConfig is not null && remoteConfig.AgentConfigMap.ContainsKey("elastic"))
 				//{
 				//	logger.LogInformation("Central configuration fetched successfully");
