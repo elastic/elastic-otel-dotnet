@@ -2,7 +2,7 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
-#if NET8_0_OR_GREATER || NETSTANDARD2_1
+#if NET8_0_OR_GREATER
 
 #pragma warning disable IL2026 // Using reflection with LoadFromAssemblyPath is intentional for OpAmp isolation
 

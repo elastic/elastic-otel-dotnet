@@ -1,22 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net462;netstandard2.1;net8.0</TargetFrameworks>
+    <TargetFrameworks>net462;net8.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>true</IsPackable>
     <PolyPublic>true</PolyPublic>
     <GenerateNuspecDependsOn>$(GenerateNuspecDependsOn);_ExcludeTargetFramework;_ExcludeTargetFrameworkDependency</GenerateNuspecDependsOn>
     <!-- Use isolated ALC for OpAmp client to avoid version conflicts in profiler-loaded scenarios.
-         Note: This makes OpAmp support non-AoT compatible for this package, but AutoInstrumentation
-         already has AoT limitations due to the profiler loading mechanism. 
-         Only enabled for frameworks that support AssemblyLoadContext (net8.0+, netstandard2.1). -->
-    <!-- Exclude ALC files only from frameworks that don't support AssemblyLoadContext (net462 only) -->
-    <DefaultItemExcludes Condition="'$(TargetFramework)' == 'net462'">$(DefaultItemExcludes);../Elastic.OpenTelemetry.Core/Configuration/IsolatedOpAmpLoadContext.cs;../Elastic.OpenTelemetry.Core/Configuration/OpAmpIsolationInitializer.cs</DefaultItemExcludes>
+         Only enabled for frameworks that support AssemblyLoadContext (net8.0). -->
   </PropertyGroup>
 
   <!-- Define USE_ISOLATED_OPAMP_CLIENT only for frameworks that support AssemblyLoadContext -->
-  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0' OR '$(TargetFramework)' == 'netstandard2.1'">
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0'">
     <DefineConstants>$(DefineConstants);USE_ISOLATED_OPAMP_CLIENT</DefineConstants>
   </PropertyGroup>
 

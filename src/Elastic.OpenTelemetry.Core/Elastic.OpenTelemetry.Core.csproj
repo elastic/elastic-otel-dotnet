@@ -8,7 +8,7 @@
     <IsPackable>false</IsPackable>
     <LangVersion>latest</LangVersion>
     <!-- Exclude ALC files from frameworks that don't support AssemblyLoadContext -->
-    <DefaultItemExcludes Condition="'$(TargetFramework)' != 'net8.0' AND '$(TargetFramework)' != 'net9.0' AND '$(TargetFramework)' != 'netstandard2.1'">$(DefaultItemExcludes);Configuration/IsolatedOpAmpLoadContext.cs;Configuration/OpAmpIsolationInitializer.cs</DefaultItemExcludes>
+    <DefaultItemExcludes Condition="'$(TargetFramework)' != 'net8.0' AND '$(TargetFramework)' != 'net9.0'">$(DefaultItemExcludes);Configuration/IsolatedOpAmpLoadContext.cs;Configuration/OpAmpIsolationInitializer.cs</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -30,8 +30,9 @@
   </ItemGroup>
 
   <!-- Remove ALC files from default compilation for unsupported frameworks -->
-  <ItemGroup Condition="'$(TargetFramework)' != 'net8.0' AND '$(TargetFramework)' != 'net9.0' AND '$(TargetFramework)' != 'netstandard2.1'">
+  <ItemGroup Condition="'$(TargetFramework)' != 'net8.0' AND '$(TargetFramework)' != 'net9.0'">
     <Compile Remove="Configuration/IsolatedOpAmpLoadContext.cs" />
+    <Compile Remove="Configuration/OpAmpIsolationInitializer.cs" />
   </ItemGroup>
 
 </Project>

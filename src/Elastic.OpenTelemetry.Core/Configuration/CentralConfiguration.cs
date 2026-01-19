@@ -44,7 +44,7 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 		_startupCancellationTokenSource = new CancellationTokenSource();
 		_remoteConfigListener = new RemoteConfigMessageListener();
 		
-#if NET8_0_OR_GREATER || NETSTANDARD2_1
+#if NET8_0_OR_GREATER
 		// Initialize isolated loading of OpAmp dependencies to prevent version conflicts
 		OpAmpIsolationInitializer.Initialize();
 #endif
