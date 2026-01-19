@@ -8,6 +8,8 @@ using Elastic.OpenTelemetry.Configuration;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry.OpAmp.Client;
 using OpenTelemetry.OpAmp.Client.Messages;
+using System.Reflection;
+
 
 #if NETFRAMEWORK
 using System.Net.Http;
@@ -122,25 +124,49 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 			var loadContext = new OpAmpLoadContext(logger);
 			_logger.LogDebug("OpAmpLoadContext created successfully");
 
-			// Load the abstractions assembly from the isolated ALC
-			// This contains the OpAmpMessageSubscriber implementation that handles OpAmp types
-			var abstractionsAssemblyPath = Path.Combine(
-				loadContext.OtelInstallationPath ?? "",
-				"Elastic.OpenTelemetry.OpAmp.Abstractions.dll");
+			string[] assembliesToLoad = [
+				"Google.Protobuf.dll",
+				"OpenTelemetry.OpAmp.Client.dll",
+				"Elastic.OpenTelemetry.OpAmp.Abstractions.dll",
+			];
 
-			if (!File.Exists(abstractionsAssemblyPath))
+			Assembly? abstractionsAssembly = null;
+
+			foreach (var assembly in assembliesToLoad)
 			{
-				_logger.LogError("Elastic.OpenTelemetry.OpAmp.Abstractions.dll not found at {Path}. OpAmp client will not be initialized.", abstractionsAssemblyPath);
+				// Load the abstractions assembly from the isolated ALC
+				// This contains the OpAmpMessageSubscriber implementation that handles OpAmp types
+				var abstractionsAssemblyPath = Path.Combine(
+					loadContext.OtelInstallationPath ?? "",
+					"Elastic.OpenTelemetry.OpAmp.Abstractions.dll");
+
+				if (!File.Exists(abstractionsAssemblyPath))
+				{
+					_logger.LogError("Elastic.OpenTelemetry.OpAmp.Abstractions.dll not found at {Path}. OpAmp client will not be initialized.", abstractionsAssemblyPath);
+					_client = new EmptyOpAmpClient();
+					_startupTask = Task.CompletedTask;
+					_isStarted = false;
+					_startupFailed = true;
+					return;
+				}
+
+				var loadedAssembly = loadContext.LoadFromAssemblyPath(abstractionsAssemblyPath);
+
+				if (assembly.StartsWith("Elastic.OpenTelemetry.OpAmp.Abstractions"))
+					abstractionsAssembly = loadedAssembly;
+			}
+
+			if (abstractionsAssembly is null)
+			{
 				_client = new EmptyOpAmpClient();
 				_startupTask = Task.CompletedTask;
 				_isStarted = false;
 				_startupFailed = true;
+
+				_logger.LogError("TODO");
+
 				return;
 			}
-
-#pragma warning disable IL2026
-			var abstractionsAssembly = loadContext.LoadFromAssemblyPath(abstractionsAssemblyPath);
-#pragma warning restore IL2026
 
 			// Get the factory type from the loaded assembly
 			var factoryType = abstractionsAssembly.GetType("Elastic.OpenTelemetry.OpAmp.Abstractions.OpAmpMessageSubscriberFactory")

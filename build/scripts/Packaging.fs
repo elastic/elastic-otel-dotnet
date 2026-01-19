@@ -51,10 +51,38 @@ let private distroAsset (asset: ReleaseAsset) = fileInfo distroFolder (asset.Nam
 let pluginFiles tfm =
     ["dll"; "pdb"; "xml"]
     |> List.map(fun e -> $"Elastic.OpenTelemetry.AutoInstrumentation.%s{e}")
-    |> List.map(fun f -> Path.Combine(".artifacts", "bin", "Elastic.OpenTelemetry.AutoInstrumentation", $"release_%s{tfm}", "", f))
+    |> List.map(fun f -> Path.Combine(".artifacts", "bin", "Elastic.OpenTelemetry.AutoInstrumentation", $"release_{tfm}", "", f))
     |> List.map(fun f -> FileInfo(f))
 
-/// downloads the artifacts if they don't already exist locally
+/// Additional files needed for OpAmp abstractions layer (NET8+ only)
+let opAmpAbstractionsFiles tfm =
+    if tfm = "net8.0" then
+        ["dll"; "pdb"]
+        |> List.map(fun e -> $"Elastic.OpenTelemetry.OpAmp.Abstractions.%s{e}")
+        |> List.map(fun f -> Path.Combine(".artifacts", "bin", "Elastic.OpenTelemetry.OpAmp.Abstractions", $"release_{tfm}", "", f))
+        |> List.map(fun f -> FileInfo(f))
+    else
+        []
+
+/// OpenTelemetry.OpAmp.Client and its dependencies (needed for isolated ALC loading)
+let opAmpDependencyFiles tfm =
+    if tfm = "net8.0" then
+        [
+            "OpenTelemetry.OpAmp.Client"
+            "Google.Protobuf"
+        ]
+        |> List.collect(fun pkg ->
+            ["dll"; "pdb"]
+            |> List.map(fun e -> 
+                let pkgPath = Path.Combine(".artifacts", "bin", "OpenTelemetry.OpAmp.Client", "release_{tfm}", "")
+                Path.Combine(pkgPath, $"%s{pkg}.%s{e}")
+            )
+        )
+        |> List.map(fun f -> FileInfo(f))
+        |> List.filter(fun f -> f.Exists) // Only include files that actually exist
+    else
+        []
+
 let downloadArtifacts (_:ParseResults<Build>) =
     let client = GitHubClient(ProductHeaderValue "Elastic.OpenTelemetry")
     let token = Environment.GetEnvironmentVariable "GITHUB_TOKEN"
@@ -91,9 +119,29 @@ let downloadArtifacts (_:ParseResults<Build>) =
 
 let injectPluginFiles (asset: ReleaseAsset) (stagedZip: FileInfo) tfm target  = 
     use zipArchive = ZipFile.Open(stagedZip.FullName, ZipArchiveMode.Update)
+    
+    // Inject main plugin files
     pluginFiles tfm  |> List.iter(fun f ->
         printfn $"Staging zip: %s{stagedZip.Name}, Adding: %s{f.Name} (%s{tfm}) to %s{target}"
         zipArchive.CreateEntryFromFile(f.FullName, Path.Combine(target, f.Name)) |> ignore
+    )
+    
+    // Inject OpAmp abstractions files (NET8+ only)
+    opAmpAbstractionsFiles tfm |> List.iter(fun f ->
+        if f.Exists then
+            printfn $"Staging zip: %s{stagedZip.Name}, Adding OpAmp abstraction: %s{f.Name} (%s{tfm}) to %s{target}"
+            zipArchive.CreateEntryFromFile(f.FullName, Path.Combine(target, f.Name)) |> ignore
+        else
+            printfn $"Warning: OpAmp abstraction file not found: %s{f.FullName}"
+    )
+    
+    // Inject OpAmp dependency files (NET8+ only)
+    opAmpDependencyFiles tfm |> List.iter(fun f ->
+        if f.Exists then
+            printfn $"Staging zip: %s{stagedZip.Name}, Adding OpAmp dependency: %s{f.Name} (%s{tfm}) to %s{target}"
+            zipArchive.CreateEntryFromFile(f.FullName, Path.Combine(target, f.Name)) |> ignore
+        else
+            printfn $"Warning: OpAmp dependency file not found: %s{f.FullName}"
     )
 
 let injectPluginScripts (stagedZip: FileInfo) (otelScript: FileInfo) (script: FileInfo) = 
