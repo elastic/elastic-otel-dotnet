@@ -10,7 +10,13 @@
 
   <ItemGroup>
     <PackageReference Include="OpenTelemetry.OpAmp.Client" />
-    <PackageReference Include="System.Text.Json" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+  <!-- Override inherited content items since this is not packable -->
+  <ItemGroup>
+    <None Remove="README.md" />
+    <Content Remove="README.md" />
   </ItemGroup>
 
 </Project>

@@ -90,7 +90,7 @@ internal sealed class OpAmpMessageSubscriberImpl : IOpAmpMessageSubscriber, IOpA
 	}
 
 	/// <summary>
-	/// Implements IOpAmpListener<RemoteConfigMessage> - called by OpAmpClient with messages from the server.
+	/// Implements IOpAmpListener{RemoteConfigMessage} - called by OpAmpClient with messages from the server.
 	/// Marshals the message across ALC boundary using only primitives.
 	/// </summary>
 	public void HandleMessage(RemoteConfigMessage message)
@@ -125,12 +125,14 @@ internal sealed class OpAmpMessageSubscriberImpl : IOpAmpMessageSubscriber, IOpA
 
 		if (message.AgentConfigMap != null)
 		{
-			foreach (var (key, agentConfig) in message.AgentConfigMap)
+			foreach (var kvp in message.AgentConfigMap)
 			{
+				var key = kvp.Key;
+				var agentConfig = kvp.Value;
 				var configObj = new
 				{
 					contentType = agentConfig.ContentType,
-					body = agentConfig.Body != null ? Convert.ToBase64String(agentConfig.Body.ToByteArray()) : null
+					body = agentConfig.Body.Length > 0 ? Convert.ToBase64String(agentConfig.Body) : null
 				};
 				configMap[key] = configObj;
 			}

@@ -13,8 +13,6 @@ public interface IOpAmpMessageSubscriber
 	/// <summary>
 	/// Event raised when a message is received from the OpAmp server.
 	/// </summary>
-	/// <param name="messageType">The fully-qualified name of the message type (e.g., "RemoteConfigMessage")</param>
-	/// <param name="jsonPayload">The message payload serialized as JSON bytes using System.Text.Json</param>
 	event Action<string, byte[]>? MessageReceived;
 
 	/// <summary>

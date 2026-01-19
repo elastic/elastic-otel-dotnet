@@ -134,11 +134,7 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 
 			foreach (var assembly in assembliesToLoad)
 			{
-				// Load the abstractions assembly from the isolated ALC
-				// This contains the OpAmpMessageSubscriber implementation that handles OpAmp types
-				var abstractionsAssemblyPath = Path.Combine(
-					loadContext.OtelInstallationPath ?? "",
-					"Elastic.OpenTelemetry.OpAmp.Abstractions.dll");
+				var abstractionsAssemblyPath = Path.Combine(loadContext.OtelInstallationPath ?? "", assembly);
 
 				if (!File.Exists(abstractionsAssemblyPath))
 				{
