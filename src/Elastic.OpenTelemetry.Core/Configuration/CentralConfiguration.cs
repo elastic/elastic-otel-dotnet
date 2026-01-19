@@ -184,11 +184,18 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 
 			_logger.LogDebug("OpAmp message subscriber created in isolated ALC");
 
-			// The subscriber implements IOpAmpMessageSubscriber which only uses primitives
-			// We can call it via dynamic or reflection without type issues
-			dynamic subscriber = subscriberInstance;
+			// Subscribe to events using reflection since the subscriber is from an isolated ALC
+#pragma warning disable IL2075
+			var messageReceivedEvent = subscriberInstance.GetType().GetEvent("MessageReceived", 
+				System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+				?? throw new InvalidOperationException("MessageReceived event not found on subscriber");
 
-			// Subscribe to messages
+			var connectionChangedEvent = subscriberInstance.GetType().GetEvent("ConnectionChanged",
+				System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
+				?? throw new InvalidOperationException("ConnectionChanged event not found on subscriber");
+#pragma warning restore IL2075
+
+			// Create event handlers using reflection
 			Action<string, byte[]> onMessageReceived = (messageType, payload) =>
 			{
 				_logger.LogDebug("Received OpAmp message of type: {MessageType}", messageType);
@@ -200,11 +207,23 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 				_logger.LogDebug("OpAmp connection status changed: {IsConnected}", isConnected);
 			};
 
-			subscriber.MessageReceived += onMessageReceived;
-			subscriber.ConnectionChanged += onConnectionChanged;
+			// Subscribe using reflection
+			messageReceivedEvent.AddEventHandler(subscriberInstance, onMessageReceived);
+			connectionChangedEvent.AddEventHandler(subscriberInstance, onConnectionChanged);
 
-			// Start the subscriber in background - subscriber manages its own lifecycle
-			_ = subscriber.StartAsync(options.OpAmpEndpoint!, _startupCancellationTokenSource.Token);
+			_logger.LogDebug("Event handlers subscribed via reflection");
+
+			// Start the subscriber using reflection (also works better across ALC boundaries than dynamic)
+#pragma warning disable IL2075
+			var startAsyncMethod = subscriberInstance.GetType().GetMethod("StartAsync",
+				System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance,
+				null,
+				new[] { typeof(string), typeof(CancellationToken) },
+				null)
+				?? throw new InvalidOperationException("StartAsync method not found on subscriber");
+#pragma warning restore IL2075
+
+			_ = startAsyncMethod.Invoke(subscriberInstance, new object[] { options.OpAmpEndpoint!, _startupCancellationTokenSource.Token });
 
 			_logger.LogInformation("OpAmp client initialization started in isolated ALC");
 			_client = new EmptyOpAmpClient(); // Use empty client - real client runs in isolated ALC
@@ -325,6 +344,7 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 			client.DefaultRequestHeaders.Add("User-Agent", UserAgent);
 
 			var userHeaders = options.OpAmpHeaders!.Split(',');
+
 			foreach (var header in userHeaders)
 			{
 				var parts = header.Split(['='], 2);
