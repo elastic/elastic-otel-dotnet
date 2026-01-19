@@ -37,6 +37,20 @@ internal sealed class WrappedOpAmpClient : IOpAmpClient
 	public void Dispose() => _client.Dispose();
 }
 
+#if NET8_0_OR_GREATER
+[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic invocations are only used when IsDynamicCodeSupported is true")]
+internal sealed class IsolatedOpAmpClientWrapper : IOpAmpClient
+{
+	private readonly dynamic _client;
+
+	internal IsolatedOpAmpClientWrapper(dynamic client) => _client = client;
+
+	public Task StartAsync(CancellationToken cancellationToken = default) => _client.StartAsync(cancellationToken);
+
+	public void Dispose() => _client.Dispose();
+}
+#endif
+
 internal sealed class EmptyOpAmpClient : IOpAmpClient
 {
 	public Task StartAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
@@ -105,11 +119,10 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 			// Initialize isolated loading of OpAmp dependencies to prevent version conflicts
 			_logger.LogDebug("Initializing OpAmp client in isolated load context to prevent dependency version conflicts.");
 
-			var appProtobufVersion = typeof(Google.Protobuf.MessageParser).Assembly.GetName().Version;
-			_logger.LogDebug("Application Protobuf Version: {AppProtobufVersion}", appProtobufVersion);
-
 			var loadContext = new OpAmpLoadContext(logger);
 			_logger.LogDebug("OpAmpLoadContext created successfully");
+
+			_client = new EmptyOpAmpClient();
 
 			// IMPORTANT: Load Google.Protobuf FIRST before OpAmpClient
 			// This ensures that when OpAmpClient is loaded, it will use the Protobuf from the isolated ALC
@@ -238,10 +251,13 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 			// Create a delegate with the correct signature from the isolated ALC
 			var configDelegate = CreateConfigurationDelegate(settingsType, opAmpAssembly, options);
 #pragma warning disable IL2072 // Suppress due to reflection-based type loading in isolated context
-			var client = (OpAmpClient)Activator.CreateInstance(opAmpClientType, configDelegate)!;
+			var isolatedClient = Activator.CreateInstance(opAmpClientType, configDelegate)!;
 #pragma warning restore IL2072
-			client.Subscribe(_remoteConfigListener);
-			_client = new WrappedOpAmpClient(client);
+			
+			// Wrap the dynamically loaded client to avoid cross-ALC type casting
+			dynamic client = isolatedClient;
+			client.Subscribe<RemoteConfigMessage>(_remoteConfigListener);
+			_client = new IsolatedOpAmpClientWrapper(isolatedClient);
 			
 			_logger.LogInformation("OpAmp client successfully initialized from isolated ALC");
 		}
