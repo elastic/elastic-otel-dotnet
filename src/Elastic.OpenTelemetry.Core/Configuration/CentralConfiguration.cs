@@ -122,60 +122,15 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 			var loadContext = new OpAmpLoadContext(logger);
 			_logger.LogDebug("OpAmpLoadContext created successfully");
 
-			_client = new EmptyOpAmpClient();
+			// Load the abstractions assembly from the isolated ALC
+			// This contains the OpAmpMessageSubscriber implementation that handles OpAmp types
+			var abstractionsAssemblyPath = Path.Combine(
+				loadContext.OtelInstallationPath ?? "",
+				"Elastic.OpenTelemetry.OpAmp.Abstractions.dll");
 
-			// IMPORTANT: Load Google.Protobuf FIRST before OpAmpClient
-			// This ensures that when OpAmpClient is loaded, it will use the Protobuf from the isolated ALC
-			System.Reflection.Assembly? protobufAssembly = null;
-			System.Reflection.Assembly? opAmpAssembly = null;
-
-			// Step 1: Pre-load Google.Protobuf into the isolated ALC
-			_logger.LogDebug("Pre-loading Google.Protobuf into isolated ALC...");
-
-			if (!string.IsNullOrEmpty(loadContext.OtelInstallationPath))
+			if (!File.Exists(abstractionsAssemblyPath))
 			{
-				var protobufPath = Path.Combine(loadContext.OtelInstallationPath, "Google.Protobuf.dll");
-				_logger.LogDebug("Attempting to load Google.Protobuf from: {ProtobufPath}", protobufPath);
-				
-				if (File.Exists(protobufPath))
-				{
-					try
-					{
-						// Check file version before loading
-						var fileVersionInfo = System.Diagnostics.FileVersionInfo.GetVersionInfo(protobufPath);
-						_logger.LogDebug("Google.Protobuf file version: {FileVersion}, Product version: {ProductVersion}", 
-							fileVersionInfo.FileVersion, fileVersionInfo.ProductVersion);
-
-						protobufAssembly = loadContext.LoadFromAssemblyPath(protobufPath);
-						var loadedVersion = protobufAssembly.GetName().Version;
-						_logger.LogDebug("Successfully loaded Google.Protobuf from isolated ALC. Version: {LoadedVersion}", loadedVersion);
-					}
-					catch (FileLoadException fex)
-					{
-						_logger.LogError(fex, "FileLoadException loading Google.Protobuf - manifest version mismatch. " +
-							"The DLL at {ProtobufPath} has an internal assembly version that doesn't match the file. " +
-							"This typically means the OpenTelemetry AutoInstrumentation package contains a mismatched or corrupted DLL.", protobufPath);
-						throw;
-					}
-					catch (Exception ex)
-					{
-						_logger.LogError(ex, "Failed to load Google.Protobuf from path: {ProtobufPath}", protobufPath);
-						throw;
-					}
-				}
-				else
-				{
-					_logger.LogWarning("Google.Protobuf.dll not found at: {ProtobufPath}. OpenTelemetry.OpAmp.Client will not be initialized.", protobufPath);
-					_client = new EmptyOpAmpClient();
-					_startupTask = Task.CompletedTask;
-					_isStarted = false;
-					_startupFailed = true;
-					return;
-				}
-			}
-			else
-			{
-				_logger.LogWarning("OtelInstallationPath is null or empty. Cannot pre-load Google.Protobuf.");
+				_logger.LogError("Elastic.OpenTelemetry.OpAmp.Abstractions.dll not found at {Path}. OpAmp client will not be initialized.", abstractionsAssemblyPath);
 				_client = new EmptyOpAmpClient();
 				_startupTask = Task.CompletedTask;
 				_isStarted = false;
@@ -183,122 +138,54 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 				return;
 			}
 
-			// Step 2: Load OpenTelemetry.OpAmp.Client
-			_logger.LogDebug("Loading OpenTelemetry.OpAmp.Client from isolated ALC...");
+#pragma warning disable IL2026
+			var abstractionsAssembly = loadContext.LoadFromAssemblyPath(abstractionsAssemblyPath);
+#pragma warning restore IL2026
 
-			if (!string.IsNullOrEmpty(loadContext.OtelInstallationPath))
-			{
-				var opAmpPath = Path.Combine(loadContext.OtelInstallationPath, "OpenTelemetry.OpAmp.Client.dll");
-				_logger.LogDebug("Attempting to load OpenTelemetry.OpAmp.Client from: {OpAmpPath}", opAmpPath);
-				
-				if (File.Exists(opAmpPath))
-				{
-					try
-					{
-						opAmpAssembly = loadContext.LoadFromAssemblyPath(opAmpPath);
-						_logger.LogDebug("Successfully loaded OpenTelemetry.OpAmp.Client from isolated ALC.");
-					}
-					catch (Exception ex)
-					{
-						_logger.LogError(ex, "Failed to load OpenTelemetry.OpAmp.Client from path: {OpAmpPath}", opAmpPath);
-						throw;
-					}
-				}
-				else
-				{
-					_logger.LogWarning("OpenTelemetry.OpAmp.Client.dll not found at: {OpAmpPath}", opAmpPath);
-					_client = new EmptyOpAmpClient();
-					_startupTask = Task.CompletedTask;
-					_isStarted = false;
-					_startupFailed = true;
-					return;
-				}
-			}
+			// Get the factory type from the loaded assembly
+			var factoryType = abstractionsAssembly.GetType("Elastic.OpenTelemetry.OpAmp.Abstractions.OpAmpMessageSubscriberFactory")
+				?? throw new InvalidOperationException("OpAmpMessageSubscriberFactory type not found in abstractions assembly");
 
-			if (opAmpAssembly is null)
-			{
-				_logger.LogError("Failed to load OpenTelemetry.OpAmp.Client assembly in isolated load context. OpAmp client will not be initialized.");
-				_client = new EmptyOpAmpClient();
-				_startupTask = Task.CompletedTask;
-				_isStarted = false;
-				_startupFailed = true;
-
-				return;
-			}
-
-			var opAmpClientType = opAmpAssembly.GetType("OpenTelemetry.OpAmp.Client.OpAmpClient");
-			if (opAmpClientType is null)
-			{
-				_logger.LogError("Failed to get OpAmpClient type from OpenTelemetry.OpAmp.Client assembly.");
-				_client = new EmptyOpAmpClient();
-				_startupTask = Task.CompletedTask;
-				_isStarted = false;
-				_startupFailed = true;
-				return;
-			}
-
-			var settingsType = opAmpAssembly.GetType("OpenTelemetry.OpAmp.Client.Settings.OpAmpClientSettings");
-			if (settingsType is null)
-			{
-				_logger.LogError("Failed to get OpAmpClientSettings type from OpenTelemetry.OpAmp.Client assembly.");
-				_client = new EmptyOpAmpClient();
-				_startupTask = Task.CompletedTask;
-				_isStarted = false;
-				_startupFailed = true;
-				return;
-			}
-
-			// Create a delegate with the correct signature from the isolated ALC
-			var configDelegate = CreateConfigurationDelegate(settingsType, opAmpAssembly, options);
-#pragma warning disable IL2072 // Suppress due to reflection-based type loading in isolated context
-			var isolatedClient = Activator.CreateInstance(opAmpClientType, configDelegate)!;
-#pragma warning restore IL2072
-			
-			// Wrap the dynamically loaded client to avoid cross-ALC type casting
-			dynamic client = isolatedClient;
-			
-			// Use dynamic invocation to avoid type checking issues with the bridge across ALCs
-			// The bridge implements HandleMessage which is what Subscribe expects
-#pragma warning disable IL2075 // Suppress due to reflection-based type loading in isolated context
-#pragma warning disable IL3050 // Suppress due to dynamic code used in guarded code path
-#pragma warning disable IL2060 // Suppress due to dynamic generic method construction
-			var remoteConfigMessageType = opAmpAssembly.GetType("OpenTelemetry.OpAmp.Client.Messages.RemoteConfigMessage")
-				?? throw new InvalidOperationException("RemoteConfigMessage type not found in isolated assembly");
-			
-			// Get the generic Subscribe<T> method
-			var genericSubscribeMethods = opAmpClientType.GetMethods(
-				System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance)
-				.Where(m => m.Name == "Subscribe" && m.IsGenericMethodDefinition)
-				.ToList();
-
-			if (genericSubscribeMethods.Count == 0)
-			{
-				throw new InvalidOperationException($"No generic Subscribe<T> method found on OpAmpClient. Available methods: {string.Join(", ", opAmpClientType.GetMethods().Select(m => m.Name).Distinct())}");
-			}
-
-			// Make the generic method: Subscribe<RemoteConfigMessage>
-			var genericSubscribeMethod = genericSubscribeMethods[0].MakeGenericMethod(remoteConfigMessageType);
-			
-			// Use reflection invoke instead of dynamic to avoid generic type inference issues
-			// Pass the bridge as an object - reflection handles the conversion
-#if NET8_0_OR_GREATER
-			var bridge = new IsolatedALCRemoteConfigMessageListenerBridge(_remoteConfigListener);
-			
-#pragma warning disable IL2055 // Suppress due to dynamic generic type construction in guarded code path
-			// Use reflection invoke directly with the already-specific generic method
-			// genericSubscribeMethod is Subscribe<RemoteConfigMessage> with the type parameter already bound
-			// Invoke with the bridge - reflection should handle structural compatibility
-			genericSubscribeMethod.Invoke(isolatedClient, new object[] { bridge });
-#pragma warning restore IL2055
-#else
-			genericSubscribeMethod.Invoke(isolatedClient, new object[] { _remoteConfigListener });
-#endif
-			_logger.LogDebug("Called Subscribe<RemoteConfigMessage> via reflection invoke");
-#pragma warning restore IL2060
-#pragma warning restore IL3050
+			// Get the Create factory method
+#pragma warning disable IL2075
+			var createMethod = factoryType.GetMethod("Create", 
+				System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static,
+				null,
+				new[] { typeof(ILogger) },
+				null)
+				?? throw new InvalidOperationException("Create method not found on OpAmpMessageSubscriberFactory");
 #pragma warning restore IL2075
-			
-			_client = new IsolatedOpAmpClientWrapper(isolatedClient);
+
+			// Create the subscriber instance using reflection - this creates it in the isolated ALC
+			var subscriberInstance = createMethod.Invoke(null, new object[] { logger })
+				?? throw new InvalidOperationException("Failed to create OpAmp message subscriber");
+
+			_logger.LogDebug("OpAmp message subscriber created in isolated ALC");
+
+			// The subscriber implements IOpAmpMessageSubscriber which only uses primitives
+			// We can call it via dynamic or reflection without type issues
+			dynamic subscriber = subscriberInstance;
+
+			// Subscribe to messages
+			Action<string, byte[]> onMessageReceived = (messageType, payload) =>
+			{
+				_logger.LogDebug("Received OpAmp message of type: {MessageType}", messageType);
+				_remoteConfigListener.HandleMessage(messageType, payload);
+			};
+
+			Action<bool> onConnectionChanged = (isConnected) =>
+			{
+				_logger.LogDebug("OpAmp connection status changed: {IsConnected}", isConnected);
+			};
+
+			subscriber.MessageReceived += onMessageReceived;
+			subscriber.ConnectionChanged += onConnectionChanged;
+
+			// Start the subscriber in background - subscriber manages its own lifecycle
+			_ = subscriber.StartAsync(options.OpAmpEndpoint!, _startupCancellationTokenSource.Token);
+
+			_logger.LogInformation("OpAmp client initialization started in isolated ALC");
+			_client = new EmptyOpAmpClient(); // Use empty client - real client runs in isolated ALC
 		}
 		catch (Exception ex)
 		{

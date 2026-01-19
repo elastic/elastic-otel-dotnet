@@ -11,6 +11,227 @@ using Microsoft.Extensions.Logging;
 
 namespace Elastic.OpenTelemetry.Core.Configuration;
 
+//internal sealed class OpAmpSubscriberBridge : DispatchProxy
+//{
+//	private Action<byte[]> _onMessage;
+//	private Action<bool> _onConnectionChange;
+//	[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)]
+//	private Type _messageType;
+//	private MethodInfo _toByteArrayMethod;
+
+//	// Called by OpAmpManager to set up the bridge
+//	[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic invocations are only used when IsDynamicCodeSupported is true")]
+//	public void Initialize(
+//		Type subscriberInterface,
+//		Action<byte[]> onMessage,
+//		Action<bool> onConnectionChange)
+//	{
+//		_onMessage = onMessage;
+//		_onConnectionChange = onConnectionChange;
+
+//		// Find the message type for conversion
+//		var assembly = subscriberInterface.Assembly;
+//		_messageType = assembly!.GetType("OpenTelemetry.OpAmp.Client.OpAmpMessage")!;
+//		_toByteArrayMethod = _messageType.GetMethod("ToByteArray")!;
+//	}
+
+//	// This is called when OpAmp invokes interface methods
+//	protected override object Invoke(MethodInfo targetMethod, object[] args)
+//	{
+//		try
+//		{
+//			switch (targetMethod.Name)
+//			{
+//				case "OnMessage":
+//				case "OnMessageReceived":
+//					HandleMessage(args[0]);
+//					break;
+
+//				case "OnConnectionStatusChanged":
+//				case "OnConnectionChanged":
+//					HandleConnectionChange(args[0]);
+//					break;
+
+//				default:
+//					Console.WriteLine($"[Bridge] Unhandled method: {targetMethod.Name}");
+//					break;
+//			}
+//		}
+//		catch (Exception ex)
+//		{
+//			Console.WriteLine($"[Bridge] Error in {targetMethod.Name}: {ex.Message}");
+//		}
+
+//		return null;
+//	}
+
+//	private void HandleMessage(object message)
+//	{
+//		try
+//		{
+//			// Convert the message object to bytes
+//			byte[] bytes = null;
+
+//			if (_toByteArrayMethod != null)
+//			{
+//				// If message has ToByteArray method
+//				bytes = (byte[])_toByteArrayMethod.Invoke(message, null);
+//			}
+//			else if (message is byte[] directBytes)
+//			{
+//				// If it's already bytes
+//				bytes = directBytes;
+//			}
+//			else
+//			{
+//				// Try to serialize using any available method
+//				var msgType = message.GetType();
+//				var serializeMethod = msgType.GetMethod("ToByteArray")
+//					?? msgType.GetMethod("Serialize");
+
+//				if (serializeMethod != null)
+//				{
+//					bytes = (byte[])serializeMethod.Invoke(message, null);
+//				}
+//			}
+
+//			if (bytes != null)
+//			{
+//				// Call back to instrumentation code (crosses ALC boundary)
+//				_onMessage?.Invoke(bytes);
+//			}
+//		}
+//		catch (Exception ex)
+//		{
+//			Console.WriteLine($"[Bridge] Error converting message: {ex.Message}");
+//		}
+//	}
+
+//	private void HandleConnectionChange(object status)
+//	{
+//		try
+//		{
+//			bool isConnected = false;
+
+//			// Handle different possible status types
+//			if (status is bool boolStatus)
+//			{
+//				isConnected = boolStatus;
+//			}
+//			else if (status is Enum enumStatus)
+//			{
+//				// Assume "Connected" or similar enum value means connected
+//				var statusString = enumStatus.ToString();
+//				isConnected = statusString.Contains("Connected", StringComparison.OrdinalIgnoreCase);
+//			}
+//			else if (status is string strStatus)
+//			{
+//				isConnected = strStatus.Contains("Connected", StringComparison.OrdinalIgnoreCase);
+//			}
+
+//			_onConnectionChange?.Invoke(isConnected);
+//		}
+//		catch (Exception ex)
+//		{
+//			Console.WriteLine($"[Bridge] Error handling connection change: {ex.Message}");
+//		}
+//	}
+
+//	public static object Create(Type interfaceType)
+//	{
+//		return Create(interfaceType, typeof(OpAmpSubscriberBridge));
+//	}
+//}
+
+//internal sealed class OpAmpManager : IDisposable
+//{
+//	private readonly OpAmpLoadContext _loadContext;
+
+//	private readonly object _clientInstance;
+//	private object _subscriberInstance;
+
+//	private readonly MethodInfo _startMethod;
+//	private readonly MethodInfo _stopMethod;
+
+//	public OpAmpManager(ILogger logger)
+//	{
+//		// Create isolated load context
+//		_loadContext = new OpAmpLoadContext(logger);
+
+//		// Load OpAmp assembly in isolated context
+//		var opAmpAssembly = _loadContext.LoadFromAssemblyPath(opAmpClientPath);
+
+//		// Find the client type
+//		var clientType = opAmpAssembly.GetType("OpenTelemetry.OpAmp.Client.OpAmpClient")
+//			?? throw new InvalidOperationException("OpAmpClient type not found");
+
+//		// Create client instance
+//		_clientInstance = Activator.CreateInstance(clientType);
+
+//		// Cache methods for later use
+//		_startMethod = clientType.GetMethod("Start") ?? clientType.GetMethod("Connect");
+//		_stopMethod = clientType.GetMethod("Stop") ?? clientType.GetMethod("Disconnect");
+//	}
+
+//	public void Start(
+//		string endpoint,
+//		Action<byte[]> onMessageReceived,
+//		Action<bool> onConnectionChanged)
+//	{
+//		// Create subscriber in isolated context that bridges to our callbacks
+//		_subscriberInstance = CreateBridgeSubscriber(
+//			_loadContext,
+//			_clientInstance,
+//			onMessageReceived,
+//			onConnectionChanged
+//		);
+
+//		// Start the client
+//		_startMethod?.Invoke(_clientInstance, new object[] { endpoint });
+//	}
+
+//	private object CreateBridgeSubscriber(
+//		OpAmpLoadContext context,
+//		object client,
+//		Action<byte[]> onMessage,
+//		Action<bool> onConnectionChange)
+//	{
+//		// Get subscriber interface type from isolated context
+//		var opAmpAssembly = client.GetType().Assembly;
+//		var subscriberInterface = opAmpAssembly.GetType("OpenTelemetry.OpAmp.Client.IOpAmpSubscriber");
+
+//		if (subscriberInterface == null)
+//		{
+//			throw new InvalidOperationException("IOpAmpSubscriber interface not found");
+//		}
+
+//		// Create the bridge subscriber using helper class
+//		var bridgeType = typeof(OpAmpSubscriberBridge);
+//		var bridge = Activator.CreateInstance(bridgeType);
+
+//		// Initialize it with callbacks
+//		var initMethod = bridgeType.GetMethod("Initialize");
+//		initMethod.Invoke(bridge, new object[] { subscriberInterface, onMessage, onConnectionChange });
+
+//		// Subscribe to the client
+//		var subscribeMethod = client.GetType().GetMethod("Subscribe");
+//		subscribeMethod?.Invoke(client, new[] { bridge });
+
+//		return bridge;
+//	}
+
+//	public void Dispose()
+//	{
+//		try
+//		{
+//			_stopMethod?.Invoke(_clientInstance, null);
+//		}
+//		catch { }
+
+//		_loadContext?.Unload();
+//	}
+//}
+
 /// <summary>
 /// Custom AssemblyLoadContext for isolating Google.Protobuf and OpenTelemetry.OpAmp.Client
 /// to prevent version conflicts when the instrumented application brings its own versions
