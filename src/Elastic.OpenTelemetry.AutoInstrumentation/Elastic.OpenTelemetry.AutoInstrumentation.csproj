@@ -7,8 +7,19 @@
     <IsPackable>true</IsPackable>
     <PolyPublic>true</PolyPublic>
     <GenerateNuspecDependsOn>$(GenerateNuspecDependsOn);_ExcludeTargetFramework;_ExcludeTargetFrameworkDependency</GenerateNuspecDependsOn>
-    <!-- Use isolated ALC for OpAmp client to avoid version conflicts in profiler-loaded scenarios.
-         Only enabled for frameworks that support AssemblyLoadContext (net8.0). -->
+    <!-- PDB Configuration: Ensure PDB files are generated for all builds -->
+    <DebugType>embedded</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <!-- PDB configuration for Release builds -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>embedded</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
   </PropertyGroup>
 
   <!-- Define USE_ISOLATED_OPAMP_CLIENT only for frameworks that support AssemblyLoadContext -->

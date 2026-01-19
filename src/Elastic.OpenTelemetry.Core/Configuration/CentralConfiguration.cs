@@ -13,7 +13,7 @@ using OpenTelemetry.OpAmp.Client.Messages;
 using System.Net.Http;
 #endif
 
-#if NET8_0_OR_GREATER && USE_ISOLATED_OPAMP_CLIENT
+#if NET8_0_OR_GREATER //&& USE_ISOLATED_OPAMP_CLIENT
 using System.Runtime.CompilerServices;
 #else
 using OpenTelemetry.OpAmp.Client.Settings;
@@ -72,7 +72,7 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 		_startupCancellationTokenSource = new CancellationTokenSource();
 		_remoteConfigListener = new RemoteConfigMessageListener();
 
-		_logger.LogDebug("CentralConfiguration constructor starting. OpAmp enabled check...");
+		_logger.LogDebug("CentralConfiguration constructor starting OpAmp enabled check");
 
 		if (options.IsOpAmpEnabled() is false)
 		{
@@ -80,14 +80,14 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 			_startupTask = Task.CompletedTask;
 			_isStarted = false;
 
-			_logger.LogDebug("OpAmp is not enabled in the provided options. Central Configuration will not be initialized.");
+			_logger.LogDebug("OpAmp is not enabled in the provided options. Central Configuration will not be initialized");
 
 			return;
 		}
 
 		_logger.LogInformation("Initializing Central Configuration with OpAmp endpoint: {OpAmpEndpoint}", options.OpAmpEndpoint);
 
-#if NET8_0_OR_GREATER && USE_ISOLATED_OPAMP_CLIENT
+#if NET8_0_OR_GREATER //&& USE_ISOLATED_OPAMP_CLIENT
 		if (!RuntimeFeature.IsDynamicCodeSupported)
 		{
 			_client = new EmptyOpAmpClient();
@@ -128,22 +128,20 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 				{
 					try
 					{
+						// Check file version before loading
+						var fileVersionInfo = System.Diagnostics.FileVersionInfo.GetVersionInfo(protobufPath);
+						_logger.LogDebug("Google.Protobuf file version: {FileVersion}, Product version: {ProductVersion}", 
+							fileVersionInfo.FileVersion, fileVersionInfo.ProductVersion);
+
 						protobufAssembly = loadContext.LoadFromAssemblyPath(protobufPath);
 						var loadedVersion = protobufAssembly.GetName().Version;
 						_logger.LogDebug("Successfully loaded Google.Protobuf from isolated ALC. Version: {LoadedVersion}", loadedVersion);
-						_logger.LogDebug("  File: {Path}", protobufPath);
-						_logger.LogDebug("  Expected version: 3.31.1.0");
-						
-						if (loadedVersion?.ToString() != "3.31.1.0")
-						{
-							_logger.LogWarning("Google.Protobuf version mismatch. Expected 3.31.1.0 but got {LoadedVersion}. " +
-								"This may cause assembly binding issues.", loadedVersion);
-						}
 					}
 					catch (FileLoadException fex)
 					{
-						_logger.LogError(fex, "FileLoadException loading Google.Protobuf - likely manifest version mismatch. " +
-							"The DLL at {ProtobufPath} has an internal version that doesn't match expectations.", protobufPath);
+						_logger.LogError(fex, "FileLoadException loading Google.Protobuf - manifest version mismatch. " +
+							"The DLL at {ProtobufPath} has an internal assembly version that doesn't match the file. " +
+							"This typically means the OpenTelemetry AutoInstrumentation package contains a mismatched or corrupted DLL.", protobufPath);
 						throw;
 					}
 					catch (Exception ex)
@@ -154,12 +152,22 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 				}
 				else
 				{
-					_logger.LogWarning("Google.Protobuf.dll not found at: {ProtobufPath}", protobufPath);
+					_logger.LogWarning("Google.Protobuf.dll not found at: {ProtobufPath}. OpenTelemetry.OpAmp.Client will not be initialized.", protobufPath);
+					_client = new EmptyOpAmpClient();
+					_startupTask = Task.CompletedTask;
+					_isStarted = false;
+					_startupFailed = true;
+					return;
 				}
 			}
 			else
 			{
 				_logger.LogWarning("OtelInstallationPath is null or empty. Cannot pre-load Google.Protobuf.");
+				_client = new EmptyOpAmpClient();
+				_startupTask = Task.CompletedTask;
+				_isStarted = false;
+				_startupFailed = true;
+				return;
 			}
 
 			// Step 2: Load OpenTelemetry.OpAmp.Client
@@ -186,6 +194,11 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 				else
 				{
 					_logger.LogWarning("OpenTelemetry.OpAmp.Client.dll not found at: {OpAmpPath}", opAmpPath);
+					_client = new EmptyOpAmpClient();
+					_startupTask = Task.CompletedTask;
+					_isStarted = false;
+					_startupFailed = true;
+					return;
 				}
 			}
 
@@ -211,10 +224,10 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 				return;
 			}
 
-			var optionsType = opAmpAssembly.GetType("OpenTelemetry.OpAmp.Client.Settings.OpAmpClientOptions");
-			if (optionsType is null)
+			var settingsType = opAmpAssembly.GetType("OpenTelemetry.OpAmp.Client.Settings.OpAmpClientSettings");
+			if (settingsType is null)
 			{
-				_logger.LogError("Failed to get OpAmpClientOptions type from OpenTelemetry.OpAmp.Client assembly.");
+				_logger.LogError("Failed to get OpAmpClientSettings type from OpenTelemetry.OpAmp.Client assembly.");
 				_client = new EmptyOpAmpClient();
 				_startupTask = Task.CompletedTask;
 				_isStarted = false;
@@ -223,7 +236,7 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 			}
 
 			// Create a delegate with the correct signature from the isolated ALC
-			var configDelegate = CreateConfigurationDelegate(optionsType, opAmpAssembly, options);
+			var configDelegate = CreateConfigurationDelegate(settingsType, opAmpAssembly, options);
 #pragma warning disable IL2072 // Suppress due to reflection-based type loading in isolated context
 			var client = (OpAmpClient)Activator.CreateInstance(opAmpClientType, configDelegate)!;
 #pragma warning restore IL2072
@@ -234,7 +247,9 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "Exception during isolated ALC OpAmp client initialization. Falling back to EmptyOpAmpClient.");
+			_logger.LogError(ex, "Exception during isolated ALC OpAmp client initialization. Falling back to EmptyOpAmpClient. " +
+				"This is likely due to a version mismatch in the OpenTelemetry AutoInstrumentation package. " +
+				"Ensure the package contains matching versions of Google.Protobuf and OpenTelemetry.OpAmp.Client.");
 			_client = new EmptyOpAmpClient();
 			_startupTask = Task.CompletedTask;
 			_isStarted = false;
@@ -287,7 +302,7 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 		_startupTask = InitializeStartupAsync();
 	}
 
-#if NET8_0_OR_GREATER && USE_ISOLATED_OPAMP_CLIENT
+#if NET8_0_OR_GREATER// && USE_ISOLATED_OPAMP_CLIENT
 	[UnconditionalSuppressMessage("Trimming", "IL3050", Justification = "Dynamic code is only used when IsDynamicCodeSupported is true")]
 	[UnconditionalSuppressMessage("Trimming", "IL2026", Justification = "Dynamic code is only used when IsDynamicCodeSupported is true")]
 	[UnconditionalSuppressMessage("Trimming", "IL2072", Justification = "Dynamic code is only used when IsDynamicCodeSupported is true")]

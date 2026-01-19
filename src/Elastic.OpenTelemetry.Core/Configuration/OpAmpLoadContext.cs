@@ -28,7 +28,6 @@ internal sealed class OpAmpLoadContext : AssemblyLoadContext
 {
 	private readonly ILogger _logger;
 	private readonly AssemblyDependencyResolver? _resolver = null;
-	private readonly string? _otelInstallationPath = null;
 
 	public OpAmpLoadContext(ILogger logger) : base("ElasticOpenTelemetryIsolatedOpAmp", isCollectible: false)
 	{
@@ -44,22 +43,22 @@ internal sealed class OpAmpLoadContext : AssemblyLoadContext
 			return;
 		}
 
-		_otelInstallationPath = Path.Join(otelInstallationPath, "net", GetType().Assembly.GetName().Name);
+		OtelInstallationPath = Path.Join(otelInstallationPath, "net");
 
 		// TODO - Check path exists
 
 		_logger.LogDebug("OpAmpLoadContext: Initializing isolated load context for OpenTelemetry OpAmp dependencies for '{OtelInstallationPath}'",
 			otelInstallationPath ?? "<null>");
 
-		_resolver = new AssemblyDependencyResolver(otelInstallationPath!);
+		_resolver = new AssemblyDependencyResolver(Path.Join(OtelInstallationPath, "Elastic.OpenTelemetry.AutoInstrumentation.dll"));
 		
 		// Hook into AssemblyResolve to handle version mismatches
 		Resolving += OnAssemblyResolve;
 	}
 
-	public string? OtelInstallationPath => _otelInstallationPath;
+	public string? OtelInstallationPath { get; }
 
-	private System.Reflection.Assembly? OnAssemblyResolve(AssemblyLoadContext context, AssemblyName assemblyName)
+	private Assembly? OnAssemblyResolve(AssemblyLoadContext context, AssemblyName assemblyName)
 	{
 		if (assemblyName.Name is not "Google.Protobuf" and not "OpenTelemetry.OpAmp.Client")
 		{
@@ -91,9 +90,9 @@ internal sealed class OpAmpLoadContext : AssemblyLoadContext
 		}
 
 		// Fallback: try direct path resolution
-		if (!string.IsNullOrEmpty(_otelInstallationPath))
+		if (!string.IsNullOrEmpty(OtelInstallationPath))
 		{
-			var assemblyPath = Path.Combine(_otelInstallationPath, $"{assemblyName.Name}.dll");
+			var assemblyPath = Path.Combine(OtelInstallationPath, $"{assemblyName.Name}.dll");
 			if (File.Exists(assemblyPath))
 			{
 				try
@@ -139,9 +138,9 @@ internal sealed class OpAmpLoadContext : AssemblyLoadContext
 				assemblyName.Name);
 
 			// Try direct path resolution if resolver is not initialized
-			if (!string.IsNullOrEmpty(_otelInstallationPath))
+			if (!string.IsNullOrEmpty(OtelInstallationPath))
 			{
-				var assemblyPath = Path.Combine(_otelInstallationPath, $"{assemblyName.Name}.dll");
+				var assemblyPath = Path.Combine(OtelInstallationPath, $"{assemblyName.Name}.dll");
 				if (File.Exists(assemblyPath))
 				{
 					try
