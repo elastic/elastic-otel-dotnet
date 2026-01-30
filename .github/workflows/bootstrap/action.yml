@@ -2,6 +2,12 @@
 name: Bootstrap Checkout
 description: Ensures all actions bootstrap the same
 
+inputs:
+  skip-cache:
+    description: 'Skip using cache for NuGet packages and OpenTelemetry distribution'
+    required: false
+    default: 'false'
+
 outputs:
   agent-version:
     description: "The current agent version number"
@@ -20,6 +26,7 @@ runs:
         git tag --list
         
     - uses: actions/cache@v5
+      if: inputs.skip-cache != 'true'
       with:
         path: ~/.nuget/packages
         key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.[cf]sproj*') }}
@@ -29,6 +36,7 @@ runs:
     # ensures we don't hit GitHub releases all the time to download the OpenTelemetry auto instrumentation assets
     # if not available they will be download in .artifacts/otel-distribution/{otel-version}
     - name: Cache OpenTelemetry Distribution
+      if: inputs.skip-cache != 'true'
       uses: actions/cache@v5
       with:
         path: .artifacts/otel-distribution
