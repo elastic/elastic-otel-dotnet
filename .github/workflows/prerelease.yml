@@ -27,6 +27,8 @@ jobs:
       - name: Bootstrap Action Workspace
         id: bootstrap
         uses: ./.github/workflows/bootstrap
+        with:
+          skip-cache: 'true'
 
       - name: Test
         run: ./build.sh test
