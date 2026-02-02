@@ -1,10 +1,11 @@
-# Based on the opentelemetry dotnet operator image:
+# Based on the OpenTelemetry .NET operator image:
 # 	https://github.com/open-telemetry/opentelemetry-operator/blob/main/autoinstrumentation/dotnet/Dockerfile
 # To build locally you need to call:
 #	- ./build.sh redistribute
 # This ensures the distribution is locally available under .artifacts/elastic-distribution
 
-FROM busybox as downloader
+# Stage 1: collect and expand all distro archives (glibc/musl, x64/arm64)
+FROM cgr.dev/chainguard/wolfi-base AS downloader
 
 WORKDIR /autoinstrumentation
 
@@ -21,6 +22,8 @@ RUN unzip elastic-dotnet-instrumentation-linux-glibc-x64.zip &&\
     rm elastic-dotnet-instrumentation-*.zip &&\
     chmod -R go+r .
 
-FROM busybox
-
-COPY --from=downloader /autoinstrumentation /autoinstrumentation
+# Stage 2: runtime image; Wolfi already provides nonroot (uid/gid 65532)
+FROM cgr.dev/chainguard/wolfi-base
+COPY --chown=65532:65532 --from=downloader /autoinstrumentation /autoinstrumentation
+USER 65532:65532
+WORKDIR /autoinstrumentation
