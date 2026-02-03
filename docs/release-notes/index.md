@@ -30,7 +30,7 @@ To check for security updates, go to [Security announcements for the Elastic sta
 ## 1.3.0 [edot-dotnet-1.3.0-release-notes]
 
 :::{note}
-This release includes prepratory work for OpAMP configuration and central configuration. These options do not currently have any impact and should not be used.
+This release includes preparatory work for OpAMP configuration and central configuration. These options do not currently have any impact and should not be used.
 :::
 
 ### Features and enhancements [edot-dotnet-1.3.0-features-enhancements]
