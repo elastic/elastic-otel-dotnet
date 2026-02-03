@@ -36,12 +36,9 @@ This release includes prepratory work for OpAMP configuration and central config
 ### Features and enhancements [edot-dotnet-1.3.0-features-enhancements]
 
 - Add initial config options to configure OpAmp client. [#372](https://github.com/elastic/elastic-otel-dotnet/pull/372)
+- Redact and log the OpAmp header option. [#374](https://github.com/elastic/elastic-otel-dotnet/pull/374)
 - Update k8s operator to use wolfi-base. [#383](https://github.com/elastic/elastic-otel-dotnet/pull/383)
 - Update to latest upstream packages. [#385](https://github.com/elastic/elastic-otel-dotnet/pull/385)
-
-### Fixes [edot-dotnet-1.3.0-fixes]
-
-- Redact and log the OpAmp header option. [#374](https://github.com/elastic/elastic-otel-dotnet/pull/374)
 
 ## 1.2.2 [edot-dotnet-1.2.2-release-notes]
 
