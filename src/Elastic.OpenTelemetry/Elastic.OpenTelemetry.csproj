@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
@@ -64,6 +64,11 @@
     <Compile Include="..\Elastic.OpenTelemetry.Core\**\*.cs" />
     <Content Remove="README.md" />
   </ItemGroup>
-  
+
+  <ItemGroup>
+    <None Include="..\..\.artifacts\bin\Elastic.OpenTelemetry.Configuration.Analyzer\release\Elastic.OpenTelemetry.Configuration.Analyzer.dll"
+          Pack="true"
+          PackagePath="analyzers/dotnet/cs/" />
+  </ItemGroup>
 </Project>
 
