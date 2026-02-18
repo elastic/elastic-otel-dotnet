@@ -1,6 +1,6 @@
-# Elastic OpenTelemetry Configuration Analyzer
+# Elastic OpenTelemetry configuration analyzer
 
-A set of Roslyn analyzers for enforcing best practices when configuring Elastic and OpenTelemetry in .NET applications using EDOT .NET.
+A set of Roslyn analyzers that help enforce recommended configuration patterns when using the Elastic Distribution of OpenTelemetry (EDOT) in .NET applications.
 
 This package provides the following analyzers:
 
