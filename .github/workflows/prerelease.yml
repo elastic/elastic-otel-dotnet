@@ -37,12 +37,12 @@ jobs:
         name: Release
         
       - name: Generate build provenance (Distribution)
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: "${{ github.workspace }}/${{ env.RELEASE_DISTRO }}"
           
       - name: Generate build provenance (Packages)
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: "${{ github.workspace }}/${{ env.RELEASE_PACKAGES }}"
 
