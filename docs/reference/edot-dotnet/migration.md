@@ -19,6 +19,10 @@ products:
 
 Compared to the Elastic APM .NET agent, the {{edot}} .NET presents a number of advantages:
 
+:::{agent-skill}
+:url: https://github.com/elastic/agent-skills/tree/main/skills/observability/edot-dotnet-migrate
+:::
+
 - No vendor lock-in through standardized concepts, supporting the use of multiple backend vendors or switching between them.
 - A single set of application APIs are required to instrument applications.
 - A wider pool of knowledge, experience and support is available across the OpenTelemetry community.
