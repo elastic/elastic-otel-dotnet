@@ -20,6 +20,8 @@ Learn how to set up and configure the {{edot}} .NET to instrument your applicati
 
 :::{agent-skill}
 :url: https://github.com/elastic/agent-skills/tree/main/skills/observability/edot-dotnet-instrument
+
+Use this skill to instrument .NET services with EDOT for tracing, metrics, and logs.
 :::
 
 ## Quickstart guide

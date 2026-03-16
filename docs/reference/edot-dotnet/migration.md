@@ -32,6 +32,8 @@ Follow these steps to migrate from the legacy Elastic APM .NET agent to the {{ed
 
 :::{agent-skill}
 :url: https://github.com/elastic/agent-skills/tree/main/skills/observability/edot-dotnet-migrate
+
+Use this skill to migrate from the Elastic APM .NET agent to EDOT .NET.
 :::
 
 ### Manual instrumentation
