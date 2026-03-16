@@ -18,6 +18,12 @@ products:
 
 Learn how to set up and configure the {{edot}} .NET to instrument your application or service.
 
+:::{agent-skill}
+:url: https://github.com/elastic/agent-skills/tree/main/skills/observability/edot-dotnet-instrument
+
+Use this skill to instrument .NET services with EDOT for tracing, metrics, and logs.
+:::
+
 ## Quickstart guide
 
 EDOT .NET is designed to be straightforward to integrate into your applications. Integration includes applications that have previously used the [OpenTelemetry SDK](https://opentelemetry.io/docs/languages/net/), those that are transitioning from the [Elastic APM Agent](apm-agent-dotnet://reference/index.md) and those introducing observability instrumentation for the first time. When the OpenTelemetry SDK or Elastic APM Agent are already in use, minor code changes are required at the point of registration. Refer to [Migration](/reference/edot-dotnet/migration.md) for more details.
