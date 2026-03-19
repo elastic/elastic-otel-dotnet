@@ -182,7 +182,7 @@ internal sealed
 
 			if (eventData.EventSource.Name.StartsWith(OpenTelemetryEventSourceNamePrefix) && eventData.Message is not null)
 			{
-				builder.Append($"OTEL-SDK ({eventData.EventSource.Name}): [{threadId}] ");
+				builder.Append($"{eventData.EventSource.Name}: [{threadId}] ");
 
 				if (eventData.Payload is null)
 				{
