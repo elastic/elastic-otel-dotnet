@@ -1,0 +1,11 @@
+<Project>
+  <!-- Solution-build signal: $(SolutionPath) is set by MSBuild for all solution-level builds.
+       Source-only projects (IsSourceOnlyProject=true) skip compilation during solution builds
+       because their .cs files are compile-included into consuming projects.
+
+       SkipBuildTool: The build tool (build.fsproj) passes /p:SkipBuildTool=true when it invokes
+       dotnet build/clean on the solution, so MSBuild skips recompiling the running build.exe.
+       IDE/manual builds don't set this property, so F5 debugging works normally. -->
+  <Import Project="build/SkipSolutionBuild.targets"
+          Condition="('$(SolutionPath)' != '' AND '$(IsSourceOnlyProject)' == 'true') OR ('$(SkipBuildTool)' == 'true' AND '$(IsBuildToolProject)' == 'true')" />
+</Project>

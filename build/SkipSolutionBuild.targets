@@ -1,0 +1,15 @@
+<Project>
+  <PropertyGroup>
+    <SkipSolutionBuildImported>true</SkipSolutionBuildImported>
+  </PropertyGroup>
+
+  <!-- Skip compilation, output copying, and cleaning during solution-level builds.
+       Used by source-only projects (whose .cs files are compile-included into consuming
+       projects) and by the build tool project (whose exe is locked while running).
+       Restore and reference resolution still work (needed by dotnet format). -->
+  <Target Name="CoreCompile" DependsOnTargets="" Returns="" />
+  <Target Name="CopyFilesToOutputDirectory" DependsOnTargets="" Returns="" />
+  <Target Name="CreateManifestResourceNames" DependsOnTargets="" Returns="" />
+  <Target Name="CoreClean" DependsOnTargets="" Returns="" />
+  <Target Name="IncrementalClean" DependsOnTargets="" Returns="" />
+</Project>
