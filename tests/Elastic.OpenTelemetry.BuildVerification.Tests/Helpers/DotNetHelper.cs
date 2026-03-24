@@ -132,9 +132,15 @@ internal static class DotNetHelper
 			psi.ArgumentList.Add(arg);
 
 		using var process = Process.Start(psi)!;
-		var output = await process.StandardOutput.ReadToEndAsync();
-		var error = await process.StandardError.ReadToEndAsync();
+
+		var outputTask = process.StandardOutput.ReadToEndAsync();
+		var errorTask = process.StandardError.ReadToEndAsync();
+
+		await Task.WhenAll(outputTask, errorTask);
 		await process.WaitForExitAsync();
+
+		var output = await outputTask;
+		var error = await errorTask;
 
 		return new DotNetResult(process.ExitCode, output, error);
 	}
