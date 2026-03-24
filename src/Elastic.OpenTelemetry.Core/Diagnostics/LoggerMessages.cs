@@ -19,8 +19,9 @@ namespace Elastic.OpenTelemetry.Diagnostics;
 internal static partial class LoggerMessages
 {
 	// NOTES:
-	// - The IDs and EventNames should ideally not change to ensure constistency in log querying.
+	// - The IDs and EventNames should ideally not change to ensure consistency in log querying.
 	// - Avoid using LogLevel.Trace as this level doesn't align well with the upstream diagnostic levels.
+	// - EventIds 1-60 are used here. Configuration LoggerMessages uses 100+, OpAmp uses 200+.
 
 	[LoggerMessage(EventId = 1, EventName = "BootstrapInvoked", Level = LogLevel.Debug, Message = "Bootstrap has been invoked {InvocationCount} times.")]
 	public static partial void LogBootstrapInvoked(this ILogger logger, int invocationCount);
@@ -165,6 +166,15 @@ internal static partial class LoggerMessages
 
 	[LoggerMessage(EventId = 60, EventName = "DetectedIncludeScopes", Level = LogLevel.Warning, Message = "IncludeScopes is enabled and may cause export issues. See https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet/troubleshooting.html#missing-log-records")]
 	internal static partial void LogDetectedIncludeScopesWarning(this ILogger logger);
+
+
+
+
+	[LoggerMessage(EventId = 70, EventName = "CompositeLoggerActivated", Level = LogLevel.Debug, Message = "CompositeLogger has been activated and drained {DeferredLogEntries} log entries.")]
+	internal static partial void LogCompositeLoggerActivated(this ILogger logger, int deferredLogEntries);
+
+
+
 
 	public static void LogDistroPreamble(this ILogger logger, SdkActivationMethod activationMethod, ElasticOpenTelemetryComponents components)
 	{

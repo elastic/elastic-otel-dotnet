@@ -87,16 +87,15 @@ internal sealed
 
 	internal Guid InstanceId { get; } = Guid.NewGuid();
 
-	public override void Dispose()
+	// LoggingEventListener does not own _logger — disposal is managed by
+	// ElasticOpenTelemetryComponents which orchestrates the lifetime of both.
+	public override void Dispose() => base.Dispose();
+
+	public ValueTask DisposeAsync()
 	{
-		if (_logger is IDisposable d)
-			d.Dispose();
-
-		base.Dispose();
+		Dispose();
+		return default;
 	}
-
-	public ValueTask DisposeAsync() =>
-		_logger is IAsyncDisposable d ? d.DisposeAsync() : default;
 
 	protected override void OnEventSourceCreated(EventSource eventSource)
 	{

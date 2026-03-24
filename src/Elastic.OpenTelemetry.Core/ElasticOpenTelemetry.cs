@@ -13,6 +13,22 @@ namespace Elastic.OpenTelemetry.Core;
 
 internal static class ElasticOpenTelemetry
 {
+	/// <summary>Maximum time to wait for the OpAmp client to start.</summary>
+	internal const int OpAmpStartTimeoutMs = 2000;
+
+	/// <summary>Maximum time to wait for the first central config response after OpAmp starts.</summary>
+	internal const int WaitForFirstConfigTimeoutMs = 3000;
+
+	/// <summary>Extra margin to ensure the safety timer fires after the bootstrap path completes.</summary>
+	internal const int SafetyTimerMarginMs = 1000;
+
+	/// <summary>
+	/// Safety timer for CompositeLogger deferred mode.
+	/// Computed as OpAmpStartTimeout + WaitForFirstConfigTimeout + margin so the timer
+	/// fires only after the normal bootstrap path has had time to activate the logger.
+	/// </summary>
+	internal const int SafetyTimerMs = OpAmpStartTimeoutMs + WaitForFirstConfigTimeoutMs + SafetyTimerMarginMs;
+
 	private static int BootstrapCounter;
 
 	public static SdkActivationMethod ActivationMethod;

@@ -14,7 +14,7 @@ namespace Elastic.OpenTelemetry.Core.Diagnostics;
 
 internal static class StackTraceLoggerExtensions
 {
-	[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2026: RequiresUnreferencedCode", Justification = "The calls to `GetMethod`" +
+	[UnconditionalSuppressMessage("AssemblyLoadTrimming", "IL2026: RequiresUnreferencedCode", Justification = "The calls to `LogCallerInfo`" +
 		" are guarded by a RuntimeFeature.IsDynamicCodeSupported` check and therefore this method is safe to call in AoT scenarios")]
 	public static void LogCallerInfo<T>(this ILogger logger, BuilderOptions<T> builderOptions) where T : class
 	{

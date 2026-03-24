@@ -443,7 +443,7 @@ public static class ServiceCollectionExtensions
 			BootstrapLogger.LogBuilderOptions(builderOptions, nameof(ServiceCollectionExtensions), nameof(AddElasticOpenTelemetryCore));
 		}
 
-		var logger = DeferredLogger.GetOrCreate(options);
+		var logger = CompositeLogger.GetOrCreate(options);
 
 		logger.LogCallerInfo(builderOptions);
 

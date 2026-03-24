@@ -32,14 +32,15 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 	private readonly SemaphoreSlim _logSemaphore = new(0);
 	private readonly CancellationTokenSource _cancellationTokenSource = new();
 	private readonly StreamWriter _streamWriter;
-	private readonly LogLevel _configuredLogLevel;
 	private readonly LoggerExternalScopeProvider _scopeProvider;
+	private readonly CompositeElasticOpenTelemetryOptions _options;
+	private readonly bool _fileLoggingEnabled;
 
 	private int _disposed;
 
 	internal Guid InstanceId { get; } = Guid.NewGuid();
 
-	public bool FileLoggingEnabled { get; }
+	public bool FileLoggingEnabled => _fileLoggingEnabled;
 
 	public FileLogger(CompositeElasticOpenTelemetryOptions options)
 	{
@@ -50,11 +51,16 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 		}
 
 		_scopeProvider = new LoggerExternalScopeProvider();
-		_configuredLogLevel = options.LogLevel;
+		_options = options;
+
+		// Making this decision here is okay for now, based on how we activate the composite logger.
+		// When we need to make options dynamic from central config, we willl need to revisit this to implement a more dynamic approach
+		// which will also need to create the stream etc if file logging was previously disabled.
+		_fileLoggingEnabled = _options.GlobalLogEnabled && _options.LogTargets.HasFlag(LogTargets.File);
+
 		_streamWriter = StreamWriter.Null;
 
 		WritingTask = Task.CompletedTask;
-		FileLoggingEnabled = options.GlobalLogEnabled && options.LogTargets.HasFlag(LogTargets.File);
 
 		if (!FileLoggingEnabled)
 			return;
@@ -77,13 +83,6 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 
 			_streamWriter.WriteLine("DateTime (UTC)                Thread  SpanId  Level         Message");
 			_streamWriter.WriteLine();
-
-			// Drain any deferred log entries captured before the file logger was initialized.
-			// These appear before the preamble to ensure correct timestamping order.
-			if (DeferredLogger.TryGetInstance(out var deferredLogger))
-			{
-				deferredLogger.DrainAndRelease(_streamWriter);
-			}
 
 			WritingTask = Task.Run(async () =>
 			{
@@ -159,7 +158,7 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 		}
 
 		// If we fall through the `try` block, consider file logging disabled.
-		FileLoggingEnabled = false;
+		_fileLoggingEnabled = false;
 	}
 
 	public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
@@ -177,7 +176,7 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 		_logSemaphore.Release();
 	}
 
-	public bool IsEnabled(LogLevel logLevel) => FileLoggingEnabled && _configuredLogLevel <= logLevel;
+	public bool IsEnabled(LogLevel logLevel) => FileLoggingEnabled && _options.LogLevel <= logLevel;
 
 	public IDisposable BeginScope<TState>(TState state) where TState : notnull => _scopeProvider.Push(state);
 
