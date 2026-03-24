@@ -61,15 +61,22 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 		{
 			_logger.LogUsingIsolatedLoadContext(nameof(CentralConfiguration));
 
-			// Use isolated load context to load OpAMP assemblies
-			var loadContext = new OpAmpIsolatedLoadContext(_logger);
+			try
+			{
+				// Use isolated load context to load OpAMP assemblies
+				var loadContext = new OpAmpIsolatedLoadContext(_logger);
 
-			client = loadContext.CreateOpAmpClientInstance(_logger,
-				options.OpAmpEndpoint!,
-				options.OpAmpHeaders ?? string.Empty,
-				options.ServiceName!,
-				options.ServiceVersion,
-				UserAgent);
+				client = loadContext.CreateOpAmpClientInstance(_logger,
+					options.OpAmpEndpoint!,
+					options.OpAmpHeaders ?? string.Empty,
+					options.ServiceName!,
+					options.ServiceVersion,
+					UserAgent);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogOpAmpClientCreationFailed(ex, nameof(CentralConfiguration), ex.GetType().Name);
+			}
 		}
 		else
 		{
