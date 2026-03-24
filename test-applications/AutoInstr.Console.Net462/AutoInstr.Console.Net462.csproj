@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net462</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <MinVerSkip>true</MinVerSkip>
+    <LangVersion>latest</LangVersion>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Remove MinVer inherited from Directory.Build.props — not needed for this standalone app -->
+    <PackageReference Remove="MinVer" />
+  </ItemGroup>
+
+  <!-- No Elastic references — the auto-instrumentation profiler injects everything. -->
+
+</Project>

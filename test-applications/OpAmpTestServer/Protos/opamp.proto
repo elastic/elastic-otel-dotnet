@@ -1,0 +1,360 @@
+// Copyright 2021, OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// OpAMP: Open Agent Management Protocol (https://github.com/open-telemetry/opamp-spec)
+
+syntax = "proto3";
+
+package opamp.proto.v1;
+
+import "anyvalue.proto";
+
+option go_package = "github.com/open-telemetry/opamp-go/protobufs";
+option csharp_namespace = "OpAmp.Proto.V1";
+
+message AgentToServer
+{
+    bytes instance_uid = 1;
+    uint64 sequence_num = 2;
+    AgentDescription agent_description = 3;
+    uint64 capabilities = 4;
+    ComponentHealth health = 5;
+    EffectiveConfig effective_config = 6;
+    RemoteConfigStatus remote_config_status = 7;
+    PackageStatuses package_statuses = 8;
+    AgentDisconnect agent_disconnect = 9;
+    uint64 flags = 10;
+    ConnectionSettingsRequest connection_settings_request = 11;
+    CustomCapabilities custom_capabilities = 12;
+    CustomMessage custom_message = 13;
+    AvailableComponents available_components = 14;
+}
+
+enum AgentToServerFlags
+{
+    AgentToServerFlags_Unspecified = 0;
+    AgentToServerFlags_RequestInstanceUid = 0x00000001;
+}
+
+message AgentDisconnect {}
+
+message ConnectionSettingsRequest
+{
+    OpAMPConnectionSettingsRequest opamp = 1;
+}
+
+message OpAMPConnectionSettingsRequest
+{
+    CertificateRequest certificate_request = 1;
+}
+
+message CertificateRequest
+{
+    bytes csr = 1;
+}
+
+message AvailableComponents
+{
+    map<string, ComponentDetails> components = 1;
+    bytes hash = 2;
+}
+
+message ComponentDetails
+{
+    repeated KeyValue metadata = 1;
+    map<string, ComponentDetails> sub_component_map = 2;
+}
+
+message ServerToAgent
+{
+    bytes instance_uid = 1;
+    ServerErrorResponse error_response = 2;
+    AgentRemoteConfig remote_config = 3;
+    ConnectionSettingsOffers connection_settings = 4;
+    PackagesAvailable packages_available = 5;
+    uint64 flags = 6;
+    uint64 capabilities = 7;
+    AgentIdentification agent_identification = 8;
+    ServerToAgentCommand command = 9;
+    CustomCapabilities custom_capabilities = 10;
+    CustomMessage custom_message = 11;
+}
+
+enum ServerToAgentFlags
+{
+    ServerToAgentFlags_Unspecified = 0;
+    ServerToAgentFlags_ReportFullState = 0x00000001;
+    ServerToAgentFlags_ReportAvailableComponents = 0x00000002;
+}
+
+enum ServerCapabilities
+{
+    ServerCapabilities_Unspecified = 0;
+    ServerCapabilities_AcceptsStatus = 0x00000001;
+    ServerCapabilities_OffersRemoteConfig = 0x00000002;
+    ServerCapabilities_AcceptsEffectiveConfig = 0x00000004;
+    ServerCapabilities_OffersPackages = 0x00000008;
+    ServerCapabilities_AcceptsPackagesStatus = 0x00000010;
+    ServerCapabilities_OffersConnectionSettings = 0x00000020;
+    ServerCapabilities_AcceptsConnectionSettingsRequest = 0x00000040;
+}
+
+message OpAMPConnectionSettings
+{
+    string destination_endpoint = 1;
+    Headers headers = 2;
+    TLSCertificate certificate = 3;
+    uint64 heartbeat_interval_seconds = 4;
+    TLSConnectionSettings tls = 5;
+}
+
+message TelemetryConnectionSettings
+{
+    string destination_endpoint = 1;
+    Headers headers = 2;
+    TLSCertificate certificate = 3;
+    TLSConnectionSettings tls = 4;
+}
+
+message OtherConnectionSettings
+{
+    string destination_endpoint = 1;
+    Headers headers = 2;
+    TLSCertificate certificate = 3;
+    map<string, string> other_settings = 4;
+    TLSConnectionSettings tls = 5;
+}
+
+message TLSConnectionSettings
+{
+    string ca_pem_contents = 1;
+    bool include_system_ca_certs_pool = 2;
+    bool insecure_skip_verify = 3;
+    string min_version = 4;
+    string max_version = 5;
+    repeated string cipher_suites = 6;
+}
+
+message Headers
+{
+    repeated Header headers = 1;
+}
+
+message Header
+{
+    string key = 1;
+    string value = 2;
+}
+
+message TLSCertificate
+{
+    bytes cert = 1;
+    bytes private_key = 2;
+    bytes ca_cert = 3;
+}
+
+message ConnectionSettingsOffers
+{
+    bytes hash = 1;
+    OpAMPConnectionSettings opamp = 2;
+    TelemetryConnectionSettings own_metrics = 3;
+    TelemetryConnectionSettings own_traces = 4;
+    TelemetryConnectionSettings own_logs = 5;
+    map<string,OtherConnectionSettings> other_connections = 6;
+}
+
+message PackagesAvailable
+{
+    map<string, PackageAvailable> packages = 1;
+    bytes all_packages_hash = 2;
+}
+
+message PackageAvailable
+{
+    PackageType type = 1;
+    string version = 2;
+    DownloadableFile file = 3;
+    bytes hash = 4;
+}
+
+enum PackageType
+{
+    PackageType_TopLevel = 0;
+    PackageType_Addon = 1;
+}
+
+message DownloadableFile
+{
+    string download_url = 1;
+    bytes content_hash = 2;
+    bytes signature = 3;
+    Headers headers = 4;
+}
+
+message ServerErrorResponse
+{
+    ServerErrorResponseType type = 1;
+    string error_message = 2;
+
+    oneof Details
+    {
+        RetryInfo retry_info = 3;
+    }
+}
+
+enum ServerErrorResponseType
+{
+    ServerErrorResponseType_Unknown = 0;
+    ServerErrorResponseType_BadRequest = 1;
+    ServerErrorResponseType_Unavailable = 2;
+}
+
+message RetryInfo
+{
+    uint64 retry_after_nanoseconds = 1;
+}
+
+message ServerToAgentCommand
+{
+    CommandType type = 1;
+}
+
+enum CommandType
+{
+    CommandType_Restart = 0;
+}
+
+message AgentDescription
+{
+    repeated KeyValue identifying_attributes = 1;
+    repeated KeyValue non_identifying_attributes = 2;
+}
+
+enum AgentCapabilities
+{
+    AgentCapabilities_Unspecified = 0;
+    AgentCapabilities_ReportsStatus = 0x00000001;
+    AgentCapabilities_AcceptsRemoteConfig = 0x00000002;
+    AgentCapabilities_ReportsEffectiveConfig = 0x00000004;
+    AgentCapabilities_AcceptsPackages = 0x00000008;
+    AgentCapabilities_ReportsPackageStatuses = 0x00000010;
+    AgentCapabilities_ReportsOwnTraces = 0x00000020;
+    AgentCapabilities_ReportsOwnMetrics = 0x00000040;
+    AgentCapabilities_ReportsOwnLogs = 0x00000080;
+    AgentCapabilities_AcceptsOpAMPConnectionSettings = 0x00000100;
+    AgentCapabilities_AcceptsOtherConnectionSettings = 0x00000200;
+    AgentCapabilities_AcceptsRestartCommand = 0x00000400;
+    AgentCapabilities_ReportsHealth = 0x00000800;
+    AgentCapabilities_ReportsRemoteConfig = 0x00001000;
+    AgentCapabilities_ReportsHeartbeat = 0x00002000;
+    AgentCapabilities_ReportsAvailableComponents = 0x00004000;
+}
+
+message ComponentHealth
+{
+    bool healthy = 1;
+    fixed64 start_time_unix_nano = 2;
+    string last_error = 3;
+    string status = 4;
+    fixed64 status_time_unix_nano = 5;
+    map<string, ComponentHealth> component_health_map = 6;
+}
+
+message EffectiveConfig
+{
+    AgentConfigMap config_map = 1;
+}
+
+message RemoteConfigStatus
+{
+    bytes last_remote_config_hash = 1;
+    RemoteConfigStatuses status = 2;
+    string error_message = 3;
+}
+
+enum RemoteConfigStatuses
+{
+    RemoteConfigStatuses_UNSET = 0;
+    RemoteConfigStatuses_APPLIED = 1;
+    RemoteConfigStatuses_APPLYING = 2;
+    RemoteConfigStatuses_FAILED = 3;
+}
+
+message PackageStatuses
+{
+    map<string, PackageStatus> packages = 1;
+    bytes server_provided_all_packages_hash = 2;
+    string error_message = 3;
+}
+
+message PackageStatus
+{
+    string name = 1;
+    string agent_has_version = 2;
+    bytes agent_has_hash = 3;
+    string server_offered_version = 4;
+    bytes server_offered_hash = 5;
+    PackageStatusEnum status = 6;
+    string error_message = 7;
+    PackageDownloadDetails download_details = 8;
+}
+
+message PackageDownloadDetails
+{
+    double download_percent = 1;
+    double download_bytes_per_second = 2;
+}
+
+enum PackageStatusEnum
+{
+    PackageStatusEnum_Installed = 0;
+    PackageStatusEnum_InstallPending = 1;
+    PackageStatusEnum_Installing = 2;
+    PackageStatusEnum_InstallFailed = 3;
+    PackageStatusEnum_Downloading = 4;
+}
+
+message AgentIdentification
+{
+    bytes new_instance_uid = 1;
+}
+
+message AgentRemoteConfig
+{
+    AgentConfigMap config = 1;
+    bytes config_hash = 2;
+}
+
+message AgentConfigMap
+{
+    map<string, AgentConfigFile> config_map = 1;
+}
+
+message AgentConfigFile
+{
+    bytes body = 1;
+    string content_type = 2;
+}
+
+message CustomCapabilities
+{
+    repeated string capabilities = 1;
+}
+
+message CustomMessage
+{
+    string capability = 1;
+    string type = 2;
+    bytes data = 3;
+}
