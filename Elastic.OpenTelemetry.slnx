@@ -35,6 +35,7 @@
     <File Path="src/Directory.Build.props" />
     <Project Path="src/Elastic.OpenTelemetry.AutoInstrumentation/Elastic.OpenTelemetry.AutoInstrumentation.csproj" />
     <Project Path="src/Elastic.OpenTelemetry.Core/Elastic.OpenTelemetry.Core.csproj" />
+    <Project Path="src/Elastic.OpenTelemetry.OpAmp.Abstractions/Elastic.OpenTelemetry.OpAmp.Abstractions.csproj" />
     <Project Path="src/Elastic.OpenTelemetry/Elastic.OpenTelemetry.csproj" />
   </Folder>
   <Folder Name="/tests/">
