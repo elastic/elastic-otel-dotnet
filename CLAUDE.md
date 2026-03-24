@@ -66,12 +66,12 @@ dotnet format
 **Source projects** (`src/`):
 
 - **Elastic.OpenTelemetry** — Main NuGet package. Extensions for `HostApplicationBuilder`, `TracerProviderBuilder`, `MeterProviderBuilder`, `LoggerProviderBuilder`. Targets netstandard2.0/2.1, net462, net8.0, net9.0.
-- **Elastic.OpenTelemetry.Core** — Core implementation (configuration, diagnostics/logging, builder state). **Not a separate NuGet package** — source-linked into the main package.
-- **Elastic.OpenTelemetry.OpAmp** — OpAmp client implementation with ALC isolation on net8.0+. Source-linked for NuGet builds, separate DLL for zip distribution builds.
-- **Elastic.OpenTelemetry.OpAmp.Abstractions** — Interfaces for OpAmp version isolation. Source-linked.
+- **Elastic.OpenTelemetry.Core** — Core implementation (configuration, diagnostics/logging, builder state). **Not a separate NuGet package** — source-linked into the main package. Marked `IsSourceOnlyProject=true`; skips compilation during solution builds because its `.cs` files are compile-included into consuming projects.
+- **Elastic.OpenTelemetry.OpAmp** — OpAmp client implementation with ALC isolation on net8.0+. Source-linked for NuGet builds, separate DLL for zip distribution builds. **Not source-only** — produces assemblies for the redistributable (zip) packaging flow.
+- **Elastic.OpenTelemetry.OpAmp.Abstractions** — Interfaces for OpAmp version isolation. Source-linked for NuGet builds. **Not source-only** — produces assemblies for the redistributable (zip) packaging flow.
 - **Elastic.OpenTelemetry.AutoInstrumentation** — Profiler-based auto-instrumentation plugin. Targets net462, net8.0. Packaged as both NuGet and redistributable zip.
 
-**Key architectural pattern**: Core, OpAmp, and OpAmp.Abstractions are **source-linked** into the main Elastic.OpenTelemetry package (not separate NuGet packages). They exist as separate projects for code organization but compile into one assembly for distribution.
+**Key architectural pattern**: Core, OpAmp, and OpAmp.Abstractions are **source-linked** into the main Elastic.OpenTelemetry package (not separate NuGet packages). They exist as separate projects for code organization but compile into one assembly for NuGet distribution. However, only Core is a **source-only project** — OpAmp and OpAmp.Abstractions also produce standalone assemblies for the zip distribution build (`BuildingForZipDistribution=true`) where they are loaded via `AssemblyLoadContext` isolation.
 
 ### OpAmp Isolation Strategy
 
