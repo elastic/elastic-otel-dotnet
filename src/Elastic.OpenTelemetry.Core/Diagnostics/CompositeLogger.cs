@@ -141,7 +141,11 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 			if (_deferredQueue is null)
 				return;
 
-			_deferredQueue = null;
+			// Replace with a new empty queue rather than null so that a subsequent
+			// Activate(options) call does not mistake the discard for an active-mode
+			// transition. Activate checks _deferredQueue is null to detect "already
+			// active"; leaving a non-null (empty) queue here lets it proceed normally.
+			_deferredQueue = new ConcurrentQueue<DeferredLogEntry>();
 		}
 
 		using (StaticLock.EnterScope())
@@ -150,11 +154,12 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 				PreActivationInstance = null;
 		}
 
-		// _safetyTimer is guaranteed non-null here: this path only runs when the queue
-		// was non-null (deferred mode), which always creates the timer in the constructor.
-		_safetyTimer!.Stop();
-		_safetyTimer.Dispose();
-		_safetyTimer = null;
+		if (_safetyTimer is not null)
+		{
+			_safetyTimer.Stop();
+			_safetyTimer.Dispose();
+			_safetyTimer = null;
+		}
 	}
 
 	/// <summary>
