@@ -1,25 +1,29 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net462;netstandard2.1;net8.0</TargetFrameworks>
+    <TargetFrameworks>net462;net8.0</TargetFrameworks>
+    <Title>Elastic Distribution of OpenTelemetry .NET Automatic Instrumentation package with all required components to enable automatic instrumentation.</Title>
+    <Description>OpenTelemetry extensions for Elastic Observability.</Description>
+    <PackageTags>Elastic;EDOT;OpenTelemetry;OTel;Observability;APM;Monitoring;Logging;Metrics;Tracing;Telemetry;O11y</PackageTags>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>true</IsPackable>
     <PolyPublic>true</PolyPublic>
-    <GenerateNuspecDependsOn>$(GenerateNuspecDependsOn);_ExcludeTargetFramework;_ExcludeTargetFrameworkDependency</GenerateNuspecDependsOn>
+    <GenerateNuspecDependsOn>$(GenerateNuspecDependsOn)</GenerateNuspecDependsOn>
   </PropertyGroup>
 
-  <!-- This package doe not support netstandard2.1 and this target is only used for building the redistributable. -->
-  <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.1'">
+  <!-- When building for zip distribution with net8.0, use AssemblyLoadContext to load OpAmp assemblies in isolation -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0' AND '$(BuildingForZipDistribution)' == 'true'">
+    <DefineConstants>$(DefineConstants);USE_ISOLATED_OPAMP_CLIENT</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
     <PackageReference Include="OpenTelemetry.AutoInstrumentation" GeneratePathProperty="true" PrivateAssets="contentfiles" />
   </ItemGroup>
 
-  <!-- 
-  We only need these dependencies when building the netstandard2.1 target to include in the redistributable. They are already present
-  for the other targets when including OpenTelemetry.AutoInstrumentation.
-  -->
-  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
-    <PackageReference Include="OpenTelemetry" PrivateAssets="all" />
+  <ItemGroup>
+    <PackageReference Include="OpenTelemetry.OpAmp.Client" />
+    <PackageReference Include="Google.Protobuf" />
   </ItemGroup>
 
   <!-- We need these dependencies when building agianst all targets. As they are private, we don't have to worry about them being packaged. -->
@@ -29,7 +33,7 @@
     <PackageReference Include="NetEscapades.EnumGenerators" PrivateAssets="all" ExcludeAssets="runtime" />
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.1'">
+  <ItemGroup>
     <!-- ensure we remove the linked instrument.cmd from base OpenTelemetry.AutoInstrumentation
           and link it as _instrument.cmd since we manually copy it over in the prebuild event -->
     <Content Update="instrument.cmd" CopyToPublishDirectory="Never" CopyToOutputDirectory="Never" />
@@ -52,28 +56,26 @@
     <Content Remove="README.md" />
   </ItemGroup>
 
-  <Target Condition="'$(TargetFramework)' != 'netstandard2.1'" Name="PreBuild" BeforeTargets="PreBuildEvent">
+  <!-- Compile OpAmp source in when:
+       - NOT building for zip (NuGet builds for all TFMs), OR
+       - Building zip for net462 (no ALC on .NET Framework; binding redirects are the best practical
+         mitigation for version conflicts but are not equivalent to ALC-style isolation) -->
+  <ItemGroup Condition="'$(BuildingForZipDistribution)' != 'true' OR '$(TargetFramework)' == 'net462'">
+    <Compile Include="..\Elastic.OpenTelemetry.OpAmp.Abstractions\**\*.cs" />
+    <Compile Include="..\Elastic.OpenTelemetry.OpAmp\**\*.cs" />
+  </ItemGroup>
+
+  <!-- For zip + net8.0: Build as separate assemblies for ALC isolation -->
+  <ItemGroup Condition="'$(BuildingForZipDistribution)' == 'true' AND '$(TargetFramework)' == 'net8.0'">
+    <ProjectReference Include="..\Elastic.OpenTelemetry.OpAmp.Abstractions\Elastic.OpenTelemetry.OpAmp.Abstractions.csproj" />
+    <ProjectReference Include="..\Elastic.OpenTelemetry.OpAmp\Elastic.OpenTelemetry.OpAmp.csproj" />
+  </ItemGroup>
+
+  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
     <!-- Copies the content files manually as physical files in the source repository -->
     <!-- we manually repackage these as contentfiles (albeit renamed) -->
     <Copy SourceFiles="$(PkgOpenTelemetry_AutoInstrumentation)/contentFiles/any/any/instrument.cmd" DestinationFiles="$(MSBuildThisFileDirectory)/_instrument.cmd" />
     <Copy SourceFiles="$(PkgOpenTelemetry_AutoInstrumentation)/contentFiles/any/any/instrument.sh" DestinationFiles="$(MSBuildThisFileDirectory)/_instrument.sh" />
-  </Target>
-
-  <!-- 
-  We require the netstandard2.1 target when building to include this in the redistributable of the auto-instrumentation zip file.
-  We do not want to include it in the NuGet package because OpenTelemetry.AutoInstrumentation does not support that target and in
-  doing so, the package would appear to support netstandard2.1 but that target would not be able to depend on 
-  OpenTelemetry.AutoInstrumentation and therefore not be useful. -->
-  <Target Name="_ExcludeTargetFramework" AfterTargets="_GetTargetFrameworksOutput" BeforeTargets="_WalkEachTargetPerFramework">
-    <ItemGroup>
-      <_TargetFrameworks Remove="netstandard2.1" />
-    </ItemGroup>
-  </Target>
-
-  <Target Name="_ExcludeTargetFrameworkDependency" AfterTargets="_WalkEachTargetPerFramework" BeforeTargets="GenerateNuspec">
-    <ItemGroup>
-      <_FrameworksWithSuppressedDependencies Include="netstandard2.1" />
-    </ItemGroup>
   </Target>
 
 </Project>

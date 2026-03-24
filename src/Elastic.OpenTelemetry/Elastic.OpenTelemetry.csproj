@@ -1,11 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFrameworks>netstandard2.0;netstandard2.1;net462;net8.0;net9.0</TargetFrameworks>
     <Title>Elastic Distribution of OpenTelemetry .NET</Title>
     <Description>OpenTelemetry extensions for Elastic Observability.</Description>
-    <PackageTags>Elastic;OpenTelemetry;OTel;Observability;APM;Monitoring;Logging;Metrics;Tracing;Telemetry</PackageTags>
+    <PackageTags>Elastic;EDOT;OpenTelemetry;OTel;Observability;APM;Monitoring;Logging;Metrics;Tracing;Telemetry;O11y</PackageTags>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>true</IsPackable>
@@ -29,6 +29,7 @@
     <PackageReference Include="OpenTelemetry" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.OpAmp.Client" />
     
     <!-- Required to add necessary resource attributes to drive the Observability UI -->
     <PackageReference Include="OpenTelemetry.Resources.Host" />
@@ -40,6 +41,8 @@
     <!-- Not, required but we bring these in for a simpler OOB -->
     <PackageReference Include="OpenTelemetry.Instrumentation.GrpcNetClient" />
     <PackageReference Include="OpenTelemetry.Instrumentation.SqlClient" />
+
+    <PackageReference Include="Google.Protobuf" />
     
     <PackageReference Include="Polyfill" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
     <PackageReference Include="NetEscapades.EnumGenerators" PrivateAssets="all" ExcludeAssets="runtime" />
@@ -58,12 +61,17 @@
   
   <ItemGroup>
     <InternalsVisibleTo Include="Elastic.OpenTelemetry.Tests" Key="$(ExposedPublicKey)" />
+    <InternalsVisibleTo Include="Elastic.OpenTelemetry.IntegrationTests" Key="$(ExposedPublicKey)" />
   </ItemGroup>
 
   <ItemGroup>
     <Compile Include="..\Elastic.OpenTelemetry.Core\**\*.cs" />
-    <Content Remove="README.md" />
+    <Compile Include="..\Elastic.OpenTelemetry.OpAmp.Abstractions\**\*.cs" />
+    <Compile Include="..\Elastic.OpenTelemetry.OpAmp\**\*.cs" />
   </ItemGroup>
   
-</Project>
+  <ItemGroup>
+    <Content Remove="README.md" />
+  </ItemGroup>
 
+</Project>
