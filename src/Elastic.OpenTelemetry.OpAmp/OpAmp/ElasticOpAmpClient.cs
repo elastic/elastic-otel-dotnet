@@ -40,6 +40,7 @@ namespace Elastic.OpenTelemetry.OpAmp
 			}
 			catch
 			{
+				_innerClient?.Dispose();
 				_httpClient.Dispose();
 				throw;
 			}
