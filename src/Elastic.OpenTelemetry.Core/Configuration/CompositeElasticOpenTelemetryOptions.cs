@@ -3,8 +3,6 @@
 // See the LICENSE file in the project root for more information
 
 using System.Collections;
-using System.Diagnostics.Tracing;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Elastic.OpenTelemetry.Configuration.Instrumentations;
@@ -14,6 +12,7 @@ using Elastic.OpenTelemetry.Diagnostics;
 using Elastic.OpenTelemetry.SemanticConventions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using static System.Environment;
 using static System.Runtime.InteropServices.RuntimeInformation;
 using static Elastic.OpenTelemetry.Configuration.EnvironmentVariables;
@@ -30,14 +29,13 @@ namespace Elastic.OpenTelemetry.Configuration;
 /// <list type="bullet">
 /// <item><description>Environment variables</description></item>
 /// <item><description>An <see cref="IConfiguration"/> instance</description></item>
+/// <item><description>Central configuration (OpAMP) — when present, takes precedence over all other sources</description></item>
 /// </list>
-/// Options initialised via property initializers take precedence over bound values.
-/// Environment variables take precedence over <see cref="IConfiguration"/> values.
+/// Central configuration always wins when applied. Otherwise, options initialised via property initialisers take precedence over bound values,
+/// and environment variables take precedence over <see cref="IConfiguration"/> values.
 /// </remarks>
 internal sealed class CompositeElasticOpenTelemetryOptions
 {
-	private const string ApiKeyAuthorizationHeaderPrefix = "Authorization=ApiKey";
-
 	// These are the options that users can set via IConfiguration
 	private static readonly string[] ElasticOpenTelemetryConfigKeys =
 	[
@@ -85,11 +83,13 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 	private readonly ConfigCell<MetricInstrumentations> _metrics = new(nameof(Metrics), MetricInstrumentations.All);
 	private readonly ConfigCell<LogInstrumentations> _logging = new(nameof(Logging), LogInstrumentations.All);
 	private readonly ConfigCell<string?> _resourceAttributes = new(nameof(ResourceAttributes), null);
+	private readonly ConfigCell<string?> _serviceName = new(nameof(ServiceName), null);
 
 	private readonly IDictionary _environmentVariables;
 	private readonly IConfiguration? _configuration;
 
 	private bool? _isOpAmpEnabled;
+	private bool _identityResolved;
 
 	/// <summary>
 	/// Creates a new instance of <see cref="CompositeElasticOpenTelemetryOptions"/> with properties
@@ -135,6 +135,7 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 		SetFromEnvironment(ELASTIC_OTEL_OPAMP_ENDPOINT, _opAmpEndpoint, StringParser);
 		SetFromEnvironment(ELASTIC_OTEL_OPAMP_HEADERS, _opAmpHeaders, StringParser);
 		SetFromEnvironment(OTEL_RESOURCE_ATTRIBUTES, _resourceAttributes, StringParser);
+		SetFromEnvironment(OTEL_SERVICE_NAME, _serviceName, StringParser);
 
 		var parser = new EnvironmentParser(_environmentVariables);
 		parser.ParseInstrumentationVariables(_signals, _tracing, _metrics, _logging);
@@ -335,9 +336,13 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 		init => _opAmpHeaders.AssignFromProperty(value);
 	}
 
-	internal string? ServiceName { get; private set; }
-
 	internal string? ServiceVersion { get; private set; }
+
+	internal string? ServiceName
+	{
+		get => _serviceName.Value ?? null;
+		private set => _serviceName.AssignFromProperty(value);
+	}
 
 	internal string? ResourceAttributes
 	{
@@ -345,41 +350,69 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 		init => _resourceAttributes.AssignFromProperty(value);
 	}
 
-	internal bool IsOpAmpEnabled()
+	/// <summary>
+	/// Resolves the OpAMP service identity from resource attributes.
+	/// Must be called before <see cref="IsOpAmpEnabled"/> to ensure
+	/// <see cref="ServiceName"/> and <see cref="ServiceVersion"/> are populated.
+	/// </summary>
+	internal void ResolveOpAmpServiceIdentity(ILogger? logger = null)
 	{
-		// If we've already evaluated the configuration, return the cached value.
-		if (_isOpAmpEnabled.HasValue)
-			return _isOpAmpEnabled.Value;
+		logger ??= NullLogger.Instance;
 
-		// OpAMP requires an endpoint, an auth header and resource attributes to function.
-		if (string.IsNullOrEmpty(OpAmpEndpoint) || string.IsNullOrEmpty(OpAmpHeaders) || string.IsNullOrEmpty(ResourceAttributes))
+		if (string.IsNullOrEmpty(ServiceName) && !string.IsNullOrEmpty(ResourceAttributes))
 		{
-			return SetAndReturn(false);
+			logger.LogDebug("OpAMP setting service name from resource attributes");
+			ServiceName = ExtractValueForKey(ResourceAttributes!, ResourceSemanticConventions.AttributeServiceName);
 		}
 
-		if (!OpAmpHeaders!.Contains(ApiKeyAuthorizationHeaderPrefix, StringComparison.OrdinalIgnoreCase))
+		if (string.IsNullOrEmpty(ServiceVersion) && !string.IsNullOrEmpty(ResourceAttributes))
 		{
-			return SetAndReturn(false);
+			ServiceVersion = ExtractValueForKey(ResourceAttributes!, ResourceSemanticConventions.AttributeServiceVersion);
 		}
 
-		// OpAMP requires at minimum the service.name to be set so central configuration can locate the correct configuration.
-		ServiceName = ExtractValueForKey(ResourceAttributes!, ResourceSemanticConventions.AttributeServiceName);
+		_identityResolved = true;
+	}
 
-		if (string.IsNullOrEmpty(ServiceName))
+	internal bool IdentityResolved => _identityResolved;
+
+	internal bool IsOpAmpEnabled(ILogger? logger = null)
+	{
+		logger ??= NullLogger.Instance;
+
+		// Only true is cached. A false result is re-evaluated on each call because
+		// ServiceName may not yet be resolved (e.g. CompositeLogger checks before
+		// ResolveOpAmpServiceIdentity has been called).
+		if (_isOpAmpEnabled is true)
 		{
-			return SetAndReturn(false);
+			logger.LogDebug("OpAMP enabled cached value: {IsOpAmpEnabled}", true);
+			return true;
 		}
 
-		// Optionally extract and cache service version if present
-		ServiceVersion = ExtractValueForKey(ResourceAttributes!, ResourceSemanticConventions.AttributeServiceVersion);
-
-		return SetAndReturn(true);
-
-		bool SetAndReturn(bool value)
+		if (string.IsNullOrEmpty(OpAmpEndpoint) || string.IsNullOrEmpty(ServiceName))
 		{
-			_isOpAmpEnabled = value;
-			return value;
+			logger.LogDebug("OpAMP required configuration not present (endpoint or service name missing)");
+			return false;
 		}
+
+		logger.LogDebug("OpAMP is enabled via configuration");
+		_isOpAmpEnabled = true;
+		return true;
+	}
+
+	internal void SetLogLevelFromCentralConfig(string logLevel, ILogger logger)
+	{
+		var parsedLogLevel = LogLevelParser(logLevel);
+
+		if (parsedLogLevel is not null)
+		{
+			logger.LogDebug("{ClassName}.{MethodName}: Setting log level from central config to {ParsedLogLevel} (Previous level {PreviousLogLevel})",
+				nameof(CompositeElasticOpenTelemetryOptions), nameof(SetLogLevelFromCentralConfig), parsedLogLevel.Value, _logLevel.Value);
+			_logLevel.AssignFromCentralConfig(parsedLogLevel.Value);
+			return;
+		}
+
+		logger.LogWarning("{ClassName}.{MethodName}:Unable to parse log level '{ReceivedLogLevel}' from central config. Keeping existing log level of {ExistingLogLevel}",
+			nameof(CompositeElasticOpenTelemetryOptions), nameof(SetLogLevelFromCentralConfig), logLevel, _logLevel.Value);
 	}
 
 	private static string? ExtractValueForKey(string input, string key)
@@ -420,6 +453,7 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 			   Logging.SetEquals(other.Logging) &&
 			   OpAmpEndpoint == other.OpAmpEndpoint &&
 			   OpAmpHeaders == other.OpAmpHeaders &&
+			   ServiceName == other.ServiceName &&
 			   ResourceAttributes == other.ResourceAttributes &&
 			   ReferenceEquals(AdditionalLogger, other.AdditionalLogger);
 	}
@@ -436,11 +470,15 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 			^ Tracing.GetHashCode()
 			^ Metrics.GetHashCode()
 			^ Logging.GetHashCode()
+			^ (OpAmpEndpoint?.GetHashCode() ?? 0)
+			^ (OpAmpHeaders?.GetHashCode() ?? 0)
+			^ (ServiceName?.GetHashCode() ?? 0)
+			^ (ResourceAttributes?.GetHashCode() ?? 0)
 			^ (AdditionalLogger?.GetHashCode() ?? 0);
 #else
 		var hash1 = HashCode.Combine(LogDirectory, LogLevel, LogTargets, SkipOtlpExporter);
 		var hash2 = HashCode.Combine(Signals, Tracing, Metrics, Logging, AdditionalLogger);
-		var hash3 = HashCode.Combine(SkipInstrumentationAssemblyScanning, OpAmpEndpoint, OpAmpHeaders, ResourceAttributes);
+		var hash3 = HashCode.Combine(SkipInstrumentationAssemblyScanning, OpAmpEndpoint, OpAmpHeaders, ResourceAttributes, ServiceName);
 		return HashCode.Combine(hash1, hash2, hash3);
 #endif
 	}
@@ -456,6 +494,7 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 		parser.ParseSkipInstrumentationAssemblyScanning(_skipInstrumentationAssemblyScanning);
 		parser.ParseOpAmpEndpoint(_opAmpEndpoint);
 		parser.ParseResourceAttributes(_resourceAttributes);
+		parser.ParseServiceName(_serviceName);
 		parser.ParseOpAmpHeaders(_opAmpHeaders);
 
 		if (BootstrapLogger.IsEnabled)
@@ -553,11 +592,15 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 		LogConfig(logger, _opAmpEndpoint);
 		LogConfig(logger, _opAmpHeaders);
 		LogConfig(logger, _resourceAttributes);
+		LogConfig(logger, _serviceName);
 
 		static void LogConfig<T>(ILogger logger, ConfigCell<T> cell)
 		{
+			// Use a single snapshot so the Default check and the logged message are consistent
+			var (_, source) = cell.Snapshot();
+
 			// To reduce noise, we log as info only if not default, otherwise, log as debug
-			if (cell.Source == ConfigSource.Default)
+			if (source == ConfigSource.Default)
 				logger.LogDebug("Configured value for {Configuration}", cell);
 			else
 				logger.LogInformation("Configured value for {Configuration}", cell);

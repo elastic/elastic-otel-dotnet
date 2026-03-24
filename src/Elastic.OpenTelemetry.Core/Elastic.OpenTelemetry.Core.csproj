@@ -6,12 +6,17 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <IsSourceOnlyProject>true</IsSourceOnlyProject>
     <LangVersion>latest</LangVersion>
+    <!-- NU1702: OpAmp targets net462/net8.0 only; TFM mismatch is expected since Core is source-only -->
+    <NoWarn>$(NoWarn);NU1702</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Google.Protobuf" />
     <PackageReference Include="OpenTelemetry" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.OpAmp.Client" />
     <PackageReference Include="OpenTelemetry.Resources.Host" />
     <PackageReference Include="OpenTelemetry.Resources.ProcessRuntime" />
     <PackageReference Include="Polyfill" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
@@ -24,6 +29,14 @@
 
   <ItemGroup>
     <Content Remove="README.md" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Elastic.OpenTelemetry.OpAmp.Abstractions\Elastic.OpenTelemetry.OpAmp.Abstractions.csproj" Private="true" />
+    <!-- OpAmp targets net462;net8.0 only. Restrict this reference to matching TFMs to avoid
+         MSB3277 System.Memory version conflicts when building for netstandard2.0/2.1 -->
+    <ProjectReference Include="..\Elastic.OpenTelemetry.OpAmp\Elastic.OpenTelemetry.OpAmp.csproj" Private="true"
+      Condition="'$(TargetFramework)' == 'net462' OR '$(TargetFramework)' == 'net8.0' OR '$(TargetFramework)' == 'net9.0'" />
   </ItemGroup>
 
 </Project>

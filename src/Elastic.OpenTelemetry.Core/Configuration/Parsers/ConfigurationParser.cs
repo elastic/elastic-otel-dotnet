@@ -33,13 +33,9 @@ internal class ConfigurationParser
 			LoggingSectionLogLevel = configuration.GetValue<string>("Logging:LogLevel:Default");
 	}
 
-	private static void SetFromConfiguration<T>(IConfiguration configuration, ConfigCell<T> cell, Func<string, T?> parser, string? subsection = null)
+	private static void SetFromConfiguration<T>(IConfiguration configuration, ConfigCell<T> cell, Func<string, T?> parser)
 	{
-		//environment configuration takes precedence, assume already configured
-		if (cell.Source == ConfigSource.Environment)
-			return;
-
-		var fullKey = subsection is null ? $"{ConfigurationSection}:{cell.Key}" : $"{ConfigurationSection}:{subsection}:{cell.Key}";
+		var fullKey = $"{ConfigurationSection}:{cell.Key}";
 
 		var lookup = configuration.GetValue<string>(fullKey);
 		if (lookup is null)
@@ -62,7 +58,7 @@ internal class ConfigurationParser
 	{
 		SetFromConfiguration(_configuration, logLevel, LogLevelParser);
 
-		if (!string.IsNullOrEmpty(LoggingSectionLogLevel) && logLevel.Source == ConfigSource.Default)
+		if (!string.IsNullOrEmpty(LoggingSectionLogLevel) && logLevel.Snapshot().Source == ConfigSource.Default)
 		{
 			var level = LogLevelHelpers.ToLogLevel(LoggingSectionLogLevel!);
 			logLevel.AssignFromConfiguration(level);
@@ -93,6 +89,20 @@ internal class ConfigurationParser
 			return;
 
 		resourceAttributes.AssignFromConfiguration(parsed);
+	}
+
+	internal void ParseServiceName(ConfigCell<string?> serviceName)
+	{
+		var lookup = _configuration.GetValue<string>(EnvironmentVariables.OTEL_SERVICE_NAME);
+
+		if (lookup is null)
+			return;
+
+		var parsed = StringParser(lookup);
+		if (parsed is null)
+			return;
+
+		serviceName.AssignFromConfiguration(parsed);
 	}
 
 	internal static EventLevel LogLevelToEventLevel(LogLevel? eventLogLevel) =>
