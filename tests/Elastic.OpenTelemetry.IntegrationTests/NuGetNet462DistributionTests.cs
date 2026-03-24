@@ -7,9 +7,27 @@ using Elastic.OpenTelemetry.IntegrationTests.Helpers;
 namespace Elastic.OpenTelemetry.IntegrationTests;
 
 /// <summary>
-/// Integration tests that verify the NuGet package distribution path on .NET Framework (net462).
-/// Windows only — .NET Framework does not run on Linux.
+/// Integration tests that verify the NuGet package distribution path on .NET Framework (net462)
+/// using the manual OpenTelemetry SDK builder APIs
+/// (<c>Sdk.CreateTracerProviderBuilder().WithElasticDefaults()</c>).
 /// </summary>
+/// <remarks>
+/// <para>
+/// These tests run the <c>NuGetConsumer.Net462</c> test app, which has NO dependency on
+/// <c>Microsoft.Extensions.Hosting</c>. It uses the manual builder APIs
+/// (<c>Sdk.CreateTracerProviderBuilder().WithElasticDefaults()</c> and
+/// <c>Sdk.CreateMeterProviderBuilder().WithElasticDefaults()</c>) — the realistic consumption
+/// pattern for legacy .NET Framework applications that don't use DI or the Generic Host.
+/// </para>
+/// <para>
+/// Why manual builders instead of hosting? Most legacy net462 apps don't use the Generic Host.
+/// While <c>Host.CreateApplicationBuilder</c> IS available on net462 (via the
+/// <c>Microsoft.Extensions.Hosting</c> NuGet package targeting netstandard2.0), it's not
+/// representative of real-world usage. The hosting/DI path (<c>AddElasticOpenTelemetry</c>)
+/// is already tested on a modern runtime by <see cref="NuGetDistributionTests"/> (net8.0).
+/// </para>
+/// <para>Windows only — .NET Framework does not run on Linux.</para>
+/// </remarks>
 [Collection("NuGetPackage")]
 public class NuGetNet462DistributionTests
 {
@@ -22,7 +40,7 @@ public class NuGetNet462DistributionTests
 			$"NuGet net462 fixture failed to initialize — test cannot run.\n{_fixture.Net462InitializationError}");
 
 	[WindowsOnlyFact(Timeout = 30_000)]
-	public async Task NuGet_Net462_DirectPath_OpAmpWorks()
+	public async Task NuGet_Net462_OpAmpWorks()
 	{
 		AssertFixtureReady();
 
@@ -53,7 +71,7 @@ public class NuGetNet462DistributionTests
 	}
 
 	[WindowsOnlyFact(Timeout = 30_000)]
-	public async Task NuGet_Net462_DirectPath_CentralConfigReceived()
+	public async Task NuGet_Net462_CentralConfigReceived()
 	{
 		AssertFixtureReady();
 
@@ -80,7 +98,7 @@ public class NuGetNet462DistributionTests
 	}
 
 	[WindowsOnlyFact(Timeout = 30_000)]
-	public async Task NuGet_Net462_DirectPath_NoOpAmpServer_GracefulFallback()
+	public async Task NuGet_Net462_NoOpAmpServer_GracefulFallback()
 	{
 		AssertFixtureReady();
 

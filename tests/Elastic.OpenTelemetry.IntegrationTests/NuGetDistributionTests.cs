@@ -7,10 +7,18 @@ using Elastic.OpenTelemetry.IntegrationTests.Helpers;
 namespace Elastic.OpenTelemetry.IntegrationTests;
 
 /// <summary>
-/// Integration tests that verify the NuGet package distribution path.
+/// Integration tests that verify the NuGet package distribution path on net8.0.
 /// Tests run against the packed <c>.nupkg</c> consumed by a standalone test app —
 /// not project references. This validates the real end-user consumption model.
 /// </summary>
+/// <remarks>
+/// <para>
+/// These tests use the hosting/DI path (<c>AddElasticOpenTelemetry()</c>) on net8.0.
+/// For .NET Framework (net462) coverage using the manual builder APIs
+/// (<c>Sdk.CreateTracerProviderBuilder().WithElasticDefaults()</c>), see
+/// <see cref="NuGetNet462DistributionTests"/>.
+/// </para>
+/// </remarks>
 [Collection("NuGetPackage")]
 public class NuGetDistributionTests
 {

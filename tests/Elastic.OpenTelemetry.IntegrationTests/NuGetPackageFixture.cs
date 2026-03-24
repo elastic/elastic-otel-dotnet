@@ -13,6 +13,16 @@ namespace Elastic.OpenTelemetry.IntegrationTests;
 /// creates a local NuGet feed, and builds the NuGetConsumer test apps.
 /// Runs once per <c>[Collection("NuGetPackage")]</c> test collection.
 /// </summary>
+/// <remarks>
+/// <para>Builds the following consumer apps:</para>
+/// <list type="bullet">
+///   <item><b>NuGetConsumer.Net8</b> — net8.0 hosting/DI path (AddElasticOpenTelemetry)</item>
+///   <item><b>NuGetConsumer.Net462</b> — net462 manual builder path
+///     (Sdk.CreateTracerProviderBuilder().WithElasticDefaults()) — represents realistic legacy
+///     .NET Framework usage without any hosting dependency</item>
+/// </list>
+/// <para>The net462 app only builds and runs on Windows.</para>
+/// </remarks>
 public class NuGetPackageFixture : IAsyncLifetime
 {
 	private readonly LocalNuGetFeed _feed = new();
@@ -22,7 +32,11 @@ public class NuGetPackageFixture : IAsyncLifetime
 	/// <summary>Path to the published NuGetConsumer.Net8.dll, ready to run via <c>dotnet</c>.</summary>
 	public string Net8AppPath { get; private set; } = string.Empty;
 
-	/// <summary>Path to the published NuGetConsumer.Net462.exe, ready to run directly. Windows only.</summary>
+	/// <summary>
+	/// Path to the published NuGetConsumer.Net462.exe, ready to run directly. Windows only.
+	/// Uses the manual builder path (Sdk.CreateTracerProviderBuilder().WithElasticDefaults()) —
+	/// no hosting dependency — representing realistic legacy .NET Framework usage.
+	/// </summary>
 	public string Net462AppPath { get; private set; } = string.Empty;
 
 	/// <summary>The version of the packed Elastic.OpenTelemetry NuGet package.</summary>
@@ -76,6 +90,8 @@ public class NuGetPackageFixture : IAsyncLifetime
 		}
 
 		// 4. Build net462 consumer app (Windows only, requires shared pack step to have succeeded)
+		//    Uses the manual builder path (WithElasticDefaults) — no hosting dependency —
+		//    representing realistic legacy .NET Framework usage.
 		if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 		{
 			Net462InitializationError = ".NET Framework tests require Windows.";

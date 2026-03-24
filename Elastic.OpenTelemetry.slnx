@@ -52,6 +52,7 @@
     <Project Path="test-applications/AutoInstr.Console.Net8/AutoInstr.Console.Net8.csproj" />
     <Project Path="test-applications/NuGetAutoInstr.Aot.Net10/NuGetAutoInstr.Aot.Net10.csproj" />
     <Project Path="test-applications/NuGetAutoInstr.Net10/NuGetAutoInstr.Net10.csproj" />
+    <Project Path="test-applications/NuGetConsumer.Net462/NuGetConsumer.Net462.csproj" />
     <Project Path="test-applications/NuGetConsumer.Net8/NuGetConsumer.Net8.csproj" />
     <Project Path="test-applications/OpAmpBootstrapTestApp/OpAmpBootstrapTestApp.csproj" />
     <Project Path="test-applications/OpAmpTestServer/OpAmpTestServer.csproj" />
