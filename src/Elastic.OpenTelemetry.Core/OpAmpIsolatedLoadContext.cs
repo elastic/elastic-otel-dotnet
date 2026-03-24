@@ -154,7 +154,18 @@ internal sealed class OpAmpIsolatedLoadContext : AssemblyLoadContext
 		ILogger logger, string endPoint, string headers,
 		string serviceName, string? serviceVersion, string userAgent)
 	{
-		var loadedAssembly = LoadFromAssemblyName(new AssemblyName(OpAmpClientContract.AssemblyName));
+		Assembly? loadedAssembly;
+		try
+		{
+			loadedAssembly = LoadFromAssemblyName(new AssemblyName(OpAmpClientContract.AssemblyName));
+		}
+		catch (Exception ex) when (ex is FileNotFoundException or FileLoadException or BadImageFormatException)
+		{
+			_logger.LogAssemblyResolutionFailed(ex, nameof(OpAmpIsolatedLoadContext), nameof(CreateOpAmpClientInstance),
+				OpAmpClientContract.AssemblyName);
+			return null;
+		}
+
 		var factoryType = loadedAssembly?.GetType(OpAmpClientContract.FactoryTypeName);
 
 		if (factoryType is null)
