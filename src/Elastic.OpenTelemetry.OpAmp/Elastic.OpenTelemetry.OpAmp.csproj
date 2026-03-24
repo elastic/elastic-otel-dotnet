@@ -1,0 +1,37 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFrameworks>net462;net8.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="OpenTelemetry.OpAmp.Client" />
+    <PackageReference Include="Google.Protobuf" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net462'">
+    <PackageReference Include="System.Net.Http" ExcludeAssets="compile;build;analyzers" />
+    <!--Use a 4.2.0.0 ref assembly for compile-time to satisfy OpenTelemetry.OpAmp.Client-->
+    <Reference Include="System.Net.Http" SpecificVersion="true" Private="true" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="README.md" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Elastic.OpenTelemetry.Core" Key="$(ExposedPublicKey)" />
+    <InternalsVisibleTo Include="Elastic.OpenTelemetry.AutoInstrumentation" Key="$(ExposedPublicKey)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Elastic.OpenTelemetry.OpAmp.Abstractions\Elastic.OpenTelemetry.OpAmp.Abstractions.csproj" Private="true" />
+  </ItemGroup>
+
+</Project>
