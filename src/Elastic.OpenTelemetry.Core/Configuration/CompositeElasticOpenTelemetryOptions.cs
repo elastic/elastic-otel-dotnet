@@ -421,20 +421,38 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 			return null;
 
 		var span = input.AsSpan();
+		var searchFrom = 0;
 
-		var index = span.IndexOf(key, StringComparison.Ordinal);
+		while (searchFrom < span.Length)
+		{
+			var index = span[searchFrom..].IndexOf(key, StringComparison.Ordinal);
 
-		if (index == -1)
-			return null;
+			if (index == -1)
+				return null;
 
-		span = span[(index + key.Length)..];
+			var absoluteIndex = searchFrom + index;
 
-		if (span.Length == 0 || span[0] != '=')
-			return null;
+			// Ensure the match is at a key boundary (start of string or preceded by ',')
+			if (absoluteIndex != 0 && span[absoluteIndex - 1] != ',')
+			{
+				searchFrom = absoluteIndex + key.Length;
+				continue;
+			}
 
-		index = span.IndexOf(',');
+			var afterKey = span[(absoluteIndex + key.Length)..];
 
-		return index == -1 ? span[1..].ToString() : span[1..index].ToString();
+			if (afterKey.Length == 0 || afterKey[0] != '=')
+			{
+				searchFrom = absoluteIndex + key.Length;
+				continue;
+			}
+
+			var commaIndex = afterKey.IndexOf(',');
+
+			return commaIndex == -1 ? afterKey[1..].ToString() : afterKey[1..commaIndex].ToString();
+		}
+
+		return null;
 	}
 
 	public override bool Equals(object? obj)

@@ -978,6 +978,21 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 	}
 
 	[Fact]
+	public void ResolveOpAmpServiceIdentity_ExtractsServiceName_WhenKeyAppearsAsSubstringInPriorValue()
+	{
+		var sut = new CompositeElasticOpenTelemetryOptions(new Hashtable
+		{
+			{ ELASTIC_OTEL_OPAMP_ENDPOINT, "http://localhost:4320" },
+			{ OTEL_RESOURCE_ATTRIBUTES, "custom.note=see service.name doc,service.name=my-app" }
+		});
+
+		sut.ResolveOpAmpServiceIdentity();
+
+		Assert.Equal("my-app", sut.ServiceName);
+		Assert.True(sut.IsOpAmpEnabled());
+	}
+
+	[Fact]
 	public void ResolveOpAmpServiceIdentity_DoesNotOverwriteExplicitServiceName()
 	{
 		var sut = new CompositeElasticOpenTelemetryOptions(new Hashtable
