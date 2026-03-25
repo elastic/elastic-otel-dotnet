@@ -131,9 +131,37 @@ public class RedistributableFixture : IAsyncLifetime
 		if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
 			return "macos";
 
-		// Linux: glibc vs musl, x64 vs arm64
+		// Linux: glibc vs musl (Alpine), x64 vs arm64
+		// Use the same detection as build/patch-dotnet-auto-install.sh: ldd /bin/ls | grep musl
 		var arch = RuntimeInformation.ProcessArchitecture == Architecture.Arm64 ? "arm64" : "x64";
-		return $"linux-glibc-{arch}";
+		var libc = IsMusl() ? "musl" : "glibc";
+		return $"linux-{libc}-{arch}";
+	}
+
+	private static bool IsMusl()
+	{
+		try
+		{
+			var psi = new ProcessStartInfo
+			{
+				FileName = "ldd",
+				Arguments = "/bin/ls",
+				RedirectStandardOutput = true,
+				RedirectStandardError = true,
+				UseShellExecute = false,
+				CreateNoWindow = true,
+			};
+			using var proc = Process.Start(psi);
+			if (proc is null)
+				return false;
+			var output = proc.StandardOutput.ReadToEnd();
+			proc.WaitForExit();
+			return output.Contains("musl", StringComparison.OrdinalIgnoreCase);
+		}
+		catch
+		{
+			return false;
+		}
 	}
 
 	private static async Task RunDotnetAsync(string arguments, CancellationToken ct)
