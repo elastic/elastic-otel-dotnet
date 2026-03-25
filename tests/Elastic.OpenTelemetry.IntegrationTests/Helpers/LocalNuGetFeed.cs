@@ -40,11 +40,13 @@ internal sealed class LocalNuGetFeed : IDisposable
 			?? throw new InvalidOperationException($"Failed to start: dotnet pack \"{projectPath}\"");
 
 		// Read both streams concurrently to avoid deadlock when either buffer fills
-		var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
-		var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+		var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+		var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
+
 		await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-		var stdout = await stdoutTask;
-		var stderr = await stderrTask;
+
+		var stdout = await stdoutTask.ConfigureAwait(false);
+		var stderr = await stderrTask.ConfigureAwait(false);
 
 		if (process.ExitCode != 0)
 			throw new InvalidOperationException(

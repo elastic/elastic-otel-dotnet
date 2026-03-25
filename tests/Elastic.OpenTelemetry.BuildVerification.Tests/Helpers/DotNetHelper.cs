@@ -133,14 +133,14 @@ internal static class DotNetHelper
 
 		using var process = Process.Start(psi)!;
 
+		// Read both streams concurrently to avoid deadlock when either buffer fills
 		var outputTask = process.StandardOutput.ReadToEndAsync();
 		var errorTask = process.StandardError.ReadToEndAsync();
 
-		await Task.WhenAll(outputTask, errorTask);
-		await process.WaitForExitAsync();
+		await process.WaitForExitAsync().ConfigureAwait(false);
 
-		var output = await outputTask;
-		var error = await errorTask;
+		var output = await outputTask.ConfigureAwait(false);
+		var error = await errorTask.ConfigureAwait(false);
 
 		return new DotNetResult(process.ExitCode, output, error);
 	}
