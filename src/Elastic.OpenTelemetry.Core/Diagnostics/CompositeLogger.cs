@@ -102,6 +102,10 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 
 			this.LogDebug("{ClassName} created in active mode.", nameof(CompositeLogger));
 
+			// Mark as already active so any subsequent Activate() call becomes a no-op
+			// and does not overwrite (and leak) the loggers we just created.
+			_activationState = 1;
+
 			// _deferredQueue stays null — active mode
 
 			return;
