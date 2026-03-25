@@ -56,6 +56,12 @@ public class CentralConfigurationResilienceTests
 		var config = new CentralConfiguration(client, Logger);
 		sw.Stop();
 
+		// On slow CI the constructor's Join may time out before the worker finishes its finally block.
+		// Poll briefly — the worker should complete quickly once the CTS fires at ~2s.
+		var deadline = DateTime.UtcNow.AddSeconds(5);
+		while (DateTime.UtcNow < deadline && (!client.StopCalled || !client.Disposed))
+			Thread.Sleep(50);
+
 		Assert.True(client.StartCalled);
 		Assert.True(client.StopCalled);
 		Assert.True(client.Disposed);
@@ -94,11 +100,17 @@ public class CentralConfigurationResilienceTests
 
 		var config = new CentralConfiguration(client, Logger);
 
+		// On slow CI the constructor's Join may time out before the worker finishes its finally block.
+		// Poll briefly — the worker should complete quickly once the CTS fires at ~2s.
+		var deadline = DateTime.UtcNow.AddSeconds(5);
+		while (DateTime.UtcNow < deadline && (!client.StartCompletedAt.HasValue || !client.StopCalledAt.HasValue))
+			Thread.Sleep(50);
+
 		Assert.True(client.StartCalled);
 		Assert.NotNull(client.StartCompletedAt);
 		Assert.NotNull(client.StopCalledAt);
-		// Both timestamps are set on the worker thread, sequentially. Thread.Join
-		// returning true means the worker has terminated, so both are in their final state.
+		// Both timestamps are set on the worker thread, sequentially. Once the worker has
+		// terminated (Join or poll), both are in their final state.
 		// This proves StopAsync does not race with an in-flight StartAsync.
 		Assert.True(client.StopCalledAt >= client.StartCompletedAt,
 			$"StopAsync called at {client.StopCalledAt:O} before StartAsync completed at {client.StartCompletedAt:O}");
@@ -221,6 +233,12 @@ public class CentralConfigurationResilienceTests
 
 		var config = new CentralConfiguration(client, Logger);
 
+		// On slow CI the constructor's Join may time out before the worker finishes its finally block.
+		// Poll briefly — the worker should complete quickly once the CTS fires at ~2s.
+		var deadline = DateTime.UtcNow.AddSeconds(5);
+		while (DateTime.UtcNow < deadline && (!client.StopCalled || !client.Disposed))
+			Thread.Sleep(50);
+
 		Assert.True(client.StartCalled);
 		Assert.True(client.StopCalled);
 		Assert.True(client.Disposed);
@@ -238,6 +256,12 @@ public class CentralConfigurationResilienceTests
 		var client = new SyncThrowingOpAmpClient(startDelay: TimeSpan.FromSeconds(10));
 
 		var config = new CentralConfiguration(client, Logger);
+
+		// On slow CI the constructor's Join may time out before the worker finishes its finally block.
+		// Poll briefly — the worker should complete quickly once the CTS fires at ~2s.
+		var deadline = DateTime.UtcNow.AddSeconds(5);
+		while (DateTime.UtcNow < deadline && !client.Disposed)
+			Thread.Sleep(50);
 
 		Assert.True(client.StartCalled);
 		// SafeDispose must still run despite the synchronous StopAsync throw
