@@ -168,11 +168,11 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 				PreActivationInstance = null;
 		}
 
-		if (_safetyTimer is not null)
+		var elapsed = Interlocked.Exchange(ref _safetyTimer, null);
+		if (elapsed is not null)
 		{
-			_safetyTimer.Stop();
-			_safetyTimer.Dispose();
-			_safetyTimer = null;
+			elapsed.Stop();
+			elapsed.Dispose();
 		}
 	}
 
@@ -337,11 +337,11 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 		this.LogCompositeLoggerActivated(count);
 
 		// Dispose safety timer
-		if (_safetyTimer is not null)
+		var activateTimer = Interlocked.Exchange(ref _safetyTimer, null);
+		if (activateTimer is not null)
 		{
-			_safetyTimer.Stop();
-			_safetyTimer.Dispose();
-			_safetyTimer = null;
+			activateTimer.Stop();
+			activateTimer.Dispose();
 		}
 	}
 
@@ -355,11 +355,11 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 		_additionalLogger = null;
 		_fileLogger?.Dispose();
 
-		if (_safetyTimer is not null)
+		var disposeTimer = Interlocked.Exchange(ref _safetyTimer, null);
+		if (disposeTimer is not null)
 		{
-			_safetyTimer.Stop();
-			_safetyTimer.Dispose();
-			_safetyTimer = null;
+			disposeTimer.Stop();
+			disposeTimer.Dispose();
 		}
 	}
 
@@ -371,11 +371,11 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 		if (_fileLogger is not null)
 			await _fileLogger.DisposeAsync().ConfigureAwait(false);
 
-		if (_safetyTimer is not null)
+		var asyncDisposeTimer = Interlocked.Exchange(ref _safetyTimer, null);
+		if (asyncDisposeTimer is not null)
 		{
-			_safetyTimer.Stop();
-			_safetyTimer.Dispose();
-			_safetyTimer = null;
+			asyncDisposeTimer.Stop();
+			asyncDisposeTimer.Dispose();
 		}
 	}
 
