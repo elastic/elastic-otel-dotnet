@@ -143,9 +143,12 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 
 		// If we have options, activate with them. Since options are mutated in place by
 		// SetLogLevelFromCentralConfig, they already reflect any central config updates.
-		if (_options is not null)
+		// Capture to a local first: _options is volatile and another thread may null it
+		// inside Activate() between the null check and the call site.
+		var options = _options;
+		if (options is not null)
 		{
-			Activate(_options);
+			Activate(options);
 			return;
 		}
 
