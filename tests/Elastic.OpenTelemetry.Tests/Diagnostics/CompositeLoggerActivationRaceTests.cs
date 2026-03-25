@@ -11,7 +11,10 @@ namespace Elastic.OpenTelemetry.Tests.Diagnostics;
 /// Validates that the deferred-to-active handoff in <see cref="CompositeLogger"/> does not
 /// lose log events when concurrent threads are enqueuing while activation is in progress.
 /// Regression tests for CR-004.
+/// Tests that exercise <see cref="CompositeLogger.GetOrCreate"/> are grouped into this
+/// collection to prevent parallel access to the static <c>PreActivationInstance</c> singleton.
 /// </summary>
+[Collection("CompositeLoggerSingleton")]
 public class CompositeLoggerActivationRaceTests
 {
 	/// <summary>
@@ -124,6 +127,61 @@ public class CompositeLoggerActivationRaceTests
 		{
 			first?.Dispose();
 			second?.Dispose();
+			CompositeLogger.ClearPreActivationInstance();
+		}
+	}
+
+	/// <summary>
+	/// Validates the late-options-arrival path: a logger created without options via
+	/// <see cref="CompositeLogger.GetOrCreate"/> receives options on a second call,
+	/// and when the safety timer fires it activates using those late-arriving options.
+	/// Placed here (rather than SafetyTimerTests) because it exercises the static
+	/// <c>PreActivationInstance</c> singleton and requires collection-level isolation.
+	/// </summary>
+	[Fact]
+	public void SafetyTimer_OptionsArriveViaGetOrCreate_ActivatesLogger()
+	{
+		CompositeLogger? logger = null;
+
+		try
+		{
+			// Step 1: Create deferred logger with no options via the singleton path
+			logger = CompositeLogger.GetOrCreate(options: null);
+
+			// Step 2: Log messages while the instance has no options (queued)
+			for (var i = 0; i < 3; i++)
+				logger.Log(LogLevel.Information, new EventId(i), $"pre-options {i}", null, (s, _) => s);
+
+			// Step 3: Create OpAmp-enabled options with a counting sink
+			var sink = new CountingLogger();
+			var env = new Dictionary<string, string>
+			{
+				["OTEL_EXPORTER_OTLP_ENDPOINT"] = "http://localhost:4317",
+				["ELASTIC_OTEL_OPAMP_ENDPOINT"] = "http://localhost:4320",
+				["OTEL_SERVICE_NAME"] = "test-service",
+			};
+			var options = new CompositeElasticOpenTelemetryOptions(env)
+			{
+				AdditionalLogger = sink
+			};
+
+			// Step 4: GetOrCreate with options — stores options on existing instance
+			var sameLogger = CompositeLogger.GetOrCreate(options);
+			Assert.Same(logger, sameLogger);
+
+			// Step 5: Safety timer fires — should activate with the late-arriving options
+			logger.OnSafetyTimerElapsed();
+
+			// Step 6: Log messages after activation — routed directly
+			for (var i = 3; i < 8; i++)
+				logger.Log(LogLevel.Information, new EventId(i), $"post-timer {i}", null, (s, _) => s);
+
+			// 10 total: 1 init debug (queued in ctor) + 3 queued = 4 drained + 1 CompositeLoggerActivated + 5 direct
+			Assert.Equal(10, sink.Count);
+		}
+		finally
+		{
+			logger?.Dispose();
 			CompositeLogger.ClearPreActivationInstance();
 		}
 	}
