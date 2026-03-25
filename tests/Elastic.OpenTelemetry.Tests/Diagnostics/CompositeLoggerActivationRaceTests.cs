@@ -87,6 +87,48 @@ public class CompositeLoggerActivationRaceTests
 	}
 
 	/// <summary>
+	/// Verifies the post-activation isolation invariant: once the pre-activation singleton is
+	/// activated, a subsequent <see cref="CompositeLogger.GetOrCreate"/> call — even with
+	/// identical options — must return a fresh independent instance rather than the already-
+	/// activated logger. This is the behavioral guarantee behind the <c>IsCompatible</c>
+	/// <c>_activationState</c> guard: without that guard, a concurrent caller that captures
+	/// <c>PreActivationInstance</c> before <c>Activate</c> clears it would observe
+	/// <c>_options == null</c> (post-activation) and incorrectly conclude the logger was still
+	/// in a compatible pre-activation state.
+	/// </summary>
+	[Fact]
+	public void GetOrCreate_AfterActivation_ReturnsFreshInstance()
+	{
+		var sink = new CountingLogger();
+		var env = new Dictionary<string, string>
+		{
+			["OTEL_EXPORTER_OTLP_ENDPOINT"] = "http://localhost:4317",
+			["ELASTIC_OTEL_OPAMP_ENDPOINT"] = "http://localhost:4320",
+			["OTEL_SERVICE_NAME"] = "test-service",
+		};
+		var options = new CompositeElasticOpenTelemetryOptions(env) { AdditionalLogger = sink };
+
+		CompositeLogger? first = null;
+		CompositeLogger? second = null;
+
+		try
+		{
+			first = CompositeLogger.GetOrCreate(options);
+			first.Activate(options);
+
+			second = CompositeLogger.GetOrCreate(options);
+
+			Assert.NotSame(first, second);
+		}
+		finally
+		{
+			first?.Dispose();
+			second?.Dispose();
+			CompositeLogger.ClearPreActivationInstance();
+		}
+	}
+
+	/// <summary>
 	/// Focused test that repeatedly creates loggers, logs from many threads, activates,
 	/// and verifies no events are lost — over many iterations to maximize the chance of
 	/// hitting the handoff window.

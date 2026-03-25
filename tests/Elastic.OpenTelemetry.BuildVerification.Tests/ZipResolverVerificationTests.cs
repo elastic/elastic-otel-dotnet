@@ -12,7 +12,7 @@ namespace Elastic.OpenTelemetry.BuildVerification.Tests;
 
 /// <summary>
 /// Verifies that the redistributable zip layout supports AssemblyDependencyResolver-based
-/// resolution for the isolated OpAmp assemblies (TG-014).
+/// resolution for the isolated OpAmp assemblies.
 /// </summary>
 public class ZipResolverVerificationTests : IDisposable
 {

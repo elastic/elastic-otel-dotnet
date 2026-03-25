@@ -25,8 +25,7 @@ public class RemoteConfigMessageListenerConcurrencyTests
 		// all 16 subscribers must be present in the internal array with no duplicates
 		// or losses. Verifies registration only (not message dispatch) because
 		// RemoteConfigMessage is an external protobuf type that is difficult to
-		// construct in isolation. A full end-to-end dispatch test belongs in the
-		// integration suite (see TG-001).
+		// construct in isolation.
 		const int threadCount = 16;
 		var listener = new RemoteConfigMessageListener(NullLogger.Instance);
 		var subscribers = new CountingSubscriber[threadCount];
