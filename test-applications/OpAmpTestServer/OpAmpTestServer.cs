@@ -95,10 +95,20 @@ public sealed class OpAmpTestServer : IAsyncDisposable
 		builder.WebHost.UseUrls($"http://{bindAddress}:0");
 		builder.Logging.ClearProviders();
 
-		_app = builder.Build();
-		_app.MapPost("/", HandleRequestAsync);
+		var app = builder.Build();
+		app.MapPost("/", HandleRequestAsync);
 
-		await _app.StartAsync(cancellationToken).ConfigureAwait(false);
+		try
+		{
+			await app.StartAsync(cancellationToken).ConfigureAwait(false);
+		}
+		catch
+		{
+			await app.DisposeAsync().ConfigureAwait(false);
+			throw;
+		}
+
+		_app = app;
 		_endpoint = _app.Urls.First();
 	}
 
