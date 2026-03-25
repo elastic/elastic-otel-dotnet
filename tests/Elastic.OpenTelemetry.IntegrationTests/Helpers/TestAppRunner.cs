@@ -181,6 +181,7 @@ internal sealed class TestAppRunner : IAsyncDisposable
 		catch (OperationCanceledException)
 		{
 			// Process refused to die — nothing more we can do
+			return;
 		}
 
 		ExitCode = _process.ExitCode;
