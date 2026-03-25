@@ -37,7 +37,7 @@ internal static class ElasticOpenTelemetry
 
 	internal static readonly HashSet<ElasticOpenTelemetryComponents> SharedComponents = [];
 
-	private static readonly Lock Lock = new();
+	internal static readonly Lock Lock = new();
 
 	internal static ElasticOpenTelemetryComponents Bootstrap(SdkActivationMethod activationMethod) =>
 		Bootstrap(activationMethod, CompositeElasticOpenTelemetryOptions.DefaultOptions, null);

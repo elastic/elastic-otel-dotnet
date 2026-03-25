@@ -244,12 +244,19 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 	/// </summary>
 	private static bool IsCompatible(CompositeLogger existing, CompositeElasticOpenTelemetryOptions? options)
 	{
+		// Already activated (or activating) — no longer a pre-activation singleton.
+		// Activation sets _activationState → 1 *before* nulling _options, so this guards
+		// the case where a concurrent thread observes _options == null due to activation
+		// and would otherwise incorrectly conclude "same bootstrap flow, options not yet available".
+		if (Volatile.Read(ref existing._activationState) != 0)
+			return false;
+
 		// Capture once to avoid a TOCTOU race: Activate() can null out _options on another thread
 		// between the null check and the dereference below. The field is volatile so a single
 		// read here is atomic and visible.
 		var existingOptions = existing._options;
 
-		// If either side has no options, they could be part of the same bootstrap flow
+		// If either side has no options yet, they could be part of the same bootstrap flow
 		if (options is null || existingOptions is null)
 			return true;
 

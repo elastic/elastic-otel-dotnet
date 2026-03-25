@@ -57,6 +57,9 @@ internal sealed class ElasticOpenTelemetryComponents : IDisposable, IAsyncDispos
 		if (Interlocked.Exchange(ref _disposed, 1) != 0)
 			return;
 
+		using (ElasticOpenTelemetry.Lock.EnterScope())
+			ElasticOpenTelemetry.SharedComponents.Remove(this);
+
 		CentralConfiguration?.Dispose();
 		Logger.Dispose();
 		LoggingEventListener.Dispose();
@@ -66,6 +69,9 @@ internal sealed class ElasticOpenTelemetryComponents : IDisposable, IAsyncDispos
 	{
 		if (Interlocked.Exchange(ref _disposed, 1) != 0)
 			return;
+
+		using (ElasticOpenTelemetry.Lock.EnterScope())
+			ElasticOpenTelemetry.SharedComponents.Remove(this);
 
 		if (CentralConfiguration is not null)
 			await CentralConfiguration.DisposeAsync().ConfigureAwait(false);
