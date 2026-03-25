@@ -49,8 +49,8 @@ public class CompositeLoggerSafetyTimerTests
 			for (var i = 5; i < 10; i++)
 				logger.Log(LogLevel.Information, new EventId(i), $"post-timer {i}", null, (s, _) => s);
 
-			// All 10 should reach the sink: 5 drained from queue + 5 direct
-			Assert.Equal(10, sink.Count);
+			// 12 total: 1 init debug (queued in ctor) + 5 queued = 6 drained + 1 CompositeLoggerActivated + 5 direct
+			Assert.Equal(12, sink.Count);
 		}
 		finally
 		{
@@ -105,7 +105,8 @@ public class CompositeLoggerSafetyTimerTests
 			for (var i = 0; i < 3; i++)
 				logger.Log(LogLevel.Information, new EventId(i), $"post-activate {i}", null, (s, _) => s);
 
-			Assert.Equal(3, sink.Count);
+			// 5 total: 1 init debug drained + 1 CompositeLoggerActivated + 3 direct
+			Assert.Equal(5, sink.Count);
 
 			// Safety timer fires — should be a no-op (already activated, queue is null)
 			logger.OnSafetyTimerElapsed();
@@ -114,7 +115,8 @@ public class CompositeLoggerSafetyTimerTests
 			for (var i = 3; i < 6; i++)
 				logger.Log(LogLevel.Information, new EventId(i), $"post-timer {i}", null, (s, _) => s);
 
-			Assert.Equal(6, sink.Count);
+			// 8 total: 5 from first assert + 3 more direct
+			Assert.Equal(8, sink.Count);
 		}
 		finally
 		{
@@ -160,8 +162,8 @@ public class CompositeLoggerSafetyTimerTests
 			for (var i = 3; i < 8; i++)
 				logger.Log(LogLevel.Information, new EventId(i), $"post-timer {i}", null, (s, _) => s);
 
-			// 3 drained from queue + 5 direct = 8
-			Assert.Equal(8, sink.Count);
+			// 10 total: 1 init debug (queued in ctor) + 3 queued = 4 drained + 1 CompositeLoggerActivated + 5 direct
+			Assert.Equal(10, sink.Count);
 		}
 		finally
 		{

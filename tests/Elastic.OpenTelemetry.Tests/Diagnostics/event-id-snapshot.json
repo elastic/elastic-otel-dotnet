@@ -153,6 +153,10 @@
       "eventName": "DetectedIncludeScopes"
     },
     {
+      "eventId": 70,
+      "eventName": "CompositeLoggerActivated"
+    },
+    {
       "eventId": 100,
       "eventName": "OpAmpNotEnabled"
     },

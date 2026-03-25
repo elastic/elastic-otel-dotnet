@@ -49,6 +49,14 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 	// into a stale queue that no consumer will ever drain.
 	private readonly Lock _activationLock = new();
 
+	// Tracks whether Activate() has been claimed by a thread. 0 = pending, 1 = claimed.
+	// Interlocked.CompareExchange atomically swaps 0→1 and returns the old value, so only
+	// the thread that sees 0 returned proceeds with activation — all others exit early.
+	// This is separate from _activationLock: the CAS guarantees a single winner, while
+	// the lock serialises the Log/Activate handoff so Log() never sees _deferredQueue=null
+	// before sub-loggers are fully assigned.
+	private int _activationState;
+
 	// Static singleton for pre-activation sharing
 	private static CompositeLogger? PreActivationInstance;
 	private static readonly Lock StaticLock = new();
@@ -141,11 +149,11 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 			if (_deferredQueue is null)
 				return;
 
-			// Replace with a new empty queue rather than null so that a subsequent
-			// Activate(options) call does not mistake the discard for an active-mode
-			// transition. Activate checks _deferredQueue is null to detect "already
-			// active"; leaving a non-null (empty) queue here lets it proceed normally.
-			_deferredQueue = new ConcurrentQueue<DeferredLogEntry>();
+			// Null out the queue so IsEnabled and Log treat this instance as inactive.
+			// A subsequent Activate(options) call will still proceed correctly because
+			// Activate's single-execution guard is now _activationState (via
+			// Interlocked.CompareExchange), not _deferredQueue is null.
+			_deferredQueue = null;
 		}
 
 		using (StaticLock.EnterScope())
@@ -261,8 +269,12 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 		if (BootstrapLogger.IsEnabled)
 			BootstrapLogger.Log($"{nameof(CompositeLogger)}: Activating instance '{InstanceId}' with options '{options.InstanceId}'.");
 
-		// Already active — just clear the static reference and return
-		if (_deferredQueue is null)
+		// Claim the right to activate exactly once. Interlocked.CompareExchange atomically
+		// swaps _activationState from 0 to 1 and returns the previous value. Only the thread
+		// that sees 0 returned wins; every other concurrent or subsequent call exits here.
+		// This prevents double-activation races that the previous _deferredQueue is null
+		// guard could not fully prevent (it was checked outside _activationLock).
+		if (Interlocked.CompareExchange(ref _activationState, 1, 0) != 0)
 		{
 			using (StaticLock.EnterScope())
 			{

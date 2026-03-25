@@ -82,7 +82,8 @@ public class CompositeLoggerActivationRaceTests
 		foreach (var t in threads)
 			t.Join(10_000);
 
-		Assert.Equal(expectedTotal, sink.Count);
+		// +2 for the init debug msg queued in the ctor and the CompositeLoggerActivated msg after drain
+		Assert.Equal(expectedTotal + 2, sink.Count);
 	}
 
 	/// <summary>
@@ -147,10 +148,11 @@ public class CompositeLoggerActivationRaceTests
 			foreach (var t in threads)
 				t.Join(10_000);
 
+			// +2 for the init debug msg queued in the ctor and the CompositeLoggerActivated msg after drain
 			Assert.True(
-				sink.Count == expectedTotal,
-				$"Iteration {iter}: expected {expectedTotal} events but got {sink.Count}. " +
-				$"Lost {expectedTotal - sink.Count} events during activation handoff.");
+				sink.Count == expectedTotal + 2,
+				$"Iteration {iter}: expected {expectedTotal + 2} events but got {sink.Count}. " +
+				$"Lost {expectedTotal + 2 - sink.Count} events during activation handoff.");
 		}
 	}
 
