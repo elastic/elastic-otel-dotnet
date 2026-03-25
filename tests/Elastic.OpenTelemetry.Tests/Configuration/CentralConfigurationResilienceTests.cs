@@ -180,17 +180,12 @@ public class CentralConfigurationResilienceTests
 	}
 
 	[Fact]
-	public void StartAsync_IgnoresCancellation_LateSuccess_ClientLeaked()
+	public void StartAsync_IgnoresCancellation_LateSuccess_OrphanedClientCleanedUp()
 	{
-		// Documents the accepted tradeoff: if StartAsync ignores the CancellationToken
-		// AND eventually succeeds after the Join timeout, the worker sees outcome==Succeeded
-		// and skips cleanup. But the caller already swapped to EmptyOpAmpClient — so nobody
-		// calls StopAsync/Dispose on the successfully-started client. It is leaked.
-		//
-		// Closing this would require an atomic CAS handoff between caller and worker, which
-		// adds meaningful complexity for a double-pathological case. The background thread
-		// (IsBackground=true) terminates on process exit.
-		// See "Known Tradeoff" in specs/HARDEN-opamp-startup-blocking-v2.md.
+		// If StartAsync ignores the CancellationToken AND eventually succeeds after the
+		// Join timeout, the caller has already atomically swapped _client to EmptyOpAmpClient.
+		// The worker detects this via Volatile.Read in its finally block and calls
+		// StopAsync/Dispose on the orphaned client — closing the previously accepted leak.
 		var client = new FaultingOpAmpClient(
 			startDelay: TimeSpan.FromSeconds(5),
 			ignoreCancellation: true);
@@ -203,19 +198,14 @@ public class CentralConfigurationResilienceTests
 		Assert.True(sw.Elapsed.TotalSeconds < 4);
 		Assert.False(config.WaitForFirstConfig(TimeSpan.FromMilliseconds(100)));
 
-		// Wait for the worker to finish: it will succeed (no startException) after the 5s delay
+		// Wait for the worker to finish and clean up the orphaned client.
+		// 5s delay + cleanup margin. Poll to reduce flakiness on slow CI.
 		var deadline = DateTime.UtcNow.AddSeconds(10);
-		while (DateTime.UtcNow < deadline && !client.StartCompletedAt.HasValue)
+		while (DateTime.UtcNow < deadline && (!client.StopCalled || !client.Disposed))
 			Thread.Sleep(100);
 
-		Assert.NotNull(client.StartCompletedAt);
-
-		// Give a brief window for any cleanup to run (it shouldn't)
-		Thread.Sleep(200);
-
-		// This is the documented leak — the worker saw Succeeded and skipped cleanup
-		Assert.False(client.StopCalled, "StopAsync should NOT be called — worker skips cleanup on success");
-		Assert.False(client.Disposed, "Client should NOT be disposed — this is the accepted leak");
+		Assert.True(client.StopCalled, "Worker should have called StopAsync on the orphaned client");
+		Assert.True(client.Disposed, "Worker should have disposed the orphaned client");
 
 		config.Dispose();
 	}

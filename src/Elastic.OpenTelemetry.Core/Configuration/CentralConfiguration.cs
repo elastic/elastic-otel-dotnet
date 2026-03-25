@@ -223,6 +223,26 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 						}
 						SafeDispose(client, _logger);
 					}
+					else
+					{
+						// Worker succeeded, but the caller may have already timed out (Join returned
+						// false) and atomically swapped _client to EmptyOpAmpClient. Use Volatile.Read
+						// to observe the caller's Interlocked.Exchange write. If _client is no longer
+						// the original client, the started client is orphaned and must be cleaned up.
+						if (!ReferenceEquals(Volatile.Read(ref _client), client))
+						{
+							try
+							{
+								TryWaitForCompletion(client.StopAsync(), CleanupBudgetMs, _logger, "StopAsync (late cleanup)");
+							}
+							catch (Exception ex)
+							{
+								_logger.LogOperationFaulted(nameof(CentralConfiguration),
+									"StopAsync (late cleanup)", ex.GetType().Name);
+							}
+							SafeDispose(client, _logger);
+						}
+					}
 				}
 				finally
 				{
@@ -262,13 +282,12 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 		// the worker owns cleanup in its finally block. The caller's only job is to swap
 		// _client so that subsequent WaitForFirstConfig/Dispose calls short-circuit.
 		//
-		// If Join timed out (result == Pending), the worker is still alive. It will
-		// eventually complete and clean up. The background thread terminates on process
-		// exit. See "Known Tradeoff" in the spec for the edge case where the worker
-		// succeeds after the caller has already swapped to empty.
+		// If Join timed out (result == Pending), the worker is still alive. Use an atomic
+		// swap (Interlocked.Exchange) so the worker can detect — via Volatile.Read — whether
+		// the caller replaced _client, and clean up any orphaned client in its finally block.
 		_logger.LogOpAmpClientStartTimeout(nameof(CentralConfiguration),
 			OpAmpBlockingStartTimeoutMilliseconds);
-		_client = new EmptyOpAmpClient();
+		Interlocked.Exchange(ref _client, new EmptyOpAmpClient());
 	}
 
 	internal bool WaitForFirstConfig(TimeSpan waitDuration)
