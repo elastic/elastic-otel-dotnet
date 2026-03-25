@@ -64,6 +64,15 @@ public partial class InstrumentationScanningTests(WebApplicationFactory<Program>
 
 		response.EnsureSuccessStatusCode();
 
+		if (exportedItems.Count > 1)
+		{
+			_output.WriteLine("Exported items:");
+			foreach (var item in exportedItems)
+			{
+				_output.WriteLine($"- {item.DisplayName}");
+			}
+		}
+
 		Assert.Equal("GET /", Assert.Single(exportedItems).DisplayName);
 	}
 
