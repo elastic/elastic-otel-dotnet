@@ -17,8 +17,11 @@
 
   <ItemGroup Condition="'$(TargetFramework)' == 'net462'">
     <PackageReference Include="System.Net.Http" ExcludeAssets="compile;build;analyzers" />
-    <!--Use a 4.2.0.0 ref assembly for compile-time to satisfy OpenTelemetry.OpAmp.Client-->
-    <Reference Include="System.Net.Http" SpecificVersion="true" Private="true" />
+    <!--Explicit compile-time reference to System.Net.Http; resolves to 4.0.0.0 from the net462
+        framework reference assemblies, which is sufficient for OpenTelemetry.OpAmp.Client.
+        The PackageReference above (ExcludeAssets="compile") brings in the 4.3.x runtime assembly
+        without adding a competing compile-time reference.-->
+    <Reference Include="System.Net.Http" Private="true" />
   </ItemGroup>
 
   <ItemGroup>
