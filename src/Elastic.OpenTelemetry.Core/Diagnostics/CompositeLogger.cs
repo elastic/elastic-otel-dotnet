@@ -131,6 +131,12 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 	/// </summary>
 	internal void OnSafetyTimerElapsed()
 	{
+		// Best-effort disposed check — mirrors the guard in Log(). A narrow race where
+		// Dispose() sets _isDisposed after this read is harmless: Activate() would create
+		// sub-loggers that are immediately unreachable and collected, but no leak persists.
+		if (_isDisposed)
+			return;
+
 		// If we have options, activate with them. Since options are mutated in place by
 		// SetLogLevelFromCentralConfig, they already reflect any central config updates.
 		if (_options is not null)
@@ -238,12 +244,17 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 	/// </summary>
 	private static bool IsCompatible(CompositeLogger existing, CompositeElasticOpenTelemetryOptions? options)
 	{
+		// Capture once to avoid a TOCTOU race: Activate() can null out _options on another thread
+		// between the null check and the dereference below. The field is volatile so a single
+		// read here is atomic and visible.
+		var existingOptions = existing._options;
+
 		// If either side has no options, they could be part of the same bootstrap flow
-		if (options is null || existing._options is null)
+		if (options is null || existingOptions is null)
 			return true;
 
 		// Same reference or equivalent options — same bootstrap flow
-		return ReferenceEquals(existing._options, options) || existing._options.Equals(options);
+		return ReferenceEquals(existingOptions, options) || existingOptions.Equals(options);
 	}
 
 	/// <summary>
