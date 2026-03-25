@@ -993,6 +993,39 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 	}
 
 	[Fact]
+	public void ResolveOpAmpServiceIdentity_ExtractsServiceName_WhenKeyIsSubstringOfPriorKey()
+	{
+		// "service.name" is a suffix of "deployment.service.name" — exact key match must be used
+		var sut = new CompositeElasticOpenTelemetryOptions(new Hashtable
+		{
+			{ ELASTIC_OTEL_OPAMP_ENDPOINT, "http://localhost:4320" },
+			{ OTEL_RESOURCE_ATTRIBUTES, "deployment.service.name=wrong,service.name=correct" }
+		});
+
+		sut.ResolveOpAmpServiceIdentity();
+
+		Assert.Equal("correct", sut.ServiceName);
+		Assert.True(sut.IsOpAmpEnabled());
+	}
+
+	[Fact]
+	public void ResolveOpAmpServiceIdentity_ExtractsServiceName_WhenSpaceFollowsComma()
+	{
+		// Spaces after commas must be trimmed so the key boundary check doesn't fail
+		var sut = new CompositeElasticOpenTelemetryOptions(new Hashtable
+		{
+			{ ELASTIC_OTEL_OPAMP_ENDPOINT, "http://localhost:4320" },
+			{ OTEL_RESOURCE_ATTRIBUTES, "deployment.environment=prod, service.name=spaced-app, service.version=3.0" }
+		});
+
+		sut.ResolveOpAmpServiceIdentity();
+
+		Assert.Equal("spaced-app", sut.ServiceName);
+		Assert.Equal("3.0", sut.ServiceVersion);
+		Assert.True(sut.IsOpAmpEnabled());
+	}
+
+	[Fact]
 	public void ResolveOpAmpServiceIdentity_DoesNotOverwriteExplicitServiceName()
 	{
 		var sut = new CompositeElasticOpenTelemetryOptions(new Hashtable

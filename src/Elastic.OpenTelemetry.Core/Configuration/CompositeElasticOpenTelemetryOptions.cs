@@ -359,15 +359,16 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 	{
 		logger ??= NullLogger.Instance;
 
-		if (string.IsNullOrEmpty(ServiceName) && !string.IsNullOrEmpty(ResourceAttributes))
+		if (!string.IsNullOrEmpty(ResourceAttributes))
 		{
-			logger.LogDebug("OpAMP setting service name from resource attributes");
-			ServiceName = ExtractValueForKey(ResourceAttributes!, ResourceSemanticConventions.AttributeServiceName);
-		}
+			if (string.IsNullOrEmpty(ServiceName))
+			{
+				logger.LogDebug("OpAMP setting service name from resource attributes");
+				ServiceName = LookupResourceAttribute(ResourceAttributes!, ResourceSemanticConventions.AttributeServiceName);
+			}
 
-		if (string.IsNullOrEmpty(ServiceVersion) && !string.IsNullOrEmpty(ResourceAttributes))
-		{
-			ServiceVersion = ExtractValueForKey(ResourceAttributes!, ResourceSemanticConventions.AttributeServiceVersion);
+			if (string.IsNullOrEmpty(ServiceVersion))
+				ServiceVersion = LookupResourceAttribute(ResourceAttributes!, ResourceSemanticConventions.AttributeServiceVersion);
 		}
 
 		_identityResolved = true;
@@ -415,41 +416,20 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 			nameof(CompositeElasticOpenTelemetryOptions), nameof(SetLogLevelFromCentralConfig), logLevel, _logLevel.Value);
 	}
 
-	private static string? ExtractValueForKey(string input, string key)
+	private static string? LookupResourceAttribute(string input, string key)
 	{
-		if (string.IsNullOrEmpty(input))
-			return null;
-
-		var span = input.AsSpan();
-		var searchFrom = 0;
-
-		while (searchFrom < span.Length)
+		foreach (var segment in input.Split(','))
 		{
-			var index = span[searchFrom..].IndexOf(key, StringComparison.Ordinal);
-
-			if (index == -1)
-				return null;
-
-			var absoluteIndex = searchFrom + index;
-
-			// Ensure the match is at a key boundary (start of string or preceded by ',')
-			if (absoluteIndex != 0 && span[absoluteIndex - 1] != ',')
-			{
-				searchFrom = absoluteIndex + key.Length;
+			var pair = segment.Trim();
+			if (pair.Length == 0)
 				continue;
-			}
 
-			var afterKey = span[(absoluteIndex + key.Length)..];
-
-			if (afterKey.Length == 0 || afterKey[0] != '=')
-			{
-				searchFrom = absoluteIndex + key.Length;
+			var eqIndex = pair.IndexOf('=');
+			if (eqIndex < 0)
 				continue;
-			}
 
-			var commaIndex = afterKey.IndexOf(',');
-
-			return commaIndex == -1 ? afterKey[1..].ToString() : afterKey[1..commaIndex].ToString();
+			if (pair[..eqIndex] == key)
+				return pair[(eqIndex + 1)..];
 		}
 
 		return null;
