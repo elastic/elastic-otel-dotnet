@@ -6,5 +6,6 @@ RUN dotnet publish test-applications/OpAmpBootstrapTestApp/OpAmpBootstrapTestApp
 
 FROM mcr.microsoft.com/dotnet/runtime:10.0
 WORKDIR /app
-COPY --from=build /app .
+COPY --from=build --chown=app:app /app .
+USER app
 ENTRYPOINT ["dotnet", "OpAmpBootstrapTestApp.dll"]
