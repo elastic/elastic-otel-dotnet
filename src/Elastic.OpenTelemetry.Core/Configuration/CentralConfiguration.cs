@@ -299,8 +299,14 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 			return;
 
 		_logger.LogDisposingOpAmpClient(nameof(CentralConfiguration));
-		TryWaitForCompletion(_client.StopAsync(), 500, _logger, "StopAsync (Dispose)");
-		SafeDispose(_client, _logger);
+		try
+		{
+			TryWaitForCompletion(() => _client.StopAsync(), 500, _logger, "StopAsync (Dispose)");
+		}
+		finally
+		{
+			SafeDispose(_client, _logger);
+		}
 	}
 
 	public async ValueTask DisposeAsync()
@@ -312,11 +318,15 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 
 		try
 		{
-			await _client.StopAsync().WaitAsync(TimeSpan.FromMilliseconds(500)).ConfigureAwait(false);
-		}
-		catch (TimeoutException)
-		{
-			_logger.LogStopAsyncTimedOut(nameof(CentralConfiguration));
+			var stopTask = _client.StopAsync();
+			var completed = await Task.WhenAny(stopTask, Task.Delay(TimeSpan.FromMilliseconds(500))).ConfigureAwait(false);
+			if (completed != stopTask)
+				_logger.LogStopAsyncTimedOut(nameof(CentralConfiguration));
+			else if (stopTask.IsFaulted)
+			{
+				var inner = stopTask.Exception?.InnerException ?? stopTask.Exception;
+				_logger.LogStopAsyncFaulted(nameof(CentralConfiguration), inner?.GetType().Name ?? "Unknown");
+			}
 		}
 		catch (Exception ex)
 		{
@@ -351,6 +361,33 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 
 	private static bool TryWaitForCompletion(Task task, TimeSpan timeout, ILogger logger, string operationName) =>
 		TryWaitForCompletion(task, (int)timeout.TotalMilliseconds, logger, operationName);
+
+	/// <summary>
+	/// Overload that defers task creation so that synchronous exceptions thrown by
+	/// <paramref name="taskFactory"/> are caught alongside async faults.
+	/// </summary>
+	private static bool TryWaitForCompletion(Func<Task> taskFactory, int timeoutMs, ILogger logger, string operationName)
+	{
+		try
+		{
+			var task = taskFactory();
+			if (task.Wait(timeoutMs))
+				return true;
+
+			logger.LogOperationTimedOut(nameof(CentralConfiguration), operationName, timeoutMs);
+			return false;
+		}
+		catch (AggregateException ex)
+		{
+			logger.LogOperationFaulted(nameof(CentralConfiguration), operationName, ex.InnerException?.GetType().Name ?? ex.GetType().Name);
+			return false;
+		}
+		catch (Exception ex)
+		{
+			logger.LogOperationFaulted(nameof(CentralConfiguration), operationName, ex.GetType().Name);
+			return false;
+		}
+	}
 
 	/// <summary>
 	/// Wraps <see cref="IDisposable.Dispose"/> with exception swallowing. <see cref="IOpAmpClient"/>
