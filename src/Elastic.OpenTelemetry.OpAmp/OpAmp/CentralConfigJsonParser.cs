@@ -109,7 +109,7 @@ namespace Elastic.OpenTelemetry.OpAmp
 
 				var valueBytes = remaining.Slice(0, i);
 
-#if NETFRAMEWORK
+#if NETFRAMEWORK || NETSTANDARD2_0
 				value = Encoding.UTF8.GetString(valueBytes.ToArray());
 #else
 				value = Encoding.UTF8.GetString(valueBytes);
