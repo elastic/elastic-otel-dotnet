@@ -175,55 +175,69 @@ internal static class ElasticOpenTelemetry
 
 			var logger = CompositeLogger.GetOrCreate(options);
 			CentralConfiguration? centralConfig = null;
+			LoggingEventListener? eventListener = null;
 
-			// Resolve service identity from resource attributes before checking enablement.
-			// IsOpAmpEnabled() is a pure query — it does not extract ServiceName/ServiceVersion.
-			options.ResolveOpAmpServiceIdentity(logger);
-
-			if (options.IsOpAmpEnabled(logger))
+			try
 			{
-				logger.LogInformation("{ClassName}.{MethodName}: OpAMP is enabled, attempting to fetch central configuration.", nameof(ElasticOpenTelemetry), nameof(CreateComponents));
+				// Resolve service identity from resource attributes before checking enablement.
+				// IsOpAmpEnabled() is a pure query — it does not extract ServiceName/ServiceVersion.
+				options.ResolveOpAmpServiceIdentity(logger);
 
-				centralConfig = new CentralConfiguration(options, logger);
-
-				if (centralConfig.WaitForFirstConfig(TimeSpan.FromMilliseconds(WaitForFirstConfigTimeoutMs)) && centralConfig.TryGetInitialConfig(out var config))
+				if (options.IsOpAmpEnabled(logger))
 				{
-					logger.LogDebug("{ClassName}.{MethodName}: Successfully retrieved initial central configuration.", nameof(ElasticOpenTelemetry), nameof(CreateComponents));
+					logger.LogInformation("{ClassName}.{MethodName}: OpAMP is enabled, attempting to fetch central configuration.", nameof(ElasticOpenTelemetry), nameof(CreateComponents));
 
-					if (config.LogLevel is not null)
+					centralConfig = new CentralConfiguration(options, logger);
+
+					if (centralConfig.WaitForFirstConfig(TimeSpan.FromMilliseconds(WaitForFirstConfigTimeoutMs)) && centralConfig.TryGetInitialConfig(out var config))
 					{
-						options.SetLogLevelFromCentralConfig(config.LogLevel, logger);
+						logger.LogDebug("{ClassName}.{MethodName}: Successfully retrieved initial central configuration.", nameof(ElasticOpenTelemetry), nameof(CreateComponents));
+
+						if (config.LogLevel is not null)
+						{
+							options.SetLogLevelFromCentralConfig(config.LogLevel, logger);
+						}
+					}
+					else
+					{
+						logger.LogWarning("{ClassName}.{MethodName}: Failed to retrieve central configuration within the timeout period, proceeding with local configuration.",
+							nameof(ElasticOpenTelemetry), nameof(CreateComponents));
 					}
 				}
 				else
 				{
-					logger.LogWarning("{ClassName}.{MethodName}: Failed to retrieve central configuration within the timeout period, proceeding with local configuration.",
+					logger.LogInformation("{ClassName}.{MethodName}: OpAMP is not enabled, skipping central configuration fetch.",
 						nameof(ElasticOpenTelemetry), nameof(CreateComponents));
 				}
+
+				// Activate with final config — creates sub-loggers, drains deferred queue
+				logger.Activate(options);
+
+				eventListener = new LoggingEventListener(logger, options);
+				var components = new ElasticOpenTelemetryComponents(logger, eventListener, options, centralConfig);
+
+				// Ownership transferred to components — clear locals so catch won't dispose them.
+				centralConfig = null;
+				eventListener = null;
+
+				if (BootstrapLogger.IsEnabled)
+				{
+					BootstrapLogger.Log($"{nameof(CreateComponents)}: Created new CompositeLogger instance '{logger.InstanceId}' via CreateComponents.");
+					BootstrapLogger.Log($"{nameof(CreateComponents)}: Created new LoggingEventListener instance '{components.LoggingEventListener.InstanceId}' via CreateComponents.");
+					BootstrapLogger.Log($"{nameof(CreateComponents)}: Created new ElasticOpenTelemetryComponents instance '{components.InstanceId}' via CreateComponents.");
+				}
+
+				logger.LogDistroPreamble(activationMethod, components);
+				logger.LogComponentsCreated(Environment.NewLine, stackTrace);
+
+				return components;
 			}
-			else
+			catch
 			{
-				logger.LogInformation("{ClassName}.{MethodName}: OpAMP is not enabled, skipping central configuration fetch.",
-					nameof(ElasticOpenTelemetry), nameof(CreateComponents));
+				centralConfig?.Dispose();
+				eventListener?.Dispose();
+				throw;
 			}
-
-			// Activate with final config — creates sub-loggers, drains deferred queue
-			logger.Activate(options);
-
-			var eventListener = new LoggingEventListener(logger, options);
-			var components = new ElasticOpenTelemetryComponents(logger, eventListener, options, centralConfig);
-
-			if (BootstrapLogger.IsEnabled)
-			{
-				BootstrapLogger.Log($"{nameof(CreateComponents)}: Created new CompositeLogger instance '{logger.InstanceId}' via CreateComponents.");
-				BootstrapLogger.Log($"{nameof(CreateComponents)}: Created new LoggingEventListener instance '{eventListener.InstanceId}' via CreateComponents.");
-				BootstrapLogger.Log($"{nameof(CreateComponents)}: Created new ElasticOpenTelemetryComponents instance '{components.InstanceId}' via CreateComponents.");
-			}
-
-			logger.LogDistroPreamble(activationMethod, components);
-			logger.LogComponentsCreated(Environment.NewLine, stackTrace);
-
-			return components;
 		}
 	}
 }
