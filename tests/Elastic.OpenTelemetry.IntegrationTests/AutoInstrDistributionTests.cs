@@ -38,7 +38,7 @@ public class AutoInstrDistributionTests
 		await using var runner = new TestAppRunner(_fixture.Net8AppPath, envVars);
 		await runner.RunToCompletionAsync();
 
-		Assert.Equal(0, runner.ExitCode);
+		runner.AssertExitCodeZero();
 		Assert.Contains("APP_COMPLETE", runner.StandardOutput);
 		Assert.NotNull(runner.EdotLogFilePath);
 
@@ -68,7 +68,7 @@ public class AutoInstrDistributionTests
 		await using var runner = new TestAppRunner(_fixture.Net8AppPath, envVars);
 		await runner.RunToCompletionAsync();
 
-		Assert.Equal(0, runner.ExitCode);
+		runner.AssertExitCodeZero();
 		Assert.Contains("APP_COMPLETE", runner.StandardOutput);
 		Assert.NotNull(runner.EdotLogFilePath);
 
@@ -93,7 +93,7 @@ public class AutoInstrDistributionTests
 		await using var runner = new TestAppRunner(_fixture.Net8AppPath, envVars);
 		await runner.RunToCompletionAsync();
 
-		Assert.Equal(0, runner.ExitCode);
+		runner.AssertExitCodeZero();
 		Assert.Contains("APP_COMPLETE", runner.StandardOutput);
 		Assert.NotNull(runner.EdotLogFilePath);
 

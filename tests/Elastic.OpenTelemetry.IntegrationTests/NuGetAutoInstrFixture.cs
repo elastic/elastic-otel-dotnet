@@ -6,6 +6,8 @@ using System.Diagnostics;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
 using Elastic.OpenTelemetry.IntegrationTests.Helpers;
+using Xunit.Abstractions;
+using Xunit.Sdk;
 
 namespace Elastic.OpenTelemetry.IntegrationTests;
 
@@ -28,7 +30,10 @@ public class NuGetAutoInstrFixture : IAsyncLifetime
 {
 	private readonly LocalNuGetFeed _feed = new();
 	private readonly List<string> _tempDirectories = [];
+	private readonly IMessageSink _diagnosticMessageSink;
 	private string? _extractionDirectory;
+
+	public NuGetAutoInstrFixture(IMessageSink diagnosticMessageSink) => _diagnosticMessageSink = diagnosticMessageSink;
 
 	/// <summary>Path to the extracted redistributable (profiler infrastructure).</summary>
 	public string InstallationDirectory { get; private set; } = string.Empty;
@@ -56,7 +61,9 @@ public class NuGetAutoInstrFixture : IAsyncLifetime
 
 	public async Task InitializeAsync()
 	{
-		using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+		// Budget covers: extract zip + pack + restore + publish (normal) + restore + publish (AOT).
+		// AOT publish is particularly slow (native compilation) — needs generous headroom on CI.
+		using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(8));
 		var ct = cts.Token;
 		var solutionRoot = FindSolutionRoot();
 		string? configFilePath = null;
@@ -74,6 +81,7 @@ public class NuGetAutoInstrFixture : IAsyncLifetime
 			_extractionDirectory = Path.Combine(
 				Path.GetTempPath(), $"edot-nuget-autoinstr-redist-{Guid.NewGuid():N}");
 			_tempDirectories.Add(_extractionDirectory);
+			WriteFixtureLog($"Extracting redistributable zip '{zipPath}' to '{_extractionDirectory}'.");
 			ZipFile.ExtractToDirectory(zipPath, _extractionDirectory);
 			InstallationDirectory = _extractionDirectory;
 
@@ -81,7 +89,9 @@ public class NuGetAutoInstrFixture : IAsyncLifetime
 			var autoInstrProjectPath = Path.Combine(solutionRoot,
 				"src", "Elastic.OpenTelemetry.AutoInstrumentation",
 				"Elastic.OpenTelemetry.AutoInstrumentation.csproj");
-			await _feed.PackProjectAsync(autoInstrProjectPath, ct).ConfigureAwait(false);
+			WriteFixtureLog($"Packing NuGet package from '{autoInstrProjectPath}'.");
+			await _feed.PackProjectAsync(autoInstrProjectPath, ct, _diagnosticMessageSink).ConfigureAwait(false);
+			WriteFixtureLog("Pack step completed.");
 
 			PackageVersion = _feed.GetPackageVersion("Elastic.OpenTelemetry.AutoInstrumentation")
 				?? throw new InvalidOperationException(
@@ -103,6 +113,7 @@ public class NuGetAutoInstrFixture : IAsyncLifetime
 		catch (Exception ex)
 		{
 			InitializationError = ex.ToString();
+			WriteFixtureLog($"Initialization failed: {InitializationError}");
 		}
 
 		// 5. Publish AOT consumer app (separate try/catch — independent of profiler tests)
@@ -148,6 +159,7 @@ public class NuGetAutoInstrFixture : IAsyncLifetime
 		catch (Exception ex)
 		{
 			AotInitializationError = ex.ToString();
+			WriteFixtureLog($"AOT initialization failed: {AotInitializationError}");
 		}
 	}
 
@@ -225,32 +237,12 @@ public class NuGetAutoInstrFixture : IAsyncLifetime
 		return $"linux-glibc-{arch}";
 	}
 
-	private static async Task RunDotnetAsync(string arguments, CancellationToken ct)
-	{
-		var psi = new ProcessStartInfo
-		{
-			FileName = "dotnet",
-			Arguments = arguments,
-			RedirectStandardOutput = true,
-			RedirectStandardError = true,
-			UseShellExecute = false,
-			CreateNoWindow = true,
-		};
+	private void WriteFixtureLog(string message) =>
+		_diagnosticMessageSink.OnMessage(
+			new DiagnosticMessage($"[{DateTimeOffset.UtcNow:O}] [NuGetAutoInstrFixture] {message}"));
 
-		using var process = Process.Start(psi)
-			?? throw new InvalidOperationException($"Failed to start: dotnet {arguments}");
-
-		var stdoutTask = process.StandardOutput.ReadToEndAsync(ct).ConfigureAwait(false);
-		var stderrTask = process.StandardError.ReadToEndAsync(ct).ConfigureAwait(false);
-		await process.WaitForExitAsync(ct).ConfigureAwait(false);
-		var stdout = await stdoutTask;
-		var stderr = await stderrTask;
-
-		if (process.ExitCode != 0)
-			throw new InvalidOperationException(
-				$"dotnet {arguments.Split(' ')[0]} failed (exit code {process.ExitCode}).\n" +
-				$"stdout:\n{stdout}\nstderr:\n{stderr}");
-	}
+	private Task RunDotnetAsync(string arguments, CancellationToken ct) =>
+		NuGetPackageFixture.RunDotnetWithLoggingAsync(arguments, WriteFixtureLog, ct);
 
 	private static string FindSolutionRoot()
 	{

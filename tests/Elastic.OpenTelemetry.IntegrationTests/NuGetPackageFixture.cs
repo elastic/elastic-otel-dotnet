@@ -62,7 +62,10 @@ public class NuGetPackageFixture : IAsyncLifetime
 
 	public async Task InitializeAsync()
 	{
-		using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(4));
+		// Budget covers: pack + restore + publish (×2 on Windows for net462).
+		// The prerelease CI runner can be slow — the previous 4-minute timeout was
+		// hit during dotnet publish, causing OperationCanceledException with no output.
+		using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(6));
 		var ct = cts.Token;
 		var solutionRoot = FindSolutionRoot();
 		string? configFilePath = null;
@@ -158,6 +161,86 @@ public class NuGetPackageFixture : IAsyncLifetime
 		return appPath;
 	}
 
+	/// <summary>
+	/// Shared helper used by all integration test fixtures to run dotnet commands
+	/// with full diagnostic logging via xUnit's <see cref="IMessageSink"/>.
+	/// </summary>
+	/// <remarks>
+	/// <para>The previous per-fixture <c>RunDotnetAsync</c> methods had two CI-visibility
+	/// problems: they were <c>static</c> with no access to the diagnostic sink, and they
+	/// passed the cancellation token to <c>ReadToEndAsync</c> — so when the fixture
+	/// timeout fired, the reads were cancelled too and stdout/stderr were lost. The only
+	/// output that reached CI logs was the bare <c>OperationCanceledException</c>.</para>
+	/// <para>This method reads streams with <c>CancellationToken.None</c> so output is
+	/// always captured. On timeout it kills the process, logs partial output, then
+	/// rethrows. Every command logs its start time, elapsed duration, and exit code.</para>
+	/// </remarks>
+	internal static async Task RunDotnetWithLoggingAsync(
+		string arguments, Action<string> log, CancellationToken cancellationToken = default)
+	{
+		var command = $"dotnet {arguments}";
+		log($"Running: {command}");
+		var sw = Stopwatch.StartNew();
+
+		var psi = new ProcessStartInfo
+		{
+			FileName = "dotnet",
+			Arguments = arguments,
+			RedirectStandardOutput = true,
+			RedirectStandardError = true,
+			UseShellExecute = false,
+			CreateNoWindow = true,
+		};
+
+		using var process = Process.Start(psi)
+			?? throw new InvalidOperationException($"Failed to start: {command}");
+
+		// Read both streams concurrently to avoid deadlock when either buffer fills.
+		// Use CancellationToken.None so we can always capture output, even on timeout.
+		var stdoutTask = process.StandardOutput.ReadToEndAsync(CancellationToken.None);
+		var stderrTask = process.StandardError.ReadToEndAsync(CancellationToken.None);
+
+		try
+		{
+			await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+		}
+		catch (OperationCanceledException)
+		{
+			// Timeout — kill the process and still capture whatever output was produced.
+			try
+			{ process.Kill(entireProcessTree: true); }
+			catch { /* best effort */ }
+
+			var partialStdout = await stdoutTask.ConfigureAwait(false);
+			var partialStderr = await stderrTask.ConfigureAwait(false);
+
+			log($"TIMEOUT after {sw.Elapsed.TotalSeconds:F1}s: {command}");
+			if (!string.IsNullOrWhiteSpace(partialStdout))
+				log($"stdout (partial):\n{partialStdout}");
+			if (!string.IsNullOrWhiteSpace(partialStderr))
+				log($"stderr (partial):\n{partialStderr}");
+
+			throw;
+		}
+
+		var stdout = await stdoutTask.ConfigureAwait(false);
+		var stderr = await stderrTask.ConfigureAwait(false);
+
+		log($"Completed in {sw.Elapsed.TotalSeconds:F1}s (exit code {process.ExitCode}): dotnet {arguments.Split(' ')[0]}");
+
+		if (process.ExitCode != 0)
+		{
+			if (!string.IsNullOrWhiteSpace(stdout))
+				log($"stdout:\n{stdout}");
+			if (!string.IsNullOrWhiteSpace(stderr))
+				log($"stderr:\n{stderr}");
+
+			throw new InvalidOperationException(
+				$"dotnet {arguments.Split(' ')[0]} failed (exit code {process.ExitCode}).\n" +
+				$"stdout:\n{stdout}\nstderr:\n{stderr}");
+		}
+	}
+
 	public Task DisposeAsync()
 	{
 		_feed.Dispose();
@@ -188,33 +271,8 @@ public class NuGetPackageFixture : IAsyncLifetime
 		return Task.CompletedTask;
 	}
 
-	private static async Task RunDotnetAsync(string arguments, CancellationToken cancellationToken = default)
-	{
-		var psi = new ProcessStartInfo
-		{
-			FileName = "dotnet",
-			Arguments = arguments,
-			RedirectStandardOutput = true,
-			RedirectStandardError = true,
-			UseShellExecute = false,
-			CreateNoWindow = true,
-		};
-
-		using var process = Process.Start(psi)
-			?? throw new InvalidOperationException($"Failed to start: dotnet {arguments}");
-
-		// Read both streams concurrently to avoid deadlock when either buffer fills
-		var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
-		var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
-		await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
-		var stdout = await stdoutTask;
-		var stderr = await stderrTask;
-
-		if (process.ExitCode != 0)
-			throw new InvalidOperationException(
-				$"dotnet {arguments.Split(' ')[0]} failed (exit code {process.ExitCode}).\n" +
-				$"stdout:\n{stdout}\nstderr:\n{stderr}");
-	}
+	private Task RunDotnetAsync(string arguments, CancellationToken cancellationToken = default) =>
+		RunDotnetWithLoggingAsync(arguments, WriteFixtureLog, cancellationToken);
 
 	private static string FindSolutionRoot()
 	{
