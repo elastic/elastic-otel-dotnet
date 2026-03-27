@@ -3,6 +3,9 @@
 // See the LICENSE file in the project root for more information
 
 using System.Diagnostics;
+using System.Text;
+using Xunit.Abstractions;
+using Xunit.Sdk;
 
 namespace Elastic.OpenTelemetry.IntegrationTests.Helpers;
 
@@ -24,8 +27,14 @@ internal sealed class LocalNuGetFeed : IDisposable
 	/// <summary>
 	/// Packs a project and places the resulting <c>.nupkg</c> into this feed directory.
 	/// </summary>
-	public async Task PackProjectAsync(string projectPath, CancellationToken cancellationToken = default)
+	public async Task PackProjectAsync(
+		string projectPath,
+		CancellationToken cancellationToken = default,
+		IMessageSink? diagnosticMessageSink = null)
 	{
+		var command = $"dotnet pack \"{projectPath}\" -c Release -o \"{FeedPath}\"";
+		WriteDiagnostic(diagnosticMessageSink, $"Running: {command}");
+
 		var psi = new ProcessStartInfo
 		{
 			FileName = "dotnet",
@@ -37,22 +46,89 @@ internal sealed class LocalNuGetFeed : IDisposable
 		};
 
 		using var process = Process.Start(psi)
-			?? throw new InvalidOperationException($"Failed to start: dotnet pack \"{projectPath}\"");
+			?? throw new InvalidOperationException($"Failed to start: {command}");
 
-		// Read both streams concurrently to avoid deadlock when either buffer fills
-		var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-		var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
+		var stdout = new StringBuilder();
+		var stderr = new StringBuilder();
+		var stdoutTask = PumpOutputAsync(process.StandardOutput, stdout, cancellationToken);
+		var stderrTask = PumpOutputAsync(process.StandardError, stderr, cancellationToken);
 
-		await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+		try
+		{
+			await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+		}
+		catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
+		{
+			TryKillProcess(process, diagnosticMessageSink);
+			await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
+			WriteBufferedOutput(diagnosticMessageSink, stdout, stderr);
 
-		var stdout = await stdoutTask.ConfigureAwait(false);
-		var stderr = await stderrTask.ConfigureAwait(false);
+			throw new TimeoutException(
+				$"dotnet pack timed out for project: {projectPath}.\n" +
+				$"stdout:\n{stdout}\nstderr:\n{stderr}", ex);
+		}
+
+		await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
 
 		if (process.ExitCode != 0)
+		{
+			WriteBufferedOutput(diagnosticMessageSink, stdout, stderr);
 			throw new InvalidOperationException(
 				$"dotnet pack failed (exit code {process.ExitCode}).\n" +
 				$"stdout:\n{stdout}\nstderr:\n{stderr}");
+		}
+
+		WriteDiagnostic(diagnosticMessageSink, $"dotnet pack completed successfully for '{projectPath}'.");
 	}
+
+	private static async Task PumpOutputAsync(
+		StreamReader reader,
+		StringBuilder sink,
+		CancellationToken cancellationToken)
+	{
+		try
+		{
+			while (true)
+			{
+				var line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
+				if (line is null)
+					break;
+
+				sink.AppendLine(line);
+			}
+		}
+		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+		{
+		}
+	}
+
+	private static void WriteBufferedOutput(IMessageSink? diagnosticMessageSink, StringBuilder stdout, StringBuilder stderr)
+	{
+		if (stdout.Length > 0)
+			WriteDiagnostic(diagnosticMessageSink, $"dotnet pack stdout:\n{stdout}");
+
+		if (stderr.Length > 0)
+			WriteDiagnostic(diagnosticMessageSink, $"dotnet pack stderr:\n{stderr}");
+	}
+
+	private static void TryKillProcess(Process process, IMessageSink? diagnosticMessageSink)
+	{
+		try
+		{
+			if (!process.HasExited)
+			{
+				process.Kill(entireProcessTree: true);
+				WriteDiagnostic(diagnosticMessageSink, "dotnet pack cancelled; killed process tree.");
+			}
+		}
+		catch (Exception ex)
+		{
+			WriteDiagnostic(diagnosticMessageSink, $"Failed to kill timed-out dotnet pack process: {ex.Message}");
+		}
+	}
+
+	private static void WriteDiagnostic(IMessageSink? diagnosticMessageSink, string message) =>
+		diagnosticMessageSink?.OnMessage(new DiagnosticMessage(message));
 
 	/// <summary>
 	/// Determines the version of a packed package by inspecting <c>.nupkg</c> filenames.
