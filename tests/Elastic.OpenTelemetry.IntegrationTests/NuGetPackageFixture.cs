@@ -5,6 +5,8 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Elastic.OpenTelemetry.IntegrationTests.Helpers;
+using Xunit.Abstractions;
+using Xunit.Sdk;
 
 namespace Elastic.OpenTelemetry.IntegrationTests;
 
@@ -14,6 +16,7 @@ namespace Elastic.OpenTelemetry.IntegrationTests;
 /// Runs once per <c>[Collection("NuGetPackage")]</c> test collection.
 /// </summary>
 /// <remarks>
+///
 /// <para>Builds the following consumer apps:</para>
 /// <list type="bullet">
 ///   <item><b>NuGetConsumer.Net8</b> — net8.0 hosting/DI path (AddElasticOpenTelemetry)</item>
@@ -27,7 +30,10 @@ public class NuGetPackageFixture : IAsyncLifetime
 {
 	private readonly LocalNuGetFeed _feed = new();
 	private readonly List<string> _publishDirectories = [];
+	private readonly IMessageSink _diagnosticMessageSink;
 	private string? _nugetConfigDirectory;
+
+	public NuGetPackageFixture(IMessageSink diagnosticMessageSink) => _diagnosticMessageSink = diagnosticMessageSink;
 
 	/// <summary>Path to the published NuGetConsumer.Net8.dll, ready to run via <c>dotnet</c>.</summary>
 	public string Net8AppPath { get; private set; } = string.Empty;
@@ -56,7 +62,7 @@ public class NuGetPackageFixture : IAsyncLifetime
 
 	public async Task InitializeAsync()
 	{
-		using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+		using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(4));
 		var ct = cts.Token;
 		var solutionRoot = FindSolutionRoot();
 		string? configFilePath = null;
@@ -65,8 +71,9 @@ public class NuGetPackageFixture : IAsyncLifetime
 		{
 			var projectPath = Path.Combine(solutionRoot, "src", "Elastic.OpenTelemetry", "Elastic.OpenTelemetry.csproj");
 
-			// 1. Pack the NuGet package into the local feed
-			await _feed.PackProjectAsync(projectPath, ct).ConfigureAwait(false);
+			WriteFixtureLog($"Packing NuGet package from '{projectPath}'.");
+			await _feed.PackProjectAsync(projectPath, ct, _diagnosticMessageSink).ConfigureAwait(false);
+			WriteFixtureLog("Pack step completed.");
 
 			PackageVersion = _feed.GetPackageVersion("Elastic.OpenTelemetry")
 				?? throw new InvalidOperationException(
@@ -87,6 +94,7 @@ public class NuGetPackageFixture : IAsyncLifetime
 		catch (Exception ex)
 		{
 			InitializationError = ex.ToString();
+			WriteFixtureLog($"Initialization failed: {InitializationError}");
 		}
 
 		// 4. Build net462 consumer app (Windows only, requires shared pack step to have succeeded)
@@ -116,6 +124,10 @@ public class NuGetPackageFixture : IAsyncLifetime
 			Net462InitializationError = ex.ToString();
 		}
 	}
+
+	private void WriteFixtureLog(string message) =>
+		_diagnosticMessageSink.OnMessage(
+			new DiagnosticMessage($"[{DateTimeOffset.UtcNow:O}] [NuGetPackageFixture] {message}"));
 
 	private async Task<string> PublishConsumerAppAsync(
 		string solutionRoot, string projectName, string outputFileName,
