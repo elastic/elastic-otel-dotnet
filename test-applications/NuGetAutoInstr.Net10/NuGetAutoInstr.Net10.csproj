@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <MinVerSkip>true</MinVerSkip>
+    <!-- Opt out of central package management — this app consumes EDOT from a local
+         NuGet feed at test time, not from the repo's Directory.Packages.props. -->
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Remove MinVer inherited from Directory.Build.props — not needed for this standalone app -->
+    <PackageReference Remove="MinVer" />
+  </ItemGroup>
+
+  <!-- When the test fixture passes -p:ElasticOtelVersion, consume the packed .nupkg.
+       Otherwise (solution build), use a ProjectReference so the app compiles normally. -->
+  <ItemGroup Condition="'$(ElasticOtelVersion)' != ''">
+    <PackageReference Include="Elastic.OpenTelemetry.AutoInstrumentation" Version="$(ElasticOtelVersion)" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(ElasticOtelVersion)' == ''">
+    <ProjectReference Include="..\..\src\Elastic.OpenTelemetry.AutoInstrumentation\Elastic.OpenTelemetry.AutoInstrumentation.csproj" />
+  </ItemGroup>
+
+</Project>

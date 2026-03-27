@@ -19,18 +19,26 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.StackExchangeRedis" Version="1.15.0-beta.1" />
     <PackageVersion Include="OpenTelemetry.Resources.Host" Version="1.15.0-beta.2" />
     <PackageVersion Include="OpenTelemetry.Resources.ProcessRuntime" Version="1.15.0-beta.1" />
+    <PackageVersion Include="OpenTelemetry.OpAmp.Client" Version="0.1.0-alpha.4" />
     <!-- Microsoft Extensions -->
     <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.0" Condition="'$(TargetFramework)' == 'net8.0' OR '$(TargetFramework)' == 'net9.0'" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
     <!-- General -->
     <PackageVersion Include="ConfigureAwaitChecker.Analyzer" Version="5.0.0.1" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="MinVer" Version="6.0.0" />
     <PackageVersion Include="NetEscapades.EnumGenerators" Version="1.0.0-beta16" />
     <PackageVersion Include="Polyfill" Version="9.3.0" />
+    <PackageVersion Include="System.Net.Http" Version="4.3.4" />
+    <!-- Transient dependencies -->
+    <!-- We bring this in explicitly because it is required by the OpAMP client implementation,
+    however, that package brings in a version with a known AoT issue. We force a newer dependency
+    to avoid build warnings for AoT consumers. -->
+    <PackageVersion Include="Google.Protobuf" Version="3.34.0" />
     <!-- Build -->
     <PackageVersion Include="Argu" Version="6.2.5" />
     <PackageVersion Include="Bullseye" Version="6.0.0" />
@@ -45,6 +53,7 @@
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="Testcontainers" Version="4.9.0" />
     <PackageVersion Include="GitHubActionsTestLogger" Version="3.0.1" />
+    <PackageVersion Include="Grpc.Tools" Version="2.76.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.22" Condition="'$(TargetFramework)' == 'net8.0'" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.11" Condition="'$(TargetFramework)' == 'net9.0'" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0" Condition="'$(TargetFramework)' == 'net10.0'" />

@@ -35,6 +35,8 @@
     <File Path="src/Directory.Build.props" />
     <Project Path="src/Elastic.OpenTelemetry.AutoInstrumentation/Elastic.OpenTelemetry.AutoInstrumentation.csproj" />
     <Project Path="src/Elastic.OpenTelemetry.Core/Elastic.OpenTelemetry.Core.csproj" />
+    <Project Path="src/Elastic.OpenTelemetry.OpAmp.Abstractions/Elastic.OpenTelemetry.OpAmp.Abstractions.csproj" />
+    <Project Path="src/Elastic.OpenTelemetry.OpAmp/Elastic.OpenTelemetry.OpAmp.csproj" />
     <Project Path="src/Elastic.OpenTelemetry/Elastic.OpenTelemetry.csproj" />
   </Folder>
   <Folder Name="/tests/">
@@ -42,9 +44,18 @@
     <File Path="tests/Directory.Build.props" />
     <File Path="tests/xunit.runner.json" />
     <Project Path="tests/AutoInstrumentation.IntegrationTests/AutoInstrumentation.IntegrationTests.csproj" />
+    <Project Path="tests/Elastic.OpenTelemetry.BuildVerification.Tests/Elastic.OpenTelemetry.BuildVerification.Tests.csproj" />
+    <Project Path="tests/Elastic.OpenTelemetry.IntegrationTests/Elastic.OpenTelemetry.IntegrationTests.csproj" />
     <Project Path="tests/Elastic.OpenTelemetry.Tests/Elastic.OpenTelemetry.Tests.csproj" />
   </Folder>
   <Folder Name="/tests/applications/">
+    <Project Path="test-applications/AutoInstr.Console.Net8/AutoInstr.Console.Net8.csproj" />
+    <Project Path="test-applications/NuGetAutoInstr.Aot.Net10/NuGetAutoInstr.Aot.Net10.csproj" />
+    <Project Path="test-applications/NuGetAutoInstr.Net10/NuGetAutoInstr.Net10.csproj" />
+    <Project Path="test-applications/NuGetConsumer.Net462/NuGetConsumer.Net462.csproj" />
+    <Project Path="test-applications/NuGetConsumer.Net8/NuGetConsumer.Net8.csproj" />
+    <Project Path="test-applications/OpAmpBootstrapTestApp/OpAmpBootstrapTestApp.csproj" />
+    <Project Path="test-applications/OpAmpTestServer/OpAmpTestServer.csproj" />
     <Project Path="test-applications/WebApi/WebApi.csproj" />
     <Project Path="test-applications/WebApiDotNet8/WebApiDotNet8.csproj" />
     <Project Path="test-applications/WebApiDotNet9/WebApiDotNet9.csproj" />

@@ -10,22 +10,8 @@ using Xunit.Abstractions;
 
 namespace Elastic.OpenTelemetry.Tests;
 
-#if NET8_0
-public partial class InstrumentationScanningTests(WebApplicationFactory<WebApiDotNet8.ProgramV8> factory, ITestOutputHelper output)
-	: IClassFixture<WebApplicationFactory<WebApiDotNet8.ProgramV8>>
+public partial class InstrumentationScanningTests(ITestOutputHelper output)
 {
-	private readonly WebApplicationFactory<WebApiDotNet8.ProgramV8> _factory = factory;
-#elif NET9_0
-public partial class InstrumentationScanningTests(WebApplicationFactory<WebApiDotNet9.ProgramV9> factory, ITestOutputHelper output)
-	: IClassFixture<WebApplicationFactory<WebApiDotNet9.ProgramV9>>
-{
-	private readonly WebApplicationFactory<WebApiDotNet9.ProgramV9> _factory = factory;
-#else
-public partial class InstrumentationScanningTests(WebApplicationFactory<Program> factory, ITestOutputHelper output)
-	: IClassFixture<WebApplicationFactory<Program>>
-{
-	private readonly WebApplicationFactory<Program> _factory = factory;
-#endif
 	private readonly ITestOutputHelper _output = output;
 
 #if NET8_0
@@ -53,10 +39,19 @@ public partial class InstrumentationScanningTests(WebApplicationFactory<Program>
 			AdditionalLogger = logger
 		};
 
-		using var factory = _factory.WithWebHostBuilder(builder => builder
-			.ConfigureTestServices(services => services
-			.AddElasticOpenTelemetry(options)
-				.WithTracing(tpb => tpb.AddInMemoryExporter(exportedItems))));
+		// Explicitly not using a shared fixture for this test to avoid potential cross-test pollution
+		// of the exported items collection, which would make assertions more difficult to write and maintain.
+#if NET8_0
+		await using var factory = new WebApplicationFactory<WebApiDotNet8.ProgramV8>()
+#elif NET9_0
+		await using var factory = new WebApplicationFactory<WebApiDotNet9.ProgramV9>()
+#else
+		await using var factory = new WebApplicationFactory<Program>()
+#endif
+			.WithWebHostBuilder(builder => builder
+				.ConfigureTestServices(services => services
+				.AddElasticOpenTelemetry(options)
+					.WithTracing(tpb => tpb.AddInMemoryExporter(exportedItems))));
 
 		using var client = factory.CreateClient();
 
@@ -64,7 +59,20 @@ public partial class InstrumentationScanningTests(WebApplicationFactory<Program>
 
 		response.EnsureSuccessStatusCode();
 
-		Assert.Equal("GET /", Assert.Single(exportedItems).DisplayName);
+		var snapshot = exportedItems.ToArray();
+
+		if (snapshot.Length > 1)
+		{
+			_output.WriteLine($"{nameof(InstrumentationAssemblyScanning_AddsAspNetCoreInstrumentation)} > Exported items:");
+			foreach (var item in snapshot)
+			{
+				_output.WriteLine($"- {item.DisplayName} : {item.OperationName} ; {item.Source.Name}");
+			}
+		}
+
+		var activity = Assert.Single(snapshot, a => a.DisplayName.Equals("GET /", StringComparison.Ordinal));
+
+		Assert.Equal("Microsoft.AspNetCore", activity.Source.Name);
 	}
 
 	[Fact]
@@ -82,10 +90,19 @@ public partial class InstrumentationScanningTests(WebApplicationFactory<Program>
 			AdditionalLogger = logger
 		};
 
-		using var factory = _factory.WithWebHostBuilder(builder => builder
-			.ConfigureTestServices(services => services
-			.AddElasticOpenTelemetry(options)
-				.WithTracing(tpb => tpb.AddInMemoryExporter(exportedItems))));
+		// Explicitly not using a shared fixture for this test to avoid potential cross-test pollution
+		// of the exported items collection, which would make assertions more difficult to write and maintain.
+#if NET8_0
+		await using var factory = new WebApplicationFactory<WebApiDotNet8.ProgramV8>()
+#elif NET9_0
+		await using var factory = new WebApplicationFactory<WebApiDotNet9.ProgramV9>()
+#else
+		await using var factory = new WebApplicationFactory<Program>()
+#endif
+			.WithWebHostBuilder(builder => builder
+				.ConfigureTestServices(services => services
+				.AddElasticOpenTelemetry(options)
+					.WithTracing(tpb => tpb.AddInMemoryExporter(exportedItems))));
 
 		using var client = factory.CreateClient();
 
@@ -93,9 +110,22 @@ public partial class InstrumentationScanningTests(WebApplicationFactory<Program>
 
 		response.EnsureSuccessStatusCode();
 
-		Assert.Equal(2, exportedItems.Count); // One for ASP.NET Core and one for HTTP
+		var snapshot = exportedItems.ToArray();
 
-		var activity = Assert.Single(exportedItems, a => a.DisplayName.Equals("GET", StringComparison.Ordinal));
+		if (snapshot.Length > 2)
+		{
+			_output.WriteLine($"{nameof(InstrumentationAssemblyScanning_AddsHttpInstrumentation)} > Exported items:");
+			foreach (var item in snapshot)
+			{
+				_output.WriteLine($"- {item.DisplayName} : {item.OperationName} ; {item.Source.Name}");
+			}
+		}
+
+		Assert.Equal(2, snapshot.Length); // One for ASP.NET Core and one for HTTP
+
+		var activity = Assert.Single(snapshot, a => a.DisplayName.Equals("GET", StringComparison.Ordinal));
+
+		Assert.Equal("System.Net.Http", activity.Source.Name);
 
 		var urlFull = Assert.Single(activity.TagObjects, a => a.Key.Equals("url.full", StringComparison.Ordinal));
 		Assert.Equal("https://example.com/", (string?)urlFull.Value);

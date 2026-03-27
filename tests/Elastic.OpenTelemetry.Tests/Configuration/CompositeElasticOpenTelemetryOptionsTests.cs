@@ -14,7 +14,7 @@ namespace Elastic.OpenTelemetry.Tests.Configuration;
 
 public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 {
-	private const int ExpectedLogsLength = 12;
+	private const int ExpectedLogsLength = 13;
 
 	[Fact]
 	public void DefaultCtor_SetsExpectedDefaults_WhenNoEnvironmentVariablesAreConfigured()
@@ -249,6 +249,33 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 	}
 
 	[Fact]
+	public void EnvironmentVariables_TakePrecedenceOver_ConfigValues_ForResourceAttributesAndServiceName()
+	{
+		const string envResourceAttributes = "env.key=env.value";
+		const string envServiceName = "env-service";
+
+		var json = """
+					{
+						"OTEL_RESOURCE_ATTRIBUTES": "config.key=config.value",
+						"OTEL_SERVICE_NAME": "config-service"
+					}
+					""";
+
+		var config = new ConfigurationBuilder()
+			.AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(json)))
+			.Build();
+
+		var sut = new CompositeElasticOpenTelemetryOptions(config, new Hashtable
+		{
+			{ OTEL_RESOURCE_ATTRIBUTES, envResourceAttributes },
+			{ OTEL_SERVICE_NAME, envServiceName }
+		});
+
+		Assert.Equal(envResourceAttributes, sut.ResourceAttributes);
+		Assert.Equal(envServiceName, sut.ServiceName);
+	}
+
+	[Fact]
 	public void ExplicitOptions_TakePrecedenceOver_ConfigValues()
 	{
 		const string fileLogDirectory = "C:\\Temp";
@@ -366,6 +393,119 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 	}
 
 	[Fact]
+	public void SetLogLevelFromCentralConfig_OverwritesValueSetViaOptions_CentralConfigWins()
+	{
+		var options = new ElasticOpenTelemetryOptions { LogLevel = LogLevel.Error };
+		var sut = new CompositeElasticOpenTelemetryOptions(options);
+		var logger = new TestLogger(output);
+
+		Assert.Equal(LogLevel.Error, sut.LogLevel);
+
+		sut.SetLogLevelFromCentralConfig("info", logger);
+
+		Assert.Equal(LogLevel.Information, sut.LogLevel);
+
+		var configLogger = new TestLogger(output);
+		sut.LogConfigSources(configLogger);
+		Assert.Contains(configLogger.Messages, s =>
+			s.Contains("LogLevel", StringComparison.Ordinal) && s.Contains("CentralConfig", StringComparison.Ordinal));
+	}
+
+	[Fact]
+	public void SetLogLevelFromCentralConfig_InvalidLevel_KeepsExistingLogLevelAndLogsWarning()
+	{
+		var options = new ElasticOpenTelemetryOptions { LogLevel = LogLevel.Warning };
+		var sut = new CompositeElasticOpenTelemetryOptions(options);
+		var logger = new TestLogger(output);
+
+		sut.SetLogLevelFromCentralConfig("banana", logger);
+
+		Assert.Equal(LogLevel.Warning, sut.LogLevel);
+		Assert.Contains(logger.Messages, s =>
+			s.Contains("Unable to parse log level", StringComparison.Ordinal)
+			&& s.Contains("banana", StringComparison.Ordinal));
+	}
+
+	[Fact]
+	public void SetLogLevelFromCentralConfig_NullLevel_KeepsExistingLogLevel()
+	{
+		var options = new ElasticOpenTelemetryOptions { LogLevel = LogLevel.Error };
+		var sut = new CompositeElasticOpenTelemetryOptions(options);
+		var logger = new TestLogger(output);
+
+		sut.SetLogLevelFromCentralConfig(null!, logger);
+
+		Assert.Equal(LogLevel.Error, sut.LogLevel);
+		Assert.Contains(logger.Messages, s =>
+			s.Contains("Unable to parse log level", StringComparison.Ordinal));
+	}
+
+	[Fact]
+	public void SetLogLevelFromCentralConfig_EmptyString_KeepsExistingLogLevel()
+	{
+		var options = new ElasticOpenTelemetryOptions { LogLevel = LogLevel.Error };
+		var sut = new CompositeElasticOpenTelemetryOptions(options);
+		var logger = new TestLogger(output);
+
+		sut.SetLogLevelFromCentralConfig("", logger);
+
+		Assert.Equal(LogLevel.Error, sut.LogLevel);
+		Assert.Contains(logger.Messages, s =>
+			s.Contains("Unable to parse log level", StringComparison.Ordinal));
+	}
+
+	[Fact]
+	public void SetLogLevelFromCentralConfig_WhitespaceOnly_KeepsExistingLogLevel()
+	{
+		var options = new ElasticOpenTelemetryOptions { LogLevel = LogLevel.Error };
+		var sut = new CompositeElasticOpenTelemetryOptions(options);
+		var logger = new TestLogger(output);
+
+		sut.SetLogLevelFromCentralConfig("  ", logger);
+
+		Assert.Equal(LogLevel.Error, sut.LogLevel);
+		Assert.Contains(logger.Messages, s =>
+			s.Contains("Unable to parse log level", StringComparison.Ordinal));
+	}
+
+	[Theory]
+	[InlineData("trace", LogLevel.Trace)]
+	[InlineData("debug", LogLevel.Debug)]
+	[InlineData("info", LogLevel.Information)]
+	[InlineData("information", LogLevel.Information)]
+	[InlineData("warn", LogLevel.Warning)]
+	[InlineData("warning", LogLevel.Warning)]
+	[InlineData("error", LogLevel.Error)]
+	[InlineData("critical", LogLevel.Critical)]
+	[InlineData("none", LogLevel.None)]
+	public void SetLogLevelFromCentralConfig_AllValidLevels(string input, LogLevel expected)
+	{
+		var options = new ElasticOpenTelemetryOptions { LogLevel = LogLevel.Trace };
+		var sut = new CompositeElasticOpenTelemetryOptions(options);
+		var logger = new TestLogger(output);
+
+		sut.SetLogLevelFromCentralConfig(input, logger);
+
+		Assert.Equal(expected, sut.LogLevel);
+	}
+
+	[Theory]
+	[InlineData("DEBUG")]
+	[InlineData("Debug")]
+	[InlineData("debug")]
+	[InlineData("dEbUg")]
+	public void SetLogLevelFromCentralConfig_IsCaseInsensitive(string input)
+	{
+		var options = new ElasticOpenTelemetryOptions { LogLevel = LogLevel.Trace };
+		var sut = new CompositeElasticOpenTelemetryOptions(options);
+		var logger = new TestLogger(output);
+
+		sut.SetLogLevelFromCentralConfig(input, logger);
+
+		Assert.Equal(LogLevel.Debug, sut.LogLevel);
+	}
+
+	[Fact]
 	public void LogValueRedaction_WorksAsExpected()
 	{
 		var options = new ElasticOpenTelemetryOptions
@@ -390,6 +530,7 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 	public void IsOpAmpEnabled_ReturnsExpectedValue(IConfiguration configuration, ElasticOpenTelemetryOptions options, IDictionary dictionary, bool isEnabled)
 	{
 		var sut = new CompositeElasticOpenTelemetryOptions(configuration, options, dictionary);
+		sut.ResolveOpAmpServiceIdentity();
 		Assert.Equal(isEnabled, sut.IsOpAmpEnabled());
 	}
 
@@ -410,8 +551,40 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 			new Hashtable
 			{
 				{ ELASTIC_OTEL_OPAMP_ENDPOINT, "http://my-collector-endpoint-from-env-vars.com" },
+				{ OTEL_RESOURCE_ATTRIBUTES, "service.name=env-var-service" }
+			},
+			true
+		],
+		[
+			new ConfigurationBuilder().Build(),
+			new ElasticOpenTelemetryOptions(),
+			new Hashtable
+			{
+				{ ELASTIC_OTEL_OPAMP_ENDPOINT, "http://my-collector-endpoint-from-env-vars.com" },
+				{ ELASTIC_OTEL_OPAMP_HEADERS, "Something=Else" },
+				{ OTEL_RESOURCE_ATTRIBUTES, "service.name=env-var-service" }
+			},
+			true
+		],
+		[
+			new ConfigurationBuilder().Build(),
+			new ElasticOpenTelemetryOptions(),
+			new Hashtable
+			{
+				{ ELASTIC_OTEL_OPAMP_ENDPOINT, "http://my-collector-endpoint-from-env-vars.com" },
 				{ ELASTIC_OTEL_OPAMP_HEADERS, "Authorization=ApiKey ABC123" },
 				{ OTEL_RESOURCE_ATTRIBUTES, "service.name=env-var-service" }
+			},
+			true
+		],
+		[
+			new ConfigurationBuilder().Build(),
+			new ElasticOpenTelemetryOptions(),
+			new Hashtable
+			{
+				{ ELASTIC_OTEL_OPAMP_ENDPOINT, "http://my-collector-endpoint-from-env-vars.com" },
+				{ ELASTIC_OTEL_OPAMP_HEADERS, "Authorization=ApiKey ABC123" },
+				{ OTEL_SERVICE_NAME, "env-var-service-name" }
 			},
 			true
 		],
@@ -435,7 +608,7 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 				{ ELASTIC_OTEL_OPAMP_HEADERS, "CustomHeader=ABV123" },
 				{ OTEL_RESOURCE_ATTRIBUTES, "service.version=1.0.0,service.name=env-var-service" }
 			},
-			false
+			true
 		],
 		[
 			new ConfigurationBuilder().Build(),
@@ -455,7 +628,7 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 				{ ELASTIC_OTEL_OPAMP_ENDPOINT, "http://my-collector-endpoint-from-env-vars.com" },
 				{ OTEL_RESOURCE_ATTRIBUTES, "service.name=env-var-service" }
 			},
-			false
+			true
 		],
 		[
 			new ConfigurationBuilder().Build(),
@@ -496,7 +669,7 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 			}).Build(),
 			new ElasticOpenTelemetryOptions(),
 			new Hashtable(),
-			false
+			true
 		],
 		[
 			new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
@@ -553,7 +726,7 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 			{
 				{ OTEL_RESOURCE_ATTRIBUTES, "service.name=env-var-service" }
 			},
-			false
+			true
 		],
 		[
 			new ConfigurationBuilder().Build(),
@@ -568,7 +741,7 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 			{
 				{ OTEL_RESOURCE_ATTRIBUTES, "service.name=env-var-service" }
 			},
-			false
+			true
 		],
 		[
 			new ConfigurationBuilder().Build(),
@@ -637,7 +810,7 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 			{
 				{ OTEL_RESOURCE_ATTRIBUTES, "service.name=env-var-service" }
 			},
-			false
+			true
 		],
 		[
 			new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
@@ -710,7 +883,7 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 		Assert.Null(sut.ServiceName);
 		Assert.Null(sut.ServiceVersion);
 
-		sut.IsOpAmpEnabled();
+		sut.ResolveOpAmpServiceIdentity();
 
 		Assert.Equal(expectedServiceName, sut.ServiceName);
 		Assert.Equal(expectedServiceVersion, sut.ServiceVersion);
@@ -767,5 +940,178 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 			Environment.SetEnvironmentVariable(ELASTIC_OTEL_LOG_TARGETS, beforeTargets);
 			Environment.SetEnvironmentVariable(ELASTIC_OTEL_OPAMP_HEADERS, beforeOpAmpHeaders);
 		}
+	}
+
+	[Fact]
+	public void IsOpAmpEnabled_DoesNotMutateServiceName()
+	{
+		var sut = new CompositeElasticOpenTelemetryOptions(new Hashtable
+		{
+			{ ELASTIC_OTEL_OPAMP_ENDPOINT, "http://localhost:4320" },
+			{ OTEL_RESOURCE_ATTRIBUTES, "service.name=my-service" }
+		});
+
+		Assert.Null(sut.ServiceName);
+
+		sut.IsOpAmpEnabled();
+
+		// IsOpAmpEnabled is a pure query — it must not extract ServiceName
+		Assert.Null(sut.ServiceName);
+	}
+
+	[Fact]
+	public void ResolveOpAmpServiceIdentity_ExtractsServiceNameAndVersion()
+	{
+		var sut = new CompositeElasticOpenTelemetryOptions(new Hashtable
+		{
+			{ ELASTIC_OTEL_OPAMP_ENDPOINT, "http://localhost:4320" },
+			{ OTEL_RESOURCE_ATTRIBUTES, "service.name=my-service,service.version=2.0.0" }
+		});
+
+		Assert.Null(sut.ServiceName);
+		Assert.Null(sut.ServiceVersion);
+
+		sut.ResolveOpAmpServiceIdentity();
+
+		Assert.Equal("my-service", sut.ServiceName);
+		Assert.Equal("2.0.0", sut.ServiceVersion);
+	}
+
+	[Fact]
+	public void ResolveOpAmpServiceIdentity_ExtractsServiceName_WhenKeyAppearsAsSubstringInPriorValue()
+	{
+		var sut = new CompositeElasticOpenTelemetryOptions(new Hashtable
+		{
+			{ ELASTIC_OTEL_OPAMP_ENDPOINT, "http://localhost:4320" },
+			{ OTEL_RESOURCE_ATTRIBUTES, "custom.note=see service.name doc,service.name=my-app" }
+		});
+
+		sut.ResolveOpAmpServiceIdentity();
+
+		Assert.Equal("my-app", sut.ServiceName);
+		Assert.True(sut.IsOpAmpEnabled());
+	}
+
+	[Fact]
+	public void ResolveOpAmpServiceIdentity_ExtractsServiceName_WhenKeyIsSubstringOfPriorKey()
+	{
+		// "service.name" is a suffix of "deployment.service.name" — exact key match must be used
+		var sut = new CompositeElasticOpenTelemetryOptions(new Hashtable
+		{
+			{ ELASTIC_OTEL_OPAMP_ENDPOINT, "http://localhost:4320" },
+			{ OTEL_RESOURCE_ATTRIBUTES, "deployment.service.name=wrong,service.name=correct" }
+		});
+
+		sut.ResolveOpAmpServiceIdentity();
+
+		Assert.Equal("correct", sut.ServiceName);
+		Assert.True(sut.IsOpAmpEnabled());
+	}
+
+	[Fact]
+	public void ResolveOpAmpServiceIdentity_ExtractsServiceName_WhenSpaceFollowsComma()
+	{
+		// Spaces after commas must be trimmed so the key boundary check doesn't fail
+		var sut = new CompositeElasticOpenTelemetryOptions(new Hashtable
+		{
+			{ ELASTIC_OTEL_OPAMP_ENDPOINT, "http://localhost:4320" },
+			{ OTEL_RESOURCE_ATTRIBUTES, "deployment.environment=prod, service.name=spaced-app, service.version=3.0" }
+		});
+
+		sut.ResolveOpAmpServiceIdentity();
+
+		Assert.Equal("spaced-app", sut.ServiceName);
+		Assert.Equal("3.0", sut.ServiceVersion);
+		Assert.True(sut.IsOpAmpEnabled());
+	}
+
+	[Fact]
+	public void ResolveOpAmpServiceIdentity_DoesNotOverwriteExplicitServiceName()
+	{
+		var sut = new CompositeElasticOpenTelemetryOptions(new Hashtable
+		{
+			{ ELASTIC_OTEL_OPAMP_ENDPOINT, "http://localhost:4320" },
+			{ OTEL_RESOURCE_ATTRIBUTES, "service.name=from-attributes" },
+			{ OTEL_SERVICE_NAME, "explicit-name" }
+		});
+
+		// OTEL_SERVICE_NAME populates ServiceName during construction
+		Assert.Equal("explicit-name", sut.ServiceName);
+
+		sut.ResolveOpAmpServiceIdentity();
+
+		// Resolve must not overwrite the explicitly-set ServiceName
+		Assert.Equal("explicit-name", sut.ServiceName);
+	}
+
+	[Fact]
+	public void ResolveOpAmpServiceIdentity_DoesNotOverwriteExplicitServiceVersion()
+	{
+		var sut = new CompositeElasticOpenTelemetryOptions(new Hashtable
+		{
+			{ ELASTIC_OTEL_OPAMP_ENDPOINT, "http://localhost:4320" },
+			{ OTEL_RESOURCE_ATTRIBUTES, "service.name=my-service,service.version=from-attributes" },
+			{ OTEL_SERVICE_NAME, "explicit-service" }
+		});
+
+		// ServiceName is set from OTEL_SERVICE_NAME during construction.
+		// ServiceVersion has no external setter or env var — "explicit" here means
+		// "already set by a prior resolve". We verify that a second resolve does not
+		// overwrite a value that was already populated.
+		sut.ResolveOpAmpServiceIdentity();
+
+		Assert.Equal("explicit-service", sut.ServiceName);
+		Assert.Equal("from-attributes", sut.ServiceVersion);
+
+		// Second resolve — ServiceVersion should not be overwritten
+		sut.ResolveOpAmpServiceIdentity();
+
+		Assert.Equal("from-attributes", sut.ServiceVersion);
+	}
+
+	[Fact]
+	public void IsOpAmpEnabled_ReturnsTrueAfterResolve()
+	{
+		var sut = new CompositeElasticOpenTelemetryOptions(new Hashtable
+		{
+			{ ELASTIC_OTEL_OPAMP_ENDPOINT, "http://localhost:4320" },
+			{ OTEL_RESOURCE_ATTRIBUTES, "service.name=my-service" }
+		});
+
+		sut.ResolveOpAmpServiceIdentity();
+
+		Assert.True(sut.IsOpAmpEnabled());
+	}
+
+	[Fact]
+	public void IsOpAmpEnabled_ReturnsTrueAfterResolve_EvenWhenPreviouslyCalledBeforeResolve()
+	{
+		var sut = new CompositeElasticOpenTelemetryOptions(new Hashtable
+		{
+			{ ELASTIC_OTEL_OPAMP_ENDPOINT, "http://localhost:4320" },
+			{ OTEL_RESOURCE_ATTRIBUTES, "service.name=my-service" }
+		});
+
+		// Before resolve: ServiceName not yet populated from ResourceAttributes
+		Assert.False(sut.IsOpAmpEnabled());
+
+		sut.ResolveOpAmpServiceIdentity();
+
+		// After resolve: false was not cached, so this re-evaluates and returns true
+		Assert.True(sut.IsOpAmpEnabled());
+	}
+
+	[Fact]
+	public void IsOpAmpEnabled_ReturnsTrue_WhenServiceNameSetViaOtelServiceName()
+	{
+		var sut = new CompositeElasticOpenTelemetryOptions(new Hashtable
+		{
+			{ ELASTIC_OTEL_OPAMP_ENDPOINT, "http://localhost:4320" },
+			{ OTEL_SERVICE_NAME, "explicit-service" }
+		});
+
+		// OTEL_SERVICE_NAME populates ServiceName at construction time —
+		// no ResolveOpAmpServiceIdentity call needed
+		Assert.True(sut.IsOpAmpEnabled());
 	}
 }

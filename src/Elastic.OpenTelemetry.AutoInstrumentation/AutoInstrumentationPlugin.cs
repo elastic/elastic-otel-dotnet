@@ -33,8 +33,24 @@ public class AutoInstrumentationPlugin
 
 	static AutoInstrumentationPlugin()
 	{
-		BootstrapLogger.LogWithStackTrace("AutoInstrumentationPlugin: Initializing via static constructor");
-		Components = ElasticOpenTelemetry.Bootstrap(SdkActivationMethod.AutoInstrumentation, new(), null);
+		try
+		{
+			BootstrapLogger.LogWithStackTrace("AutoInstrumentationPlugin: Initializing via static constructor");
+			Components = ElasticOpenTelemetry.Bootstrap(SdkActivationMethod.AutoInstrumentation, new(), null);
+			BootstrapLogger.Log("AutoInstrumentationPlugin: Static constructor completed successfully");
+		}
+		catch (Exception ex)
+		{
+			BootstrapLogger.Log($"AutoInstrumentationPlugin: Static constructor failed with exception: {ex}");
+			BootstrapLogger.LogWithStackTrace($"Stack trace: {ex.StackTrace}");
+
+			// Throw a new exception that wraps the original with more context.
+			// This will appear in the OTEL auto-instrumentation logs, likely the StartupHook log for .NET targets.
+			throw new InvalidOperationException(
+				$"AutoInstrumentationPlugin initialization failed. " +
+				$"Original error: {ex.Message}",
+				ex);
+		}
 	}
 
 	/// <summary>

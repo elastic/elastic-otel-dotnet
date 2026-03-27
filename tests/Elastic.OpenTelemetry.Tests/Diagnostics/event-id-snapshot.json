@@ -1,0 +1,308 @@
+{
+  "snapshot": [
+    {
+      "eventId": 1,
+      "eventName": "BootstrapInvoked"
+    },
+    {
+      "eventId": 2,
+      "eventName": "ComponentsCreated"
+    },
+    {
+      "eventId": 3,
+      "eventName": "SharedComponentsReused"
+    },
+    {
+      "eventId": 4,
+      "eventName": "SharedComponentsNotReused"
+    },
+    {
+      "eventId": 5,
+      "eventName": "ServiceCollectionComponentsReused"
+    },
+    {
+      "eventId": 6,
+      "eventName": "NoExistingComponents"
+    },
+    {
+      "eventId": 7,
+      "eventName": "StoringBuilderState"
+    },
+    {
+      "eventId": 8,
+      "eventName": "MultipleWithElasticDefaultsCalls"
+    },
+    {
+      "eventId": 9,
+      "eventName": "MultipleAddElasticProcessorsCalls"
+    },
+    {
+      "eventId": 10,
+      "eventName": "AddingResourceAttribute"
+    },
+    {
+      "eventId": 11,
+      "eventName": "ResourceBuilderWithElasticDefaultsMultipleCalls"
+    },
+    {
+      "eventId": 12,
+      "eventName": "ConfiguredOtlpExporterOptions"
+    },
+    {
+      "eventId": 20,
+      "eventName": "ConfiguredSignalProvider"
+    },
+    {
+      "eventId": 21,
+      "eventName": "SkippedOtlpExporter"
+    },
+    {
+      "eventId": 22,
+      "eventName": "ProviderBuilderSignalDisabled"
+    },
+    {
+      "eventId": 23,
+      "eventName": "SkippingBootstrap"
+    },
+    {
+      "eventId": 24,
+      "eventName": "BuilderAlreadyConfigured"
+    },
+    {
+      "eventId": 25,
+      "eventName": "ConfiguringBuilder"
+    },
+    {
+      "eventId": 26,
+      "eventName": "AddedOtlpExporter"
+    },
+    {
+      "eventId": 27,
+      "eventName": "InvokedConfigureAction"
+    },
+    {
+      "eventId": 28,
+      "eventName": "DeferredOtlpExporter"
+    },
+    {
+      "eventId": 30,
+      "eventName": "LocatedInstrumentationAssembly"
+    },
+    {
+      "eventId": 31,
+      "eventName": "AddedInstrumentation"
+    },
+    {
+      "eventId": 32,
+      "eventName": "HttpInstrumentationFound"
+    },
+    {
+      "eventId": 33,
+      "eventName": "RuntimeInstrumentationFound"
+    },
+    {
+      "eventId": 34,
+      "eventName": "AddedInstrumentationViaReflection"
+    },
+    {
+      "eventId": 35,
+      "eventName": "UnableToFindTypeViaReflection"
+    },
+    {
+      "eventId": 36,
+      "eventName": "UnableToFindMethodViaReflection"
+    },
+    {
+      "eventId": 37,
+      "eventName": "InvalidBaseDirectory"
+    },
+    {
+      "eventId": 38,
+      "eventName": "SkippingAssemblyScanning"
+    },
+    {
+      "eventId": 39,
+      "eventName": "AddedResourceDetectorViaReflection"
+    },
+    {
+      "eventId": 40,
+      "eventName": "ProcessorAdded"
+    },
+    {
+      "eventId": 41,
+      "eventName": "MeterAdded"
+    },
+    {
+      "eventId": 42,
+      "eventName": "ActivitySourceAdded"
+    },
+    {
+      "eventId": 43,
+      "eventName": "ResourceDetectorAdded"
+    },
+    {
+      "eventId": 50,
+      "eventName": "FoundTag"
+    },
+    {
+      "eventId": 51,
+      "eventName": "SetTag"
+    },
+    {
+      "eventId": 60,
+      "eventName": "DetectedIncludeScopes"
+    },
+    {
+      "eventId": 70,
+      "eventName": "CompositeLoggerActivated"
+    },
+    {
+      "eventId": 100,
+      "eventName": "OpAmpNotEnabled"
+    },
+    {
+      "eventId": 101,
+      "eventName": "InitializingCentralConfig"
+    },
+    {
+      "eventId": 102,
+      "eventName": "UsingIsolatedLoadContext"
+    },
+    {
+      "eventId": 103,
+      "eventName": "DynamicCodeNotSupported"
+    },
+    {
+      "eventId": 104,
+      "eventName": "OpAmpNotSupportedOnPlatform"
+    },
+    {
+      "eventId": 105,
+      "eventName": "UsingEmptyOpAmpClient"
+    },
+    {
+      "eventId": 106,
+      "eventName": "OpAmpClientCreated"
+    },
+    {
+      "eventId": 107,
+      "eventName": "OpAmpClientStarted"
+    },
+    {
+      "eventId": 108,
+      "eventName": "OpAmpClientStartTimeout"
+    },
+    {
+      "eventId": 109,
+      "eventName": "DisposingOpAmpClient"
+    },
+    {
+      "eventId": 110,
+      "eventName": "AsyncDisposingOpAmpClient"
+    },
+    {
+      "eventId": 111,
+      "eventName": "StopAsyncTimedOut"
+    },
+    {
+      "eventId": 112,
+      "eventName": "StopAsyncFaulted"
+    },
+    {
+      "eventId": 113,
+      "eventName": "OperationTimedOut"
+    },
+    {
+      "eventId": 114,
+      "eventName": "OperationFaulted"
+    },
+    {
+      "eventId": 115,
+      "eventName": "DisposeFaulted"
+    },
+    {
+      "eventId": 116,
+      "eventName": "OpAmpClientCreationFailed"
+    },
+    {
+      "eventId": 130,
+      "eventName": "ReceivedRemoteConfigMessage"
+    },
+    {
+      "eventId": 131,
+      "eventName": "ReceivedInitialCentralConfig"
+    },
+    {
+      "eventId": 150,
+      "eventName": "AssemblyResolved"
+    },
+    {
+      "eventId": 151,
+      "eventName": "AssemblyResolutionFailed"
+    },
+    {
+      "eventId": 152,
+      "eventName": "FactoryTypeNotFound"
+    },
+    {
+      "eventId": 153,
+      "eventName": "FactoryActivationFailed"
+    },
+    {
+      "eventId": 154,
+      "eventName": "FactoryCreateException"
+    },
+    {
+      "eventId": 155,
+      "eventName": "AssemblyResolverReturnedNull"
+    },
+    {
+      "eventId": 156,
+      "eventName": "AssemblyResolvedPathNotFound"
+    },
+    {
+      "eventId": 200,
+      "eventName": "ReceivedRemoteConfig"
+    },
+    {
+      "eventId": 202,
+      "eventName": "NoElasticConfigKey"
+    },
+    {
+      "eventId": 203,
+      "eventName": "ConfigNotJsonFormat"
+    },
+    {
+      "eventId": 204,
+      "eventName": "NoValidLogLevel"
+    },
+    {
+      "eventId": 205,
+      "eventName": "ExtractedLogLevel"
+    },
+    {
+      "eventId": 206,
+      "eventName": "NotifyingSubscribers"
+    },
+    {
+      "eventId": 207,
+      "eventName": "SubscriberAdded"
+    },
+    {
+      "eventId": 220,
+      "eventName": "StartingOpAmpClient"
+    },
+    {
+      "eventId": 221,
+      "eventName": "StoppingOpAmpClient"
+    },
+    {
+      "eventId": 222,
+      "eventName": "SubscribingToRemoteConfig"
+    },
+    {
+      "eventId": 223,
+      "eventName": "DisposingElasticOpAmpClient"
+    }
+  ]
+}

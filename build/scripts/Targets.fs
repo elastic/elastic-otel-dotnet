@@ -14,12 +14,12 @@ open Proc.Fs
 open BuildInformation
 
 let private clean _ =
-    exec { run "dotnet" "clean" "-c" "release" }
+    exec { run "dotnet" "clean" "-c" "release" "/p:SkipBuildTool=true" }
     let removeArtifacts folder = Shell.cleanDir (Paths.ArtifactPath folder).FullName
     removeArtifacts "package"
     removeArtifacts "tests"
     
-let private compile _ = exec { run "dotnet" "build" "-c" "release" }
+let private compile _ = exec { run "dotnet" "build" "-c" "release" "/p:SkipBuildTool=true" }
 
 let private build _ = printfn "build"
 let private release _ = printfn "release"
@@ -64,16 +64,24 @@ let private runTests suite _ =
         match suite with
         | All -> []
         | Skip_All -> ["--filter"; "FullyQualifiedName~.SKIPPING.ALL.TESTS"]
-        | Unit ->  [ "--filter"; "FullyQualifiedName~.Tests" ]
+        | Unit ->  [ "--filter"; "FullyQualifiedName~.Tests&FullyQualifiedName!~.BuildVerification.Tests" ]
         | Integration -> [ "--filter"; "FullyQualifiedName~.IntegrationTests" ]
+        | Build_Verification -> []
 
-    let tfmArgs = 
+    // Build verification targets its own project; all other suites run against the whole solution
+    let projectArgs =
+        match suite with
+        | Build_Verification -> ["tests/Elastic.OpenTelemetry.BuildVerification.Tests/Elastic.OpenTelemetry.BuildVerification.Tests.csproj"]
+        | _ -> []
+
+    let tfmArgs =
       if OS.Current = Windows then []
       else ["-f"; "net10.0"]
     exec {
         env (Map ["TEST_SUITE", suite.SuitName])
         run "dotnet" (
             ["test"; "-c"; "release"; "--no-restore"; "--no-build"; logger]
+            @ projectArgs
             @ filterArgs
             @ tfmArgs
             @ ["--"; "RunConfiguration.CollectSourceInformation=true"]
@@ -119,11 +127,12 @@ let Setup (parsed:ParseResults<Build>) =
         | Compile -> Build.Step compile
         | Build -> Build.Cmd [Clean; CheckFormat; Compile] [] build
         
-        | Integrate -> Build.Cmd [] [Build] <| runTests Integration
+        | Integrate -> Build.Cmd [Redistribute] [Build] <| runTests Integration
         | Unit_Test -> Build.Cmd [] [Build] <| runTests Unit
+        | Build_Verify -> Build.Cmd [] [Build] <| runTests Build_Verification
         | Test -> Build.Cmd [] [Build] test
         
-        | Redistribute -> Build.Cmd [] [] Packaging.redistribute
+        | Redistribute -> Build.Cmd [Compile] [] Packaging.redistribute
         
         | Release -> 
             Build.Cmd 

@@ -57,10 +57,10 @@ ARG TARGETARCH
 ARG TARGETVARIANT
 WORKDIR /app
 COPY --from=publish_example /app/example /app/example
-COPY --from=build_distro /work/.artifacts/bin/Elastic.OpenTelemetry/release_netstandard2.1/Elastic.OpenTelemetry.dll /app/otel/net/
-COPY --from=build_distro /work/.artifacts/bin/Elastic.OpenTelemetry/release_netstandard2.1/Elastic.OpenTelemetry.pdb /app/otel/net/
-COPY --from=build_distro /work/.artifacts/bin/Elastic.OpenTelemetry.AutoInstrumentation/release_netstandard2.1/Elastic.OpenTelemetry.AutoInstrumentation.dll /app/otel/net/
-COPY --from=build_distro /work/.artifacts/bin/Elastic.OpenTelemetry.AutoInstrumentation/release_netstandard2.1/Elastic.OpenTelemetry.AutoInstrumentation.pdb /app/otel/net/
+COPY --from=build_distro /work/.artifacts/bin/Elastic.OpenTelemetry/release_net8.0/Elastic.OpenTelemetry.dll /app/otel/net/
+COPY --from=build_distro /work/.artifacts/bin/Elastic.OpenTelemetry/release_net8.0/Elastic.OpenTelemetry.pdb /app/otel/net/
+COPY --from=build_distro /work/.artifacts/bin/Elastic.OpenTelemetry.AutoInstrumentation/release_net8.0/Elastic.OpenTelemetry.AutoInstrumentation.dll /app/otel/net/
+COPY --from=build_distro /work/.artifacts/bin/Elastic.OpenTelemetry.AutoInstrumentation/release_net8.0/Elastic.OpenTelemetry.AutoInstrumentation.pdb /app/otel/net/
 
 ENV CORECLR_ENABLE_PROFILING="1"
 ENV CORECLR_PROFILER="{918728DD-259F-4A6A-AC2B-B85E1B658318}"

@@ -51,10 +51,47 @@ let private distroAsset (asset: ReleaseAsset) = fileInfo distroFolder (asset.Nam
 let pluginFiles tfm =
     ["dll"; "pdb"; "xml"]
     |> List.map(fun e -> $"Elastic.OpenTelemetry.AutoInstrumentation.%s{e}")
-    |> List.map(fun f -> Path.Combine(".artifacts", "bin", "Elastic.OpenTelemetry.AutoInstrumentation", $"release_%s{tfm}", "", f))
+    |> List.map(fun f -> Path.Combine(".artifacts", "bin", "Elastic.OpenTelemetry.AutoInstrumentation", $"release_{tfm}", "", f))
     |> List.map(fun f -> FileInfo(f))
 
-/// downloads the artifacts if they don't already exist locally
+/// Additional files needed for OpAmp abstractions layer (NET8+ only)
+let opAmpAbstractionsFiles tfm =
+    if tfm = "net8.0" then
+        ["dll"; "pdb"]
+        |> List.map(fun e -> $"Elastic.OpenTelemetry.OpAmp.Abstractions.%s{e}")
+        |> List.map(fun f -> Path.Combine(".artifacts", "bin", "Elastic.OpenTelemetry.OpAmp.Abstractions", $"release_{tfm}", "", f))
+        |> List.map(fun f -> FileInfo(f))
+    else
+        []
+
+/// Additional files needed for OpAmp client implementation (NET8+ only)
+let opAmpFiles tfm =
+    if tfm = "net8.0" then
+        ["dll"; "pdb"; "deps.json"]
+        |> List.map(fun e -> $"Elastic.OpenTelemetry.OpAmp.%s{e}")
+        |> List.map(fun f -> Path.Combine(".artifacts", "bin", "Elastic.OpenTelemetry.OpAmp", $"release_{tfm}", "", f))
+        |> List.map(fun f -> FileInfo(f))
+    else
+        []
+
+/// OpenTelemetry.OpAmp.Client and its dependencies (needed for ALC loading on net8.0, and direct loading on net462)
+let opAmpDependencyFiles tfm =
+    if tfm = "net8.0" || tfm = "net462" then
+        [
+            "OpenTelemetry.OpAmp.Client"
+            "Google.Protobuf"
+        ]
+        |> List.collect(fun pkg ->
+            ["dll"; "pdb"]
+            |> List.map(fun e -> 
+                let pkgPath = Path.Combine(".artifacts", "bin", "Elastic.OpenTelemetry.OpAmp", $"release_{tfm}", "")
+                Path.Combine(pkgPath, $"%s{pkg}.%s{e}")
+            )
+        )
+        |> List.map(fun f -> FileInfo(f))
+    else
+        []
+
 let downloadArtifacts (_:ParseResults<Build>) =
     let client = GitHubClient(ProductHeaderValue "Elastic.OpenTelemetry")
     let token = Environment.GetEnvironmentVariable "GITHUB_TOKEN"
@@ -91,9 +128,39 @@ let downloadArtifacts (_:ParseResults<Build>) =
 
 let injectPluginFiles (asset: ReleaseAsset) (stagedZip: FileInfo) tfm target  = 
     use zipArchive = ZipFile.Open(stagedZip.FullName, ZipArchiveMode.Update)
+    
+    // Inject main plugin files
+    // Use forward slashes for zip entry paths (zip standard) — Path.Combine uses backslashes on Windows
     pluginFiles tfm  |> List.iter(fun f ->
         printfn $"Staging zip: %s{stagedZip.Name}, Adding: %s{f.Name} (%s{tfm}) to %s{target}"
-        zipArchive.CreateEntryFromFile(f.FullName, Path.Combine(target, f.Name)) |> ignore
+        zipArchive.CreateEntryFromFile(f.FullName, $"{target}/{f.Name}") |> ignore
+    )
+
+    // Inject OpAmp abstractions files (NET8+ only)
+    opAmpAbstractionsFiles tfm |> List.iter(fun f ->
+        if f.Exists then
+            printfn $"Staging zip: %s{stagedZip.Name}, Adding OpAmp abstraction: %s{f.Name} (%s{tfm}) to %s{target}"
+            zipArchive.CreateEntryFromFile(f.FullName, $"{target}/{f.Name}") |> ignore
+        else
+            printfn $"Warning: OpAmp abstraction file not found: %s{f.FullName}"
+    )
+
+    // Inject OpAmp implementation files (NET8+ only)
+    opAmpFiles tfm |> List.iter(fun f ->
+        if f.Exists then
+            printfn $"Staging zip: %s{stagedZip.Name}, Adding OpAmp: %s{f.Name} (%s{tfm}) to %s{target}"
+            zipArchive.CreateEntryFromFile(f.FullName, $"{target}/{f.Name}") |> ignore
+        else
+            printfn $"Warning: OpAmp file not found: %s{f.FullName}"
+    )
+
+    // Inject OpAmp dependency files (OpenTelemetry.OpAmp.Client + Google.Protobuf)
+    opAmpDependencyFiles tfm |> List.iter(fun f ->
+        if f.Exists then
+            printfn $"Staging zip: %s{stagedZip.Name}, Adding OpAmp dependency: %s{f.Name} (%s{tfm}) to %s{target}"
+            zipArchive.CreateEntryFromFile(f.FullName, $"{target}/{f.Name}") |> ignore
+        else
+            printfn $"Warning: OpAmp dependency file not found: %s{f.FullName}"
     )
 
 let injectPluginScripts (stagedZip: FileInfo) (otelScript: FileInfo) (script: FileInfo) = 
@@ -210,10 +277,80 @@ let stageArtifacts (assets:List<ReleaseAsset * FileInfo>) =
     )
     stagedZips
 
+/// Validates that each redistributable zip contains the expected files.
+/// Called after stageArtifacts to catch missing or unexpected files before release.
+let validateRedistributableContents () =
+    let distroFiles =
+        distroFolder.GetFiles("*.zip")
+        |> Array.toList
+
+    let requiredInNet = [
+        "Elastic.OpenTelemetry.AutoInstrumentation.dll"
+        "Elastic.OpenTelemetry.OpAmp.Abstractions.dll"
+        "Elastic.OpenTelemetry.OpAmp.dll"
+        "Elastic.OpenTelemetry.OpAmp.deps.json"
+        "OpenTelemetry.OpAmp.Client.dll"
+        "Google.Protobuf.dll"
+    ]
+    let requiredInNetfx = [
+        "Elastic.OpenTelemetry.AutoInstrumentation.dll"
+        "OpenTelemetry.OpAmp.Client.dll"
+        "Google.Protobuf.dll"
+    ]
+    let forbiddenInNetfx = [
+        "Elastic.OpenTelemetry.OpAmp.dll"
+        "Elastic.OpenTelemetry.OpAmp.Abstractions.dll"
+        "Elastic.OpenTelemetry.OpAmp.deps.json"
+    ]
+
+    let mutable errors = []
+
+    distroFiles |> List.iter (fun zip ->
+        use zipArchive = ZipFile.Open(zip.FullName, ZipArchiveMode.Read)
+        let entryNames = zipArchive.Entries |> Seq.map(fun e -> e.FullName) |> Seq.toList
+
+        let isWindows = zip.Name.EndsWith "-windows.zip"
+
+        // Validate net/ folder — use forward slashes to match zip entry standard
+        requiredInNet |> List.iter (fun required ->
+            let entryPath = $"net/{required}"
+            if not (entryNames |> List.exists (fun e -> e = entryPath)) then
+                errors <- $"MISSING in {zip.Name}: net/{required}" :: errors
+        )
+
+        // Validate netfx/ folder (Windows zips only)
+        if isWindows then
+            requiredInNetfx |> List.iter (fun required ->
+                let entryPath = $"netfx/{required}"
+                if not (entryNames |> List.exists (fun e -> e = entryPath)) then
+                    errors <- $"MISSING in {zip.Name}: netfx/{required}" :: errors
+            )
+            forbiddenInNetfx |> List.iter (fun forbidden ->
+                let entryPath = $"netfx/{forbidden}"
+                if entryNames |> List.exists (fun e -> e = entryPath) then
+                    errors <- $"UNEXPECTED in {zip.Name}: netfx/{forbidden} (should be compiled into AutoInstrumentation.dll)" :: errors
+            )
+    )
+
+    if not errors.IsEmpty then
+        let errorMsg = errors |> List.rev |> String.concat "\n  "
+        failwithf $"Redistributable validation failed:\n  %s{errorMsg}"
+    else
+        printfn "Redistributable validation passed: all expected files present in %d zips" distroFiles.Length
+
 let redistribute (arguments:ParseResults<Build>) =
+    // Clean distro folder to ensure validation only sees current-run artifacts
+    if Directory.Exists(distroFolder.FullName) then
+        Directory.Delete(distroFolder.FullName, true)
+    Directory.CreateDirectory(distroFolder.FullName) |> ignore
+
     // We build net8.0 as the minimum supported TFM version - See above for details
-    exec { run "dotnet" "build" "src/Elastic.OpenTelemetry.AutoInstrumentation/Elastic.OpenTelemetry.AutoInstrumentation.csproj" "-f" "net8.0" "-c" "release" }
-    exec { run "dotnet" "build" "src/Elastic.OpenTelemetry.AutoInstrumentation/Elastic.OpenTelemetry.AutoInstrumentation.csproj" "-f" "net462" "-c" "release" }
+    exec { run "dotnet" "build" "src/Elastic.OpenTelemetry.AutoInstrumentation/Elastic.OpenTelemetry.AutoInstrumentation.csproj" "-f" "net8.0" "-c" "release" "-p:BuildingForZipDistribution=true" }
+    exec { run "dotnet" "build" "src/Elastic.OpenTelemetry.AutoInstrumentation/Elastic.OpenTelemetry.AutoInstrumentation.csproj" "-f" "net462" "-c" "release" "-p:BuildingForZipDistribution=true" }
+    // Build OpAmp project with CopyLocalLockFileAssemblies to ensure Google.Protobuf and OpenTelemetry.OpAmp.Client DLLs
+    // are copied to the output directory for inclusion in the redistributable
+    exec { run "dotnet" "build" "src/Elastic.OpenTelemetry.OpAmp/Elastic.OpenTelemetry.OpAmp.csproj" "-f" "net8.0" "-c" "release" "-p:CopyLocalLockFileAssemblies=true" }
+    exec { run "dotnet" "build" "src/Elastic.OpenTelemetry.OpAmp/Elastic.OpenTelemetry.OpAmp.csproj" "-f" "net462" "-c" "release" "-p:CopyLocalLockFileAssemblies=true" }
     let assets = downloadArtifacts arguments
     printfn ""
     assets |> List.iter (fun (asset, path) ->
@@ -222,4 +359,5 @@ let redistribute (arguments:ParseResults<Build>) =
     stageInstallationBashScript()
     stageInstallationPsScript()
     let staged = stageArtifacts assets
+    validateRedistributableContents()
     ignore()

@@ -10,7 +10,6 @@ using Elastic.OpenTelemetry.Core.Diagnostics;
 using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
@@ -53,15 +52,7 @@ internal static class SignalBuilder
 		if (components?.Logger is not null)
 			return components.Logger;
 
-		if (options is not null)
-		{
-			var deferredLogger = DeferredLogger.GetOrCreate(options);
-
-			if (deferredLogger is NullLogger && options.AdditionalLogger is not null)
-				return options.AdditionalLogger;
-		}
-
-		return NullLogger.Instance;
+		return CompositeLogger.GetOrCreate(options);
 	}
 
 	/// <summary>

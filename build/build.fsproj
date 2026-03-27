@@ -5,6 +5,7 @@
     <OutputType>Exe</OutputType>
     <NoWarn>$(NoWarn);NU1701</NoWarn>
     <IsPackable>false</IsPackable>
+    <IsBuildToolProject>true</IsBuildToolProject>
   </PropertyGroup>
   
   <ItemGroup>

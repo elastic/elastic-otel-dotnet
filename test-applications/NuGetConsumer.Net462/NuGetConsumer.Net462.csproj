@@ -1,0 +1,56 @@
+<!--
+  NuGetConsumer.Net462 — EDOT NuGet consumer for .NET Framework 4.6.2
+  ====================================================================
+  This test app verifies that the Elastic.OpenTelemetry NuGet package can be
+  consumed on .NET Framework 4.6.2 using the manual OpenTelemetry SDK builder
+  APIs (TracerProviderBuilder.WithElasticDefaults / MeterProviderBuilder.WithElasticDefaults)
+  WITHOUT any dependency on Microsoft.Extensions.Hosting.
+
+  WHY MANUAL BUILDERS (NOT HOSTING)?
+  Most legacy .NET Framework applications do not use the Generic Host
+  (Host.CreateApplicationBuilder / AddElasticOpenTelemetry). They wire up
+  OpenTelemetry manually via Sdk.CreateTracerProviderBuilder(). This app
+  represents that realistic consumption pattern and ensures the EDOT API
+  surface works correctly on net462.
+
+  NOTE ON Host.CreateApplicationBuilder AND net462:
+  Host.CreateApplicationBuilder IS available on net462 — it comes from the
+  Microsoft.Extensions.Hosting NuGet package (which targets netstandard2.0),
+  not from the .NET Framework itself. We intentionally don't test that path
+  here because (a) it's already covered by the NuGetConsumer.Net8 tests, and
+  (b) the manual builder path is far more representative of real-world
+  net462 usage.
+
+  See also: NuGetNet462DistributionTests.cs for the integration tests that
+  exercise this app.
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net462</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <MinVerSkip>true</MinVerSkip>
+    <LangVersion>latest</LangVersion>
+    <!-- Opt out of central package management — this app consumes EDOT from a local
+         NuGet feed at test time, not from the repo's Directory.Packages.props. -->
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Remove MinVer inherited from Directory.Build.props — not needed for this standalone app -->
+    <PackageReference Remove="MinVer" />
+  </ItemGroup>
+
+  <!-- When the test fixture passes -p:ElasticOtelVersion, consume the packed .nupkg.
+       Otherwise (solution build), use a ProjectReference so the app compiles normally. -->
+  <ItemGroup Condition="'$(ElasticOtelVersion)' != ''">
+    <PackageReference Include="Elastic.OpenTelemetry" Version="$(ElasticOtelVersion)" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(ElasticOtelVersion)' == ''">
+    <ProjectReference Include="..\..\src\Elastic.OpenTelemetry\Elastic.OpenTelemetry.csproj" />
+  </ItemGroup>
+
+</Project>
