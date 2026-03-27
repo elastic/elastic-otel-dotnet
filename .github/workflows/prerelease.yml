@@ -30,11 +30,13 @@ jobs:
         with:
           skip-cache: 'true'
 
+      # Run the release script to generate the distribution and packages
+      # The redistributable artifacts are needed for the test step, and the packages are needed for the publish steps that follow
+      - name: Release
+        run: ./build.sh release -c
+
       - name: Test
         run: ./build.sh test
-
-      - run: ./build.sh release -c
-        name: Release
         
       - name: Generate build provenance (Distribution)
         uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4
