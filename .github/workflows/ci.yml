@@ -58,7 +58,7 @@ jobs:
         run: ls -R .artifacts/
 
       - name: Upload Windows Build Artifacts
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        uses: actions/upload-artifact@v4
         with:
           name: windows-artifacts
           path: |
@@ -76,7 +76,7 @@ jobs:
       labels: elastic-otel-dotnet-ubuntu24-16
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@v6
 
       - name: Bootstrap Action Workspace
         id: bootstrap
@@ -89,7 +89,7 @@ jobs:
         run: ls -R .artifacts/
 
       - name: Upload Linux Build Artifacts
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        uses: actions/upload-artifact@v4
         with:
           name: linux-artifacts
           path: |
@@ -102,19 +102,20 @@ jobs:
   unit-tests-windows:
     name: Windows Tests
     needs: [build-windows]
+    if: needs.build-windows.result == 'success'
     runs-on:
       group: elastic-otel-dotnet
       labels: elastic-otel-dotnet-windows2025-16
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@v6
 
       - name: Bootstrap Action Workspace
         id: bootstrap
         uses: ./.github/workflows/bootstrap
 
       - name: Download Windows Build Artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@v8
         with:
           name: windows-artifacts
           path: .artifacts/
@@ -134,20 +135,21 @@ jobs:
   integration-tests-windows:
     name: Windows Integration Tests
     needs: [build-windows]
+    if: needs.build-windows.result == 'success'
     runs-on:
       group: elastic-otel-dotnet
       labels: elastic-otel-dotnet-windows2025-16
     timeout-minutes: 20
     continue-on-error: true
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@v6
 
       - name: Bootstrap Action Workspace
         id: bootstrap
         uses: ./.github/workflows/bootstrap
 
       - name: Download Windows Build Artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@v8
         with:
           name: windows-artifacts
           path: .artifacts/
@@ -167,19 +169,20 @@ jobs:
   aot-tests-windows:
     name: AOT Compatibility Tests
     needs: [build-windows]
+    if: needs.build-windows.result == 'success'
     runs-on:
       group: elastic-otel-dotnet
       labels: elastic-otel-dotnet-windows2025-16
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@v6
 
       - name: Bootstrap Action Workspace
         id: bootstrap
         uses: ./.github/workflows/bootstrap
 
       - name: Download Windows Build Artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@v8
         with:
           name: windows-artifacts
           path: .artifacts/
@@ -200,19 +203,20 @@ jobs:
   unit-tests-linux:
     name: Linux Tests
     needs: [build-linux]
+    if: needs.build-linux.result == 'success'
     runs-on:
       group: elastic-otel-dotnet
       labels: elastic-otel-dotnet-ubuntu24-16
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@v6
 
       - name: Bootstrap Action Workspace
         id: bootstrap
         uses: ./.github/workflows/bootstrap
 
       - name: Download Linux Build Artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@v8
         with:
           name: linux-artifacts
           path: .artifacts/
@@ -230,20 +234,21 @@ jobs:
   integration-tests-linux:
     name: Linux Integration Tests
     needs: [build-linux]
+    if: needs.build-linux.result == 'success'
     runs-on:
       group: elastic-otel-dotnet
       labels: elastic-otel-dotnet-ubuntu24-16
     timeout-minutes: 20
     continue-on-error: true
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@v6
 
       - name: Bootstrap Action Workspace
         id: bootstrap
         uses: ./.github/workflows/bootstrap
 
       - name: Download Linux Build Artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@v8
         with:
           name: linux-artifacts
           path: .artifacts/
@@ -261,19 +266,20 @@ jobs:
   build-verification-linux:
     name: Build Verification Tests
     needs: [build-linux]
+    if: needs.build-linux.result == 'success'
     runs-on:
       group: elastic-otel-dotnet
       labels: elastic-otel-dotnet-ubuntu24-16
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@v6
 
       - name: Bootstrap Action Workspace
         id: bootstrap
         uses: ./.github/workflows/bootstrap
 
       - name: Download Linux Build Artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@v8
         with:
           name: linux-artifacts
           path: .artifacts/

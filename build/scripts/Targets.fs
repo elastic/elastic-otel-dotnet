@@ -54,14 +54,36 @@ let private pristineCheck (arguments:ParseResults<Build>) =
     | _, 0  -> printfn "There are no dotnet formatting violations, continuing the build."
     | _ -> failwithf "There are dotnet formatting violations. Call `dotnet format` to fix or specify -c to ./build.sh to skip this check"
 
-let private runTests suite (arguments:ParseResults<Build>) =
+let private runTests (suite: TestSuite) (arguments:ParseResults<Build>) =
     let skipRestore = arguments.TryGetResult Skip_Restore |> Option.isSome
+    let skipBuild = arguments.TryGetResult Skip_Build |> Option.isSome
     let loggerArgs =
         match BuildServer.isGitHubActionsBuild with
         | true ->
             [ "--logger"; "GitHubActions;summary.includePassedTests=false;summary.includeNotFoundTests=false"
               "--logger"; "console;verbosity=detailed" ]
         | false -> []
+
+    let runDotnetTest projectArgs filterArgs =
+        let tfmArgs =
+            if OS.Current = Windows then []
+            else ["-f"; "net10.0"]
+        let restoreArgs = if skipRestore then ["--no-restore"] else []
+        let noBuildArgs = if skipBuild then ["--no-build"] else []
+
+        exec {
+            env (Map ["TEST_SUITE", suite.SuitName])
+            run "dotnet" (
+                ["test"; "-c"; "release"]
+                @ noBuildArgs
+                @ restoreArgs
+                @ loggerArgs
+                @ projectArgs
+                @ filterArgs
+                @ tfmArgs
+                @ ["--"; "RunConfiguration.CollectSourceInformation=true"]
+            )
+        }
 
     let filterArgs =
         match suite with
@@ -82,23 +104,11 @@ let private runTests suite (arguments:ParseResults<Build>) =
         | OpenTelemetry_Integration -> ["tests/Elastic.OpenTelemetry.IntegrationTests/Elastic.OpenTelemetry.IntegrationTests.csproj"]
         | _ -> []
 
-    let tfmArgs =
-        if OS.Current = Windows then []
-        else ["-f"; "net10.0"]
-    let restoreArgs = if skipRestore then ["--no-restore"] else []
-
-    exec {
-        env (Map ["TEST_SUITE", suite.SuitName])
-        run "dotnet" (
-            ["test"; "-c"; "release"; "--no-build"]
-            @ restoreArgs
-            @ loggerArgs
-            @ projectArgs
-            @ filterArgs
-            @ tfmArgs
-            @ ["--"; "RunConfiguration.CollectSourceInformation=true"]
-        )
-    }
+    match suite with
+    | Integration ->
+        runDotnetTest ["tests/AutoInstrumentation.IntegrationTests/AutoInstrumentation.IntegrationTests.csproj"] []
+        runDotnetTest ["tests/Elastic.OpenTelemetry.IntegrationTests/Elastic.OpenTelemetry.IntegrationTests.csproj"] []
+    | _ -> runDotnetTest projectArgs filterArgs
 
 let private test (arguments:ParseResults<Build>) =
     let arg = arguments.TryGetResult Test_Suite
