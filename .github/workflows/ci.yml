@@ -105,7 +105,7 @@ jobs:
     runs-on:
       group: elastic-otel-dotnet
       labels: elastic-otel-dotnet-windows2025-16
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
@@ -203,7 +203,7 @@ jobs:
     runs-on:
       group: elastic-otel-dotnet
       labels: elastic-otel-dotnet-ubuntu24-16
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
@@ -291,8 +291,10 @@ jobs:
   # === Cleanup ===
   cleanup-artifacts:
     name: Cleanup Artifacts
-    needs: [unit-tests-windows, integration-tests-windows, aot-tests-windows, unit-tests-linux, integration-tests-linux, build-verification-linux]
-    if: always()
+    needs: [build-windows, build-linux]
+    if: |
+      always() &&
+      (needs.build-windows.result != 'skipped' || needs.build-linux.result != 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

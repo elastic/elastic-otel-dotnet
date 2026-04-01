@@ -67,7 +67,7 @@ let private runTests suite (arguments:ParseResults<Build>) =
         match suite with
         | All -> []
         | Skip_All -> ["--filter"; "FullyQualifiedName~.SKIPPING.ALL.TESTS"]
-        | Unit ->  [ "--filter"; "FullyQualifiedName~.Tests&FullyQualifiedName!~.BuildVerification.Tests&FullyQualifiedName!~.IntegrationTests&FullyQualifiedName!~.AotCompatibility.Tests" ]
+        | Unit ->  [ "--filter"; "FullyQualifiedName~.Tests&FullyQualifiedName!~.BuildVerification.Tests&FullyQualifiedName!~.IntegrationTests&FullyQualifiedName!~.AotCompatibility.Tests&Category!=AotCompatibility" ]
         | Integration -> [ "--filter"; "FullyQualifiedName~.IntegrationTests" ]
         | AutoInstrumentation_Integration | OpenTelemetry_Integration -> []
         | Build_Verification -> []

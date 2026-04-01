@@ -7,12 +7,13 @@ using System.Runtime.InteropServices;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Elastic.OpenTelemetry.Tests.Aot
+namespace Elastic.OpenTelemetry.AotCompatibility.Tests
 {
 	public class NativeAotCompatibilityTests(ITestOutputHelper output)
 	{
 		private readonly ITestOutputHelper _output = output;
 
+		[Trait("Category", "AotCompatibility")]
 		[Fact]
 		public async Task CanPublishAotApp()
 		{
