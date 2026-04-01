@@ -75,7 +75,7 @@ jobs:
     runs-on:
       group: elastic-otel-dotnet
       labels: elastic-otel-dotnet-windows2025-16
-    timeout-minutes: 10
+    timeout-minutes: 20
     continue-on-error: true
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -83,6 +83,10 @@ jobs:
       - name: Bootstrap Action Workspace
         id: bootstrap
         uses: ./.github/workflows/bootstrap
+
+      - name: Build Redistributable Artifacts
+        run: build.bat redistribute
+        shell: cmd
 
       - name: Integration Tests
         run: build.bat test --test-suite=integration
@@ -94,7 +98,7 @@ jobs:
     runs-on:
       group: elastic-otel-dotnet
       labels: elastic-otel-dotnet-ubuntu24-16
-    timeout-minutes: 10
+    timeout-minutes: 20
     continue-on-error: true
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -102,6 +106,9 @@ jobs:
       - name: Bootstrap Action Workspace
         id: bootstrap
         uses: ./.github/workflows/bootstrap
+
+      - name: Build Redistributable Artifacts
+        run: ./build.sh redistribute
 
       - name: Integration Tests
         run: ./build.sh test --test-suite=integration
@@ -112,7 +119,7 @@ jobs:
     runs-on:
       group: elastic-otel-dotnet
       labels: elastic-otel-dotnet-windows2025-16
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
@@ -130,13 +137,16 @@ jobs:
     runs-on:
       group: elastic-otel-dotnet
       labels: elastic-otel-dotnet-ubuntu24-16
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
       - name: Bootstrap Action Workspace
         id: bootstrap
         uses: ./.github/workflows/bootstrap
+
+      - name: Build Redistributable Artifacts
+        run: ./build.sh redistribute
 
       - name: Build Verification Tests
         run: ./build.sh test --test-suite=build_verification
