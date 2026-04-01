@@ -43,46 +43,58 @@ let private checkFormat _ =
     | _ -> failwithf "There are dotnet formatting violations. Call `dotnet format` to fix or specify -c to ./build.sh to skip this check"
 
 type private TestProject =
-        { Path: string
-            TfmArgs: string list }
+    {
+        Path: string
+        TfmArgs: string list
+    }
 
 let private unitTestProject =
-        { Path = "tests/Elastic.OpenTelemetry.Tests/Elastic.OpenTelemetry.Tests.csproj"
-            TfmArgs = if OS.Current = Windows then [] else ["-f"; "net10.0"] }
+    {
+        Path = "tests/Elastic.OpenTelemetry.Tests/Elastic.OpenTelemetry.Tests.csproj"
+        TfmArgs = if OS.Current = Windows then [] else ["-f"; "net10.0"]
+    }
 
 let private buildVerificationTestProject =
-        { Path = "tests/Elastic.OpenTelemetry.BuildVerification.Tests/Elastic.OpenTelemetry.BuildVerification.Tests.csproj"
-            TfmArgs = [] }
+    {
+        Path = "tests/Elastic.OpenTelemetry.BuildVerification.Tests/Elastic.OpenTelemetry.BuildVerification.Tests.csproj"
+        TfmArgs = []
+    }
 
 let private aotCompatibilityTestProject =
-        { Path = "tests/Elastic.OpenTelemetry.AotCompatibility.Tests/Elastic.OpenTelemetry.AotCompatibility.Tests.csproj"
-            TfmArgs = [] }
+    {
+        Path = "tests/Elastic.OpenTelemetry.AotCompatibility.Tests/Elastic.OpenTelemetry.AotCompatibility.Tests.csproj"
+        TfmArgs = []
+    }
 
 let private autoInstrumentationIntegrationTestProject =
-        { Path = "tests/AutoInstrumentation.IntegrationTests/AutoInstrumentation.IntegrationTests.csproj"
-            TfmArgs = [] }
+    {
+        Path = "tests/AutoInstrumentation.IntegrationTests/AutoInstrumentation.IntegrationTests.csproj"
+        TfmArgs = []
+    }
 
 let private openTelemetryIntegrationTestProject =
-        { Path = "tests/Elastic.OpenTelemetry.IntegrationTests/Elastic.OpenTelemetry.IntegrationTests.csproj"
-            TfmArgs = [] }
+    {
+        Path = "tests/Elastic.OpenTelemetry.IntegrationTests/Elastic.OpenTelemetry.IntegrationTests.csproj"
+        TfmArgs = []
+    }
 
 let private getTestProjects suite =
-        match suite with
-        | All ->
-                [ unitTestProject
-                    buildVerificationTestProject
-                    aotCompatibilityTestProject
-                    autoInstrumentationIntegrationTestProject
-                    openTelemetryIntegrationTestProject ]
-        | Unit -> [unitTestProject]
-        | Integration ->
-                [ autoInstrumentationIntegrationTestProject
-                    openTelemetryIntegrationTestProject ]
-        | AutoInstrumentation_Integration -> [autoInstrumentationIntegrationTestProject]
-        | OpenTelemetry_Integration -> [openTelemetryIntegrationTestProject]
-        | Build_Verification -> [buildVerificationTestProject]
-        | Aot_Compatibility -> [aotCompatibilityTestProject]
-        | Skip_All -> []
+    match suite with
+    | All ->
+        [ unitTestProject
+          buildVerificationTestProject
+          aotCompatibilityTestProject
+          autoInstrumentationIntegrationTestProject
+          openTelemetryIntegrationTestProject ]
+    | Unit -> [unitTestProject]
+    | Integration ->
+        [ autoInstrumentationIntegrationTestProject
+          openTelemetryIntegrationTestProject ]
+    | AutoInstrumentation_Integration -> [autoInstrumentationIntegrationTestProject]
+    | OpenTelemetry_Integration -> [openTelemetryIntegrationTestProject]
+    | Build_Verification -> [buildVerificationTestProject]
+    | Aot_Compatibility -> [aotCompatibilityTestProject]
+    | Skip_All -> []
 
 let private pristineCheck (arguments:ParseResults<Build>) =
     let skipCheck = arguments.TryGetResult Skip_Dirty_Check |> Option.isSome
