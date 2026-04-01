@@ -6,5 +6,5 @@ using Elastic.OpenTelemetry.BuildVerification.Tests.Helpers;
 
 namespace Elastic.OpenTelemetry.BuildVerification.Tests;
 
-[CollectionDefinition("BuildArtifacts")]
-public class BuildArtifactsCollection : ICollectionFixture<BuildArtifactsFixture> { }
+[CollectionDefinition("ZipResolver")]
+public class ZipResolverCollection : ICollectionFixture<ZipExtractionFixture> { }

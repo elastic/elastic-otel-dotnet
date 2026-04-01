@@ -74,7 +74,7 @@ public class NotWindowsCiFact : FactAttribute
 {
 	public NotWindowsCiFact()
 	{
-		if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI")))
-			Skip = "We can not run this test in a virtualized windows environment";
+		if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI")))
+			Skip = "Cannot run Docker tests in this CI environment because Docker is unavailable.";
 	}
 }

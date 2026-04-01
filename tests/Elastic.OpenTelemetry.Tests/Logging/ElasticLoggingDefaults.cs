@@ -8,6 +8,7 @@ using Xunit.Abstractions;
 
 namespace Elastic.OpenTelemetry.Tests.Logging;
 
+[Collection("CompositeLoggerSingleton")]
 public class ElasticLoggingDefaults(ITestOutputHelper output)
 {
 	private readonly ITestOutputHelper _output = output;

@@ -16,7 +16,14 @@ namespace Elastic.OpenTelemetry.Core;
 internal static class ElasticOpenTelemetry
 {
 	/// <summary>Maximum time to wait for the OpAmp client to start.</summary>
-	internal const int OpAmpStartTimeoutMs = 2000;
+	/// <remarks>
+	/// The upstream OpAmp client's <c>DispatchFrameAsync</c> silently swallows all exceptions
+	/// (including <see cref="OperationCanceledException"/>), so a cancelled HTTP request looks
+	/// like a successful <c>StartAsync</c> that never received a response. On loaded CI machines
+	/// running .NET Framework, thread pool scheduling delays can cause even a localhost HTTP
+	/// round-trip to exceed a tight timeout. 5 seconds provides sufficient headroom.
+	/// </remarks>
+	internal const int OpAmpStartTimeoutMs = 5000;
 
 	/// <summary>Maximum time to wait for the first central config response after OpAmp starts.</summary>
 	internal const int WaitForFirstConfigTimeoutMs = 3000;

@@ -25,10 +25,10 @@ runs:
         git fetch --prune --unshallow --tags
         git tag --list
         
-    - uses: actions/cache@v5
+    - uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
       if: inputs.skip-cache != 'true'
       with:
-        path: ~/.nuget/packages
+        path: ${{ env.NUGET_PACKAGES }}
         key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.[cf]sproj*') }}
         restore-keys: |
           ${{ runner.os }}-nuget
@@ -37,13 +37,13 @@ runs:
     # if not available they will be download in .artifacts/otel-distribution/{otel-version}
     - name: Cache OpenTelemetry Distribution
       if: inputs.skip-cache != 'true'
-      uses: actions/cache@v5
+      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5
       with:
         path: .artifacts/otel-distribution
         key: otel-distribution
     
     - name: Setup dotnet
-      uses: actions/setup-dotnet@v5
+      uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5
       with:
         global-json-file: ./global.json
         dotnet-version: |
@@ -63,4 +63,4 @@ runs:
         dotnet --version
 
     # Setup git config
-    - uses: elastic/oblt-actions/git/setup@v1
+    - uses: elastic/oblt-actions/git/setup@31fd8582a94d1829536be22c624697f851fdf60e # v1

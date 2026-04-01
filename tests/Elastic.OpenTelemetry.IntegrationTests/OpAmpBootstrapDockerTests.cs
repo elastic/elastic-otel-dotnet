@@ -3,11 +3,11 @@
 // See the LICENSE file in the project root for more information
 
 using System.Runtime.InteropServices;
-using DotNet.Testcontainers;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Images;
+using Microsoft.Extensions.Logging;
 
 namespace Elastic.OpenTelemetry.IntegrationTests;
 
@@ -18,6 +18,10 @@ namespace Elastic.OpenTelemetry.IntegrationTests;
 /// </summary>
 public class OpAmpBootstrapDockerTests : IAsyncLifetime
 {
+	private static readonly ILogger ContainerLogger = LoggerFactory
+		.Create(b => b.AddConsole().SetMinimumLevel(LogLevel.Warning))
+		.CreateLogger("testcontainers");
+
 	private readonly OpAmpTestServer.OpAmpTestServer _server;
 	private IFutureDockerImage? _image;
 	private IContainer? _container;
@@ -35,7 +39,7 @@ public class OpAmpBootstrapDockerTests : IAsyncLifetime
 		_image = new ImageFromDockerfileBuilder()
 			.WithDockerfileDirectory(directory, string.Empty)
 			.WithDockerfile("test-applications/OpAmpBootstrapTestApp/Dockerfile")
-			.WithLogger(ConsoleLogger.Instance)
+			.WithLogger(ContainerLogger)
 			.Build();
 
 		await _image.CreateAsync();
@@ -43,7 +47,7 @@ public class OpAmpBootstrapDockerTests : IAsyncLifetime
 		_output = Consume.RedirectStdoutAndStderrToStream(new MemoryStream(), new MemoryStream());
 		_container = new ContainerBuilder()
 			.WithImage(_image)
-			.WithLogger(ConsoleLogger.Instance)
+			.WithLogger(ContainerLogger)
 			.WithOutputConsumer(_output)
 			.WithCreateParameterModifier(p =>
 			{

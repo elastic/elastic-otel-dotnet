@@ -2,9 +2,9 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
-// Just testing on one platform for now to speed up tests
-#if NET10_0
+using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace Elastic.OpenTelemetry.Tests.Aot
@@ -63,4 +63,3 @@ namespace Elastic.OpenTelemetry.Tests.Aot
 		}
 	}
 }
-#endif

@@ -5,6 +5,8 @@
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
+using Xunit.Abstractions;
+using Xunit.Sdk;
 
 namespace Elastic.OpenTelemetry.IntegrationTests;
 
@@ -23,8 +25,11 @@ namespace Elastic.OpenTelemetry.IntegrationTests;
 /// </remarks>
 public class RedistributableFixture : IAsyncLifetime
 {
+	private readonly IMessageSink _diagnosticMessageSink;
 	private string? _extractionDirectory;
 	private string? _publishDirectory;
+
+	public RedistributableFixture(IMessageSink diagnosticMessageSink) => _diagnosticMessageSink = diagnosticMessageSink;
 
 	/// <summary>
 	/// Path to the extracted redistributable — mimics a real installation.
@@ -88,6 +93,7 @@ public class RedistributableFixture : IAsyncLifetime
 		catch (Exception ex)
 		{
 			InitializationError = ex.ToString();
+			WriteFixtureLog($"Initialization failed: {InitializationError}");
 		}
 	}
 
@@ -164,32 +170,12 @@ public class RedistributableFixture : IAsyncLifetime
 		}
 	}
 
-	private static async Task RunDotnetAsync(string arguments, CancellationToken ct)
-	{
-		var psi = new ProcessStartInfo
-		{
-			FileName = "dotnet",
-			Arguments = arguments,
-			RedirectStandardOutput = true,
-			RedirectStandardError = true,
-			UseShellExecute = false,
-			CreateNoWindow = true,
-		};
+	private void WriteFixtureLog(string message) =>
+		_diagnosticMessageSink.OnMessage(
+			new DiagnosticMessage($"[{DateTimeOffset.UtcNow:O}] [RedistributableFixture] {message}"));
 
-		using var process = Process.Start(psi)
-			?? throw new InvalidOperationException($"Failed to start: dotnet {arguments}");
-
-		var stdoutTask = process.StandardOutput.ReadToEndAsync(ct).ConfigureAwait(false);
-		var stderrTask = process.StandardError.ReadToEndAsync(ct).ConfigureAwait(false);
-		await process.WaitForExitAsync(ct).ConfigureAwait(false);
-		var stdout = await stdoutTask;
-		var stderr = await stderrTask;
-
-		if (process.ExitCode != 0)
-			throw new InvalidOperationException(
-				$"dotnet {arguments.Split(' ')[0]} failed (exit code {process.ExitCode}).\n" +
-				$"stdout:\n{stdout}\nstderr:\n{stderr}");
-	}
+	private Task RunDotnetAsync(string arguments, CancellationToken ct) =>
+		NuGetPackageFixture.RunDotnetWithLoggingAsync(arguments, WriteFixtureLog, ct);
 
 	private static string FindSolutionRoot()
 	{

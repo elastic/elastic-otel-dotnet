@@ -15,30 +15,55 @@ namespace Elastic.OpenTelemetry.IntegrationTests.Helpers;
 /// </summary>
 internal sealed class LocalNuGetFeed : IDisposable
 {
+	private static readonly TimeSpan PostTimeoutLogDrain = TimeSpan.FromSeconds(30);
+
 	/// <summary>Path to the temp directory containing <c>.nupkg</c> files.</summary>
 	public string FeedPath { get; }
+
+	private readonly string _buildScratchPath;
 
 	public LocalNuGetFeed()
 	{
 		FeedPath = Path.Combine(Path.GetTempPath(), $"edot-nuget-feed-{Guid.NewGuid():N}");
 		Directory.CreateDirectory(FeedPath);
+
+		_buildScratchPath = Path.Combine(Path.GetTempPath(), $"edot-nuget-build-{Guid.NewGuid():N}");
+		Directory.CreateDirectory(_buildScratchPath);
 	}
 
 	/// <summary>
 	/// Packs a project and places the resulting <c>.nupkg</c> into this feed directory.
 	/// </summary>
+	/// <remarks>
+	/// Uses isolated <c>BaseOutputPath</c> and <c>BaseIntermediateOutputPath</c> so that
+	/// the restore + build performed by <c>dotnet pack</c> does not read or write the
+	/// shared <c>.artifacts/</c> directory. This prevents interference with zip-distribution
+	/// artifacts and avoids picking up a tainted <c>project.assets.json</c> left behind by
+	/// an earlier <c>BuildingForZipDistribution=true</c> build.
+	/// </remarks>
 	public async Task PackProjectAsync(
 		string projectPath,
 		CancellationToken cancellationToken = default,
 		IMessageSink? diagnosticMessageSink = null)
 	{
-		var command = $"dotnet pack \"{projectPath}\" -c Release -o \"{FeedPath}\"";
+		// Trailing separator is required by MSBuild for Base*Path properties.
+		// Use forward slashes to avoid the Windows \"- escaping issue where a trailing
+		// backslash before a closing quote is interpreted as an escaped literal quote,
+		// merging adjacent arguments into a single mangled path.
+		var binPath = Path.Combine(_buildScratchPath, "bin").Replace('\\', '/') + "/";
+		var objPath = Path.Combine(_buildScratchPath, "obj").Replace('\\', '/') + "/";
+
+		var arguments =
+			$"pack \"{projectPath}\" -c Release -o \"{FeedPath}\" " +
+			$"\"-p:BaseOutputPath={binPath}\" " +
+			$"\"-p:BaseIntermediateOutputPath={objPath}\"";
+		var command = $"dotnet {arguments}";
 		WriteDiagnostic(diagnosticMessageSink, $"Running: {command}");
 
 		var psi = new ProcessStartInfo
 		{
 			FileName = "dotnet",
-			Arguments = $"pack \"{projectPath}\" -c Release -o \"{FeedPath}\"",
+			Arguments = arguments,
 			RedirectStandardOutput = true,
 			RedirectStandardError = true,
 			UseShellExecute = false,
@@ -48,10 +73,11 @@ internal sealed class LocalNuGetFeed : IDisposable
 		using var process = Process.Start(psi)
 			?? throw new InvalidOperationException($"Failed to start: {command}");
 
+		using var outputDrainCts = new CancellationTokenSource();
 		var stdout = new StringBuilder();
 		var stderr = new StringBuilder();
-		var stdoutTask = PumpOutputAsync(process.StandardOutput, stdout, cancellationToken);
-		var stderrTask = PumpOutputAsync(process.StandardError, stderr, cancellationToken);
+		var stdoutTask = PumpOutputAsync(process.StandardOutput, stdout, outputDrainCts.Token);
+		var stderrTask = PumpOutputAsync(process.StandardError, stderr, outputDrainCts.Token);
 
 		try
 		{
@@ -60,7 +86,11 @@ internal sealed class LocalNuGetFeed : IDisposable
 		catch (OperationCanceledException ex) when (cancellationToken.IsCancellationRequested)
 		{
 			TryKillProcess(process, diagnosticMessageSink);
+			outputDrainCts.CancelAfter(PostTimeoutLogDrain);
 			await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
+			if (outputDrainCts.IsCancellationRequested)
+				WriteDiagnostic(diagnosticMessageSink,
+					$"dotnet pack timed out; stopped waiting for additional output after {PostTimeoutLogDrain.TotalSeconds:F0}s.");
 			WriteBufferedOutput(diagnosticMessageSink, stdout, stderr);
 
 			throw new TimeoutException(
@@ -166,13 +196,19 @@ internal sealed class LocalNuGetFeed : IDisposable
 		File.WriteAllText(Path.Combine(targetDirectory, "nuget.config"), configContent);
 	}
 
-	/// <summary>Cleans up the temp feed directory.</summary>
+	/// <summary>Cleans up the temp feed and build scratch directories.</summary>
 	public void Dispose()
 	{
-		if (Directory.Exists(FeedPath))
+		TryDeleteDirectory(FeedPath);
+		TryDeleteDirectory(_buildScratchPath);
+	}
+
+	private static void TryDeleteDirectory(string path)
+	{
+		if (Directory.Exists(path))
 		{
 			try
-			{ Directory.Delete(FeedPath, true); }
+			{ Directory.Delete(path, true); }
 			catch
 			{
 				// Best-effort cleanup

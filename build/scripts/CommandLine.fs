@@ -9,7 +9,7 @@ open Microsoft.FSharp.Reflection
 open System
 open Bullseye
 
-type TestSuite = All | Unit | Integration | Build_Verification | Skip_All
+type TestSuite = All | Unit | Integration | AutoInstrumentation_Integration | OpenTelemetry_Integration | Build_Verification | Aot_Compatibility | Skip_All
     with 
     member this.SuitName =
         match FSharpValue.GetUnionFields(this, typeof<TestSuite>) with
@@ -24,7 +24,10 @@ type Build =
     
     | [<CliPrefix(CliPrefix.None);SubCommand>] Unit_Test
     | [<CliPrefix(CliPrefix.None);SubCommand>] Integrate
+    | [<CliPrefix(CliPrefix.None);SubCommand>] Integrate_AutoInstrumentation
+    | [<CliPrefix(CliPrefix.None);SubCommand>] Integrate_OpenTelemetry
     | [<CliPrefix(CliPrefix.None);SubCommand>] Build_Verify
+    | [<CliPrefix(CliPrefix.None);SubCommand>] Aot_Compat
 
     | [<CliPrefix(CliPrefix.None);SubCommand>] Format
     
@@ -39,6 +42,8 @@ type Build =
     | [<Inherit;AltCommandLine("-s")>] Single_Target
     | [<Inherit>] Token of string 
     | [<Inherit;AltCommandLine("-c")>] Skip_Dirty_Check
+    | [<Inherit>] Skip_Build
+    | [<Inherit>] Skip_Restore
     | [<Inherit;EqualsAssignment>] Test_Suite of TestSuite 
 with
     interface IArgParserTemplate with
@@ -51,7 +56,10 @@ with
             
             | Unit_Test -> "alias to providing: test --test-suite=unit"
             | Integrate -> "alias to providing: test --test-suite=integration"
+            | Integrate_AutoInstrumentation -> "alias to providing: test --test-suite=autoinstrumentation_integration"
+            | Integrate_OpenTelemetry -> "alias to providing: test --test-suite=opentelemetry_integration"
             | Build_Verify -> "alias to providing: test --test-suite=build_verification"
+            | Aot_Compat -> "alias to providing: test --test-suite=aot_compatibility"
             | Test -> "runs a clean build and then runs all the tests unless --test-suite is provided"
             | Release -> "runs build, tests, and create and validates the packages shy of publishing them"
             | Format -> "runs dotnet format"
@@ -69,6 +77,8 @@ with
             | Single_Target -> "Runs the provided sub command without running their dependencies"
             | Token _ -> "Token to be used to authenticate with github"
             | Skip_Dirty_Check -> "Skip the clean checkout check that guards the release/publish targets"
+            | Skip_Build -> "Skip composed build dependencies for test-related commands"
+            | Skip_Restore -> "Pass --no-restore when running dotnet test"
             | Test_Suite _ -> "Specify the test suite to run, defaults to all"
 
     member this.StepName =

@@ -22,7 +22,7 @@ namespace Elastic.OpenTelemetry.IntegrationTests.Helpers;
 /// </remarks>
 internal sealed class TestAppRunner : IAsyncDisposable
 {
-	private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
+	private static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(60);
 
 	private readonly string _appPath;
 	private readonly Dictionary<string, string> _environmentVariables;
@@ -84,15 +84,60 @@ internal sealed class TestAppRunner : IAsyncDisposable
 	/// <summary>Captured stderr from the child process.</summary>
 	public string StandardError { get { lock (_stderrLock) return _stderr.ToString(); } }
 
+	/// <summary>
+	/// Builds a diagnostic dump of the process output for use in assertion messages.
+	/// Includes stdout, stderr, and the tail of the EDOT log file if available.
+	/// </summary>
+	/// <remarks>
+	/// Without this, CI failures like <c>Assert.Equal(0, runner.ExitCode)</c> only show
+	/// "Expected: 0, Actual: 1" with no process output — making it impossible to
+	/// diagnose what went wrong without reproducing locally.
+	/// </remarks>
+	public string GetDiagnosticSummary()
+	{
+		var sb = new StringBuilder();
+		sb.AppendLine($"App: {_appPath}");
+		sb.AppendLine($"Exit code: {ExitCode}");
+
+		var stdout = StandardOutput;
+		if (!string.IsNullOrWhiteSpace(stdout))
+			sb.AppendLine($"stdout:\n{stdout}");
+
+		var stderr = StandardError;
+		if (!string.IsNullOrWhiteSpace(stderr))
+			sb.AppendLine($"stderr:\n{stderr}");
+
+		if (EdotLogFilePath is not null && File.Exists(EdotLogFilePath))
+		{
+			var logLines = File.ReadAllLines(EdotLogFilePath);
+			var tail = logLines.Length > 50 ? logLines[^50..] : logLines;
+			sb.AppendLine($"EDOT log ({logLines.Length} lines, last {tail.Length}):\n{string.Join("\n", tail)}");
+		}
+
+		return sb.ToString();
+	}
+
+	/// <summary>
+	/// Asserts that the process exited with code 0. On failure, includes full
+	/// diagnostic output (stdout, stderr, EDOT log tail) in the assertion message.
+	/// </summary>
+	public void AssertExitCodeZero() =>
+		Assert.True(ExitCode == 0,
+			$"Process exited with code {ExitCode}.\n{GetDiagnosticSummary()}");
+
 	/// <summary>Starts the child process.</summary>
 	public void Start()
 	{
-		// .exe → run directly (net462); .dll → run via dotnet CLI
-		var isExe = _appPath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
+		// .dll → run via dotnet CLI; anything else → run directly as a native executable.
+		// This handles both .exe (Windows / net462) and extensionless native AOT binaries
+		// on Linux. The previous check (.exe only) caused AOT apps on Linux to be
+		// incorrectly launched via "dotnet <path>", which fails because the native ELF
+		// binary is not a .NET assembly.
+		var isDll = _appPath.EndsWith(".dll", StringComparison.OrdinalIgnoreCase);
 		var psi = new ProcessStartInfo
 		{
-			FileName = isExe ? _appPath : "dotnet",
-			Arguments = isExe ? "" : $"\"{_appPath}\"",
+			FileName = isDll ? "dotnet" : _appPath,
+			Arguments = isDll ? $"\"{_appPath}\"" : "",
 			RedirectStandardOutput = true,
 			RedirectStandardError = true,
 			UseShellExecute = false,
@@ -143,10 +188,24 @@ internal sealed class TestAppRunner : IAsyncDisposable
 		}
 		catch (OperationCanceledException)
 		{
-			_process.Kill(entireProcessTree: true);
+			try
+			{
+				if (!_process.HasExited)
+					_process.Kill(entireProcessTree: true);
+
+				await _process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
+			}
+			catch
+			{
+				// Best effort: continue building a diagnostic summary from whatever output we captured.
+			}
+
+			if (_process.HasExited)
+				ExitCode = _process.ExitCode;
+
+			DiscoverLogFile();
 			throw new TimeoutException(
-				$"Process did not exit within {timeout.Value.TotalSeconds}s.\n" +
-				$"stdout:\n{StandardOutput}\nstderr:\n{StandardError}");
+				$"Process did not exit within {timeout.Value.TotalSeconds}s.\n{GetDiagnosticSummary()}");
 		}
 
 		ExitCode = _process.ExitCode;
