@@ -42,6 +42,48 @@ let private checkFormat _ =
     | 0 -> printfn "There are no dotnet formatting violations, continuing the build."
     | _ -> failwithf "There are dotnet formatting violations. Call `dotnet format` to fix or specify -c to ./build.sh to skip this check"
 
+type private TestProject =
+        { Path: string
+            TfmArgs: string list }
+
+let private unitTestProject =
+        { Path = "tests/Elastic.OpenTelemetry.Tests/Elastic.OpenTelemetry.Tests.csproj"
+            TfmArgs = if OS.Current = Windows then [] else ["-f"; "net10.0"] }
+
+let private buildVerificationTestProject =
+        { Path = "tests/Elastic.OpenTelemetry.BuildVerification.Tests/Elastic.OpenTelemetry.BuildVerification.Tests.csproj"
+            TfmArgs = [] }
+
+let private aotCompatibilityTestProject =
+        { Path = "tests/Elastic.OpenTelemetry.AotCompatibility.Tests/Elastic.OpenTelemetry.AotCompatibility.Tests.csproj"
+            TfmArgs = [] }
+
+let private autoInstrumentationIntegrationTestProject =
+        { Path = "tests/AutoInstrumentation.IntegrationTests/AutoInstrumentation.IntegrationTests.csproj"
+            TfmArgs = [] }
+
+let private openTelemetryIntegrationTestProject =
+        { Path = "tests/Elastic.OpenTelemetry.IntegrationTests/Elastic.OpenTelemetry.IntegrationTests.csproj"
+            TfmArgs = [] }
+
+let private getTestProjects suite =
+        match suite with
+        | All ->
+                [ unitTestProject
+                    buildVerificationTestProject
+                    aotCompatibilityTestProject
+                    autoInstrumentationIntegrationTestProject
+                    openTelemetryIntegrationTestProject ]
+        | Unit -> [unitTestProject]
+        | Integration ->
+                [ autoInstrumentationIntegrationTestProject
+                    openTelemetryIntegrationTestProject ]
+        | AutoInstrumentation_Integration -> [autoInstrumentationIntegrationTestProject]
+        | OpenTelemetry_Integration -> [openTelemetryIntegrationTestProject]
+        | Build_Verification -> [buildVerificationTestProject]
+        | Aot_Compatibility -> [aotCompatibilityTestProject]
+        | Skip_All -> []
+
 let private pristineCheck (arguments:ParseResults<Build>) =
     let skipCheck = arguments.TryGetResult Skip_Dirty_Check |> Option.isSome
     match skipCheck, Information.isCleanWorkingCopy "." with
@@ -64,10 +106,7 @@ let private runTests (suite: TestSuite) (arguments:ParseResults<Build>) =
               "--logger"; "console;verbosity=detailed" ]
         | false -> []
 
-    let runDotnetTest projectArgs filterArgs =
-        let tfmArgs =
-            if OS.Current = Windows then []
-            else ["-f"; "net10.0"]
+    let runDotnetTest (project: TestProject) =
         let restoreArgs = if skipRestore then ["--no-restore"] else []
         let noBuildArgs = if skipBuild then ["--no-build"] else []
 
@@ -78,37 +117,30 @@ let private runTests (suite: TestSuite) (arguments:ParseResults<Build>) =
                 @ noBuildArgs
                 @ restoreArgs
                 @ loggerArgs
-                @ projectArgs
-                @ filterArgs
-                @ tfmArgs
+                @ [project.Path]
+                @ project.TfmArgs
                 @ ["--"; "RunConfiguration.CollectSourceInformation=true"]
             )
         }
 
-    let filterArgs =
-        match suite with
-        | All -> []
-        | Skip_All -> ["--filter"; "FullyQualifiedName~.SKIPPING.ALL.TESTS"]
-        | Unit ->  [ "--filter"; "FullyQualifiedName~.Tests&FullyQualifiedName!~.BuildVerification.Tests&FullyQualifiedName!~.IntegrationTests&FullyQualifiedName!~.AotCompatibility.Tests&Category!=AotCompatibility" ]
-        | Integration -> [ "--filter"; "FullyQualifiedName~.IntegrationTests" ]
-        | AutoInstrumentation_Integration | OpenTelemetry_Integration -> []
-        | Build_Verification -> []
-        | Aot_Compatibility -> []
+    let runTestProject project =
+        try
+            runDotnetTest project
+            None
+        with ex ->
+            printfn $"Test project failed: %s{project.Path}"
+            Some (project.Path, ex.Message)
 
-    // Build verification and individual integration suites target their own projects; all other suites run against the whole solution
-    let projectArgs =
-        match suite with
-        | Build_Verification -> ["tests/Elastic.OpenTelemetry.BuildVerification.Tests/Elastic.OpenTelemetry.BuildVerification.Tests.csproj"]
-        | Aot_Compatibility -> ["tests/Elastic.OpenTelemetry.AotCompatibility.Tests/Elastic.OpenTelemetry.AotCompatibility.Tests.csproj"]
-        | AutoInstrumentation_Integration -> ["tests/AutoInstrumentation.IntegrationTests/AutoInstrumentation.IntegrationTests.csproj"]
-        | OpenTelemetry_Integration -> ["tests/Elastic.OpenTelemetry.IntegrationTests/Elastic.OpenTelemetry.IntegrationTests.csproj"]
-        | _ -> []
+    let failures =
+        getTestProjects suite
+        |> List.choose runTestProject
 
-    match suite with
-    | Integration ->
-        runDotnetTest ["tests/AutoInstrumentation.IntegrationTests/AutoInstrumentation.IntegrationTests.csproj"] []
-        runDotnetTest ["tests/Elastic.OpenTelemetry.IntegrationTests/Elastic.OpenTelemetry.IntegrationTests.csproj"] []
-    | _ -> runDotnetTest projectArgs filterArgs
+    if failures |> List.isEmpty |> not then
+        let details =
+            failures
+            |> List.map (fun (projectPath, message) -> $"- %s{projectPath}: %s{message}")
+            |> String.concat "\n"
+        failwithf "One or more test projects failed:\n%s" details
 
 let private test (arguments:ParseResults<Build>) =
     let arg = arguments.TryGetResult Test_Suite
