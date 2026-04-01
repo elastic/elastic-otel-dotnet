@@ -34,9 +34,74 @@ jobs:
             code:
               - '!(docs/**)'
 
+  # === Platform-specific build jobs ===
+  build-windows:
+    name: Build Windows Artifacts
+    needs: [check-paths]
+    if: needs.check-paths.outputs.code == 'true'
+    runs-on:
+      group: elastic-otel-dotnet
+      labels: elastic-otel-dotnet-windows2025-16
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Bootstrap Action Workspace
+        id: bootstrap
+        uses: ./.github/workflows/bootstrap
+
+      - name: Build Release Artifacts
+        run: build.bat release
+        shell: cmd
+
+      - name: Display structure of artifacts directory
+        run: ls -R .artifacts/
+
+      - name: Upload Windows Build Artifacts
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: windows-artifacts
+          path: |
+            .artifacts/bin/
+            .artifacts/package/
+            .artifacts/elastic-distribution/
+          retention-days: 1
+
+  build-linux:
+    name: Build Linux Artifacts
+    needs: [check-paths]
+    if: needs.check-paths.outputs.code == 'true'
+    runs-on:
+      group: elastic-otel-dotnet
+      labels: elastic-otel-dotnet-ubuntu24-16
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Bootstrap Action Workspace
+        id: bootstrap
+        uses: ./.github/workflows/bootstrap
+
+      - name: Build Release Artifacts
+        run: ./build.sh release
+
+      - name: Display structure of artifacts directory
+        run: ls -R .artifacts/
+
+      - name: Upload Linux Build Artifacts
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: linux-artifacts
+          path: |
+            .artifacts/bin/
+            .artifacts/package/
+            .artifacts/elastic-distribution/
+          retention-days: 1
+
+  # === Windows test jobs ===
   unit-tests-windows:
     name: Windows Tests
-    needs: [check-paths]
+    needs: [build-windows]
     runs-on:
       group: elastic-otel-dotnet
       labels: elastic-otel-dotnet-windows2025-16
@@ -48,30 +113,27 @@ jobs:
         id: bootstrap
         uses: ./.github/workflows/bootstrap
 
-      - name: Unit Tests
-        run: build.bat test --test-suite=unit
+      - name: Download Windows Build Artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: windows-artifacts
+          path: .artifacts/
+
+      - name: Verify artifact integrity
         shell: cmd
+        run: |
+          if not exist .artifacts\bin (echo ERROR: .artifacts\bin missing & exit /b 1)
+          if not exist .artifacts\package (echo ERROR: .artifacts\package missing & exit /b 1)
+          if not exist .artifacts\elastic-distribution (echo ERROR: .artifacts\elastic-distribution missing & exit /b 1)
+          echo Artifact integrity check passed.
 
-  unit-tests-linux:
-    name: Linux Tests
-    needs: [check-paths]
-    runs-on:
-      group: elastic-otel-dotnet
-      labels: elastic-otel-dotnet-ubuntu24-16
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
-      - name: Bootstrap Action Workspace
-        id: bootstrap
-        uses: ./.github/workflows/bootstrap
-        
       - name: Unit Tests
-        run: ./build.sh test --test-suite=unit
+        run: build.bat test --test-suite=unit --skip-build --skip-restore
+        shell: cmd
 
   integration-tests-windows:
     name: Windows Integration Tests
-    needs: [check-paths]
+    needs: [build-windows]
     runs-on:
       group: elastic-otel-dotnet
       labels: elastic-otel-dotnet-windows2025-16
@@ -84,38 +146,27 @@ jobs:
         id: bootstrap
         uses: ./.github/workflows/bootstrap
 
-      - name: Build Redistributable Artifacts
-        run: build.bat redistribute
+      - name: Download Windows Build Artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: windows-artifacts
+          path: .artifacts/
+
+      - name: Verify artifact integrity
         shell: cmd
+        run: |
+          if not exist .artifacts\bin (echo ERROR: .artifacts\bin missing & exit /b 1)
+          if not exist .artifacts\package (echo ERROR: .artifacts\package missing & exit /b 1)
+          if not exist .artifacts\elastic-distribution (echo ERROR: .artifacts\elastic-distribution missing & exit /b 1)
+          echo Artifact integrity check passed.
 
       - name: Integration Tests
-        run: build.bat test --test-suite=integration
+        run: build.bat test --test-suite=integration --skip-build --skip-restore
         shell: cmd
-
-  integration-tests-linux:
-    name: Linux Integration Tests
-    needs: [check-paths]
-    runs-on:
-      group: elastic-otel-dotnet
-      labels: elastic-otel-dotnet-ubuntu24-16
-    timeout-minutes: 20
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-
-      - name: Bootstrap Action Workspace
-        id: bootstrap
-        uses: ./.github/workflows/bootstrap
-
-      - name: Build Redistributable Artifacts
-        run: ./build.sh redistribute
-
-      - name: Integration Tests
-        run: ./build.sh test --test-suite=integration
 
   aot-tests-windows:
     name: AOT Compatibility Tests
-    needs: [check-paths]
+    needs: [build-windows]
     runs-on:
       group: elastic-otel-dotnet
       labels: elastic-otel-dotnet-windows2025-16
@@ -127,13 +178,28 @@ jobs:
         id: bootstrap
         uses: ./.github/workflows/bootstrap
 
+      - name: Download Windows Build Artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: windows-artifacts
+          path: .artifacts/
+
+      - name: Verify artifact integrity
+        shell: cmd
+        run: |
+          if not exist .artifacts\bin (echo ERROR: .artifacts\bin missing & exit /b 1)
+          if not exist .artifacts\package (echo ERROR: .artifacts\package missing & exit /b 1)
+          if not exist .artifacts\elastic-distribution (echo ERROR: .artifacts\elastic-distribution missing & exit /b 1)
+          echo Artifact integrity check passed.
+
       - name: AOT Compatibility Tests
-        run: build.bat test --test-suite=aot_compatibility
+        run: build.bat test --test-suite=aot_compatibility --skip-build --skip-restore
         shell: cmd
 
-  build-verification-linux:
-    name: Build Verification Tests
-    needs: [check-paths]
+  # === Linux test jobs ===
+  unit-tests-linux:
+    name: Linux Tests
+    needs: [build-linux]
     runs-on:
       group: elastic-otel-dotnet
       labels: elastic-otel-dotnet-ubuntu24-16
@@ -145,8 +211,98 @@ jobs:
         id: bootstrap
         uses: ./.github/workflows/bootstrap
 
-      - name: Build Redistributable Artifacts
-        run: ./build.sh redistribute
+      - name: Download Linux Build Artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: linux-artifacts
+          path: .artifacts/
+
+      - name: Verify artifact integrity
+        run: |
+          for d in .artifacts/bin .artifacts/package .artifacts/elastic-distribution; do
+            test -d "$d" || { echo "ERROR: $d missing"; exit 1; }
+          done
+          echo "Artifact integrity check passed"
+
+      - name: Unit Tests
+        run: ./build.sh test --test-suite=unit --skip-build --skip-restore
+
+  integration-tests-linux:
+    name: Linux Integration Tests
+    needs: [build-linux]
+    runs-on:
+      group: elastic-otel-dotnet
+      labels: elastic-otel-dotnet-ubuntu24-16
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Bootstrap Action Workspace
+        id: bootstrap
+        uses: ./.github/workflows/bootstrap
+
+      - name: Download Linux Build Artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: linux-artifacts
+          path: .artifacts/
+
+      - name: Verify artifact integrity
+        run: |
+          for d in .artifacts/bin .artifacts/package .artifacts/elastic-distribution; do
+            test -d "$d" || { echo "ERROR: $d missing"; exit 1; }
+          done
+          echo "Artifact integrity check passed"
+
+      - name: Integration Tests
+        run: ./build.sh test --test-suite=integration --skip-build --skip-restore
+
+  build-verification-linux:
+    name: Build Verification Tests
+    needs: [build-linux]
+    runs-on:
+      group: elastic-otel-dotnet
+      labels: elastic-otel-dotnet-ubuntu24-16
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Bootstrap Action Workspace
+        id: bootstrap
+        uses: ./.github/workflows/bootstrap
+
+      - name: Download Linux Build Artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: linux-artifacts
+          path: .artifacts/
+
+      - name: Verify artifact integrity
+        run: |
+          for d in .artifacts/bin .artifacts/package .artifacts/elastic-distribution; do
+            test -d "$d" || { echo "ERROR: $d missing"; exit 1; }
+          done
+          echo "Artifact integrity check passed"
 
       - name: Build Verification Tests
-        run: ./build.sh test --test-suite=build_verification
+        run: ./build.sh test --test-suite=build_verification --skip-build --skip-restore
+
+  # === Cleanup ===
+  cleanup-artifacts:
+    name: Cleanup Artifacts
+    needs: [unit-tests-windows, integration-tests-windows, aot-tests-windows, unit-tests-linux, integration-tests-linux, build-verification-linux]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Delete Windows Artifacts
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
+        with:
+          name: windows-artifacts
+          failOnError: false
+      - name: Delete Linux Artifacts
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
+        with:
+          name: linux-artifacts
+          failOnError: false
