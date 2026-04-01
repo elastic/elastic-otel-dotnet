@@ -55,7 +55,6 @@ public class PluginLoaderTests : IAsyncLifetime
 
 	public async Task DisposeAsync() => await _container.StopAsync().ConfigureAwait(false);
 
-	[NotWindowsCiFact]
 	public async Task ObserveDistributionPluginLoad()
 	{
 		await Task.Delay(TimeSpan.FromSeconds(3));

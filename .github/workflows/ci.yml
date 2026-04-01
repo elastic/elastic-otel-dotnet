@@ -149,7 +149,7 @@ jobs:
         uses: ./.github/workflows/bootstrap
 
       - name: Download Windows Build Artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           name: windows-artifacts
           path: .artifacts/
@@ -182,7 +182,7 @@ jobs:
         uses: ./.github/workflows/bootstrap
 
       - name: Download Windows Build Artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           name: windows-artifacts
           path: .artifacts/
@@ -216,7 +216,7 @@ jobs:
         uses: ./.github/workflows/bootstrap
 
       - name: Download Linux Build Artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           name: linux-artifacts
           path: .artifacts/
@@ -248,7 +248,7 @@ jobs:
         uses: ./.github/workflows/bootstrap
 
       - name: Download Linux Build Artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           name: linux-artifacts
           path: .artifacts/
@@ -279,7 +279,7 @@ jobs:
         uses: ./.github/workflows/bootstrap
 
       - name: Download Linux Build Artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@v4
         with:
           name: linux-artifacts
           path: .artifacts/

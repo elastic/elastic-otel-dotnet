@@ -23,7 +23,7 @@ public class AutoInstrDistributionTests
 		Assert.True(_fixture.IsReady,
 			$"Redistributable fixture failed to initialize — test cannot run.\n{_fixture.InitializationError}");
 
-	[SkipOnCiFact("Times out on CI; need investigation.", Timeout = 90_000)]
+	[Fact(Timeout = 90_000)]
 	public async Task AutoInstr_Net8_AlcPath_OpAmpWorks()
 	{
 		AssertFixtureReady();
