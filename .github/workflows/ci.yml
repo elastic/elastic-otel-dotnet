@@ -37,6 +37,7 @@ jobs:
   unit-tests-windows:
     name: Windows Tests
     needs: [check-paths]
+    if: needs.check-paths.outputs.code == 'true'
     runs-on:
       group: elastic-otel-dotnet
       labels: elastic-otel-dotnet-windows2025-16
@@ -55,6 +56,7 @@ jobs:
   unit-tests-linux:
     name: Linux Tests
     needs: [check-paths]
+    if: needs.check-paths.outputs.code == 'true'
     runs-on:
       group: elastic-otel-dotnet
       labels: elastic-otel-dotnet-ubuntu24-16
@@ -72,6 +74,7 @@ jobs:
   integration-tests-windows:
     name: Windows Integration Tests
     needs: [check-paths]
+    if: needs.check-paths.outputs.code == 'true'
     runs-on:
       group: elastic-otel-dotnet
       labels: elastic-otel-dotnet-windows2025-16
@@ -95,6 +98,7 @@ jobs:
   integration-tests-linux:
     name: Linux Integration Tests
     needs: [check-paths]
+    if: needs.check-paths.outputs.code == 'true'
     runs-on:
       group: elastic-otel-dotnet
       labels: elastic-otel-dotnet-ubuntu24-16
@@ -116,6 +120,7 @@ jobs:
   aot-tests-windows:
     name: AOT Compatibility Tests
     needs: [check-paths]
+    if: needs.check-paths.outputs.code == 'true'
     runs-on:
       group: elastic-otel-dotnet
       labels: elastic-otel-dotnet-windows2025-16
@@ -134,6 +139,7 @@ jobs:
   build-verification-linux:
     name: Build Verification Tests
     needs: [check-paths]
+    if: needs.check-paths.outputs.code == 'true'
     runs-on:
       group: elastic-otel-dotnet
       labels: elastic-otel-dotnet-ubuntu24-16
