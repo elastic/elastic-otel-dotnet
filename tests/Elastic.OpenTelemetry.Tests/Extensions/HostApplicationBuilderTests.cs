@@ -7,6 +7,7 @@ using Elastic.OpenTelemetry.Core;
 
 namespace Elastic.OpenTelemetry.Tests.Extensions;
 
+[Collection("CompositeLoggerSingleton")]
 public class HostApplicationBuilderTests
 {
 	[Fact]

@@ -14,7 +14,9 @@ env:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on:
+      group: elastic-otel-dotnet
+      labels: elastic-otel-dotnet-ubuntu24-16
     permissions:
       artifact-metadata: write
       attestations: write

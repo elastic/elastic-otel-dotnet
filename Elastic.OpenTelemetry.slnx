@@ -44,6 +44,7 @@
     <File Path="tests/Directory.Build.props" />
     <File Path="tests/xunit.runner.json" />
     <Project Path="tests/AutoInstrumentation.IntegrationTests/AutoInstrumentation.IntegrationTests.csproj" />
+    <Project Path="tests/Elastic.OpenTelemetry.AotCompatibility.Tests/Elastic.OpenTelemetry.AotCompatibility.Tests.csproj" />
     <Project Path="tests/Elastic.OpenTelemetry.BuildVerification.Tests/Elastic.OpenTelemetry.BuildVerification.Tests.csproj" />
     <Project Path="tests/Elastic.OpenTelemetry.IntegrationTests/Elastic.OpenTelemetry.IntegrationTests.csproj" />
     <Project Path="tests/Elastic.OpenTelemetry.Tests/Elastic.OpenTelemetry.Tests.csproj" />

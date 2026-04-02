@@ -86,19 +86,47 @@ internal static class DotNetHelper
 	/// <summary>
 	/// Runs dotnet pack with output redirected to the specified directory.
 	/// </summary>
+	/// <remarks>
+	/// Uses isolated <c>BaseOutputPath</c> and <c>BaseIntermediateOutputPath</c> so that the
+	/// pack performs a full restore + build into a scratch directory instead of reading from
+	/// the shared <c>.artifacts/</c> tree. This prevents picking up a tainted
+	/// <c>project.assets.json</c> left behind by a <c>BuildingForZipDistribution=true</c> build.
+	/// </remarks>
 	internal static async Task<DotNetResult> PackAsync(
 		string projectRelativePath,
 		string outputDirectory,
 		Dictionary<string, string>? properties = null)
 	{
-		var args = new List<string>
+		var scratchDir = Path.Combine(Path.GetTempPath(), $"edot-bv-pack-{Guid.NewGuid():N}");
+		try
 		{
-			"pack", GetProjectPath(projectRelativePath),
-			"-c", "Release",
-			"--output", outputDirectory
-		};
-		AddProperties(args, properties);
-		return await RunDotNetAsync(args);
+			// Trailing separator is required by MSBuild for Base*Path properties.
+			// Use forward slashes to avoid the Windows \"- escaping issue where a trailing
+			// backslash before a closing quote is interpreted as an escaped literal quote,
+			// merging adjacent arguments into a single mangled path.
+			var binPath = Path.Combine(scratchDir, "bin").Replace('\\', '/') + "/";
+			var objPath = Path.Combine(scratchDir, "obj").Replace('\\', '/') + "/";
+
+			var args = new List<string>
+			{
+				"pack", GetProjectPath(projectRelativePath),
+				"-c", "Release",
+				"--output", outputDirectory,
+				$"-p:BaseOutputPath={binPath}",
+				$"-p:BaseIntermediateOutputPath={objPath}"
+			};
+			AddProperties(args, properties);
+			return await RunDotNetAsync(args, TimeSpan.FromMinutes(10));
+		}
+		finally
+		{
+			if (Directory.Exists(scratchDir))
+			{
+				try
+				{ Directory.Delete(scratchDir, true); }
+				catch { /* best-effort cleanup */ }
+			}
+		}
 	}
 
 	private static List<string> BuildMsBuildArgs(
@@ -118,8 +146,11 @@ internal static class DotNetHelper
 			args.Add($"-p:{key}={value}");
 	}
 
-	private static async Task<DotNetResult> RunDotNetAsync(List<string> args)
+	private static async Task<DotNetResult> RunDotNetAsync(List<string> args, TimeSpan? timeout = null)
 	{
+		timeout ??= TimeSpan.FromMinutes(5);
+		using var cts = new CancellationTokenSource(timeout.Value);
+
 		var psi = new ProcessStartInfo("dotnet")
 		{
 			WorkingDirectory = SolutionRoot,
@@ -137,7 +168,21 @@ internal static class DotNetHelper
 		var outputTask = process.StandardOutput.ReadToEndAsync();
 		var errorTask = process.StandardError.ReadToEndAsync();
 
-		await process.WaitForExitAsync().ConfigureAwait(false);
+		try
+		{
+			await process.WaitForExitAsync(cts.Token).ConfigureAwait(false);
+		}
+		catch (OperationCanceledException)
+		{
+			try
+			{ process.Kill(entireProcessTree: true); }
+			catch { /* best effort */ }
+
+			var partialOut = await outputTask.ConfigureAwait(false);
+			var partialErr = await errorTask.ConfigureAwait(false);
+			return new DotNetResult(-1, partialOut,
+				$"Process timed out after {timeout.Value.TotalMinutes:0} minutes.\n{partialErr}");
+		}
 
 		var output = await outputTask.ConfigureAwait(false);
 		var error = await errorTask.ConfigureAwait(false);

@@ -143,6 +143,10 @@ public class CompositeLoggerActivationRaceTests
 	{
 		CompositeLogger? logger = null;
 
+		// Ensure no stale singleton from a prior test in the collection can interfere
+		// with the GetOrCreate singleton behaviour this test exercises.
+		CompositeLogger.ClearPreActivationInstance();
+
 		try
 		{
 			// Step 1: Create deferred logger with no options via the singleton path

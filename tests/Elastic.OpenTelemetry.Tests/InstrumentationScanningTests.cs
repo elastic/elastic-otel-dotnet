@@ -10,6 +10,7 @@ using Xunit.Abstractions;
 
 namespace Elastic.OpenTelemetry.Tests;
 
+[Collection("CompositeLoggerSingleton")]
 public partial class InstrumentationScanningTests(ITestOutputHelper output)
 {
 	private readonly ITestOutputHelper _output = output;
@@ -59,6 +60,8 @@ public partial class InstrumentationScanningTests(ITestOutputHelper output)
 
 		response.EnsureSuccessStatusCode();
 
+		await Task.Delay(500); // Small delay to ensure the activity has been exported before we take the snapshot for assertions
+
 		var snapshot = exportedItems.ToArray();
 
 		if (snapshot.Length > 1)
@@ -70,9 +73,9 @@ public partial class InstrumentationScanningTests(ITestOutputHelper output)
 			}
 		}
 
-		var activity = Assert.Single(snapshot, a => a.DisplayName.Equals("GET /", StringComparison.Ordinal));
-
-		Assert.Equal("Microsoft.AspNetCore", activity.Source.Name);
+		var activity = Assert.Single(snapshot, a =>
+			a.Source.Name == "Microsoft.AspNetCore" &&
+			a.DisplayName.Equals("GET /", StringComparison.Ordinal));
 	}
 
 	[Fact]
@@ -110,30 +113,35 @@ public partial class InstrumentationScanningTests(ITestOutputHelper output)
 
 		response.EnsureSuccessStatusCode();
 
+		await Task.Delay(500); // Small delay to ensure the activity has been exported before we take the snapshot for assertions
+
 		var snapshot = exportedItems.ToArray();
 
-		if (snapshot.Length > 2)
+		_output.WriteLine($"{nameof(InstrumentationAssemblyScanning_AddsHttpInstrumentation)} > Exported items ({snapshot.Length}):");
+		foreach (var item in snapshot)
 		{
-			_output.WriteLine($"{nameof(InstrumentationAssemblyScanning_AddsHttpInstrumentation)} > Exported items:");
-			foreach (var item in snapshot)
-			{
-				_output.WriteLine($"- {item.DisplayName} : {item.OperationName} ; {item.Source.Name}");
-			}
+			_output.WriteLine($"- {item.DisplayName} : {item.OperationName} ; {item.Source.Name}");
 		}
 
-		Assert.Equal(2, snapshot.Length); // One for ASP.NET Core and one for HTTP
+		// We expect at least an ASP.NET Core activity and an HTTP activity.
+		// The exact count may be higher when the OTel singleton captures activities
+		// from other tests running in parallel, so avoid asserting on exact count.
+		Assert.True(snapshot.Length >= 2, $"Expected at least 2 exported activities but found {snapshot.Length}.");
 
-		var activity = Assert.Single(snapshot, a => a.DisplayName.Equals("GET", StringComparison.Ordinal));
+		// Filter by url.full tag to uniquely identify *this* test's HTTP activity,
+		// avoiding collisions with activities from parallel tests sharing the OTel singleton.
+		var activity = Assert.Single(snapshot, a =>
+			a.Source.Name == "System.Net.Http" &&
+			a.TagObjects.Any(t => t.Key == "url.full" && (string?)t.Value == "https://example.com/"));
 
-		Assert.Equal("System.Net.Http", activity.Source.Name);
-
-		var urlFull = Assert.Single(activity.TagObjects, a => a.Key.Equals("url.full", StringComparison.Ordinal));
-		Assert.Equal("https://example.com/", (string?)urlFull.Value);
+		Assert.Equal("GET", activity.DisplayName);
 
 		var foundExpectedHttpTracerInstrumentationMessage = false;
 		var foundExpectedHttpMeterInstrumentationMessage = false;
 
-		foreach (var message in logger.Messages)
+		var messages = logger.Messages.ToArray();
+
+		foreach (var message in messages)
 		{
 			if (HttpTracerProviderBuilderRegex().IsMatch(message))
 				foundExpectedHttpTracerInstrumentationMessage = true;

@@ -50,15 +50,15 @@ public class CentralConfigurationResilienceTests
 	[Fact]
 	public void StartAsync_CancelledOnTimeout_FallsBackToEmptyClient()
 	{
-		var client = new FaultingOpAmpClient(startDelay: TimeSpan.FromSeconds(10));
+		var client = new FaultingOpAmpClient(startDelay: TimeSpan.FromSeconds(30));
 
 		var sw = Stopwatch.StartNew();
 		var config = new CentralConfiguration(client, Logger);
 		sw.Stop();
 
 		// On slow CI the constructor's Join may time out before the worker finishes its finally block.
-		// Poll briefly — the worker should complete quickly once the CTS fires at ~2s.
-		var deadline = DateTime.UtcNow.AddSeconds(5);
+		// Poll briefly — the worker should complete quickly once the CTS fires at ~5s.
+		var deadline = DateTime.UtcNow.AddSeconds(8);
 		while (DateTime.UtcNow < deadline && (!client.StopCalled || !client.Disposed))
 			Thread.Sleep(50);
 
@@ -67,10 +67,10 @@ public class CentralConfigurationResilienceTests
 		Assert.True(client.Disposed);
 		Assert.False(config.WaitForFirstConfig(TimeSpan.FromMilliseconds(100)));
 
-		// Constructor must complete well under the 10s delay, proving CTS cancellation worked.
-		// Expected: ~2s (CTS fires) + worker cleanup + scheduling margin ≈ 3s Join timeout.
-		// The 4s bound gives 1s of CI headroom while still catching a startup budget regression.
-		Assert.True(sw.Elapsed.TotalSeconds < 4,
+		// Constructor must complete well under the 30s delay, proving CTS cancellation worked.
+		// Expected: ~5s (CTS fires) + worker cleanup + scheduling margin ≈ 6s Join timeout.
+		// The 8s bound gives 2s of CI headroom while still catching a startup budget regression.
+		Assert.True(sw.Elapsed.TotalSeconds < 8,
 			$"Constructor took {sw.Elapsed.TotalSeconds:F1}s — cancellation may not have fired");
 
 		config.Dispose();
@@ -96,13 +96,13 @@ public class CentralConfigurationResilienceTests
 	[Fact]
 	public void StartAsync_CancelledOnTimeout_StopCalledAfterStartUnwinds()
 	{
-		var client = new FaultingOpAmpClient(startDelay: TimeSpan.FromSeconds(10));
+		var client = new FaultingOpAmpClient(startDelay: TimeSpan.FromSeconds(30));
 
 		var config = new CentralConfiguration(client, Logger);
 
 		// On slow CI the constructor's Join may time out before the worker finishes its finally block.
-		// Poll briefly — the worker should complete quickly once the CTS fires at ~2s.
-		var deadline = DateTime.UtcNow.AddSeconds(5);
+		// Poll briefly — the worker should complete quickly once the CTS fires at ~5s.
+		var deadline = DateTime.UtcNow.AddSeconds(8);
 		while (DateTime.UtcNow < deadline && (!client.StartCompletedAt.HasValue || !client.StopCalledAt.HasValue))
 			Thread.Sleep(50);
 
@@ -122,9 +122,9 @@ public class CentralConfigurationResilienceTests
 	public void StartAsync_IgnoresCancellation_CallerFallsBackPromptly()
 	{
 		// Client ignores the CancellationToken — simulates a buggy upstream that doesn't
-		// observe cancellation. The 5s delay exceeds both the CTS timeout (2s) and the
-		// Join timeout (3s), so thread.Join returns false and the caller falls back.
-		var client = new FaultingOpAmpClient(startDelay: TimeSpan.FromSeconds(5), ignoreCancellation: true);
+		// observe cancellation. The 15s delay exceeds both the CTS timeout (5s) and the
+		// Join timeout (6s), so thread.Join returns false and the caller falls back.
+		var client = new FaultingOpAmpClient(startDelay: TimeSpan.FromSeconds(15), ignoreCancellation: true);
 
 		var sw = Stopwatch.StartNew();
 		var config = new CentralConfiguration(client, Logger);
@@ -138,9 +138,9 @@ public class CentralConfigurationResilienceTests
 		Assert.False(client.StopCalled, "Caller should not have waited for worker cleanup");
 		Assert.False(client.Disposed, "Client should not be disposed yet — worker is still running");
 
-		// Join timeout = 2000 + 500 + 500 = 3000ms. Constructor must complete well under
-		// the 5s delay, proving the Join timeout fired. The 4s bound gives 1s of CI headroom.
-		Assert.True(sw.Elapsed.TotalSeconds < 4,
+		// Join timeout = 5000 + 500 + 500 = 6000ms. Constructor must complete well under
+		// the 15s delay, proving the Join timeout fired. The 8s bound gives 2s of CI headroom.
+		Assert.True(sw.Elapsed.TotalSeconds < 8,
 			$"Constructor took {sw.Elapsed.TotalSeconds:F1}s — Join timeout may not be working");
 
 		config.Dispose();
@@ -152,7 +152,7 @@ public class CentralConfigurationResilienceTests
 		// Client ignores cancellation AND eventually faults after the delay.
 		// This exercises the "worker still alive at Join, eventually faults and runs cleanup" path.
 		var client = new FaultingOpAmpClient(
-			startDelay: TimeSpan.FromSeconds(5),
+			startDelay: TimeSpan.FromSeconds(15),
 			ignoreCancellation: true,
 			startException: new InvalidOperationException("late failure"));
 
@@ -164,12 +164,12 @@ public class CentralConfigurationResilienceTests
 		Assert.False(config.WaitForFirstConfig(TimeSpan.FromMilliseconds(100)));
 
 		// Caller completes promptly via Join timeout
-		Assert.True(sw.Elapsed.TotalSeconds < 4,
+		Assert.True(sw.Elapsed.TotalSeconds < 8,
 			$"Constructor took {sw.Elapsed.TotalSeconds:F1}s — Join timeout may not be working");
 
-		// Wait for the worker to finish: 5s delay + cleanup margin.
+		// Wait for the worker to finish: 15s delay + cleanup margin.
 		// Poll rather than Thread.Sleep to reduce flakiness on slow CI.
-		var deadline = DateTime.UtcNow.AddSeconds(10);
+		var deadline = DateTime.UtcNow.AddSeconds(20);
 		while (DateTime.UtcNow < deadline && (!client.StopCalled || !client.Disposed))
 			Thread.Sleep(100);
 
@@ -187,7 +187,7 @@ public class CentralConfigurationResilienceTests
 		// The worker detects this via Volatile.Read in its finally block and calls
 		// StopAsync/Dispose on the orphaned client — closing the previously accepted leak.
 		var client = new FaultingOpAmpClient(
-			startDelay: TimeSpan.FromSeconds(5),
+			startDelay: TimeSpan.FromSeconds(15),
 			ignoreCancellation: true);
 
 		var sw = Stopwatch.StartNew();
@@ -195,12 +195,12 @@ public class CentralConfigurationResilienceTests
 		sw.Stop();
 
 		// Caller fell back promptly
-		Assert.True(sw.Elapsed.TotalSeconds < 4);
+		Assert.True(sw.Elapsed.TotalSeconds < 8);
 		Assert.False(config.WaitForFirstConfig(TimeSpan.FromMilliseconds(100)));
 
 		// Wait for the worker to finish and clean up the orphaned client.
-		// 5s delay + cleanup margin. Poll to reduce flakiness on slow CI.
-		var deadline = DateTime.UtcNow.AddSeconds(10);
+		// 15s delay + cleanup margin. Poll to reduce flakiness on slow CI.
+		var deadline = DateTime.UtcNow.AddSeconds(20);
 		while (DateTime.UtcNow < deadline && (!client.StopCalled || !client.Disposed))
 			Thread.Sleep(100);
 
@@ -218,14 +218,14 @@ public class CentralConfigurationResilienceTests
 	public void StopAsync_Faults_DuringStartCleanup_ConstructorStillCompletes()
 	{
 		var client = new FaultingOpAmpClient(
-			startDelay: TimeSpan.FromSeconds(10),
+			startDelay: TimeSpan.FromSeconds(30),
 			stopException: new InvalidOperationException("stop failed"));
 
 		var config = new CentralConfiguration(client, Logger);
 
 		// On slow CI the constructor's Join may time out before the worker finishes its finally block.
-		// Poll briefly — the worker should complete quickly once the CTS fires at ~2s.
-		var deadline = DateTime.UtcNow.AddSeconds(5);
+		// Poll briefly — the worker should complete quickly once the CTS fires at ~5s.
+		var deadline = DateTime.UtcNow.AddSeconds(8);
 		while (DateTime.UtcNow < deadline && (!client.StopCalled || !client.Disposed))
 			Thread.Sleep(50);
 
@@ -243,13 +243,13 @@ public class CentralConfigurationResilienceTests
 		// SyncThrowingOpAmpClient.StopAsync is non-async and throws before returning a Task.
 		// This exercises the try/catch around client.StopAsync() in the worker's finally that
 		// prevents a synchronous throw from escaping the background thread.
-		var client = new SyncThrowingOpAmpClient(startDelay: TimeSpan.FromSeconds(10));
+		var client = new SyncThrowingOpAmpClient(startDelay: TimeSpan.FromSeconds(30));
 
 		var config = new CentralConfiguration(client, Logger);
 
 		// On slow CI the constructor's Join may time out before the worker finishes its finally block.
-		// Poll briefly — the worker should complete quickly once the CTS fires at ~2s.
-		var deadline = DateTime.UtcNow.AddSeconds(5);
+		// Poll briefly — the worker should complete quickly once the CTS fires at ~5s.
+		var deadline = DateTime.UtcNow.AddSeconds(8);
 		while (DateTime.UtcNow < deadline && !client.Disposed)
 			Thread.Sleep(50);
 

@@ -7,6 +7,7 @@
 **/.vs
 **/.vscode
 **/.idea
+**/.claude
 **/*.*proj.user
 **/*.dbmdl
 **/*.jfm
@@ -20,3 +21,12 @@
 **/obj
 **/secrets.dev.yaml
 **/values.dev.yaml
+# Testcontainers' DockerfileArchive enumerates files in the build context then tars
+# them sequentially. Transient files that appear during enumeration but disappear
+# before the tar read cause FileNotFoundException and fail the Docker image build.
+# CI workflows set NUGET_PACKAGES=$GITHUB_WORKSPACE/.nuget/packages, putting the
+# NuGet cache inside the repo checkout — temp files from concurrent restores trigger
+# this race. Git lock files (.git/index.lock etc.) are similarly transient during
+# concurrent git operations. Neither is needed by any Dockerfile.
+.nuget
+.git/**/*.lock
