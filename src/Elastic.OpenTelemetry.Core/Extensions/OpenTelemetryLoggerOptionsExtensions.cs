@@ -45,14 +45,10 @@ internal static class OpenTelemetryLoggerOptionsExtensions
 
 		options.IncludeFormattedMessage = true;
 
-		// IncludeScopes is disabled until we have a resolution to duplicate attributes
-		// See:
-		//   - https://github.com/open-telemetry/opentelemetry-dotnet/issues/4324
-		//   - https://github.com/open-telemetry/opentelemetry-collector-contrib/issues/39304
-		// options.IncludeScopes = true;
-
-		// TODO - Verify if we can configure the OTLP exporter to add the user agent header.
-		// See: https://github.com/elastic/elastic-otel-dotnet/issues/338
+		// NOTE: The OTLP exporter may emit duplicate attributes when IncludeScopes is enabled, as scopes are emitted as attributes on the log record.
+		// This is not strictly spec compliant. When using EDOT collector or the managed OTLP endpoint, these duplicate attributes will be deduplicated.
+		// This works by including the first occurrence of the attribute and ignoring subsequent occurrences with the same key.
+		options.IncludeScopes = true;
 
 		logger.LogConfiguredSignalProvider(nameof(Signals.Logs), nameof(OpenTelemetryLoggerOptions), "<n/a>");
 	}

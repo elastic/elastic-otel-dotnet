@@ -5,7 +5,6 @@
 using System.Diagnostics;
 using Example.MinimalApi;
 using OpenTelemetry;
-using OpenTelemetry.Exporter;
 using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -45,23 +44,34 @@ var app = builder.Build();
 
 app.UseHttpsRedirection();
 
-app.MapGet("/", (IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory) =>
-	Api.HandleRoot(httpClientFactory, loggerFactory));
+app.MapGet("/", (IHttpClientFactory httpClientFactory, ILogger<Api> logger) =>
+	Api.HandleRoot(httpClientFactory, logger));
 
 app.Run();
 
 namespace Example.MinimalApi
 {
-	internal static class Api
+	internal class Api
 	{
 		public static string ActivitySourceName = "CustomActivitySource";
 		private static readonly ActivitySource ActivitySource = new(ActivitySourceName);
 
-		public static async Task<IResult> HandleRoot(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory)
+		public static async Task<IResult> HandleRoot(IHttpClientFactory httpClientFactory, ILogger logger)
 		{
-			var logger = loggerFactory.CreateLogger("Example.Api");
+			using (logger.BeginScope(new List<KeyValuePair<string, object>>
+			{
+				new("TransactionId", "12345"),
+			}))
+			{
+				using (logger.BeginScope("InnerScope for {TransactionId}", "99999"))
+				{
+					logger.LogInformation("Doing stuff inside inner scope");
+				}
 
-			logger.LogInformation("Doing stuff");
+				logger.LogInformation("Doing stuff inside outer scope");
+			}
+
+			logger.LogInformation("Doing stuff without a scope");
 
 			using var client = httpClientFactory.CreateClient();
 

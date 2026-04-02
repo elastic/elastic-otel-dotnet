@@ -485,27 +485,6 @@ public static class LoggerProviderBuilderExtensions
 
 			builder.ConfigureServices(sc => sc.Configure<OpenTelemetryLoggerOptions>(o => o.WithElasticDefaults(logger)));
 
-			// This check is to detect if ASP.NET Core is present in the application.
-			// If it is, we check if IncludeScopes is enabled and log a warning because the upstream OTLP exporter
-			// exports duplicate attributes which does not conform to the spec and breaks the EDOT Collector.
-			if (builder is IDeferredLoggerProviderBuilder deferredBuilder)
-			{
-				var httpContextType = Type.GetType("Microsoft.AspNetCore.Http.HttpContext, Microsoft.AspNetCore.Http.Abstractions");
-
-				if (httpContextType is not null)
-				{
-					var options = deferredBuilder.Configure((sp, _) =>
-					{
-						var options = sp.GetService<IOptions<OpenTelemetryLoggerOptions>>();
-
-						if (options is not null && options.Value.IncludeScopes == true)
-						{
-							logger.LogDetectedIncludeScopesWarning();
-						}
-					});
-				}
-			}
-
 			// Invoke any user-provided configuration.
 			var userProvidedConfigureBuilder = builderContext.BuilderOptions.UserProvidedConfigureBuilder;
 			if (userProvidedConfigureBuilder is not null)

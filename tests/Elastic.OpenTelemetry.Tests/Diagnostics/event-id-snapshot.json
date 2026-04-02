@@ -149,10 +149,6 @@
       "eventName": "SetTag"
     },
     {
-      "eventId": 60,
-      "eventName": "DetectedIncludeScopes"
-    },
-    {
       "eventId": 70,
       "eventName": "CompositeLoggerActivated"
     },
