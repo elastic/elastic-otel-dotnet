@@ -79,7 +79,6 @@ jobs:
       group: elastic-otel-dotnet
       labels: elastic-otel-dotnet-windows2025-16
     timeout-minutes: 20
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v6
 
@@ -103,7 +102,6 @@ jobs:
       group: elastic-otel-dotnet
       labels: elastic-otel-dotnet-ubuntu24-16
     timeout-minutes: 20
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v6
 
