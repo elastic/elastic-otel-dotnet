@@ -199,9 +199,9 @@ let Setup (parsed:ParseResults<Build>) =
         | Compile -> Build.Step compile
         | Build -> Build.Cmd [Clean; CheckFormat; Compile] [] build
         
-        | Integrate -> Build.Cmd [Redistribute] testComposedOf <| runTests Integration
-        | Integrate_AutoInstrumentation -> Build.Cmd [Redistribute] testComposedOf <| runTests AutoInstrumentation_Integration
-        | Integrate_OpenTelemetry -> Build.Cmd [Redistribute] testComposedOf <| runTests OpenTelemetry_Integration
+        | Integrate -> Build.Cmd [] testComposedOf <| runTests Integration
+        | Integrate_AutoInstrumentation -> Build.Cmd [] testComposedOf <| runTests AutoInstrumentation_Integration
+        | Integrate_OpenTelemetry -> Build.Cmd [] testComposedOf <| runTests OpenTelemetry_Integration
         | Unit_Test -> Build.Cmd [] testComposedOf <| runTests Unit
         | Build_Verify -> Build.Cmd [] testComposedOf <| runTests Build_Verification
         | Aot_Compat -> Build.Cmd [] testComposedOf <| runTests Aot_Compatibility

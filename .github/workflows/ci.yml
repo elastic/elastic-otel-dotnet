@@ -91,7 +91,7 @@ jobs:
         shell: cmd
 
       - name: Integration Tests
-        run: build.bat test --test-suite=integration
+        run: build.bat test --test-suite=integration --skip-build --skip-restore
         shell: cmd
 
   integration-tests-linux:
@@ -113,7 +113,7 @@ jobs:
         run: ./build.sh redistribute
 
       - name: Integration Tests
-        run: ./build.sh test --test-suite=integration
+        run: ./build.sh test --test-suite=integration --skip-build --skip-restore
 
   aot-tests-windows:
     name: AOT Compatibility Tests
@@ -153,4 +153,4 @@ jobs:
         run: ./build.sh redistribute
 
       - name: Build Verification Tests
-        run: ./build.sh test --test-suite=build_verification
+        run: ./build.sh test --test-suite=build_verification --skip-build --skip-restore

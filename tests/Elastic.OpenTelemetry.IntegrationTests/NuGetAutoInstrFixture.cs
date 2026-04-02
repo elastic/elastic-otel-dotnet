@@ -23,8 +23,9 @@ namespace Elastic.OpenTelemetry.IntegrationTests;
 /// <para>The consumer apps reference the packed <c>.nupkg</c>, so the plugin DLL comes from
 /// NuGet (in the app's output directory), not from the zip's <c>net/</c> folder. The
 /// redistributable zip only provides the profiler infrastructure.</para>
-/// <para>Use <c>./build.sh integrate</c> to ensure both the redistributable and NuGet
-/// artifacts are fresh.</para>
+/// <para>Before running these tests, first run <c>./build.sh redistribute</c>
+/// to produce the profiler infrastructure zip. This fixture packs the NuGet
+/// artifacts it needs during initialization.</para>
 /// </remarks>
 public class NuGetAutoInstrFixture : IAsyncLifetime
 {
@@ -73,11 +74,13 @@ public class NuGetAutoInstrFixture : IAsyncLifetime
 
 		try
 		{
+			const string redistributeHelp = "Run './build.sh redistribute' to build the redistributable zips first.";
 			// 1. Find and extract the redistributable zip (for profiler infrastructure)
 			var zipPath = FindDistributionZip(solutionRoot)
 				?? throw new FileNotFoundException(
 					"Redistributable zip not found. " +
-					"Run './build.sh integrate' or './build.sh redistribute -c'.\n" +
+					redistributeHelp + " " +
+					"Then rerun the integration tests.\n" +
 					$"Expected: elastic-dotnet-instrumentation-{GetPlatformZipSuffix()}.zip " +
 					$"under {Path.Combine(solutionRoot, ".artifacts", "elastic-distribution")}");
 

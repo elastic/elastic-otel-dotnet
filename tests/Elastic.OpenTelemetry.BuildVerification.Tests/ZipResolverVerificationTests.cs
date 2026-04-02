@@ -16,24 +16,15 @@ namespace Elastic.OpenTelemetry.BuildVerification.Tests;
 /// <see cref="ZipExtractionFixture"/>.
 /// </summary>
 [Collection("ZipResolver")]
-public class ZipResolverVerificationTests(ZipExtractionFixture fixture, ITestOutputHelper output)
+public class ZipResolverVerificationTests(ZipExtractionFixture fixture)
 {
-	private string? NetDir => fixture.NetDir;
-
-	private void SkipIfNoArtifacts()
+	private string NetDir
 	{
-		output.WriteLine($"Zip found: {fixture.ZipFound}, net/ dir: {NetDir ?? "(null)"}");
-
-		// xUnit v2 does not have Assert.Skip. The $XunitDynamicSkip$ exception message
-		// prefix is the v2-compatible mechanism for dynamic test skipping, supported by
-		// xunit.runner.visualstudio since v2.4.0.
-		if (!fixture.ZipFound)
-			throw new Exception("$XunitDynamicSkip$Redistributable artifacts not available. Run './build.sh redistribute' first.");
-
-		// If the zip was found but net/ is missing, that's a layout regression — fail, don't skip.
-		Assert.NotNull(NetDir);
-		Assert.True(Directory.Exists(NetDir),
-			$"Redistributable zip was found but the extracted net/ folder is missing at: {Path.Combine(fixture.ExtractDir, "net")}");
+		get
+		{
+			Assert.NotNull(fixture.NetDir);
+			return fixture.NetDir;
+		}
 	}
 
 	// ── deps.json presence ───────────────────────────────────────────────
@@ -41,9 +32,7 @@ public class ZipResolverVerificationTests(ZipExtractionFixture fixture, ITestOut
 	[Fact]
 	public void OpAmpDepsJson_ExistsInNetFolder()
 	{
-		SkipIfNoArtifacts();
-
-		var depsJson = Path.Combine(NetDir!, "Elastic.OpenTelemetry.OpAmp.deps.json");
+		var depsJson = Path.Combine(NetDir, "Elastic.OpenTelemetry.OpAmp.deps.json");
 		Assert.True(File.Exists(depsJson),
 			$"Expected Elastic.OpenTelemetry.OpAmp.deps.json in extracted net/ folder at: {depsJson}");
 	}
@@ -53,8 +42,6 @@ public class ZipResolverVerificationTests(ZipExtractionFixture fixture, ITestOut
 	[Fact]
 	public void Resolver_ResolvesGoogleProtobuf()
 	{
-		SkipIfNoArtifacts();
-
 		var resolver = CreateResolver();
 		var path = resolver.ResolveAssemblyToPath(new AssemblyName("Google.Protobuf"));
 
@@ -64,8 +51,6 @@ public class ZipResolverVerificationTests(ZipExtractionFixture fixture, ITestOut
 	[Fact]
 	public void Resolver_ResolvesOpAmpClient()
 	{
-		SkipIfNoArtifacts();
-
 		var resolver = CreateResolver();
 		var path = resolver.ResolveAssemblyToPath(new AssemblyName("OpenTelemetry.OpAmp.Client"));
 
@@ -75,8 +60,6 @@ public class ZipResolverVerificationTests(ZipExtractionFixture fixture, ITestOut
 	[Fact]
 	public void Resolver_ResolvesOpAmpAssembly()
 	{
-		SkipIfNoArtifacts();
-
 		// Self-resolution of the root assembly is a runtime implementation detail
 		// (the root library is listed in its own deps.json targets section), not a
 		// documented API guarantee. If this test starts failing on a future .NET version
@@ -91,8 +74,6 @@ public class ZipResolverVerificationTests(ZipExtractionFixture fixture, ITestOut
 	[Fact]
 	public void Resolver_ResolvesAbstractions()
 	{
-		SkipIfNoArtifacts();
-
 		// Abstractions is shipped in the zip and listed in the deps.json as a dependency.
 		// The production ALC intentionally does NOT load it into the isolated context
 		// (it is excluded from the AssembliesToLoad whitelist in OpAmpIsolatedLoadContext)
@@ -108,9 +89,7 @@ public class ZipResolverVerificationTests(ZipExtractionFixture fixture, ITestOut
 	[Fact]
 	public void SharedDependency_InDepsJson_ButNotInZip()
 	{
-		SkipIfNoArtifacts();
-
-		var depsJsonPath = Path.Combine(NetDir!, "Elastic.OpenTelemetry.OpAmp.deps.json");
+		var depsJsonPath = Path.Combine(NetDir, "Elastic.OpenTelemetry.OpAmp.deps.json");
 		Assert.True(File.Exists(depsJsonPath), $"deps.json not found: {depsJsonPath}");
 
 		// Verify Microsoft.Extensions.Logging.Abstractions IS listed in the deps.json
@@ -129,7 +108,7 @@ public class ZipResolverVerificationTests(ZipExtractionFixture fixture, ITestOut
 		// Verify the assembly is NOT physically in the extracted net/ folder.
 		// It is intentionally excluded from the zip because at runtime it is
 		// provided by the host/default ALC.
-		var assemblyPath = Path.Combine(NetDir!, "Microsoft.Extensions.Logging.Abstractions.dll");
+		var assemblyPath = Path.Combine(NetDir, "Microsoft.Extensions.Logging.Abstractions.dll");
 		Assert.False(File.Exists(assemblyPath),
 			"Microsoft.Extensions.Logging.Abstractions.dll should NOT be in the extracted net/ folder");
 	}
@@ -139,9 +118,7 @@ public class ZipResolverVerificationTests(ZipExtractionFixture fixture, ITestOut
 	[Fact]
 	public void CustomAlc_LoadsIsolatedAssembliesFromExtractedNetFolder()
 	{
-		SkipIfNoArtifacts();
-
-		var rootAssemblyPath = Path.Combine(NetDir!, "Elastic.OpenTelemetry.OpAmp.dll");
+		var rootAssemblyPath = Path.Combine(NetDir, "Elastic.OpenTelemetry.OpAmp.dll");
 		var loadContext = new TestPluginLoadContext(rootAssemblyPath);
 
 		try
@@ -157,7 +134,7 @@ public class ZipResolverVerificationTests(ZipExtractionFixture fixture, ITestOut
 
 				Assert.NotNull(assembly);
 				Assert.True(
-					assembly.Location.StartsWith(NetDir!, StringComparison.OrdinalIgnoreCase),
+					assembly.Location.StartsWith(NetDir, StringComparison.OrdinalIgnoreCase),
 					$"Expected assembly '{assemblyName}' to load from '{NetDir}' but was at '{assembly.Location}'");
 				Assert.Same(loadContext, AssemblyLoadContext.GetLoadContext(assembly)!);
 			}
@@ -172,8 +149,6 @@ public class ZipResolverVerificationTests(ZipExtractionFixture fixture, ITestOut
 	[Fact]
 	public void WhitelistedAlc_DoesNotLoadNonWhitelistedAssemblies()
 	{
-		SkipIfNoArtifacts();
-
 		// WARNING: Default ALC pollution scope.
 		// LoadFromAssemblyPath into AssemblyLoadContext.Default is irreversible for the
 		// process lifetime. If any other test in the same test run resolves
@@ -185,11 +160,11 @@ public class ZipResolverVerificationTests(ZipExtractionFixture fixture, ITestOut
 		// This mirrors production, where Abstractions is available in the default ALC
 		// because AutoInstrumentation.dll links it in. Pre-loading is necessary so
 		// the fallback succeeds when the whitelist ALC correctly returns null.
-		var abstractionsPath = Path.Combine(NetDir!, "Elastic.OpenTelemetry.OpAmp.Abstractions.dll");
+		var abstractionsPath = Path.Combine(NetDir, "Elastic.OpenTelemetry.OpAmp.Abstractions.dll");
 		Assert.True(File.Exists(abstractionsPath), $"Abstractions assembly not found: {abstractionsPath}");
 		AssemblyLoadContext.Default.LoadFromAssemblyPath(abstractionsPath);
 
-		var rootAssemblyPath = Path.Combine(NetDir!, "Elastic.OpenTelemetry.OpAmp.dll");
+		var rootAssemblyPath = Path.Combine(NetDir, "Elastic.OpenTelemetry.OpAmp.dll");
 		var loadContext = new WhitelistedPluginLoadContext(rootAssemblyPath);
 
 		try
@@ -211,7 +186,7 @@ public class ZipResolverVerificationTests(ZipExtractionFixture fixture, ITestOut
 
 	private AssemblyDependencyResolver CreateResolver()
 	{
-		var rootAssemblyPath = Path.Combine(NetDir!, "Elastic.OpenTelemetry.OpAmp.dll");
+		var rootAssemblyPath = Path.Combine(NetDir, "Elastic.OpenTelemetry.OpAmp.dll");
 		Assert.True(File.Exists(rootAssemblyPath),
 			$"Root assembly not found: {rootAssemblyPath}");
 		return new AssemblyDependencyResolver(rootAssemblyPath);
@@ -222,7 +197,7 @@ public class ZipResolverVerificationTests(ZipExtractionFixture fixture, ITestOut
 		Assert.NotNull(path);
 		Assert.True(File.Exists(path), $"Resolved path does not exist: {path}");
 		Assert.True(
-			path.StartsWith(NetDir!, StringComparison.OrdinalIgnoreCase),
+			path.StartsWith(NetDir, StringComparison.OrdinalIgnoreCase),
 			$"Resolved path for '{assemblyName}' is not within extracted net/ folder. " +
 			$"Expected prefix: '{NetDir}', actual: '{path}'");
 	}

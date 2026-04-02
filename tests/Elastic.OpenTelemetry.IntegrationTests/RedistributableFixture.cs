@@ -17,11 +17,9 @@ namespace Elastic.OpenTelemetry.IntegrationTests;
 /// </summary>
 /// <remarks>
 /// <para>Expects the redistributable zip to already exist in
-/// <c>.artifacts/elastic-distribution/</c>. Use <c>./build.sh integrate</c> to build
-/// the redistributable and run integration tests in one step. The build system
-/// ensures freshness — the fixture is a consumer, not a builder.</para>
-/// <para>If running tests directly via <c>dotnet test</c>, first run
-/// <c>./build.sh redistribute -c</c> to produce the zip.</para>
+/// <c>.artifacts/elastic-distribution/</c>. The fixture is a consumer, not a builder.</para>
+/// <para>Before running these tests, first run <c>./build.sh redistribute</c>
+/// to produce the zip, then run the integration tests separately.</para>
 /// </remarks>
 public class RedistributableFixture : IAsyncLifetime
 {
@@ -56,13 +54,14 @@ public class RedistributableFixture : IAsyncLifetime
 		try
 		{
 			var solutionRoot = FindSolutionRoot();
+			const string redistributeHelp = "Run './build.sh redistribute' to build the redistributable zips first.";
 
 			// 1. Find the redistributable zip (build system ensures freshness)
 			var zipPath = FindDistributionZip(solutionRoot)
 				?? throw new FileNotFoundException(
 					"Redistributable zip not found. " +
-					"Run './build.sh integrate' (builds + tests) or " +
-					"'./build.sh redistribute -c' (build only).\n" +
+					redistributeHelp + " " +
+					"Then rerun the integration tests.\n" +
 					$"Expected: elastic-dotnet-instrumentation-{GetPlatformZipSuffix()}.zip " +
 					$"under {Path.Combine(solutionRoot, ".artifacts", "elastic-distribution")}");
 

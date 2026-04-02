@@ -22,34 +22,28 @@ public class ZipExtractionFixture : IDisposable
 	/// <summary>Path to the extracted net/ subfolder, or null if the zip has no net/ folder.</summary>
 	public string? NetDir { get; }
 
-	/// <summary>Whether a redistributable zip was found in the artifacts.</summary>
-	public bool ZipFound { get; }
-
 	public ZipExtractionFixture(IMessageSink diagnosticSink)
 	{
 		_diagnosticSink = diagnosticSink;
 		ExtractDir = Path.Combine(Path.GetTempPath(), $"edot-zip-resolver-{Guid.NewGuid():N}");
 		Directory.CreateDirectory(ExtractDir);
+		const string redistributeHelp = "Run './build.sh redistribute' to build the redistributable zips first.";
 
 		var distroDir = Path.Combine(DotNetHelper.SolutionRoot, ".artifacts", "elastic-distribution");
 		if (!Directory.Exists(distroDir))
 		{
-			Log("No elastic-distribution directory found — tests will be skipped");
-			return;
+			throw new InvalidOperationException(
+				$"Redistributable artifacts not found at {distroDir}. " +
+				redistributeHelp);
 		}
 
 		// Find any redistributable zip (prefer Linux for cross-platform CI)
-		var zip = Directory.GetFiles(distroDir, "*.zip")
+		var zip = (Directory.GetFiles(distroDir, "*.zip")
 			.FirstOrDefault(f => !f.EndsWith("-windows.zip"))
-			?? Directory.GetFiles(distroDir, "*.zip").FirstOrDefault();
+			?? Directory.GetFiles(distroDir, "*.zip").FirstOrDefault()) ?? throw new InvalidOperationException(
+				$"No redistributable zips found in {distroDir}. " +
+				redistributeHelp);
 
-		if (zip is null)
-		{
-			Log("No redistributable zip found — tests will be skipped");
-			return;
-		}
-
-		ZipFound = true;
 		Log($"Extracting {Path.GetFileName(zip)} to {ExtractDir}");
 		ZipFile.ExtractToDirectory(zip, ExtractDir);
 
