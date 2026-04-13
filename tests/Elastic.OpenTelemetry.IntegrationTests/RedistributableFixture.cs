@@ -5,6 +5,8 @@
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
+using Xunit.Abstractions;
+using Xunit.Sdk;
 
 namespace Elastic.OpenTelemetry.IntegrationTests;
 
@@ -15,16 +17,17 @@ namespace Elastic.OpenTelemetry.IntegrationTests;
 /// </summary>
 /// <remarks>
 /// <para>Expects the redistributable zip to already exist in
-/// <c>.artifacts/elastic-distribution/</c>. Use <c>./build.sh integrate</c> to build
-/// the redistributable and run integration tests in one step. The build system
-/// ensures freshness — the fixture is a consumer, not a builder.</para>
-/// <para>If running tests directly via <c>dotnet test</c>, first run
-/// <c>./build.sh redistribute -c</c> to produce the zip.</para>
+/// <c>.artifacts/elastic-distribution/</c>. The fixture is a consumer, not a builder.</para>
+/// <para>Before running these tests, first run <c>./build.sh redistribute</c>
+/// to produce the zip, then run the integration tests separately.</para>
 /// </remarks>
 public class RedistributableFixture : IAsyncLifetime
 {
+	private readonly IMessageSink _diagnosticMessageSink;
 	private string? _extractionDirectory;
 	private string? _publishDirectory;
+
+	public RedistributableFixture(IMessageSink diagnosticMessageSink) => _diagnosticMessageSink = diagnosticMessageSink;
 
 	/// <summary>
 	/// Path to the extracted redistributable — mimics a real installation.
@@ -51,13 +54,14 @@ public class RedistributableFixture : IAsyncLifetime
 		try
 		{
 			var solutionRoot = FindSolutionRoot();
+			const string redistributeHelp = "Run './build.sh redistribute' to build the redistributable zips first.";
 
 			// 1. Find the redistributable zip (build system ensures freshness)
 			var zipPath = FindDistributionZip(solutionRoot)
 				?? throw new FileNotFoundException(
 					"Redistributable zip not found. " +
-					"Run './build.sh integrate' (builds + tests) or " +
-					"'./build.sh redistribute -c' (build only).\n" +
+					redistributeHelp + " " +
+					"Then rerun the integration tests.\n" +
 					$"Expected: elastic-dotnet-instrumentation-{GetPlatformZipSuffix()}.zip " +
 					$"under {Path.Combine(solutionRoot, ".artifacts", "elastic-distribution")}");
 
@@ -88,6 +92,7 @@ public class RedistributableFixture : IAsyncLifetime
 		catch (Exception ex)
 		{
 			InitializationError = ex.ToString();
+			WriteFixtureLog($"Initialization failed: {InitializationError}");
 		}
 	}
 
@@ -164,32 +169,12 @@ public class RedistributableFixture : IAsyncLifetime
 		}
 	}
 
-	private static async Task RunDotnetAsync(string arguments, CancellationToken ct)
-	{
-		var psi = new ProcessStartInfo
-		{
-			FileName = "dotnet",
-			Arguments = arguments,
-			RedirectStandardOutput = true,
-			RedirectStandardError = true,
-			UseShellExecute = false,
-			CreateNoWindow = true,
-		};
+	private void WriteFixtureLog(string message) =>
+		_diagnosticMessageSink.OnMessage(
+			new DiagnosticMessage($"[{DateTimeOffset.UtcNow:O}] [RedistributableFixture] {message}"));
 
-		using var process = Process.Start(psi)
-			?? throw new InvalidOperationException($"Failed to start: dotnet {arguments}");
-
-		var stdoutTask = process.StandardOutput.ReadToEndAsync(ct).ConfigureAwait(false);
-		var stderrTask = process.StandardError.ReadToEndAsync(ct).ConfigureAwait(false);
-		await process.WaitForExitAsync(ct).ConfigureAwait(false);
-		var stdout = await stdoutTask;
-		var stderr = await stderrTask;
-
-		if (process.ExitCode != 0)
-			throw new InvalidOperationException(
-				$"dotnet {arguments.Split(' ')[0]} failed (exit code {process.ExitCode}).\n" +
-				$"stdout:\n{stdout}\nstderr:\n{stderr}");
-	}
+	private Task RunDotnetAsync(string arguments, CancellationToken ct) =>
+		NuGetPackageFixture.RunDotnetWithLoggingAsync(arguments, WriteFixtureLog, ct);
 
 	private static string FindSolutionRoot()
 	{

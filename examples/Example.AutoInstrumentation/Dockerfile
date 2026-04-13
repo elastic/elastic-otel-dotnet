@@ -1,8 +1,8 @@
 ARG OTEL_VERSION=1.13.0
-FROM mcr.microsoft.com/dotnet/runtime:10.0 AS base
 ARG TARGETPLATFORM
 ARG TARGETARCH
 ARG TARGETVARIANT
+FROM mcr.microsoft.com/dotnet/runtime:10.0 AS base
 RUN apt-get update && apt-get install -y unzip curl strace
 # Would love to run as non root but TestContainers does not utilize buildkit like `docker build` does OOTB
 #USER $APP_UID

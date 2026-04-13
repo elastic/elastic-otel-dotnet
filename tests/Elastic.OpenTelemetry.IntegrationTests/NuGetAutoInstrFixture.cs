@@ -6,6 +6,8 @@ using System.Diagnostics;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
 using Elastic.OpenTelemetry.IntegrationTests.Helpers;
+using Xunit.Abstractions;
+using Xunit.Sdk;
 
 namespace Elastic.OpenTelemetry.IntegrationTests;
 
@@ -21,14 +23,21 @@ namespace Elastic.OpenTelemetry.IntegrationTests;
 /// <para>The consumer apps reference the packed <c>.nupkg</c>, so the plugin DLL comes from
 /// NuGet (in the app's output directory), not from the zip's <c>net/</c> folder. The
 /// redistributable zip only provides the profiler infrastructure.</para>
-/// <para>Use <c>./build.sh integrate</c> to ensure both the redistributable and NuGet
-/// artifacts are fresh.</para>
+/// <para>Before running these tests, first run <c>./build.sh redistribute</c>
+/// to produce the profiler infrastructure zip. This fixture packs the NuGet
+/// artifacts it needs during initialization.</para>
 /// </remarks>
 public class NuGetAutoInstrFixture : IAsyncLifetime
 {
+	private static readonly TimeSpan SharedSetupTimeout = TimeSpan.FromMinutes(8);
+	private static readonly TimeSpan AotSetupTimeout = TimeSpan.FromMinutes(10);
+
 	private readonly LocalNuGetFeed _feed = new();
 	private readonly List<string> _tempDirectories = [];
+	private readonly IMessageSink _diagnosticMessageSink;
 	private string? _extractionDirectory;
+
+	public NuGetAutoInstrFixture(IMessageSink diagnosticMessageSink) => _diagnosticMessageSink = diagnosticMessageSink;
 
 	/// <summary>Path to the extracted redistributable (profiler infrastructure).</summary>
 	public string InstallationDirectory { get; private set; } = string.Empty;
@@ -56,24 +65,29 @@ public class NuGetAutoInstrFixture : IAsyncLifetime
 
 	public async Task InitializeAsync()
 	{
-		using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
-		var ct = cts.Token;
+		// Shared setup budget covers: extract zip + pack + restore + publish (normal app).
+		// AOT setup runs under its own timeout so it cannot inherit an already-expired token.
+		using var sharedSetupCts = new CancellationTokenSource(SharedSetupTimeout);
+		var ct = sharedSetupCts.Token;
 		var solutionRoot = FindSolutionRoot();
 		string? configFilePath = null;
 
 		try
 		{
+			const string redistributeHelp = "Run './build.sh redistribute' to build the redistributable zips first.";
 			// 1. Find and extract the redistributable zip (for profiler infrastructure)
 			var zipPath = FindDistributionZip(solutionRoot)
 				?? throw new FileNotFoundException(
 					"Redistributable zip not found. " +
-					"Run './build.sh integrate' or './build.sh redistribute -c'.\n" +
+					redistributeHelp + " " +
+					"Then rerun the integration tests.\n" +
 					$"Expected: elastic-dotnet-instrumentation-{GetPlatformZipSuffix()}.zip " +
 					$"under {Path.Combine(solutionRoot, ".artifacts", "elastic-distribution")}");
 
 			_extractionDirectory = Path.Combine(
 				Path.GetTempPath(), $"edot-nuget-autoinstr-redist-{Guid.NewGuid():N}");
 			_tempDirectories.Add(_extractionDirectory);
+			WriteFixtureLog($"Extracting redistributable zip '{zipPath}' to '{_extractionDirectory}'.");
 			ZipFile.ExtractToDirectory(zipPath, _extractionDirectory);
 			InstallationDirectory = _extractionDirectory;
 
@@ -81,7 +95,9 @@ public class NuGetAutoInstrFixture : IAsyncLifetime
 			var autoInstrProjectPath = Path.Combine(solutionRoot,
 				"src", "Elastic.OpenTelemetry.AutoInstrumentation",
 				"Elastic.OpenTelemetry.AutoInstrumentation.csproj");
-			await _feed.PackProjectAsync(autoInstrProjectPath, ct).ConfigureAwait(false);
+			WriteFixtureLog($"Packing NuGet package from '{autoInstrProjectPath}'.");
+			await _feed.PackProjectAsync(autoInstrProjectPath, ct, _diagnosticMessageSink).ConfigureAwait(false);
+			WriteFixtureLog("Pack step completed.");
 
 			PackageVersion = _feed.GetPackageVersion("Elastic.OpenTelemetry.AutoInstrumentation")
 				?? throw new InvalidOperationException(
@@ -103,6 +119,7 @@ public class NuGetAutoInstrFixture : IAsyncLifetime
 		catch (Exception ex)
 		{
 			InitializationError = ex.ToString();
+			WriteFixtureLog($"Initialization failed: {InitializationError}");
 		}
 
 		// 5. Publish AOT consumer app (separate try/catch — independent of profiler tests)
@@ -114,13 +131,14 @@ public class NuGetAutoInstrFixture : IAsyncLifetime
 
 		try
 		{
+			using var aotSetupCts = new CancellationTokenSource(AotSetupTimeout);
 			var aotProjectPath = Path.Combine(solutionRoot,
 				"test-applications", "NuGetAutoInstr.Aot.Net10", "NuGetAutoInstr.Aot.Net10.csproj");
 
 			await RunDotnetAsync(
 				$"restore \"{aotProjectPath}\" " +
 				$"--configfile \"{configFilePath}\" " +
-				$"-p:ElasticOtelVersion={PackageVersion}", cts.Token).ConfigureAwait(false);
+				$"-p:ElasticOtelVersion={PackageVersion}", aotSetupCts.Token).ConfigureAwait(false);
 
 			var aotPublishDir = Path.Combine(Path.GetTempPath(),
 				$"edot-nuget-autoinstr-aot-{Guid.NewGuid():N}");
@@ -130,7 +148,7 @@ public class NuGetAutoInstrFixture : IAsyncLifetime
 			await RunDotnetAsync(
 				$"publish \"{aotProjectPath}\" --no-restore " +
 				$"-c Release -o \"{aotPublishDir}\" " +
-				$"-p:ElasticOtelVersion={PackageVersion}", cts.Token).ConfigureAwait(false);
+				$"-p:ElasticOtelVersion={PackageVersion}", aotSetupCts.Token).ConfigureAwait(false);
 
 			// AOT produces a native exe (no .dll)
 			var aotExeName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
@@ -148,6 +166,7 @@ public class NuGetAutoInstrFixture : IAsyncLifetime
 		catch (Exception ex)
 		{
 			AotInitializationError = ex.ToString();
+			WriteFixtureLog($"AOT initialization failed: {AotInitializationError}");
 		}
 	}
 
@@ -166,6 +185,13 @@ public class NuGetAutoInstrFixture : IAsyncLifetime
 		var publishDir = Path.Combine(Path.GetTempPath(),
 			$"edot-{projectName.ToLowerInvariant()}-{Guid.NewGuid():N}");
 		_tempDirectories.Add(publishDir);
+
+		WriteFixtureLog($"Publishing {projectName}");
+		WriteFixtureLog($"consumerProjectPath: {projectPath}");
+		WriteFixtureLog($"configFilePath: {configFilePath}");
+		WriteFixtureLog($"PackageVersion: {PackageVersion}");
+		WriteFixtureLog($"Working directory: {Environment.CurrentDirectory}");
+		WriteFixtureLog($"NUGET_PACKAGES: {Environment.GetEnvironmentVariable("NUGET_PACKAGES") ?? "<null>"}");
 
 		await RunDotnetAsync(
 			$"publish \"{projectPath}\" --no-restore " +
@@ -225,32 +251,12 @@ public class NuGetAutoInstrFixture : IAsyncLifetime
 		return $"linux-glibc-{arch}";
 	}
 
-	private static async Task RunDotnetAsync(string arguments, CancellationToken ct)
-	{
-		var psi = new ProcessStartInfo
-		{
-			FileName = "dotnet",
-			Arguments = arguments,
-			RedirectStandardOutput = true,
-			RedirectStandardError = true,
-			UseShellExecute = false,
-			CreateNoWindow = true,
-		};
+	private void WriteFixtureLog(string message) =>
+		_diagnosticMessageSink.OnMessage(
+			new DiagnosticMessage($"[{DateTimeOffset.UtcNow:O}] [NuGetAutoInstrFixture] {message}"));
 
-		using var process = Process.Start(psi)
-			?? throw new InvalidOperationException($"Failed to start: dotnet {arguments}");
-
-		var stdoutTask = process.StandardOutput.ReadToEndAsync(ct).ConfigureAwait(false);
-		var stderrTask = process.StandardError.ReadToEndAsync(ct).ConfigureAwait(false);
-		await process.WaitForExitAsync(ct).ConfigureAwait(false);
-		var stdout = await stdoutTask;
-		var stderr = await stderrTask;
-
-		if (process.ExitCode != 0)
-			throw new InvalidOperationException(
-				$"dotnet {arguments.Split(' ')[0]} failed (exit code {process.ExitCode}).\n" +
-				$"stdout:\n{stdout}\nstderr:\n{stderr}");
-	}
+	private Task RunDotnetAsync(string arguments, CancellationToken ct) =>
+		NuGetPackageFixture.RunDotnetWithLoggingAsync(arguments, WriteFixtureLog, ct);
 
 	private static string FindSolutionRoot()
 	{

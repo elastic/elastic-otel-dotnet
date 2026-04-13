@@ -4,15 +4,7 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - '*.md'
-      - '*.asciidoc'
-      - 'docs/**'
   pull_request:
-    paths-ignore:
-      - '*.md'
-      - '*.asciidoc'
-      - 'docs/**'
 
 permissions:
   contents: read
@@ -24,14 +16,34 @@ concurrency:
 env:
   NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
 
-# NOTE: if you add a new job and it's a mandatory check then
-#       update ci-docs.yml
 jobs:
-  test-windows:
-    name: Windows Tests
-    runs-on: windows-latest
+  check-paths:
+    name: Detect Changed Paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
     steps:
-      - uses: actions/checkout@v6
+      # Required for push events; pull_request events use the GitHub API directly
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        if: github.event_name == 'push'
+      - uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
+        id: filter
+        with:
+          filters: |
+            code:
+              - '!(docs/**)'
+
+  unit-tests-windows:
+    name: Windows Tests
+    needs: [check-paths]
+    if: needs.check-paths.outputs.code == 'true'
+    runs-on:
+      group: elastic-otel-dotnet
+      labels: elastic-otel-dotnet-windows2025-16
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Bootstrap Action Workspace
         id: bootstrap
@@ -41,29 +53,104 @@ jobs:
         run: build.bat test --test-suite=unit
         shell: cmd
 
-  test-linux:
+  unit-tests-linux:
     name: Linux Tests
-    runs-on: ubuntu-latest
+    needs: [check-paths]
+    if: needs.check-paths.outputs.code == 'true'
+    runs-on:
+      group: elastic-otel-dotnet
+      labels: elastic-otel-dotnet-ubuntu24-16
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Bootstrap Action Workspace
         id: bootstrap
         uses: ./.github/workflows/bootstrap
         
       - name: Unit Tests
-        run: ./build.sh test --test-suite=unit # For now, we limit to unit tests only, until we have a better way to run integration tests only for autoinstrumentation builds
+        run: ./build.sh test --test-suite=unit
 
-  # We still run the full release build on pull-requests this ensures packages are validated ahead of time
-  release-build:
-    name: Release Build
-    runs-on: ubuntu-latest
+  integration-tests-windows:
+    name: Windows Integration Tests
+    needs: [check-paths]
+    if: needs.check-paths.outputs.code == 'true'
+    runs-on:
+      group: elastic-otel-dotnet
+      labels: elastic-otel-dotnet-windows2025-16
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Bootstrap Action Workspace
         id: bootstrap
         uses: ./.github/workflows/bootstrap
 
-      - name: Release
-        run: ./build.sh release -c
+      - name: Build Redistributable Artifacts
+        run: build.bat redistribute
+        shell: cmd
+
+      - name: Integration Tests
+        run: build.bat test --test-suite=integration --skip-build --skip-restore
+        shell: cmd
+
+  integration-tests-linux:
+    name: Linux Integration Tests
+    needs: [check-paths]
+    if: needs.check-paths.outputs.code == 'true'
+    runs-on:
+      group: elastic-otel-dotnet
+      labels: elastic-otel-dotnet-ubuntu24-16
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Bootstrap Action Workspace
+        id: bootstrap
+        uses: ./.github/workflows/bootstrap
+
+      - name: Build Redistributable Artifacts
+        run: ./build.sh redistribute
+
+      - name: Integration Tests
+        run: ./build.sh test --test-suite=integration --skip-build --skip-restore
+
+  aot-tests-windows:
+    name: AOT Compatibility Tests
+    needs: [check-paths]
+    if: needs.check-paths.outputs.code == 'true'
+    runs-on:
+      group: elastic-otel-dotnet
+      labels: elastic-otel-dotnet-windows2025-16
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Bootstrap Action Workspace
+        id: bootstrap
+        uses: ./.github/workflows/bootstrap
+
+      - name: AOT Compatibility Tests
+        run: build.bat test --test-suite=aot_compatibility
+        shell: cmd
+
+  build-verification-linux:
+    name: Build Verification Tests
+    needs: [check-paths]
+    if: needs.check-paths.outputs.code == 'true'
+    runs-on:
+      group: elastic-otel-dotnet
+      labels: elastic-otel-dotnet-ubuntu24-16
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Bootstrap Action Workspace
+        id: bootstrap
+        uses: ./.github/workflows/bootstrap
+
+      - name: Build Redistributable Artifacts
+        run: ./build.sh redistribute
+
+      - name: Build Verification Tests
+        run: ./build.sh test --test-suite=build_verification --skip-build --skip-restore

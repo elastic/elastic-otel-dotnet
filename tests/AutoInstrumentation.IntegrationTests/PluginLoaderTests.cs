@@ -23,7 +23,7 @@ public class PluginLoaderTests : IAsyncLifetime
 
 	public PluginLoaderTests()
 	{
-		ConsoleLogger.Instance.DebugLogLevelEnabled = true;
+		ConsoleLogger.Instance.DebugLogLevelEnabled = false;
 		var directory = CommonDirectoryPath.GetSolutionDirectory();
 		_image = new ImageFromDockerfileBuilder()
 			.WithDockerfileDirectory(directory, string.Empty)
@@ -55,7 +55,7 @@ public class PluginLoaderTests : IAsyncLifetime
 
 	public async Task DisposeAsync() => await _container.StopAsync().ConfigureAwait(false);
 
-	[NotWindowsCiFact]
+	[LinuxOnlyFact]
 	public async Task ObserveDistributionPluginLoad()
 	{
 		await Task.Delay(TimeSpan.FromSeconds(3));
@@ -70,11 +70,11 @@ public class PluginLoaderTests : IAsyncLifetime
 	}
 }
 
-public class NotWindowsCiFact : FactAttribute
+public class LinuxOnlyFact : FactAttribute
 {
-	public NotWindowsCiFact()
+	public LinuxOnlyFact()
 	{
-		if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI")))
-			Skip = "We can not run this test in a virtualized windows environment";
+		if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+			Skip = "Docker Linux image tests cannot run on Windows";
 	}
 }

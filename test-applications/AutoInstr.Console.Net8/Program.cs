@@ -7,5 +7,5 @@
 // (CORECLR_ENABLE_PROFILING, CORECLR_PROFILER, etc.).
 
 Console.WriteLine("APP_STARTED");
-await Task.Delay(5000).ConfigureAwait(false);
+await Task.Delay(30_000).ConfigureAwait(false);
 Console.WriteLine("APP_COMPLETE");

@@ -42,6 +42,60 @@ let private checkFormat _ =
     | 0 -> printfn "There are no dotnet formatting violations, continuing the build."
     | _ -> failwithf "There are dotnet formatting violations. Call `dotnet format` to fix or specify -c to ./build.sh to skip this check"
 
+type private TestProject =
+    {
+        Path: string
+        TfmArgs: string list
+    }
+
+let private unitTestProject =
+    {
+        Path = "tests/Elastic.OpenTelemetry.Tests/Elastic.OpenTelemetry.Tests.csproj"
+        TfmArgs = if OS.Current = Windows then [] else ["-f"; "net10.0"]
+    }
+
+let private buildVerificationTestProject =
+    {
+        Path = "tests/Elastic.OpenTelemetry.BuildVerification.Tests/Elastic.OpenTelemetry.BuildVerification.Tests.csproj"
+        TfmArgs = []
+    }
+
+let private aotCompatibilityTestProject =
+    {
+        Path = "tests/Elastic.OpenTelemetry.AotCompatibility.Tests/Elastic.OpenTelemetry.AotCompatibility.Tests.csproj"
+        TfmArgs = []
+    }
+
+let private autoInstrumentationIntegrationTestProject =
+    {
+        Path = "tests/AutoInstrumentation.IntegrationTests/AutoInstrumentation.IntegrationTests.csproj"
+        TfmArgs = []
+    }
+
+let private openTelemetryIntegrationTestProject =
+    {
+        Path = "tests/Elastic.OpenTelemetry.IntegrationTests/Elastic.OpenTelemetry.IntegrationTests.csproj"
+        TfmArgs = []
+    }
+
+let private getTestProjects suite =
+    match suite with
+    | All ->
+        [ unitTestProject
+          buildVerificationTestProject
+          aotCompatibilityTestProject
+          autoInstrumentationIntegrationTestProject
+          openTelemetryIntegrationTestProject ]
+    | Unit -> [unitTestProject]
+    | Integration ->
+        [ autoInstrumentationIntegrationTestProject
+          openTelemetryIntegrationTestProject ]
+    | AutoInstrumentation_Integration -> [autoInstrumentationIntegrationTestProject]
+    | OpenTelemetry_Integration -> [openTelemetryIntegrationTestProject]
+    | Build_Verification -> [buildVerificationTestProject]
+    | Aot_Compatibility -> [aotCompatibilityTestProject]
+    | Skip_All -> []
+
 let private pristineCheck (arguments:ParseResults<Build>) =
     let skipCheck = arguments.TryGetResult Skip_Dirty_Check |> Option.isSome
     match skipCheck, Information.isCleanWorkingCopy "." with
@@ -54,39 +108,51 @@ let private pristineCheck (arguments:ParseResults<Build>) =
     | _, 0  -> printfn "There are no dotnet formatting violations, continuing the build."
     | _ -> failwithf "There are dotnet formatting violations. Call `dotnet format` to fix or specify -c to ./build.sh to skip this check"
 
-let private runTests suite _ =
-    let logger =
+let private runTests (suite: TestSuite) (arguments:ParseResults<Build>) =
+    let skipRestore = arguments.TryGetResult Skip_Restore |> Option.isSome
+    let skipBuild = arguments.TryGetResult Skip_Build |> Option.isSome
+    let loggerArgs =
         match BuildServer.isGitHubActionsBuild with
-        | true -> "--logger:\"GitHubActions;summary.includePassedTests=false;summary.includeNotFoundTests=false\""
-        | false -> ""
+        | true ->
+            [ "--logger"; "GitHubActions;summary.includePassedTests=false;summary.includeNotFoundTests=false"
+              "--logger"; "console;verbosity=detailed" ]
+        | false -> []
 
-    let filterArgs =
-        match suite with
-        | All -> []
-        | Skip_All -> ["--filter"; "FullyQualifiedName~.SKIPPING.ALL.TESTS"]
-        | Unit ->  [ "--filter"; "FullyQualifiedName~.Tests&FullyQualifiedName!~.BuildVerification.Tests" ]
-        | Integration -> [ "--filter"; "FullyQualifiedName~.IntegrationTests" ]
-        | Build_Verification -> []
+    let runDotnetTest (project: TestProject) =
+        let restoreArgs = if skipRestore then ["--no-restore"] else []
+        let noBuildArgs = if skipBuild then ["--no-build"] else []
 
-    // Build verification targets its own project; all other suites run against the whole solution
-    let projectArgs =
-        match suite with
-        | Build_Verification -> ["tests/Elastic.OpenTelemetry.BuildVerification.Tests/Elastic.OpenTelemetry.BuildVerification.Tests.csproj"]
-        | _ -> []
+        exec {
+            env (Map ["TEST_SUITE", suite.SuitName])
+            run "dotnet" (
+                ["test"; "-c"; "release"]
+                @ noBuildArgs
+                @ restoreArgs
+                @ loggerArgs
+                @ [project.Path]
+                @ project.TfmArgs
+                @ ["--"; "RunConfiguration.CollectSourceInformation=true"]
+            )
+        }
 
-    let tfmArgs =
-      if OS.Current = Windows then []
-      else ["-f"; "net10.0"]
-    exec {
-        env (Map ["TEST_SUITE", suite.SuitName])
-        run "dotnet" (
-            ["test"; "-c"; "release"; "--no-restore"; "--no-build"; logger]
-            @ projectArgs
-            @ filterArgs
-            @ tfmArgs
-            @ ["--"; "RunConfiguration.CollectSourceInformation=true"]
-        )
-    }
+    let runTestProject project =
+        try
+            runDotnetTest project
+            None
+        with ex ->
+            printfn $"Test project failed: %s{project.Path}"
+            Some (project.Path, ex.Message)
+
+    let failures =
+        getTestProjects suite
+        |> List.choose runTestProject
+
+    if failures |> List.isEmpty |> not then
+        let details =
+            failures
+            |> List.map (fun (projectPath, message) -> $"- %s{projectPath}: %s{message}")
+            |> String.concat "\n"
+        failwithf "One or more test projects failed:\n%s" details
 
 let private test (arguments:ParseResults<Build>) =
     let arg = arguments.TryGetResult Test_Suite
@@ -105,20 +171,26 @@ let private validateLicenses _ =
     exec { run "dotnet" (["nuget-license"] @ args) }
 
 let private validatePackages _ =
-    let packagesPath = Paths.ArtifactPath "package"
-    let output = Paths.RelativePathToRoot <| packagesPath.FullName
-    let nugetPackages =
-        packagesPath.GetFiles("*.nupkg", SearchOption.AllDirectories)
-        |> Seq.sortByDescending(fun f -> f.CreationTimeUtc)
-        |> Seq.map (fun p -> Paths.RelativePathToRoot p.FullName)
-        
-    let args = ["-v"; Software.Version.AsString; "-k"; Software.SignKey; "-t"; output]
-    nugetPackages
-    |> Seq.iter (fun p ->
-        exec { run "dotnet" (["nupkg-validator"; p] @ args) } 
-    )
+    if OS.Current = Windows then
+        printfn "Skipping package validation on Windows"
+    else
+        let packagesPath = Paths.ArtifactPath "package"
+        let output = Paths.RelativePathToRoot <| packagesPath.FullName
+        let nugetPackages =
+            packagesPath.GetFiles("*.nupkg", SearchOption.AllDirectories)
+            |> Seq.sortByDescending(fun f -> f.CreationTimeUtc)
+            |> Seq.map (fun p -> Paths.RelativePathToRoot p.FullName)
+
+        let args = ["-v"; Software.Version.AsString; "-k"; Software.SignKey; "-t"; output]
+        nugetPackages
+        |> Seq.iter (fun p ->
+            exec { run "dotnet" (["nupkg-validator"; p] @ args) }
+        )
     
 let Setup (parsed:ParseResults<Build>) =
+    let skipBuild = parsed.TryGetResult Skip_Build |> Option.isSome
+    let testComposedOf = if skipBuild then [] else [Build]
+
     let wireCommandLine (t: Build) =
         match t with
         // commands
@@ -127,10 +199,13 @@ let Setup (parsed:ParseResults<Build>) =
         | Compile -> Build.Step compile
         | Build -> Build.Cmd [Clean; CheckFormat; Compile] [] build
         
-        | Integrate -> Build.Cmd [Redistribute] [Build] <| runTests Integration
-        | Unit_Test -> Build.Cmd [] [Build] <| runTests Unit
-        | Build_Verify -> Build.Cmd [] [Build] <| runTests Build_Verification
-        | Test -> Build.Cmd [] [Build] test
+        | Integrate -> Build.Cmd [] testComposedOf <| runTests Integration
+        | Integrate_AutoInstrumentation -> Build.Cmd [] testComposedOf <| runTests AutoInstrumentation_Integration
+        | Integrate_OpenTelemetry -> Build.Cmd [] testComposedOf <| runTests OpenTelemetry_Integration
+        | Unit_Test -> Build.Cmd [] testComposedOf <| runTests Unit
+        | Build_Verify -> Build.Cmd [] testComposedOf <| runTests Build_Verification
+        | Aot_Compat -> Build.Cmd [] testComposedOf <| runTests Aot_Compatibility
+        | Test -> Build.Cmd [] testComposedOf test
         
         | Redistribute -> Build.Cmd [Compile] [] Packaging.redistribute
         
@@ -153,7 +228,9 @@ let Setup (parsed:ParseResults<Build>) =
         | Single_Target
         | Test_Suite _
         | Token _
-        | Skip_Dirty_Check -> Build.Ignore
+        | Skip_Dirty_Check
+        | Skip_Build
+        | Skip_Restore -> Build.Ignore
 
     for target in Build.Targets do
         let setup = wireCommandLine target 

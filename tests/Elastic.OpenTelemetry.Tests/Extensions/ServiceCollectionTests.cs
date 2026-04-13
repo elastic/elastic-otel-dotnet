@@ -10,6 +10,7 @@ using Xunit.Abstractions;
 
 namespace Elastic.OpenTelemetry.Tests.Extensions;
 
+[Collection("CompositeLoggerSingleton")]
 public class ServiceCollectionTests(ITestOutputHelper output)
 {
 	private readonly ITestOutputHelper _output = output;

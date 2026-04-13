@@ -56,7 +56,7 @@ public class NuGetNet462DistributionTests
 		await using var runner = new TestAppRunner(_fixture.Net462AppPath, envVars);
 		await runner.RunToCompletionAsync();
 
-		Assert.Equal(0, runner.ExitCode);
+		runner.AssertExitCodeZero();
 		Assert.Contains("APP_COMPLETE", runner.StandardOutput);
 		Assert.NotNull(runner.EdotLogFilePath);
 
@@ -87,7 +87,7 @@ public class NuGetNet462DistributionTests
 		await using var runner = new TestAppRunner(_fixture.Net462AppPath, envVars);
 		await runner.RunToCompletionAsync();
 
-		Assert.Equal(0, runner.ExitCode);
+		runner.AssertExitCodeZero();
 		Assert.NotNull(runner.EdotLogFilePath);
 
 		var analyzer = new EdotLogAnalyzer(runner.EdotLogFilePath);
@@ -111,7 +111,7 @@ public class NuGetNet462DistributionTests
 		await using var runner = new TestAppRunner(_fixture.Net462AppPath, envVars);
 		await runner.RunToCompletionAsync();
 
-		Assert.Equal(0, runner.ExitCode);
+		runner.AssertExitCodeZero();
 		Assert.Contains("APP_COMPLETE", runner.StandardOutput);
 		Assert.NotNull(runner.EdotLogFilePath);
 
