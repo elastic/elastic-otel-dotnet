@@ -38,7 +38,6 @@ now safe to use via EDOT collector and managed OTLP endpoints.
 ### Features and enhancements [edot-dotnet-1.4.0-features-enhancements]
 
 - Add Central Configuration (via OpAMP) Support. [#392](https://github.com/elastic/elastic-otel-dotnet/pull/392)
-- Add Central Configuration (via OpAMP) Support. [#392](https://github.com/elastic/elastic-otel-dotnet/pull/392)
 - Reenable include scopes by default. [#399](https://github.com/elastic/elastic-otel-dotnet/pull/399)
 
 ## 1.3.0 [edot-dotnet-1.3.0-release-notes]
