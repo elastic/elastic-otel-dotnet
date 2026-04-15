@@ -27,10 +27,24 @@ To check for security updates, go to [Security announcements for the Elastic sta
 % ### Fixes [edot-dotnet-X.X.X-fixes]
 % *
 
+## 1.4.0 [edot-dotnet-1.4.0-release-notes]
+
+:::{important}
+This release includes a behaviour change by re-enabling `IncludeScopes` for logging.
+This ensures richer attributes on logs, but may increase storage costs. This is
+now safe to use via EDOT collector and managed OTLP endpoints.
+:::
+
+### Features and enhancements [edot-dotnet-1.4.0-features-enhancements]
+
+- Add Central Configuration (via OpAMP) Support. [#392](https://github.com/elastic/elastic-otel-dotnet/pull/392)
+- Add Central Configuration (via OpAMP) Support. [#392](https://github.com/elastic/elastic-otel-dotnet/pull/392)
+- Reenable include scopes by default. [#399](https://github.com/elastic/elastic-otel-dotnet/pull/399)
+
 ## 1.3.0 [edot-dotnet-1.3.0-release-notes]
 
 :::{note}
-This release includes preparatory work for OpAMP configuration and central configuration. These options do not currently have any impact and should not be used.
+This release includes preparatory work for OpAMP configuration and central configuration.These options do not currently have any impact and should not be used.
 :::
 
 ### Features and enhancements [edot-dotnet-1.3.0-features-enhancements]
