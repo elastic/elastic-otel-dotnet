@@ -89,6 +89,7 @@ public class NuGetPackageFixture : IAsyncLifetime
 					"Failed to determine package version after packing. " +
 					$"Feed directory: {_feed.FeedPath}");
 			WriteFixtureLog($"[Stage 1/4] Pack completed. PackageVersion='{PackageVersion}'. FeedPath='{_feed.FeedPath}'.");
+			InvalidateGlobalCacheEntry("Elastic.OpenTelemetry", PackageVersion, WriteFixtureLog);
 
 			// 2. Write a temp nuget.config for the consumer apps' restore
 			_nugetConfigDirectory = Path.Combine(Path.GetTempPath(), $"edot-nuget-config-{Guid.NewGuid():N}");
@@ -220,6 +221,32 @@ public class NuGetPackageFixture : IAsyncLifetime
 			$"\"-p:BaseOutputPath={binPath}\"",
 			$"\"-p:BaseIntermediateOutputPath={objPath}\"",
 			scratchDir);
+	}
+
+	/// <summary>
+	/// Deletes the global NuGet package cache entry for a freshly packed package so that
+	/// the restore step uses the new nupkg from the local feed rather than a cached copy
+	/// with potentially stale dependencies. Canary versions reuse the same version string
+	/// across runs (MinVer produces the same version while the git state is unchanged),
+	/// so NuGet would otherwise trust the cached nuspec and resolve old transitive versions.
+	/// </summary>
+	internal static void InvalidateGlobalCacheEntry(string packageId, string version, Action<string> log)
+	{
+		var globalPackagesPath =
+			Environment.GetEnvironmentVariable("NUGET_PACKAGES")
+			?? Path.Combine(
+				Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+				".nuget", "packages");
+
+		var cacheDir = Path.Combine(globalPackagesPath, packageId.ToLowerInvariant(), version.ToLowerInvariant());
+		if (!Directory.Exists(cacheDir))
+			return;
+
+		log($"Deleting stale global NuGet cache entry '{cacheDir}' so the freshly packed nupkg is used.");
+		try
+		{ Directory.Delete(cacheDir, recursive: true); }
+		catch (Exception ex)
+		{ log($"Warning: could not delete stale cache dir '{cacheDir}': {ex.Message}"); }
 	}
 
 	/// <summary>

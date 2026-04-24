@@ -50,7 +50,9 @@
     <Project Path="tests/Elastic.OpenTelemetry.Tests/Elastic.OpenTelemetry.Tests.csproj" />
   </Folder>
   <Folder Name="/tests/applications/">
+    <Project Path="test-applications/AutoInstr.Console.Net10/AutoInstr.Console.Net10.csproj" />
     <Project Path="test-applications/AutoInstr.Console.Net8/AutoInstr.Console.Net8.csproj" />
+    <Project Path="test-applications/AutoInstr.Console.Net9/AutoInstr.Console.Net9.csproj" />
     <Project Path="test-applications/NuGetAutoInstr.Aot.Net10/NuGetAutoInstr.Aot.Net10.csproj" />
     <Project Path="test-applications/NuGetAutoInstr.Net10/NuGetAutoInstr.Net10.csproj" />
     <Project Path="test-applications/NuGetConsumer.Net462/NuGetConsumer.Net462.csproj" />

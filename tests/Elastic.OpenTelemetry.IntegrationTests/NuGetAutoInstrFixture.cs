@@ -102,6 +102,8 @@ public class NuGetAutoInstrFixture : IAsyncLifetime
 				?? throw new InvalidOperationException(
 					"Failed to determine package version after packing. " +
 					$"Feed directory: {_feed.FeedPath}");
+			NuGetPackageFixture.InvalidateGlobalCacheEntry(
+				"Elastic.OpenTelemetry.AutoInstrumentation", PackageVersion, WriteFixtureLog);
 
 			// 3. Write nuget.config for the consumer apps
 			var nugetConfigDir = Path.Combine(Path.GetTempPath(), $"edot-nuget-autoinstr-config-{Guid.NewGuid():N}");

@@ -23,9 +23,24 @@ namespace Elastic.OpenTelemetry.IntegrationTests;
 /// </remarks>
 public class RedistributableFixture : IAsyncLifetime
 {
+	private static readonly (string Tfm, string ProjectName)[] TestApps = GetTestApps();
+
+	private static (string Tfm, string ProjectName)[] GetTestApps()
+	{
+		var apps = new List<(string Tfm, string ProjectName)>
+		{
+			("net8.0",  "AutoInstr.Console.Net8"),
+			("net9.0",  "AutoInstr.Console.Net9"),
+			("net10.0", "AutoInstr.Console.Net10"),
+		};
+		if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+			apps.Add(("net462", "AutoInstr.Console.Net462"));
+		return [.. apps];
+	}
+
 	private readonly IMessageSink _diagnosticMessageSink;
+	private readonly List<string> _publishDirectories = [];
 	private string? _extractionDirectory;
-	private string? _publishDirectory;
 
 	public RedistributableFixture(IMessageSink diagnosticMessageSink) => _diagnosticMessageSink = diagnosticMessageSink;
 
@@ -35,10 +50,17 @@ public class RedistributableFixture : IAsyncLifetime
 	/// </summary>
 	public string InstallationDirectory { get; private set; } = string.Empty;
 
-	/// <summary>
-	/// Path to the published AutoInstr.Console.Net8.dll, ready to run under the profiler.
-	/// </summary>
+	/// <summary>Path to the published AutoInstr.Console.Net8.dll, ready to run under the profiler.</summary>
 	public string Net8AppPath { get; private set; } = string.Empty;
+
+	/// <summary>Path to the published AutoInstr.Console.Net9.dll, ready to run under the profiler.</summary>
+	public string Net9AppPath { get; private set; } = string.Empty;
+
+	/// <summary>Path to the published AutoInstr.Console.Net10.dll, ready to run under the profiler.</summary>
+	public string Net10AppPath { get; private set; } = string.Empty;
+
+	/// <summary>Path to the published AutoInstr.Console.Net462.exe, ready to run under the .NET Framework profiler. Windows only.</summary>
+	public string Net462AppPath { get; private set; } = string.Empty;
 
 	/// <summary>Whether the fixture initialized successfully.</summary>
 	public bool IsReady { get; private set; }
@@ -71,21 +93,32 @@ public class RedistributableFixture : IAsyncLifetime
 			ZipFile.ExtractToDirectory(zipPath, _extractionDirectory);
 			InstallationDirectory = _extractionDirectory;
 
-			// 3. Build + publish the auto-instrumentation test app
-			var appProjectPath = Path.Combine(solutionRoot,
-				"test-applications", "AutoInstr.Console.Net8", "AutoInstr.Console.Net8.csproj");
-			_publishDirectory = Path.Combine(
-				Path.GetTempPath(), $"edot-autoinstr-net8-{Guid.NewGuid():N}");
-			var publishDir = _publishDirectory;
+			// 3. Build + publish one auto-instrumentation test app per supported TFM
+			foreach (var (tfm, projectName) in TestApps)
+			{
+				var appProjectPath = Path.Combine(solutionRoot,
+					"test-applications", projectName, $"{projectName}.csproj");
+				var publishDir = Path.Combine(
+					Path.GetTempPath(), $"edot-autoinstr-{tfm}-{Guid.NewGuid():N}");
+				_publishDirectories.Add(publishDir);
 
-			await RunDotnetAsync(
-				$"publish \"{appProjectPath}\" -c Release -o \"{publishDir}\"", ct).ConfigureAwait(false);
+				await RunDotnetAsync(
+					$"publish \"{appProjectPath}\" -c Release -o \"{publishDir}\"", ct).ConfigureAwait(false);
 
-			Net8AppPath = Path.Combine(publishDir, "AutoInstr.Console.Net8.dll");
+				var appExtension = tfm == "net462" ? ".exe" : ".dll";
+				var appPath = Path.Combine(publishDir, $"{projectName}{appExtension}");
+				if (!File.Exists(appPath))
+					throw new FileNotFoundException(
+						$"Published app not found at expected path: {appPath}");
 
-			if (!File.Exists(Net8AppPath))
-				throw new FileNotFoundException(
-					$"Published app not found at expected path: {Net8AppPath}");
+				switch (tfm)
+				{
+					case "net8.0":  Net8AppPath  = appPath; break;
+					case "net9.0":  Net9AppPath  = appPath; break;
+					case "net10.0": Net10AppPath = appPath; break;
+					case "net462":  Net462AppPath = appPath; break;
+				}
+			}
 
 			IsReady = true;
 		}
@@ -98,7 +131,8 @@ public class RedistributableFixture : IAsyncLifetime
 
 	public Task DisposeAsync()
 	{
-		string?[] dirs = [_extractionDirectory, _publishDirectory];
+		var dirs = new List<string?>(_publishDirectories.Count + 1) { _extractionDirectory };
+		dirs.AddRange(_publishDirectories);
 
 		foreach (var dir in dirs)
 		{
