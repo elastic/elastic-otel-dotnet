@@ -39,8 +39,7 @@ public class PluginLoaderTests : IAsyncLifetime
 			.Build();
 
 		_output = Consume.RedirectStdoutAndStderrToStream(new MemoryStream(), new MemoryStream());
-		_container = new ContainerBuilder()
-			.WithImage(_image)
+		_container = new ContainerBuilder(_image)
 			.WithPortBinding(5000, 8080)
 			.WithLogger(ConsoleLogger.Instance)
 			.WithOutputConsumer(_output)

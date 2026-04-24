@@ -45,8 +45,7 @@ public class OpAmpBootstrapDockerTests : IAsyncLifetime
 		await _image.CreateAsync();
 
 		_output = Consume.RedirectStdoutAndStderrToStream(new MemoryStream(), new MemoryStream());
-		_container = new ContainerBuilder()
-			.WithImage(_image)
+		_container = new ContainerBuilder(_image)
 			.WithLogger(ContainerLogger)
 			.WithOutputConsumer(_output)
 			.WithCreateParameterModifier(p =>
