@@ -113,10 +113,18 @@ public class RedistributableFixture : IAsyncLifetime
 
 				switch (tfm)
 				{
-					case "net8.0":  Net8AppPath  = appPath; break;
-					case "net9.0":  Net9AppPath  = appPath; break;
-					case "net10.0": Net10AppPath = appPath; break;
-					case "net462":  Net462AppPath = appPath; break;
+					case "net8.0":
+						Net8AppPath = appPath;
+						break;
+					case "net9.0":
+						Net9AppPath = appPath;
+						break;
+					case "net10.0":
+						Net10AppPath = appPath;
+						break;
+					case "net462":
+						Net462AppPath = appPath;
+						break;
 				}
 			}
 
