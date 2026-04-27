@@ -1,0 +1,5 @@
+{
+  "appHost": {
+    "path": "examples/AppHost/AppHost.csproj"
+  }
+}

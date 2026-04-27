@@ -35,7 +35,7 @@ public class NuGetPackageFixture : IAsyncLifetime
 
 	private readonly Stopwatch _sw = Stopwatch.StartNew();
 	private readonly LocalNuGetFeed _feed = new();
-	private readonly List<string> _publishDirectories = [];
+	private readonly List<string> _tempDirectories = [];
 	private readonly IMessageSink _diagnosticMessageSink;
 	private string? _nugetConfigDirectory;
 
@@ -89,9 +89,11 @@ public class NuGetPackageFixture : IAsyncLifetime
 					"Failed to determine package version after packing. " +
 					$"Feed directory: {_feed.FeedPath}");
 			WriteFixtureLog($"[Stage 1/4] Pack completed. PackageVersion='{PackageVersion}'. FeedPath='{_feed.FeedPath}'.");
+			InvalidateGlobalCacheEntry("Elastic.OpenTelemetry", PackageVersion, WriteFixtureLog);
 
 			// 2. Write a temp nuget.config for the consumer apps' restore
 			_nugetConfigDirectory = Path.Combine(Path.GetTempPath(), $"edot-nuget-config-{Guid.NewGuid():N}");
+			_tempDirectories.Add(_nugetConfigDirectory);
 			_feed.WriteNuGetConfig(_nugetConfigDirectory);
 			configFilePath = Path.Combine(_nugetConfigDirectory, "nuget.config");
 			WriteFixtureLog($"[Stage 2/4] nuget.config written to '{configFilePath}'.");
@@ -143,10 +145,6 @@ public class NuGetPackageFixture : IAsyncLifetime
 		}
 	}
 
-	private void WriteFixtureLog(string message) =>
-		_diagnosticMessageSink.OnMessage(
-			new DiagnosticMessage($"[{DateTimeOffset.UtcNow:O}] [+{_sw.Elapsed.TotalSeconds:F1}s] [NuGetPackageFixture] {message}"));
-
 	private async Task<string> PublishConsumerAppAsync(
 		string solutionRoot, string projectName, string outputFileName,
 		string configFilePath, CancellationToken ct)
@@ -154,20 +152,27 @@ public class NuGetPackageFixture : IAsyncLifetime
 		var consumerProjectPath = Path.Combine(solutionRoot,
 			"test-applications", projectName, $"{projectName}.csproj");
 
+		// Isolate obj/bin from .artifacts/ so a prior solution-wide build's project.assets.json
+		// can't cache-hit this restore and override the PackageReference path we're exercising.
+		// See CreateIsolatedBuildPaths for the detailed rationale.
+		var (baseOutputArg, baseIntermediateOutputArg, _) = CreateIsolatedBuildPaths(projectName, _tempDirectories);
+
 		WriteFixtureLog($"  Restoring '{projectName}' (elapsed {_sw.Elapsed.TotalSeconds:F1}s). ConfigFile='{configFilePath}'.");
 		await RunDotnetAsync(
 			$"restore \"{consumerProjectPath}\" " +
 			$"--configfile \"{configFilePath}\" " +
+			$"{baseOutputArg} {baseIntermediateOutputArg} " +
 			$"-p:ElasticOtelVersion={PackageVersion}", ct).ConfigureAwait(false);
 		WriteFixtureLog($"  Restore complete for '{projectName}' (elapsed {_sw.Elapsed.TotalSeconds:F1}s).");
 
 		var publishDir = Path.Combine(Path.GetTempPath(), $"edot-{projectName.ToLowerInvariant()}-{Guid.NewGuid():N}");
-		_publishDirectories.Add(publishDir);
+		_tempDirectories.Add(publishDir);
 
 		WriteFixtureLog($"  Publishing '{projectName}' to '{publishDir}' (elapsed {_sw.Elapsed.TotalSeconds:F1}s).");
 		await RunDotnetAsync(
 			$"publish \"{consumerProjectPath}\" --no-restore " +
 			$"-c Release -o \"{publishDir}\" " +
+			$"{baseOutputArg} {baseIntermediateOutputArg} " +
 			$"-p:ElasticOtelVersion={PackageVersion}", ct).ConfigureAwait(false);
 		WriteFixtureLog($"  Publish complete for '{projectName}' (elapsed {_sw.Elapsed.TotalSeconds:F1}s).");
 
@@ -178,6 +183,70 @@ public class NuGetPackageFixture : IAsyncLifetime
 				$"Published app not found at expected path: {appPath}");
 
 		return appPath;
+	}
+
+	private void WriteFixtureLog(string message) =>
+		_diagnosticMessageSink.OnMessage(
+			new DiagnosticMessage($"[{DateTimeOffset.UtcNow:O}] [+{_sw.Elapsed.TotalSeconds:F1}s] [NuGetPackageFixture] {message}"));
+
+	/// <summary>
+	/// Builds <c>-p:BaseOutputPath</c> / <c>-p:BaseIntermediateOutputPath</c> arguments pointing
+	/// at a fresh scratch directory so restore/publish doesn't read or write the shared
+	/// <c>.artifacts/</c> tree. Without this, a <c>project.assets.json</c> left behind by an
+	/// earlier build (for example a solution-wide <c>./build.sh build</c>, which compiles the
+	/// test-apps via ProjectReference) would be treated as cache-compatible by
+	/// <c>dotnet restore</c>, and the fixture's <c>-p:ElasticOtelVersion=...</c> PackageReference
+	/// path would silently be ignored — producing wrong transitive versions at publish time
+	/// (the concrete failure we hit was ilc picking up an older <c>Google.Protobuf</c> with
+	/// AOT analysis warnings, instead of the centrally-pinned version).
+	/// </summary>
+	/// <remarks>
+	/// Shared between <see cref="NuGetPackageFixture"/> and <see cref="NuGetAutoInstrFixture"/>;
+	/// the returned <paramref name="tempDirectoriesForCleanup"/> entry is tracked for later
+	/// best-effort cleanup in the caller's <c>DisposeAsync</c>.
+	/// </remarks>
+	internal static (string BaseOutputArg, string BaseIntermediateOutputArg, string ScratchDir) CreateIsolatedBuildPaths(
+		string projectName, List<string> tempDirectoriesForCleanup)
+	{
+		var scratchDir = Path.Combine(Path.GetTempPath(), $"edot-scratch-{projectName.ToLowerInvariant()}-{Guid.NewGuid():N}");
+		tempDirectoriesForCleanup.Add(scratchDir);
+
+		// Trailing separator is required by MSBuild for Base*Path properties. Use forward slashes
+		// on Windows to avoid the \"- escaping issue where a trailing backslash before a closing
+		// quote is interpreted as an escaped literal quote, merging adjacent arguments.
+		var binPath = Path.Combine(scratchDir, "bin").Replace('\\', '/') + "/";
+		var objPath = Path.Combine(scratchDir, "obj").Replace('\\', '/') + "/";
+
+		return (
+			$"\"-p:BaseOutputPath={binPath}\"",
+			$"\"-p:BaseIntermediateOutputPath={objPath}\"",
+			scratchDir);
+	}
+
+	/// <summary>
+	/// Deletes the global NuGet package cache entry for a freshly packed package so that
+	/// the restore step uses the new nupkg from the local feed rather than a cached copy
+	/// with potentially stale dependencies. Canary versions reuse the same version string
+	/// across runs (MinVer produces the same version while the git state is unchanged),
+	/// so NuGet would otherwise trust the cached nuspec and resolve old transitive versions.
+	/// </summary>
+	internal static void InvalidateGlobalCacheEntry(string packageId, string version, Action<string> log)
+	{
+		var globalPackagesPath =
+			Environment.GetEnvironmentVariable("NUGET_PACKAGES")
+			?? Path.Combine(
+				Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+				".nuget", "packages");
+
+		var cacheDir = Path.Combine(globalPackagesPath, packageId.ToLowerInvariant(), version.ToLowerInvariant());
+		if (!Directory.Exists(cacheDir))
+			return;
+
+		log($"Deleting stale global NuGet cache entry '{cacheDir}' so the freshly packed nupkg is used.");
+		try
+		{ Directory.Delete(cacheDir, recursive: true); }
+		catch (Exception ex)
+		{ log($"Warning: could not delete stale cache dir '{cacheDir}': {ex.Message}"); }
 	}
 
 	/// <summary>
@@ -294,7 +363,7 @@ public class NuGetPackageFixture : IAsyncLifetime
 	{
 		_feed.Dispose();
 
-		foreach (var dir in _publishDirectories)
+		foreach (var dir in _tempDirectories)
 		{
 			if (Directory.Exists(dir))
 			{
@@ -304,18 +373,6 @@ public class NuGetPackageFixture : IAsyncLifetime
 				{
 					// Best-effort cleanup
 				}
-			}
-		}
-
-		if (_nugetConfigDirectory is not null && Directory.Exists(_nugetConfigDirectory))
-		{
-			try
-			{
-				Directory.Delete(_nugetConfigDirectory, true);
-			}
-			catch
-			{
-				// Best-effort cleanup
 			}
 		}
 

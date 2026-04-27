@@ -2,7 +2,6 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
-using System.Diagnostics;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
 using Elastic.OpenTelemetry.IntegrationTests.Helpers;
@@ -103,6 +102,8 @@ public class NuGetAutoInstrFixture : IAsyncLifetime
 				?? throw new InvalidOperationException(
 					"Failed to determine package version after packing. " +
 					$"Feed directory: {_feed.FeedPath}");
+			NuGetPackageFixture.InvalidateGlobalCacheEntry(
+				"Elastic.OpenTelemetry.AutoInstrumentation", PackageVersion, WriteFixtureLog);
 
 			// 3. Write nuget.config for the consumer apps
 			var nugetConfigDir = Path.Combine(Path.GetTempPath(), $"edot-nuget-autoinstr-config-{Guid.NewGuid():N}");
@@ -135,9 +136,18 @@ public class NuGetAutoInstrFixture : IAsyncLifetime
 			var aotProjectPath = Path.Combine(solutionRoot,
 				"test-applications", "NuGetAutoInstr.Aot.Net10", "NuGetAutoInstr.Aot.Net10.csproj");
 
+			// AOT is the scenario that most visibly surfaced the stale-project.assets.json issue:
+			// ilc reads the full transitive graph at publish time, so a cache-hit restore that
+			// inherited ProjectReference-era deps from a prior solution build would feed ilc an
+			// older Google.Protobuf (with AOT analysis warnings) instead of the centrally-pinned
+			// version. Isolate obj/bin per consumer app to keep .artifacts/ out of the picture.
+			var (aotBaseOutputArg, aotBaseIntermediateOutputArg, _) =
+				NuGetPackageFixture.CreateIsolatedBuildPaths("NuGetAutoInstr.Aot.Net10", _tempDirectories);
+
 			await RunDotnetAsync(
 				$"restore \"{aotProjectPath}\" " +
 				$"--configfile \"{configFilePath}\" " +
+				$"{aotBaseOutputArg} {aotBaseIntermediateOutputArg} " +
 				$"-p:ElasticOtelVersion={PackageVersion}", aotSetupCts.Token).ConfigureAwait(false);
 
 			var aotPublishDir = Path.Combine(Path.GetTempPath(),
@@ -148,6 +158,7 @@ public class NuGetAutoInstrFixture : IAsyncLifetime
 			await RunDotnetAsync(
 				$"publish \"{aotProjectPath}\" --no-restore " +
 				$"-c Release -o \"{aotPublishDir}\" " +
+				$"{aotBaseOutputArg} {aotBaseIntermediateOutputArg} " +
 				$"-p:ElasticOtelVersion={PackageVersion}", aotSetupCts.Token).ConfigureAwait(false);
 
 			// AOT produces a native exe (no .dll)
@@ -177,9 +188,16 @@ public class NuGetAutoInstrFixture : IAsyncLifetime
 		var projectPath = Path.Combine(solutionRoot,
 			"test-applications", projectName, $"{projectName}.csproj");
 
+		// Isolate obj/bin from .artifacts/ so a prior solution-wide build's project.assets.json
+		// can't cache-hit this restore and override the PackageReference path we're exercising.
+		// See NuGetPackageFixture.CreateIsolatedBuildPaths for the detailed rationale.
+		var (baseOutputArg, baseIntermediateOutputArg, _) =
+			NuGetPackageFixture.CreateIsolatedBuildPaths(projectName, _tempDirectories);
+
 		await RunDotnetAsync(
 			$"restore \"{projectPath}\" " +
 			$"--configfile \"{configFilePath}\" " +
+			$"{baseOutputArg} {baseIntermediateOutputArg} " +
 			$"-p:ElasticOtelVersion={PackageVersion}", ct).ConfigureAwait(false);
 
 		var publishDir = Path.Combine(Path.GetTempPath(),
@@ -196,6 +214,7 @@ public class NuGetAutoInstrFixture : IAsyncLifetime
 		await RunDotnetAsync(
 			$"publish \"{projectPath}\" --no-restore " +
 			$"-c Release -o \"{publishDir}\" " +
+			$"{baseOutputArg} {baseIntermediateOutputArg} " +
 			$"-p:ElasticOtelVersion={PackageVersion}", ct).ConfigureAwait(false);
 
 		var appPath = Path.Combine(publishDir, outputFileName);
