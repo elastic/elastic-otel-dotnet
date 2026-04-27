@@ -191,6 +191,30 @@ Allows EDOT .NET to be used without the instrumentation assembly scanning featur
 | Environment variable | `ELASTIC_OTEL_SKIP_ASSEMBLY_SCANNING` |
 | `IConfiguration` integration | `Elastic:OpenTelemetry:SkipInstrumentationAssemblyScanning` |
 
+#### `OpAmpEndpoint`
+
+* Type: String
+* Default: `string.Empty`
+
+The OpAMP server endpoint used for [central configuration](#central-configuration). When set, EDOT .NET connects to the specified endpoint to receive remote configuration updates. Setting this option also requires a service name. EDOT .NET resolves the service name from `OTEL_SERVICE_NAME` first; if that is not set, it falls back to the `service.name` key within `OTEL_RESOURCE_ATTRIBUTES`. If neither is configured, central configuration is silently disabled.
+
+| Configuration method | Key |
+|---|---|
+| Environment variable | `ELASTIC_OTEL_OPAMP_ENDPOINT` |
+| `IConfiguration` integration | `Elastic:OpenTelemetry:OpAmpEndpoint` |
+
+#### `OpAmpHeaders`
+
+* Type: String
+* Default: `string.Empty`
+
+A comma-separated list of HTTP headers in `Key=Value` format to include in requests to the OpAMP server. Use this to pass authentication credentials required by the OpAMP server.
+
+| Configuration method | Key |
+|---|---|
+| Environment variable | `ELASTIC_OTEL_OPAMP_HEADERS` |
+| `IConfiguration` integration | `Elastic:OpenTelemetry:OpAmpHeaders` |
+
 ### TLS configuration for OTLP endpoint
 
 To secure the connection to the OTLP endpoint using TLS, you can configure the following environment variables as documented in the [OpenTelemetry OTLP Exporter specification](https://opentelemetry.io/docs/specs/otel/protocol/exporter/):
@@ -204,8 +228,101 @@ To secure the connection to the OTLP endpoint using TLS, you can configure the f
 Signal-specific variants are also supported: `OTEL_EXPORTER_OTLP_{TRACES,METRICS,LOGS}_CERTIFICATE`, `OTEL_EXPORTER_OTLP_{TRACES,METRICS,LOGS}_CLIENT_CERTIFICATE`, and `OTEL_EXPORTER_OTLP_{TRACES,METRICS,LOGS}_CLIENT_KEY`.
 
 :::{note}
-Central configuration via OpAMP is not yet supported in EDOT .NET. Therefore, TLS configuration for OpAMP endpoint is not available.
+HTTPS endpoints are supported for the OpAMP connection used by [central configuration](#central-configuration). Custom certificate verification and mutual TLS (mTLS) for the OpAMP endpoint are not yet available.
 :::
+
+## Central configuration
+
+Central configuration allows you to manage EDOT .NET settings remotely without redeploying. When enabled, EDOT .NET connects to an OpAMP-compatible server (the EDOT Collector configured with the Elastic APM Config Extension) and receives configuration at startup from Elastic Observability.
+
+Central configuration takes precedence over all other configuration sources (environment variables and `IConfiguration`). When a remote value is removed, the locally configured value is restored on the next agent startup.
+
+### Activation
+
+To enable central configuration, set the OpAMP server endpoint using one of the following methods:
+
+**Environment variable:**
+
+```sh
+export ELASTIC_OTEL_OPAMP_ENDPOINT=http://your-collector:4320/v1/opamp
+```
+
+```powershell
+$env:ELASTIC_OTEL_OPAMP_ENDPOINT = "http://your-collector:4320/v1/opamp"
+```
+
+**`IConfiguration` (for example, `appsettings.json`):**
+
+```json
+{
+  "Elastic": {
+    "OpenTelemetry": {
+      "OpAmpEndpoint": "http://your-collector:4320/v1/opamp"
+    }
+  }
+}
+```
+
+**Code:**
+
+```csharp
+var options = new ElasticOpenTelemetryOptions
+{
+    OpAmpClientOptions = new OpAmpClientOptions
+    {
+        Endpoint = "http://your-collector:4320/v1/opamp"
+    }
+};
+```
+
+Central configuration also requires a service name so that EDOT .NET can identify itself to the OpAMP server. EDOT .NET resolves the service name in the following order:
+
+1. `OTEL_SERVICE_NAME` environment variable (or the same key in `IConfiguration`)
+2. The `service.name` key within `OTEL_RESOURCE_ATTRIBUTES` (used as a fallback if `OTEL_SERVICE_NAME` is not set)
+
+For example, using `OTEL_SERVICE_NAME`:
+
+```sh
+export OTEL_SERVICE_NAME=my-service
+```
+
+```powershell
+$env:OTEL_SERVICE_NAME = "my-service"
+```
+
+Or embedding it in the resource attributes:
+
+```sh
+export OTEL_RESOURCE_ATTRIBUTES="service.name=my-service,service.version=1.0.0"
+```
+
+```powershell
+$env:OTEL_RESOURCE_ATTRIBUTES = "service.name=my-service,service.version=1.0.0"
+```
+
+If neither is configured, central configuration is silently disabled.
+
+To pass authentication credentials to the OpAMP server, set the headers option alongside the endpoint:
+
+```sh
+export ELASTIC_OTEL_OPAMP_HEADERS="Authorization=Bearer <token>"
+```
+
+```powershell
+$env:ELASTIC_OTEL_OPAMP_HEADERS = "Authorization=Bearer <token>"
+```
+
+### TLS
+
+HTTPS endpoints are supported for the OpAMP connection. Custom certificate verification and mutual TLS (mTLS) for the OpAMP endpoint are not yet available.
+
+### Remotely configurable settings
+
+The following settings can be changed through central configuration without restarting your application:
+
+| Setting | Type |
+|---|---|
+| Log level | Static (requires restart) |
 
 ## Prevent logs export
 
