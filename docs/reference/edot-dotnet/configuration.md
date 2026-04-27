@@ -318,7 +318,7 @@ HTTPS endpoints are supported for the OpAMP connection. Custom certificate verif
 
 ### Remotely configurable settings
 
-The following settings can be changed through central configuration without restarting your application:
+The following settings can be changed through central configuration:
 
 | Setting | Type |
 |---|---|
