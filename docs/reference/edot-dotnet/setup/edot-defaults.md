@@ -230,9 +230,13 @@ EDOT .NET enables the following options that are not enabled by default when usi
 | Option                   | EDOT .NET default | OpenTelemetry SDK default |
 | ------------------------ | ----------------- | ------------------------- |
 | IncludeFormattedMessage  | `true`            | `false`                   |
-| IncludeScopes            | `false` (Since 1.0.2)           | `false`                   |
+| IncludeScopes            | `true` (Since 1.4.0)      | `false`                   |
 
-Since 1.0.2 `IncludeScopes` is no longer enabled by default. Refer to [Troubleshooting](docs-content://troubleshoot/ingest/opentelemetry/edot-sdks/dotnet/index.md#missing-log-records). 1.0.0 and 1.0.1 default to `true`.
+Enabling `IncludeScopes` produces richer log attributes by including .NET log scope data as additional attributes on each log record. Be aware that including scopes can increase log storage volume depending on the scope data your application emits.
+
+:::{note}
+`IncludeScopes` was disabled between 1.0.2 and 1.3.x as a temporary workaround for a duplicate-attribute issue in the upstream OpenTelemetry SDK. It was re-enabled in 1.4.0 once the EDOT Collector and managed OTLP endpoints gained support for deduplicating repeated attributes.
+:::
 
 ### Instrumentation assembly scanning
 
