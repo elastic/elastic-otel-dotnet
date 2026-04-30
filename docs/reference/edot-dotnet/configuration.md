@@ -239,7 +239,7 @@ Central configuration takes precedence over all other configuration sources (env
 
 ### Activation
 
-To enable central configuration, set the OpAMP server endpoint using one of the following methods:
+To turn on the central configuration, set the OpAMP server endpoint using one of the following methods:
 
 **Environment variable:**
 
