@@ -196,7 +196,7 @@ Allows EDOT .NET to be used without the instrumentation assembly scanning featur
 * Type: String
 * Default: `string.Empty`
 
-The OpAMP server endpoint used for [central configuration](#central-configuration). When set, EDOT .NET connects to the specified endpoint to receive remote configuration updates. Setting this option also requires a service name. EDOT .NET resolves the service name from `OTEL_SERVICE_NAME` first; if that is not set, it falls back to the `service.name` key within `OTEL_RESOURCE_ATTRIBUTES`. If neither is configured, central configuration is silently disabled.
+The OpAMP server endpoint used for [central configuration](#central-configuration). When set, EDOT .NET connects to the specified endpoint to receive remote configuration updates. Setting this option also requires a service name. EDOT .NET resolves the service name from `OTEL_SERVICE_NAME` first; if that is not set, it falls back to the `service.name` key within `OTEL_RESOURCE_ATTRIBUTES`. If neither is configured, central configuration is silently deactivated.
 
 | Configuration method | Key |
 |---|---|
