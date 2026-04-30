@@ -300,7 +300,7 @@ export OTEL_RESOURCE_ATTRIBUTES="service.name=my-service,service.version=1.0.0"
 $env:OTEL_RESOURCE_ATTRIBUTES = "service.name=my-service,service.version=1.0.0"
 ```
 
-If neither is configured, central configuration is silently disabled.
+If neither is configured, central configuration is silently deactivated.
 
 To pass authentication credentials to the OpAMP server, set the headers option alongside the endpoint:
 
