@@ -232,7 +232,7 @@ EDOT .NET enables the following options that are not enabled by default when usi
 | IncludeFormattedMessage  | `true`            | `false`                   |
 | IncludeScopes            | `true` (Since 1.4.0)      | `false`                   |
 
-Enabling `IncludeScopes` produces richer log attributes by including .NET log scope data as additional attributes on each log record. Be aware that including scopes can increase log storage volume depending on the scope data your application emits.
+Activating `IncludeScopes` produces richer log attributes by including .NET log scope data as additional attributes on each log record. Be aware that including scopes can increase log storage volume depending on the scope data your application emits.
 
 :::{note}
 `IncludeScopes` was disabled between 1.0.2 and 1.3.x as a temporary workaround for a duplicate-attribute issue in the upstream OpenTelemetry SDK. It was re-enabled in 1.4.0 once the EDOT Collector and managed OTLP endpoints gained support for deduplicating repeated attributes.
