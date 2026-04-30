@@ -233,7 +233,7 @@ HTTPS endpoints are supported for the OpAMP connection used by [central configur
 
 ## Central configuration
 
-Central configuration allows you to manage EDOT .NET settings remotely without redeploying. When enabled, EDOT .NET connects to an OpAMP-compatible server (the EDOT Collector configured with the Elastic APM Config Extension) and receives configuration at startup from Elastic Observability.
+Central configuration allows you to manage EDOT .NET settings remotely without redeploying. When turned on, EDOT .NET connects to an OpAMP-compatible server (the EDOT Collector configured with the Elastic APM Config Extension) and receives configuration at startup from Elastic Observability.
 
 Central configuration takes precedence over all other configuration sources (environment variables and `IConfiguration`). When a remote value is removed, the locally configured value is restored on the next agent startup.
 
