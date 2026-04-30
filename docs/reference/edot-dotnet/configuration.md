@@ -26,8 +26,10 @@ including:
 * Setting [environment variables](#environment-variables).
 * Using the [`IConfiguration` integration](#iconfiguration-integration).
 * [Manually configuring](#manual-configuration) EDOT .NET.
+* [Central configuration](#central-configuration).
 
-Configuration options set manually in code take precedence over environment variables, and environment variables take precedence over configuration options set using the `IConfiguration` system.
+Configuration options set manually in code take precedence over environment variables, and environment variables take precedence over configuration options set using the `IConfiguration` system. Central configuration is evaluated last and takes precedence over all other
+configuration sources.
 
 ### Environment variables
 
@@ -232,6 +234,10 @@ HTTPS endpoints are supported for the OpAMP connection used by [central configur
 :::
 
 ## Central configuration
+
+:::{note}
+Central configuration is available since 1.4.0 of EDOT .NET.
+:::
 
 Central configuration allows you to manage EDOT .NET settings remotely without redeploying. When turned on, EDOT .NET connects to an OpAMP-compatible server (the EDOT Collector configured with the Elastic APM Config Extension) and receives configuration at startup from Elastic Observability.
 
