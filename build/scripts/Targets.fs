@@ -35,10 +35,12 @@ let private version _ =
     
 let private generatePackages _ = exec { run "dotnet" "pack" }
 
-let private format _ = exec { run "dotnet" "format" "--verbosity" "quiet" }
+let private restore _ = exec { run "dotnet" "restore" }
+
+let private format _ = exec { run "dotnet" "format" "--no-restore" "--verbosity" "quiet" }
 
 let private checkFormat _ =
-    match exec { exit_code_of "dotnet" "format" "--verify-no-changes" } with
+    match exec { exit_code_of "dotnet" "format" "--verify-no-changes" "--no-restore" } with
     | 0 -> printfn "There are no dotnet formatting violations, continuing the build."
     | _ -> failwithf "There are dotnet formatting violations. Call `dotnet format` to fix or specify -c to ./build.sh to skip this check"
 
@@ -103,7 +105,7 @@ let private pristineCheck (arguments:ParseResults<Build>) =
     | _, true  -> printfn "The checkout folder does not have pending changes, proceeding"
     | _ -> failwithf "The checkout folder has pending changes, aborting. Specify -c to ./build.sh to skip this check"
     
-    match skipCheck, (exec { exit_code_of "dotnet" "format" "--verify-no-changes" }) with
+    match skipCheck, (exec { exit_code_of "dotnet" "format" "--verify-no-changes" "--no-restore" }) with
     | true, _ -> printfn "Skip formatting checks since -c is specified"
     | _, 0  -> printfn "There are no dotnet formatting violations, continuing the build."
     | _ -> failwithf "There are dotnet formatting violations. Call `dotnet format` to fix or specify -c to ./build.sh to skip this check"
@@ -197,7 +199,7 @@ let Setup (parsed:ParseResults<Build>) =
         | Version -> Build.Step version
         | Clean -> Build.Cmd [Version] [] clean
         | Compile -> Build.Step compile
-        | Build -> Build.Cmd [Clean; CheckFormat; Compile] [] build
+        | Build -> Build.Cmd [Clean; Restore; CheckFormat; Compile] [] build
         
         | Integrate -> Build.Cmd [] testComposedOf <| runTests Integration
         | Integrate_AutoInstrumentation -> Build.Cmd [] testComposedOf <| runTests AutoInstrumentation_Integration
@@ -215,11 +217,12 @@ let Setup (parsed:ParseResults<Build>) =
                 [ValidateLicenses; GeneratePackages; ValidatePackages]
                 release
 
-        | Format -> Build.Step format
+        | Format -> Build.Cmd [Restore] [] format
 
         // steps
+        | Restore -> Build.Step restore
         | CheckFormat -> Build.Step checkFormat
-        | PristineCheck -> Build.Step pristineCheck
+        | PristineCheck -> Build.Cmd [Restore] [] pristineCheck
         | GeneratePackages -> Build.Step generatePackages
         | ValidateLicenses -> Build.Step validateLicenses
         | ValidatePackages -> Build.Step validatePackages
