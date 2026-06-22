@@ -31,6 +31,7 @@ type Build =
 
     | [<CliPrefix(CliPrefix.None);SubCommand>] Format
     
+    | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] Restore
     | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] CheckFormat
     | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] PristineCheck
     | [<CliPrefix(CliPrefix.None);Hidden;SubCommand>] GeneratePackages
@@ -65,12 +66,13 @@ with
             | Format -> "runs dotnet format"
             
             // steps
+            | Restore
             | CheckFormat
             | PristineCheck
             | GeneratePackages
             | ValidateLicenses
             | ValidatePackages
-            | Compile 
+            | Compile
             | Redistribute
             
             // flags
