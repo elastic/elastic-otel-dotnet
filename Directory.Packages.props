@@ -55,13 +55,13 @@
     <PackageVersion Include="Proc.Fs" Version="0.14.0" />
     <PackageVersion Include="Fake.Tools.Git" Version="6.1.4" />
     <!-- Testing -->
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.4.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.6.0" />
     <PackageVersion Include="JunitXml.TestLogger" Version="8.0.0" />
     <PackageVersion Include="Nullean.VsTest.Pretty.TestLogger" Version="0.10.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="Testcontainers" Version="4.11.0" />
-    <PackageVersion Include="GitHubActionsTestLogger" Version="3.0.3" />
+    <PackageVersion Include="GitHubActionsTestLogger" Version="3.0.4" />
     <PackageVersion Include="Grpc.Tools" Version="2.80.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.26" Condition="'$(TargetFramework)' == 'net8.0'" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.15" Condition="'$(TargetFramework)' == 'net9.0'" />
@@ -74,7 +74,7 @@
     <PackageVersion Update="Microsoft.Extensions.Hosting" Version="[8.0.0,)" />
     <PackageVersion Update="Microsoft.Extensions.Http.Resilience" Version="[8.10.0,)" />
     <PackageVersion Update="Microsoft.Extensions.Logging.Console" Version="[8.0.0,)" />
-    <PackageVersion Update="Microsoft.Extensions.ServiceDiscovery" Version="[8.2.2,)" />
+    <PackageVersion Update="Microsoft.Extensions.ServiceDiscovery" Version="10.7.0" />
     <PackageVersion Update="Microsoft.Extensions.Logging.Abstractions" Version="[8.0.0,)" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
