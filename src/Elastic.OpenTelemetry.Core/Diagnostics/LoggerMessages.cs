@@ -65,6 +65,9 @@ internal static partial class LoggerMessages
 		"`ElasticUserAgentHandler` to set the EDOT .NET user agent.")]
 	public static partial void LogConfiguredOtlpExporterOptions(this ILogger logger, string signal);
 
+	[LoggerMessage(EventId = 13, EventName = "AssemblyIntrospectionFailed", Level = LogLevel.Warning,
+		Message = "Failed to log loaded assembly.")]
+	internal static partial void LogAssemblyIntrospectionFailed(this ILogger logger, Exception ex);
 
 
 

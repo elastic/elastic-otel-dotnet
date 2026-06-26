@@ -2,11 +2,11 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using Elastic.OpenTelemetry.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 namespace Elastic.OpenTelemetry.Core.Diagnostics;
@@ -22,6 +22,8 @@ internal static class LoadedAssemblyLogHelper
 	// library loaded into separate AssemblyLoadContexts are each captured.
 	private static readonly ConcurrentDictionary<string, byte> Logged = new(StringComparer.OrdinalIgnoreCase);
 
+	private static int _subscribed;
+
 	/// <summary>
 	/// Subscribes to <see cref="AppDomain.AssemblyLoad"/> and logs assemblies as they load.
 	/// Also scans assemblies already loaded at call time. Subscription is established first
@@ -29,13 +31,19 @@ internal static class LoadedAssemblyLogHelper
 	/// </summary>
 	internal static void Subscribe(ILogger logger)
 	{
+		if (Interlocked.Exchange(ref _subscribed, 1) == 1)
+			return;
+
 		AppDomain.CurrentDomain.AssemblyLoad += (_, args) => TryLog(logger, args.LoadedAssembly);
 
 		foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
 			TryLog(logger, assembly);
 	}
 
-	[RequiresAssemblyFiles("Calls System.Reflection.Assembly.Location")]
+	[UnconditionalSuppressMessage("SingleFile", "IL3000:AvoidAssemblyLocationInSingleFile",
+		Justification = "Assembly.Location is only accessed when RuntimeFeature.IsDynamicCodeSupported is true. " +
+		"In AoT/single-file scenarios the location is omitted and an empty string is handled gracefully, " +
+		"since this value is used only for diagnostic logging.")]
 	private static void TryLog(ILogger logger, Assembly assembly)
 	{
 		if (!logger.IsEnabled(LogLevel.Debug))
@@ -61,7 +69,11 @@ internal static class LoadedAssemblyLogHelper
 			// AssemblyVersion is logged separately because it is often locked to a major version for
 			// binary compatibility and may differ significantly from the actual release version.
 			var informationalVersion = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-			var location = assembly.Location;
+#if NET
+			var location = RuntimeFeature.IsDynamicCodeSupported ? assembly.Location : string.Empty;
+#else
+			var location = assembly.IsDynamic ? string.Empty : assembly.Location;
+#endif
 
 			var tokenBytes = assemblyName.GetPublicKeyToken();
 			var publicKeyToken = tokenBytes is { Length: > 0 }
@@ -81,9 +93,9 @@ internal static class LoadedAssemblyLogHelper
 					name, assemblyVersion, publicKeyToken, location);
 			}
 		}
-		catch
+		catch (Exception ex)
 		{
-			// Never let assembly logging disturb the application.
+			logger.LogAssemblyIntrospectionFailed(ex);
 		}
 	}
 }
