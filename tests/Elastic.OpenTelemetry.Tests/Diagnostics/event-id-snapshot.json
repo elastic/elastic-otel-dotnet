@@ -49,6 +49,10 @@
       "eventName": "ConfiguredOtlpExporterOptions"
     },
     {
+      "eventId": 13,
+      "eventName": "AssemblyIntrospectionFailed"
+    },
+    {
       "eventId": 20,
       "eventName": "ConfiguredSignalProvider"
     },

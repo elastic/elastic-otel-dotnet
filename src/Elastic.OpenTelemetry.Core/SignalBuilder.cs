@@ -144,7 +144,7 @@ internal static class SignalBuilder
 			// We will have flushed the deferred logger at this point so we can now use the final logger.
 			logger = components.Logger;
 
-			LoadedAssemblyLogHelper.LogLoadedAssemblies(components.Logger);
+			LoadedAssemblyLogHelper.Subscribe(components.Logger);
 
 			var builderContext = new BuilderContext<T>
 			{
