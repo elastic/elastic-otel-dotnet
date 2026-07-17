@@ -1,6 +1,6 @@
 ---
 navigation_title: .NET worker services
-description: Learn how to instrument .NET worker services for Elastic Observability using the Elastic Distribution of OpenTelemetry .NET.
+description: Learn how to instrument .NET worker services for Elastic Observability using Elastic OTel .NET.
 applies_to:
   stack:
   serverless:
@@ -14,9 +14,9 @@ products:
 
 ---
 
-# Set up EDOT .NET for worker services
+# Set up Elastic OTel .NET for worker services [set-up-edot-net-for-worker-services]
 
-When building long-running [worker services](https://learn.microsoft.com/en-us/dotnet/core/extensions/workers) using the Worker Service template, OpenTelemetry is introduced using the same approach as for ASP.NET Core. The recommended way to turn on EDOT .NET is by calling `AddElasticOpenTelemetry` on the `HostApplicationBuilder`.
+When building long-running [worker services](https://learn.microsoft.com/en-us/dotnet/core/extensions/workers) using the Worker Service template, OpenTelemetry is introduced using the same approach as for ASP.NET Core. The recommended way to turn on Elastic OTel .NET is by calling `AddElasticOpenTelemetry` on the `HostApplicationBuilder`.
 
 ```csharp
 using Example.WorkerService;
@@ -34,7 +34,7 @@ host.Run();
 The previous code:
 
 1. Creates a `HostApplicationBuilder` using the `Host.CreateApplicationBuilder` factory method.
-2. Turns on EDOT .NET by calling `AddElasticOpenTelemetry` on the `HostApplicationBuilder`.
+2. Turns on Elastic OTel .NET by calling `AddElasticOpenTelemetry` on the `HostApplicationBuilder`.
 3. Registers application-specific types into the `IServiceCollection`.
 4. Builds and runs the `IHost` to execute the application workload.
 
@@ -208,4 +208,4 @@ The previous code:
 1. Configures tracing using `WithTracing` to add the diagnostic name as a source for trace telemetry we wish to collect and export. The `AddSource` method is called on the builder to configure this.
 2. Configures metrics using `WithMetrics` to add the diagnostic name as a meter for metrics telemetry we wish to collect and export. The `AddMeter` method is called on the builder to configure this.
 
-With these changes in place, this sample application is now instrumented, and for each message processed, a span will be created and exported. We also increment a metric for which the value will be periodically sent. EDOT .NET configures the delta temporality [by default](/reference/edot-dotnet/setup/edot-defaults.md), so each exported value for the counter will be the count since the last export.
+With these changes in place, this sample application is now instrumented, and for each message processed, a span will be created and exported. We also increment a metric for which the value will be periodically sent. Elastic OTel .NET configures the delta temporality [by default](/reference/edot-dotnet/setup/edot-defaults.md), so each exported value for the counter will be the count since the last export.

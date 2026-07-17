@@ -13,5 +13,5 @@ products:
 
 ---
 
-# Set up EDOT .NET for ASP.NET Core applications
+# Set up Elastic OTel .NET for ASP.NET Core applications [set-up-edot-net-for-aspnet-core-applications]
 

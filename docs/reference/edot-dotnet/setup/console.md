@@ -1,6 +1,6 @@
 ---
 navigation_title: Console applications
-description: Learn how to instrument console applications using the Elastic Distribution of OpenTelemetry .NET.
+description: Learn how to instrument console applications using Elastic OTel .NET.
 applies_to:
   stack:
   serverless:
@@ -14,7 +14,7 @@ products:
 
 ---
 
-# Set up EDOT .NET for console applications
+# Set up Elastic OTel .NET for console applications [set-up-edot-net-for-console-applications]
 
 You can instrument console applications using the {{edot}} .NET. Applications running without a [host](https://learn.microsoft.com/dotnet/core/extensions/generic-host) can initialize OpenTelemetry manually. For example:
 
@@ -30,7 +30,7 @@ The preceding code:
 1. Imports the required types from the `OpenTelemetry` namespace.
 2. Creates an instance of the `OpenTelemetrySdk` using its factory `Create` method.
 3. Configures the `IOpenTelemetryBuilder` by passing a lambda.
-4. Enables EDOT .NET and its [opinionated defaults](edot-defaults.md) by calling `WithElasticDefaults` on the `IOpenTelemetryBuilder`.
+4. Enables Elastic OTel .NET and its [opinionated defaults](edot-defaults.md) by calling `WithElasticDefaults` on the `IOpenTelemetryBuilder`.
 
 When building console applications, consider using the features provided by [`Microsoft.Extensions.Hosting`](https://www.nuget.org/packages/microsoft.extensions.hosting) as this turns on dependency injection and logging capabilities.
 
@@ -75,9 +75,9 @@ When calling `OpenTelemetrySdk.Create` a dedicated `IServiceCollection` and `ISe
 
 Replace the `{MyServerlessEndpoint}` and `{MyEncodedApiKey}` placeholders above with the values provided by your Elastic Observability backend.
 
-### Configure EDOT .NET
+### Configure Elastic OTel .NET [configure-edot-net]
 
-Several configuration settings are available to control the additional features offered by EDOT .NET. These might be configured using environment variables, `IConfiguration` and/or code-based configuration. Refer to [Configuration](/reference/edot-dotnet/configuration.md) documentation for more details.
+Several configuration settings are available to control the additional features offered by Elastic OTel .NET. These might be configured using environment variables, `IConfiguration` and/or code-based configuration. Refer to [Configuration](/reference/edot-dotnet/configuration.md) documentation for more details.
 
 As an example, manual code-based configuration can be used to disable the instrumentation assembly scanning feature.
 
@@ -104,7 +104,7 @@ The preceding code:
 2. Configures `SkipInstrumentationAssemblyScanning` as `true` to disable the assembly scanning feature.
 3. Passes the `ElasticOpenTelemetryOptions` from the `options` variable into the `WithElasticDefaults` method.
 
-You can also use `IConfiguration` to control EDOT .NET.
+You can also use `IConfiguration` to control Elastic OTel .NET.
 
 ```csharp
 using OpenTelemetry;

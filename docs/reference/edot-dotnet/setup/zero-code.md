@@ -1,6 +1,6 @@
 ---
 navigation_title: Zero-code instrumentation
-description: Use the EDOT .NET automatic instrumentation to send traces and metrics from .NET applications and services to observability backends without having to modify source code.
+description: Use the Elastic OTel .NET automatic instrumentation to send traces and metrics from .NET applications and services to observability backends without modifying source code.
 applies_to:
   stack:
   serverless:
@@ -16,13 +16,13 @@ products:
 
 # Using profiler-based zero-code instrumentation
 
-EDOT .NET includes a redistribution of the zero-code installer scripts so most of the documentation in the [.NET zero-code instrumentation documentation](https://opentelemetry.io/docs/zero-code/dotnet/) applies.
+Elastic OTel .NET includes a redistribution of the zero-code installer scripts so most of the documentation in the [.NET zero-code instrumentation documentation](https://opentelemetry.io/docs/zero-code/dotnet/) applies.
 
-Use the EDOT .NET automatic instrumentation to send traces and metrics from .NET applications and services to observability backends without having to modify source code.
+Use the Elastic OTel .NET automatic instrumentation to send traces and metrics from .NET applications and services to observability backends without having to modify source code.
 
 ## Compatibility
 
-EDOT .NET automatic instrumentation should work with all officially supported operating systems and versions of .NET. The minimal supported version of .NET Framework is 4.6.2.
+Elastic OTel .NET automatic instrumentation should work with all officially supported operating systems and versions of .NET. The minimal supported version of .NET Framework is 4.6.2.
 
 Supported processor architectures are:
 

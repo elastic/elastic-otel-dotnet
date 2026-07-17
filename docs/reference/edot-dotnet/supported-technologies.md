@@ -1,6 +1,6 @@
 ---
 navigation_title: Supported technologies
-description: Technologies supported by the Elastic Distribution of OpenTelemetry .NET.
+description: Technologies supported by Elastic OTel .NET.
 applies_to:
   stack:
   serverless:
@@ -13,9 +13,9 @@ products:
   - id: edot-sdk
 ---
 
-# Technologies supported by EDOT .NET SDK
+# Technologies supported by Elastic OTel .NET SDK [technologies-supported-by-edot-net-sdk]
 
-EDOT .NET is a distribution of OpenTelemetry .NET SDK. It inherits all the [supported](opentelemetry://reference/compatibility/nomenclature.md) technologies from the [upstream SDK](https://github.com/open-telemetry/opentelemetry-dotnet).
+Elastic OTel .NET is a distribution of OpenTelemetry .NET SDK. It inherits all the [supported](opentelemetry://reference/compatibility/nomenclature.md) technologies from the [upstream SDK](https://github.com/open-telemetry/opentelemetry-dotnet).
 
 :::{note} - Understanding auto-instrumentation scope
 
@@ -31,15 +31,15 @@ If your application uses technologies not covered by auto-instrumentation, you h
 2. **Manual instrumentation** — Use the [OpenTelemetry API](https://opentelemetry.io/docs/languages/net/instrumentation/) to add custom spans, metrics, and logs for unsupported components.
 :::
 
-## EDOT Collector and Elastic Stack versions
+## {{agent}} and Elastic Stack versions [edot-collector-and-elastic-stack-versions]
 
-EDOT .NET sends data through the OpenTelemetry protocol (OTLP). While OTLP ingest works with later 8.16+ versions of the EDOT Collector, for full support use either the [EDOT Collector](elastic-agent:/reference/edot-collector/index.md) versions 9.x or [{{serverless-full}}](docs-content://deploy-manage/deploy/elastic-cloud/serverless.md) for OTLP ingest.
+Elastic OTel .NET sends data through the OpenTelemetry protocol (OTLP). While OTLP ingest works with later 8.16+ versions of the {{agent}}, for full support use either the [{{agent}}](elastic-agent:/reference/edot-collector/index.md) versions 9.x or [{{serverless-full}}](docs-content://deploy-manage/deploy/elastic-cloud/serverless.md) for OTLP ingest.
 
 :::{note}
-Ingesting data from EDOT SDKs through EDOT Collector 9.x into Elastic Stack versions 8.18+ is supported.
+Ingesting data from Elastic OTel SDKs through {{agent}} 9.x into Elastic Stack versions 8.18+ is supported.
 :::
 
-Refer to [EDOT SDKs compatibility](opentelemetry://reference/compatibility/sdks.md) for support details.
+Refer to [Elastic OTel SDKs compatibility](opentelemetry://reference/compatibility/sdks.md) for support details.
 
 ## .NET Frameworks
 
@@ -66,13 +66,13 @@ and [.NET Support Policy](https://dotnet.microsoft.com/platform/support/policy).
 
 Instrumentation for .NET can occur in three ways:
 
-1. Built-in OpenTelemetry native instrumentation, where libraries are instrumented using the .NET APIs, requiring no bridging libraries to be observed. Many Microsoft recent libraries implement OpenTelemetry native instrumentation, and many third parties are working on such improvements. When native OTel instrumentation exists, it may be observed directly by the OpenTelemetry SDK (and, by extension, EDOT .NET) by calling `AddSource` to register the `ActivitySource` used by the instrumented code.
+1. Built-in OpenTelemetry native instrumentation, where libraries are instrumented using the .NET APIs, requiring no bridging libraries to be observed. Many Microsoft recent libraries implement OpenTelemetry native instrumentation, and many third parties are working on such improvements. When native OTel instrumentation exists, it may be observed directly by the OpenTelemetry SDK (and, by extension, Elastic OTel .NET) by calling `AddSource` to register the `ActivitySource` used by the instrumented code.
 
-2. [Contrib instrumentation](https://github.com/open-telemetry/opentelemetry-dotnet-contrib) packages. These packages bridge existing telemetry from libraries to emit or enrich OpenTelemetry spans and metrics. Some packages have no dependencies and are included with EDOT .NET [by default](/reference/edot-dotnet/setup/edot-defaults.md). Others, which bring in transitive dependencies, can be added to applications and registered with the OpenTelemetry SDK. EDOT .NET provides an instrumentation assembly scanning feature to register any contrib instrumentation without code changes.
+2. [Contrib instrumentation](https://github.com/open-telemetry/opentelemetry-dotnet-contrib) packages. These packages bridge existing telemetry from libraries to emit or enrich OpenTelemetry spans and metrics. Some packages have no dependencies and are included with Elastic OTel .NET [by default](/reference/edot-dotnet/setup/edot-defaults.md). Others, which bring in transitive dependencies, can be added to applications and registered with the OpenTelemetry SDK. Elastic OTel .NET provides an instrumentation assembly scanning feature to register any contrib instrumentation without code changes.
 
-3. Additional instrumentation is available for some components and libraries when using the profiler-based [zero code installation](/reference/edot-dotnet/setup/zero-code.md), for which  EDOT .NET does not add any additional instrumentation. Find the current list supported in the [.NET zero-code documentation](https://opentelemetry.io/docs/zero-code/dotnet/instrumentations/).
+3. Additional instrumentation is available for some components and libraries when using the profiler-based [zero code installation](/reference/edot-dotnet/setup/zero-code.md), for which Elastic OTel .NET does not add any additional instrumentation. Find the current list supported in the [.NET zero-code documentation](https://opentelemetry.io/docs/zero-code/dotnet/instrumentations/).
 
-See also the EDOT .NET [opinionated defaults](/reference/edot-dotnet/setup/edot-defaults.md) for behavior that might differ from the OpenTelemetry NET SDK defaults.
+See also the Elastic OTel .NET [opinionated defaults](/reference/edot-dotnet/setup/edot-defaults.md) for behavior that might differ from the OpenTelemetry NET SDK defaults.
 
 :::{warning}
 Instrumentation assembly scanning is not supported for applications using native [AOT](https://learn.microsoft.com/dotnet/core/deploying/native-aot) compilation.
@@ -80,7 +80,7 @@ Instrumentation assembly scanning is not supported for applications using native
 
 ## .NET runtime support
 
-EDOT .NET support all [officially supported](https://dotnet.microsoft.com/en-us/platform/support/policy) versions of [.NET](https://dotnet.microsoft.com/download/dotnet) and
+Elastic OTel .NET support all [officially supported](https://dotnet.microsoft.com/en-us/platform/support/policy) versions of [.NET](https://dotnet.microsoft.com/download/dotnet) and
 [.NET Framework](https://dotnet.microsoft.com/download/dotnet-framework) (an older Windows-based .NET implementation), except `.NET Framework 3.5`. Due to assembly binding issues introduced by Microsoft, use at least .NET Framework 4.7.2 for best compatibility.
 
 ## Exporting data to Elastic

@@ -1,6 +1,6 @@
 ---
 navigation_title: Configuration
-description: Configure the Elastic Distribution of OpenTelemetry .NET (EDOT .NET) to send data to Elastic.
+description: Configure the Elastic OTel .NET to send data to Elastic.
 applies_to:
   stack:
   serverless:
@@ -14,9 +14,9 @@ products:
 
 ---
 
-# Configure the EDOT .NET SDK
+# Configure the Elastic OTel .NET SDK [configure-the-edot-net-sdk]
 
-Configure the {{edot}} .NET (EDOT .NET) to send data to Elastic.
+Configure the {{edot}} .NET to send data to Elastic.
 
 ## Configuration methods
 
@@ -25,7 +25,7 @@ including:
 
 * Setting [environment variables](#environment-variables).
 * Using the [`IConfiguration` integration](#iconfiguration-integration).
-* [Manually configuring](#manual-configuration) EDOT .NET.
+* [Manually configuring](#manual-configuration) Elastic OTel .NET.
 * [Central configuration](#central-configuration).
 
 Configuration options set manually in code take precedence over environment variables, and environment variables take precedence over configuration options set using the `IConfiguration` system. Central configuration is evaluated last and takes precedence over all other
@@ -33,17 +33,17 @@ configuration sources.
 
 ### Environment variables
 
-You can configure EDOT .NET using environment variables. This is a cross-platform way to configure EDOT .NET and is especially useful in containerized environments.
+You can configure Elastic OTel .NET using environment variables. This is a cross-platform way to configure Elastic OTel .NET and is especially useful in containerized environments.
 
-Environment variables are read at startup and can be used to configure EDOT .NET. For details of the various EDOT-specific options available and their corresponding environment variable names, see [Configuration options](#configuration-options).
+Environment variables are read at startup and can be used to configure Elastic OTel .NET. For details of the various Elastic-specific options available and their corresponding environment variable names, see [Configuration options](#configuration-options).
 
 All OpenTelemetry environment variables from the contrib SDK may also be used to configure the SDK behavior for features such as resources, samples and exporters.
 
 ### IConfiguration integration
 
-In applications that use the [".NET generic host"](https://learn.microsoft.com/dotnet/core/extensions/generic-host), such as [ASP.NET Core](https://learn.microsoft.com/aspnet/core/introduction-to-aspnet-core) and [worker services](https://learn.microsoft.com/dotnet/core/extensions/workers), EDOT .NET can be configured using the `IConfiguration` integration.
+In applications that use the [".NET generic host"](https://learn.microsoft.com/dotnet/core/extensions/generic-host), such as [ASP.NET Core](https://learn.microsoft.com/aspnet/core/introduction-to-aspnet-core) and [worker services](https://learn.microsoft.com/dotnet/core/extensions/workers), Elastic OTel .NET can be configured using the `IConfiguration` integration.
 
-When using an `IHostApplicationBuilder` in modern ASP.NET Core applications, the `AddElasticOpenTelemetry` extension method turns on EDOT .NET and configuration from `IHostApplicationBuilder.Configuration` is passed in automatically. For example:
+When using an `IHostApplicationBuilder` in modern ASP.NET Core applications, the `AddElasticOpenTelemetry` extension method turns on Elastic OTel .NET and configuration from `IHostApplicationBuilder.Configuration` is passed in automatically. For example:
 
 ```csharp
 var builder = WebApplication.CreateBuilder(args);
@@ -70,7 +70,7 @@ For example, you can define the configuration for the {{edot}} .NET in the `apps
 This example sets the file log directory to `C:\Logs` which activates diagnostic file logging.
 :::
 
-Configuration parsed from the `Elastic:OpenTelemetry` section of the `IConfiguration` instance is bound to the `ElasticOpenTelemetryOptions` instance used to configure EDOT .NET.
+Configuration parsed from the `Elastic:OpenTelemetry` section of the `IConfiguration` instance is bound to the `ElasticOpenTelemetryOptions` instance used to configure Elastic OTel .NET.
 
 In situations where the application might not depend on the hosting APIs, but uses the dependency injection APIs instead, an `IConfiguration` instance can be passed in manually. This is usually the case with console applications. For example:
 
@@ -90,7 +90,7 @@ To learn more about the Microsoft configuration system, see [Configuration in AS
 
 ### Manual configuration
 
-In all other scenarios, you can configure EDOT .NET manually in code.
+In all other scenarios, you can configure Elastic OTel .NET manually in code.
 
 Create an instance of `ElasticOpenTelemetryOptions` and pass it to an overload of the `WithElasticDefaults` extension methods available on the `IHostApplicationBuilder`, the `IServiceCollection` and the specific signal providers such as `TracerProviderBuilder`.
 
@@ -117,18 +117,18 @@ using var sdk = OpenTelemetrySdk.Create(builder => builder
 
 ## Configuration options
 
-Because the {{edot}} .NET (EDOT .NET) is an extension of the [OpenTelemetry .NET SDK](https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation), it supports both:
+Because the {{edot}} .NET is an extension of the [OpenTelemetry .NET SDK](https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation), it supports both:
 
 * General OpenTelemetry SDK configuration options
-* Elastic-specific configuration options that are only available when using EDOT .NET
+* Elastic-specific configuration options that are only available when using Elastic OTel .NET
 
 ### OpenTelemetry SDK configuration options
 
-EDOT .NET supports all configuration options listed in the [OpenTelemetry General SDK Configuration documentation](https://opentelemetry.io/docs/languages/sdk-configuration/general/).
+Elastic OTel .NET supports all configuration options listed in the [OpenTelemetry General SDK Configuration documentation](https://opentelemetry.io/docs/languages/sdk-configuration/general/).
 
 ### Elastic-specific configuration options
 
-EDOT .NET supports the following Elastic-specific options.
+Elastic OTel .NET supports the following Elastic-specific options.
 
 #### `LogDirectory`
 
@@ -147,7 +147,7 @@ A string specifying the output directory where the {{edot}} .NET writes diagnost
 * Type: String
 * Default: `Information`
 
-Sets the logging level for EDOT .NET. Valid options are `Critical`, `Error`, `Warning`, `Information`, `Debug`, `Trace`, and `None`. `None` disables the logging.
+Sets the logging level for Elastic OTel .NET. Valid options are `Critical`, `Error`, `Warning`, `Information`, `Debug`, `Trace`, and `None`. `None` disables the logging.
 
 | Configuration method | Key |
 |---|---|
@@ -173,7 +173,7 @@ Valid options are `file`, `stdout` and `none`. `None` disables the logging.
 * Type: Bool
 * Default: `false`
 
-Allows EDOT .NET to be used with its defaults, but without enabling the export of telemetry data to
+Allows Elastic OTel .NET to be used with its defaults, but without enabling the export of telemetry data to
 an OTLP endpoint. This can be useful when you want to test applications without sending telemetry data.
 
 | Configuration method | Key |
@@ -186,7 +186,7 @@ an OTLP endpoint. This can be useful when you want to test applications without 
 * Type: Bool
 * Default: `false`
 
-Allows EDOT .NET to be used without the instrumentation assembly scanning feature turned on. This prevents the automatic registration of instrumentation from referenced [OpenTelemetry contrib](https://github.com/open-telemetry/opentelemetry-dotnet-contrib) instrumentation packages.
+Allows Elastic OTel .NET to be used without the instrumentation assembly scanning feature turned on. This prevents the automatic registration of instrumentation from referenced [OpenTelemetry contrib](https://github.com/open-telemetry/opentelemetry-dotnet-contrib) instrumentation packages.
 
 | Configuration method | Key |
 |---|---|
@@ -198,7 +198,7 @@ Allows EDOT .NET to be used without the instrumentation assembly scanning featur
 * Type: String
 * Default: `string.Empty`
 
-The OpAMP server endpoint used for [central configuration](#central-configuration). When set, EDOT .NET connects to the specified endpoint to receive remote configuration updates. Setting this option also requires a service name. EDOT .NET resolves the service name from `OTEL_SERVICE_NAME` first; if that is not set, it falls back to the `service.name` key within `OTEL_RESOURCE_ATTRIBUTES`. If neither is configured, central configuration is silently deactivated.
+The OpAMP server endpoint used for [central configuration](#central-configuration). When set, Elastic OTel .NET connects to the specified endpoint to receive remote configuration updates. Setting this option also requires a service name. Elastic OTel .NET resolves the service name from `OTEL_SERVICE_NAME` first; if that is not set, it falls back to the `service.name` key within `OTEL_RESOURCE_ATTRIBUTES`. If neither is configured, central configuration is silently deactivated.
 
 | Configuration method | Key |
 |---|---|
@@ -236,10 +236,10 @@ HTTPS endpoints are supported for the OpAMP connection used by [central configur
 ## Central configuration
 
 :::{note}
-Central configuration is available since 1.4.0 of EDOT .NET.
+Central configuration is available since 1.4.0 of Elastic OTel .NET.
 :::
 
-Central configuration allows you to manage EDOT .NET settings remotely without redeploying. When turned on, EDOT .NET connects to an OpAMP-compatible server (the EDOT Collector configured with the Elastic APM Config Extension) and receives configuration at startup from Elastic Observability.
+Central configuration allows you to manage Elastic OTel .NET settings remotely without redeploying. When turned on, Elastic OTel .NET connects to an OpAMP-compatible server (the Elastic Agent configured with the Elastic APM Config Extension) and receives configuration at startup from Elastic Observability.
 
 Central configuration takes precedence over all other configuration sources (environment variables and `IConfiguration`). When a remote value is removed, the locally configured value is restored on the next agent startup.
 
@@ -281,7 +281,7 @@ var options = new ElasticOpenTelemetryOptions
 };
 ```
 
-Central configuration also requires a service name so that EDOT .NET can identify itself to the OpAMP server. EDOT .NET resolves the service name in the following order:
+Central configuration also requires a service name so that Elastic OTel .NET can identify itself to the OpAMP server. Elastic OTel .NET resolves the service name in the following order:
 
 1. `OTEL_SERVICE_NAME` environment variable (or the same key in `IConfiguration`)
 2. The `service.name` key within `OTEL_RESOURCE_ATTRIBUTES` (used as a fallback if `OTEL_SERVICE_NAME` is not set)

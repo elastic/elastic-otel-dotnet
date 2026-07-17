@@ -1,6 +1,6 @@
 ---
 navigation_title: ASP.NET
-description: EDOT .NET can be used with ASP.NET applications by registering the OpenTelemetry SDK TelemetryHttpModule.
+description: Elastic OTel .NET can be used with ASP.NET applications by registering the OpenTelemetry SDK TelemetryHttpModule.
 applies_to:
   stack:
   serverless:
@@ -14,9 +14,9 @@ products:
 
 ---
 
-# Set up EDOT .NET for ASP.NET applications on .NET Framework
+# Set up Elastic OTel .NET for ASP.NET applications on .NET Framework [set-up-edot-net-for-aspnet-applications-on-net-framework]
 
-You can use EDOT .NET with ASP.NET applications by registering the OpenTelemetry SDK TelemetryHttpModule.
+You can use Elastic OTel .NET with ASP.NET applications by registering the OpenTelemetry SDK TelemetryHttpModule.
 
 ## Install the NuGet packages
 
@@ -31,7 +31,7 @@ reference to your project file:
 Replace the `<LATEST>` version placeholder with the [latest available package from NuGet.org](https://www.nuget.org/packages/Elastic.OpenTelemetry).
 :::
 
-EDOT .NET includes a transitive dependency on the OpenTelemetry SDK, so you do not need to add the OpenTelemetry SDK package to your project directly. However,
+Elastic OTel .NET includes a transitive dependency on the OpenTelemetry SDK, so you do not need to add the OpenTelemetry SDK package to your project directly. However,
 you can explicitly add the OpenTelemetry SDK as a dependency if you want to opt into newer SDK versions.
 
 For ASP.NET applications, you also need to install the contrib instrumentation library. Add the `OpenTelemetry.Instrumentation.AspNet` [NuGet package](https://www.nuget.org/packages/OpenTelemetry.Instrumentation.AspNet) reference to your project file:
@@ -60,7 +60,7 @@ Next, modify your `Web.Config` file to add a required HttpModule:
 </system.webServer>
 ```
 
-## Register the EDOT .NET and OpenTelemetry SDK
+## Register the Elastic OTel .NET and OpenTelemetry SDK [register-the-edot-net-and-opentelemetry-sdk]
 
 Finally, initialize ASP.NET instrumentation in your `Global.asax.cs` file along with other OpenTelemetry initialization:
 
@@ -105,10 +105,10 @@ The preceding code:
 1. Imports the required types from the `OpenTelemetry` namespace.
 2. Creates an instance of the `OpenTelemetrySdk` using its factory `Create` method.
 3. Configures the `IOpenTelemetryBuilder` by passing a lambda.
-4. Enables EDOT .NET and its [opinionated defaults](edot-defaults.md) by calling `WithElasticDefaults` on the `IOpenTelemetryBuilder`.
+4. Enables Elastic OTel .NET and its [opinionated defaults](edot-defaults.md) by calling `WithElasticDefaults` on the `IOpenTelemetryBuilder`.
 5. Calls `ConfigureResource` to configure the name for the service.
 
-By default, EDOT .NET uses instrumentation assembly scanning and will detect the `OpenTelemetry.Instrumentation.AspNet` instrumentation, registering it with the OpenTelemetry SDK. Traces for ASP.NET requests are automatically observed and exported over OTLP without further configuration.
+By default, Elastic OTel .NET uses instrumentation assembly scanning and will detect the `OpenTelemetry.Instrumentation.AspNet` instrumentation, registering it with the OpenTelemetry SDK. Traces for ASP.NET requests are automatically observed and exported over OTLP without further configuration.
 
 ## Configure environment variables
 

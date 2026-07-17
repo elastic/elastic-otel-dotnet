@@ -1,6 +1,6 @@
 ---
-navigation_title: EDOT .NET
-description: The Elastic Distribution of OpenTelemetry (EDOT) .NET provides an extension of the OpenTelemetry SDK for .NET, configured for the best experience with Elastic Observability. 
+navigation_title: Elastic OTel .NET
+description: The Elastic OTel .NET provides an extension of the OpenTelemetry SDK for .NET, configured for the best experience with Elastic Observability.
 applies_to:
   stack:
   serverless:
@@ -14,17 +14,17 @@ products:
 
 ---
 
-# Elastic Distribution of OpenTelemetry .NET
+# Elastic OTel .NET [elastic-distribution-of-opentelemetry-net]
 
-The {{edot}} (EDOT) .NET provides an extension of the [OpenTelemetry SDK for .NET](https://opentelemetry.io/docs/languages/net), configured for the best experience with Elastic Observability. 
+The {{edot}} .NET provides an extension of the [OpenTelemetry SDK for .NET](https://opentelemetry.io/docs/languages/net), configured for the best experience with Elastic Observability.
 
-Use EDOT .NET to start the OpenTelemetry SDK with your .NET application, and automatically capture tracing data, performance metrics, and logs. Traces, metrics, and logs can be sent to any OpenTelemetry Protocol (OTLP) Collector you choose.
+Use Elastic OTel .NET to start the OpenTelemetry SDK with your .NET application, and automatically capture tracing data, performance metrics, and logs. Traces, metrics, and logs can be sent to any OpenTelemetry Protocol (OTLP) Collector you choose.
 
 A goal of this distribution is to avoid introducing proprietary concepts in addition to those defined by the wider OpenTelemetry community. For any additional features introduced, Elastic aims at contributing them back to the contrib OpenTelemetry project.
 
 ## Features
 
-In addition to all the features of OpenTelemetry .NET, with EDOT .NET you have access to the following:
+In addition to all the features of OpenTelemetry .NET, with Elastic OTel .NET you have access to the following:
 
 * Improvements and bug fixes contributed by the Elastic team before the changes are available in contrib OpenTelemetry repositories.
 * Optional features that can enhance OpenTelemetry data that is being sent to Elastic.
@@ -36,4 +36,4 @@ Follow the step-by-step instructions in [Setup](/reference/edot-dotnet/setup/ind
 
 ## Release notes
 
-For the latest release notes, including known issues, deprecations, and breaking changes, refer to [EDOT .NET release notes](/release-notes/index.md)
+For the latest release notes, including known issues, deprecations, and breaking changes, refer to [Elastic OTel .NET release notes](/release-notes/index.md)

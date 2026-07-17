@@ -1,4 +1,4 @@
-project: 'EDOT .NET release notes'
+project: 'Elastic OTel .NET release notes'
 cross_links:
   - docs-content
   - opentelemetry
@@ -10,9 +10,9 @@ toc:
   - toc: reference/edot-dotnet
 subs:
   motlp: Elastic Cloud Managed OTLP Endpoint
-  edot: Elastic Distribution of OpenTelemetry
+  edot: Elastic OpenTelemetry
   ecloud:   "Elastic Cloud"
-  edot-cf:   "EDOT Cloud Forwarder"
+  edot-cf:   "Elastic Cloud Forwarder"
   ech:   "Elastic Cloud Hosted"
   ess:   "Elasticsearch Service"
   ece:   "Elastic Cloud Enterprise"

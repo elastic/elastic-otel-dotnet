@@ -1,6 +1,6 @@
 ---
 navigation_title: Migration
-description: Migrate from the Elastic APM .NET agent to the Elastic Distribution of OpenTelemetry .NET (EDOT .NET).
+description: Migrate from the Elastic APM .NET agent to Elastic OTel .NET.
 applies_to:
   stack:
   serverless:
@@ -15,7 +15,7 @@ products:
 
 ---
 
-# Migrate to EDOT .NET from the Elastic APM .NET agent
+# Migrate to Elastic OTel .NET from the Elastic APM .NET agent [migrate-to-edot-net-from-the-elastic-apm-net-agent]
 
 Compared to the Elastic APM .NET agent, the {{edot}} .NET presents a number of advantages:
 
@@ -24,7 +24,7 @@ Compared to the Elastic APM .NET agent, the {{edot}} .NET presents a number of a
 - A wider pool of knowledge, experience and support is available across the OpenTelemetry community.
 - Efficient data collection and advanced data processing opportunities.
 
-While you can use the [OpenTelemetry SDK for .NET](https://github.com/open-telemetry/opentelemetry-dotnet) to directly export data to an Elastic Observability backend, some capabilities of the Elastic tooling might not be able to function as intended. Use the {{edot}} (EDOT) language SDK and the [{{edot}} Collector](elastic-agent://reference/edot-collector/index.md) for the best experience.
+While you can use the [OpenTelemetry SDK for .NET](https://github.com/open-telemetry/opentelemetry-dotnet) to directly export data to an Elastic Observability backend, some capabilities of the Elastic tooling might not be able to function as intended. Use the {{edot}} language SDK and the [{{agent}}](elastic-agent://reference/edot-collector/index.md) for the best experience.
 
 ## Migrating from Elastic .NET Agent [migrating-to-edot-net-from-elastic-net-agent]
 
@@ -33,7 +33,7 @@ Follow these steps to migrate from the legacy Elastic APM .NET agent to the {{ed
 :::{agent-skill}
 :url: https://github.com/elastic/agent-skills/tree/main/skills/observability/edot-dotnet-migrate
 
-Use this skill to migrate from the Elastic APM .NET agent to EDOT .NET.
+Use this skill to migrate from the Elastic APM .NET agent to Elastic OTel .NET.
 :::
 
 ### Manual instrumentation
@@ -108,7 +108,7 @@ The preceding code uses the `SetTag` method to "activity" variable may be assign
 
 ### Agent registration
 
-After migrating any manual instrumentation from the Elastic APM Agent public API to the Microsoft `Activity` API, the final step is to switch the observation and export of telemetry signals from the APM Agent to EDOT .NET.
+After migrating any manual instrumentation from the Elastic APM Agent public API to the Microsoft `Activity` API, the final step is to switch the observation and export of telemetry signals from the APM Agent to Elastic OTel .NET.
 
 The steps vary by project template. In all cases, you need to add the `Elastic.Opentelemetry` [NuGet package](https://www.nuget.org/packages/Elastic.OpenTelemetry)
 to your project:
@@ -138,7 +138,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddAllElasticApm();
 ```
 
-To switch to using EDOT .NET, replace the preceding code:
+To switch to using Elastic OTel .NET, replace the preceding code:
 
 ```csharp
 using OpenTelemetry;
@@ -149,7 +149,7 @@ builder.AddElasticOpenTelemetry(b => b
    .WithTracing(t => t.AddSource("MyAppInstrumentation")));
 ```
 
-The previous snippet adds one additional source to be observed, which matches the name you gave to the `ActivitySource` defined earlier. It also uses the `AddElasticOpenTelemetry` extension method for the `IHostApplicationBuilder`. By default, EDOT .NET is configured to observe the most common instrumentation and export data through OTLP. Refer to [Opinionated defaults](/reference/edot-dotnet/setup/edot-defaults.md) for more information.
+The previous snippet adds one additional source to be observed, which matches the name you gave to the `ActivitySource` defined earlier. It also uses the `AddElasticOpenTelemetry` extension method for the `IHostApplicationBuilder`. By default, Elastic OTel .NET is configured to observe the most common instrumentation and export data through OTLP. Refer to [Opinionated defaults](/reference/edot-dotnet/setup/edot-defaults.md) for more information.
 
 Configuration of the APM Agent is likely to have been achieved using environment variables or by providing settings using the `appsettings.json` file, typical for ASP.NET Core applications:
 
@@ -174,7 +174,7 @@ The OpenTelemetry SDK is generally configured using environment variables. For t
 
 The required values for the endpoint and headers can be obtained from your Elastic Observability instance. After you've migrated, you can remove the Elastic APM Agent NuGet from your application.
 
-For more details on registering and configuring EDOT. NET, see the [quickstart](/reference/edot-dotnet/setup/index.md) documentation.
+For more details on registering and configuring Elastic OTel .NET, see the [quickstart](/reference/edot-dotnet/setup/index.md) documentation.
 
 ### Zero-code auto instrumentation
 
@@ -193,31 +193,31 @@ When using the Elastic APM Agent profiler auto-instrumentation functionality, th
 | All            | ELASTIC_APM_SERVER_URL              | The URL of the APM Server.                      |
 | All            | ELASTIC_APM_SECRET_TOKEN            | The secret used to authenticate with APM server.|
 
-To switch to the EDOT .NET zero-code auto instrumentation, update the `COR_*` and `CORECLR_*` environment variables to point to the Elastic redistribution of the OpenTelemetry auto-instrumentation profiler.
+To switch to the Elastic OTel .NET zero-code auto instrumentation, update the `COR_*` and `CORECLR_*` environment variables to point to the Elastic redistribution of the OpenTelemetry auto-instrumentation profiler.
 
-Follow the steps in [Using EDOT .NET zero-code instrumentation](/reference/edot-dotnet/setup/zero-code.md) to configure the profiler.
+Follow the steps in [Using Elastic OTel .NET zero-code instrumentation](/reference/edot-dotnet/setup/zero-code.md) to configure the profiler.
 
 ### Limitations
 
-Elastic APM Agent includes several features that are not currently supported when using EDOT .NET. Each of these are being assessed and may be included in contributions to OpenTelemetry or as value-add features of EDOT .NET in future releases.
+Elastic APM Agent includes several features that are not currently supported when using Elastic OTel .NET. Each of these are being assessed and may be included in contributions to OpenTelemetry or as value-add features of Elastic OTel .NET in future releases.
 
 #### Stacktrace capture
 
-The [stacktrace capture](apm-agent-dotnet://reference/config-stacktrace.md) feature from Elastic APM .NET agent is not currently available in EDOT .NET.
+The [stacktrace capture](apm-agent-dotnet://reference/config-stacktrace.md) feature from Elastic APM .NET agent is not currently available in Elastic OTel .NET.
 
 #### Central and dynamic configuration
 
-Currently EDOT .NET does not have an equivalent of the [central configuration feature](docs-content://solutions/observability/apm/apm-agent-central-configuration.md) that the Elastic APM .NET agent supports. 
+Currently Elastic OTel .NET does not have an equivalent of the [central configuration feature](docs-content://solutions/observability/apm/apm-agent-central-configuration.md) that the Elastic APM .NET agent supports.
 
-When using EDOT .NET, all the configurations are static and should be provided to the application with other configurations, such as environment variables.
+When using Elastic OTel .NET, all the configurations are static and should be provided to the application with other configurations, such as environment variables.
 
 #### Span compression
 
-EDOT .NET does not implement [span compression](docs-content://solutions/observability/apm/spans.md#apm-spans-span-compression).
+Elastic OTel .NET does not implement [span compression](docs-content://solutions/observability/apm/spans.md#apm-spans-span-compression).
 
 ## Migrate from the .NET SDK [migrating-to-edot-net-from-the-upstream-opentelemetry-net-sdk]
 
-EDOT .NET require minimal code changes to migrate from the OpenTelemetry SDK for .NET. The distribution [opinionated defaults](/reference/edot-dotnet/setup/edot-defaults.md) simplify the amount of code required to get started with OpenTelemetry in .NET applications.
+Elastic OTel .NET require minimal code changes to migrate from the OpenTelemetry SDK for .NET. The distribution [opinionated defaults](/reference/edot-dotnet/setup/edot-defaults.md) simplify the amount of code required to get started with OpenTelemetry in .NET applications.
 
 In an application which already uses the OpenTelemetry SDK, the following code is an example of how this would be registered and enabled in an ASP.NET Core application.
 
@@ -259,9 +259,9 @@ reference to your project file:
 Replace the `<LATEST>` version placeholder with the [latest available package from NuGet.org](https://www.nuget.org/packages/Elastic.OpenTelemetry).
 :::
 
-EDOT .NET includes a transitive dependency on the OpenTelemetry SDK, so you do not need to add the OpenTelemetry SDK package to your project directly. However, you can explicitly add the OpenTelemetry SDK as a dependency if you want to opt into newer SDK versions.
+Elastic OTel .NET includes a transitive dependency on the OpenTelemetry SDK, so you do not need to add the OpenTelemetry SDK package to your project directly. However, you can explicitly add the OpenTelemetry SDK as a dependency if you want to opt into newer SDK versions.
 
-Due to the EDOT .NET defaults, less code is required to achieve the same instrumentation behavior that the previous code snippet configured for the OpenTelemetry SDK. For example:
+Due to the Elastic OTel .NET defaults, less code is required to achieve the same instrumentation behavior that the previous code snippet configured for the OpenTelemetry SDK. For example:
 
 ```csharp
 using OpenTelemetry;
@@ -272,7 +272,7 @@ builder.AddElasticOpenTelemetry(b => b
     .WithTracing(t => t.AddSource("AppInstrumentation")));
 ```
 
-EDOT .NET activates all signals by default, so the registration code is less verbose. EDOT .NET also performs instrumentation assembly scanning to automatically add instrumentation from any contrib libraries that it finds deployed with the application. All that is required is the installation of the relevant instrumentation NuGet packages.
+Elastic OTel .NET activates all signals by default, so the registration code is less verbose. Elastic OTel .NET also performs instrumentation assembly scanning to automatically add instrumentation from any contrib libraries that it finds deployed with the application. All that is required is the installation of the relevant instrumentation NuGet packages.
 
 :::{warning}
 Instrumentation assembly scanning is not supported for applications using native [AOT](https://learn.microsoft.com/dotnet/core/deploying/native-aot) compilation.
@@ -280,10 +280,10 @@ Instrumentation assembly scanning is not supported for applications using native
 
 ### Zero-code instrumentation
 
-EDOT .NET ships with a lightly modified redistribution of the OpenTelemetry SDK installation script. To instrument a .NET application automatically, download and run the installer script for your operating system from the latest [release](https://github.com/elastic/elastic-otel-dotnet/releases).
+Elastic OTel .NET ships with a lightly modified redistribution of the OpenTelemetry SDK installation script. To instrument a .NET application automatically, download and run the installer script for your operating system from the latest [release](https://github.com/elastic/elastic-otel-dotnet/releases).
 
 Refer to the OpenTelemetry SDK documentation for [.NET zero-code instrumentation](https://opentelemetry.io/docs/zero-code/net) for more examples of using the installation script.
 
 ## Troubleshooting
 
-If you're encountering issues during migration, refer to the [EDOT .NET troubleshooting guide](docs-content://troubleshoot/ingest/opentelemetry/edot-sdks/dotnet/index.md).
+If you're encountering issues during migration, refer to the [Elastic OTel .NET troubleshooting guide](docs-content://troubleshoot/ingest/opentelemetry/edot-sdks/dotnet/index.md).

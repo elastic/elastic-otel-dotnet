@@ -1,6 +1,6 @@
 ---
 navigation_title: Opinionated defaults
-description: When using EDOT .NET, Elastic defaults for tracing, metrics and logging are applied. These defaults are designed to provide a faster getting started experience by automatically enabling data collection from telemetry signals without requiring as much up-front code as the OpenTelemetry SDK.
+description: When using Elastic OTel .NET, Elastic defaults for tracing, metrics, and logging are applied to provide a faster getting started experience with less up-front code than the OpenTelemetry SDK.
 applies_to:
   stack:
   serverless:
@@ -14,9 +14,9 @@ products:
 
 ---
 
-# EDOT .NET opinionated defaults
+# Elastic OTel .NET opinionated defaults [edot-net-opinionated-defaults]
 
-When using EDOT .NET, Elastic defaults for tracing, metrics and logging are applied. These defaults are designed to provide a faster getting started experience by automatically enabling data collection from telemetry signals without requiring as much up-front code as the OpenTelemetry SDK. This has the positive side effect of reducing the
+When using Elastic OTel .NET, Elastic defaults for tracing, metrics and logging are applied. These defaults are designed to provide a faster getting started experience by automatically enabling data collection from telemetry signals without requiring as much up-front code as the OpenTelemetry SDK. This has the positive side effect of reducing the
 boilerplate code you must maintain in your application. These defaults should be satisfactory for most applications but can be overridden for advanced use cases.
 
 ## Defaults for all signals
@@ -27,14 +27,14 @@ When using any of the following registration extension methods:
 - `IServiceCollection.AddElasticOpenTelemetry`
 - `IOpenTelemetryBuilder.WithElasticDefaults`
 
-EDOT .NET turns on:
+Elastic OTel .NET turns on:
 
 - Observation of all signals (tracing, metrics and logging).
 - OTLP exporter for all signals.
 
-When sending data to an Elastic Observability backend, OTLP through the EDOT Collector is recommended for compatibility and is required for full support. EDOT .NET enables OTLP over gRPC as the default for all signals. You can turn off this behavior through [configuration](/reference/edot-dotnet/configuration.md).
+When sending data to an Elastic Observability backend, OTLP through the {{agent}} is recommended for compatibility and is required for full support. Elastic OTel .NET enables OTLP over gRPC as the default for all signals. You can turn off this behavior through [configuration](/reference/edot-dotnet/configuration.md).
 
-All signals are configured to apply EDOT .NET defaults for resource attributes through the `ResourceBuilder`.
+All signals are configured to apply Elastic OTel .NET defaults for resource attributes through the `ResourceBuilder`.
 
 ### Modify defaults for each signal
 
@@ -67,7 +67,7 @@ The following attributes are added in all scenarios (NuGet and zero code install
 | -------------------------- | --------------------------------------------------------------------------- |
 | `service.instance.id`      | Set with a random GUID to ensure runtime metrics dashboard can be filtered. |
 | `telemetry.distro.name`    | Set as `elastic`.                                                           |
-| `telemetry.distro.version` | Set as the version of the EDOT .NET.                                        |
+| `telemetry.distro.version` | Set as the version of Elastic OTel .NET.                                    |
 
 When using the NuGet installation method, transitive dependencies are added for the following contrib resource detector packages:
 
@@ -90,11 +90,11 @@ Instrumentation assembly scanning is not supported for applications using native
 
 ## Defaults for tracing
 
-EDOT .NET applies subtly different defaults depending on the .NET runtime version being targeted.
+Elastic OTel .NET applies subtly different defaults depending on the .NET runtime version being targeted.
 
 ### HTTP traces
 
-On .NET 9 and newer runtimes, EDOT .NET observes the `System.Net.Http` source to collect traces from the .NET HTTP APIs. Since .NET 9, the built-in traces are compliant with current semantic conventions. Using the built-in `System.Net.Http` source is now the recommended choice. If the target application explicitly depends on the `OpenTelemetry.Instrumentation.Http` package, EDOT .NET assumes it should be used instead of the built-in source.
+On .NET 9 and newer runtimes, Elastic OTel .NET observes the `System.Net.Http` source to collect traces from the .NET HTTP APIs. Since .NET 9, the built-in traces are compliant with current semantic conventions. Using the built-in `System.Net.Http` source is now the recommended choice. If the target application explicitly depends on the `OpenTelemetry.Instrumentation.Http` package, Elastic OTel .NET assumes it should be used instead of the built-in source.
 
 :::{note}
 When upgrading applications to .NET 9 and newer, consider removing the package reference to `OpenTelemetry.Instrumentation.Http`.
@@ -116,7 +116,7 @@ All scenarios register the SQL client when instrumentation assembly scanning is 
 
 ### Additional sources
 
-EDOT .NET observes the `Elastic.Transport` source to collect traces from Elastic client libraries, such as `Elastic.Clients.{{es}}`, which is built upon the [Elastic transport](https://github.com/elastic/elastic-transport-net) layer.
+Elastic OTel .NET observes the `Elastic.Transport` source to collect traces from Elastic client libraries, such as `Elastic.Clients.{{es}}`, which is built upon the [Elastic transport](https://github.com/elastic/elastic-transport-net) layer.
 
 ### Instrumentation assembly scanning
 
@@ -147,19 +147,19 @@ Instrumentation assembly scanning is not supported for applications using native
 
 #### ASP.NET Core defaults
 
-To provide a richer experience out-of-the-box, EDOT .NET registers an exception enricher for ASP.NET Core when using instrumentation assembly scanning.
+To provide a richer experience out-of-the-box, Elastic OTel .NET registers an exception enricher for ASP.NET Core when using instrumentation assembly scanning.
 
 When an unhandled exception occurs during a request that ASP.NET Core handles, the exception is added as a span event using the [`AddException`](https://learn.microsoft.com/dotnet/api/system.diagnostics.activity.addexception) API from `System.Diagnostics`. Span events are stored as logs in the Observability backend and will appear in the Errors UI. Additionally, when the `Exception.Source` property is not null, its value is added as an attribute `exception.source` on the ASP.NET Core request span.
 
 ## Defaults for metrics
 
-EDOT .NET applies subtly different defaults depending on the .NET runtime version being targeted.
+Elastic OTel .NET applies subtly different defaults depending on the .NET runtime version being targeted.
 
 ### HTTP metrics
 
-On .NET 9 and newer runtimes, EDOT .NET observes the `System.Net.Http` meter to collect metrics from the .NET HTTP APIs. Since .NET 9, the built-in metrics are compliant with current semantic conventions. Using the built-in `System.Net.Http` meter is therefore recommended. 
+On .NET 9 and newer runtimes, Elastic OTel .NET observes the `System.Net.Http` meter to collect metrics from the .NET HTTP APIs. Since .NET 9, the built-in metrics are compliant with current semantic conventions. Using the built-in `System.Net.Http` meter is therefore recommended.
 
-If the target application has an explicit dependency on the `OpenTelemetry.Instrumentation.Http` package,  EDOT .NET assumes that it should be used instead of the built-in meter. 
+If the target application has an explicit dependency on the `OpenTelemetry.Instrumentation.Http` package, Elastic OTel .NET assumes that it should be used instead of the built-in meter. 
 
 :::{note}
 When upgrading applications to .NET 9 and newer, consider removing the package reference to `OpenTelemetry.Instrumentation.Http`.
@@ -169,9 +169,9 @@ On all other runtimes, when using the NuGet installation method, a transitive de
 
 ### Runtime metrics
 
-On .NET 9 and newer runtimes, EDOT .NET observes the `System.Runtime` meter to collect metrics from the .NET HTTP APIs. Since .NET 9, the built-in traces are compliant with current semantic conventions. Using the built-in `System.Runtime` meter is therefore recommended. 
+On .NET 9 and newer runtimes, Elastic OTel .NET observes the `System.Runtime` meter to collect metrics from the .NET HTTP APIs. Since .NET 9, the built-in traces are compliant with current semantic conventions. Using the built-in `System.Runtime` meter is therefore recommended.
 
-If the target application has an explicit dependency on the `OpenTelemetry.Instrumentation.Runtime` package, EDOT .NET assumes that it should be used instead of the built-in meter.
+If the target application has an explicit dependency on the `OpenTelemetry.Instrumentation.Runtime` package, Elastic OTel .NET assumes that it should be used instead of the built-in meter.
 
 :::{note}
 When upgrading applications to .NET 9 and newer, consider removing the package reference to `OpenTelemetry.Instrumentation.Runtime`.
@@ -198,7 +198,7 @@ NuGet package, the following meters are observed by default:
 
 ### Additional meters
 
-EDOT .NET observes the `System.Net.NameResolution` meter, to collect metrics from DNS.
+Elastic OTel .NET observes the `System.Net.NameResolution` meter, to collect metrics from DNS.
 
 ### Instrumentation assembly scanning
 
@@ -221,13 +221,13 @@ Instrumentation assembly scanning is not supported for applications using native
 
 ### Configuration defaults
 
-To ensure the best compatibility of metric data (specifically from the histogram instrument), EDOT .NET defaults the `TemporalityPreference` configuration setting on `MetricReaderOptions` to use the `MetricReaderTemporalityPreference.Delta` temporality.
+To ensure the best compatibility of metric data (specifically from the histogram instrument), Elastic OTel .NET defaults the `TemporalityPreference` configuration setting on `MetricReaderOptions` to use the `MetricReaderTemporalityPreference.Delta` temporality.
 
 ## Defaults for logging
 
-EDOT .NET enables the following options that are not enabled by default when using the OpenTelemetry SDK.
+Elastic OTel .NET enables the following options that are not enabled by default when using the OpenTelemetry SDK.
 
-| Option                   | EDOT .NET default | OpenTelemetry SDK default |
+| Option                   | Elastic OTel .NET default | OpenTelemetry SDK default |
 | ------------------------ | ----------------- | ------------------------- |
 | IncludeFormattedMessage  | `true`            | `false`                   |
 | IncludeScopes            | `true` (Since 1.4.0)      | `false`                   |
@@ -235,7 +235,7 @@ EDOT .NET enables the following options that are not enabled by default when usi
 Activating `IncludeScopes` produces richer log attributes by including .NET log scope data as additional attributes on each log record. Be aware that including scopes can increase log storage volume depending on the scope data your application emits.
 
 :::{note}
-`IncludeScopes` was deactivated between 1.0.2 and 1.3.x as a temporary workaround for a duplicate-attribute issue in the upstream OpenTelemetry SDK. It was reactivated in 1.4.0 once the EDOT Collector and managed OTLP endpoints gained support for deduplicating repeated attributes.
+`IncludeScopes` was deactivated between 1.0.2 and 1.3.x as a temporary workaround for a duplicate-attribute issue in the upstream OpenTelemetry SDK. It was reactivated in 1.4.0 once the {{agent}} and managed OTLP endpoints gained support for deduplicating repeated attributes.
 :::
 
 ### Instrumentation assembly scanning
@@ -243,7 +243,7 @@ Activating `IncludeScopes` produces richer log attributes by including .NET log 
 Instrumentation assembly scanning is enabled by default and is designed to simplify the registration code required to configure the OpenTelemetry SDK. Instrumentation assembly scanning uses reflection to invoke the required registration method for the contrib instrumentation and resource detector packages.
 
 :::{warning}
-Calling the `AddXyzInstrumentation` method in combination with assembly scanning, might not be safe for all instrumentations. When using EDOT .NET, remove the registration of instrumentation to avoid overhead and mitigate the potential for duplicated spans. This has a positive side-effect of simplifying the code you need to manage.
+Calling the `AddXyzInstrumentation` method in combination with assembly scanning, might not be safe for all instrumentations. When using Elastic OTel .NET, remove the registration of instrumentation to avoid overhead and mitigate the potential for duplicated spans. This has a positive side-effect of simplifying the code you need to manage.
 :::
 
 If you need to configure advanced options when registering instrumentation, turn off instrumentation assembly scanning through [Configuration](/reference/edot-dotnet/configuration.md) and prefer manually registering all instrumentation in your application code.
