@@ -47,12 +47,12 @@ jobs:
       run: ls -al ${{ env.RELEASE_DISTRO }}
       
     - name: Generate build provenance (Distribution)
-      uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4
+      uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4
       with:
         subject-path: "${{ github.workspace }}/${{ env.RELEASE_DISTRO }}"
 
     - name: Generate build provenance (Packages)
-      uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4
+      uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4
       with:
         subject-path: "${{ github.workspace }}/${{ env.RELEASE_PACKAGES }}"
         
@@ -101,7 +101,7 @@ jobs:
         labels: ${{ steps.docker-meta.outputs.labels }}
 
     - name: Attest image
-      uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4
+      uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4
       continue-on-error: true # continue for now until we see it working in action
       with:
         subject-name: ${{ env.DOCKER_IMAGE_NAME }}
