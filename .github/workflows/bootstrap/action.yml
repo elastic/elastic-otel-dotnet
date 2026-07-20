@@ -43,7 +43,7 @@ runs:
         key: otel-distribution
     
     - name: Setup dotnet
-      uses: actions/setup-dotnet@v5
+      uses: actions/setup-dotnet@v6
       with:
         global-json-file: ./global.json
         dotnet-version: |
