@@ -265,22 +265,25 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 		// in their constructor (before being adopted by any Bootstrap call), and excluding
 		// them would cause GetOrCreate() to create new CompositeLogger/FileLogger instances
 		// for every call in the bootstrap chain, each racing to open the same log file.
-		// _activatedViaActivateMethod is set only when the Activate() CAS succeeds, and it is
-		// set *before* _options is nulled, so a volatile read of 0 here guarantees _options
-		// is still valid — no TOCTOU race.
 		if (Volatile.Read(ref existing._activatedViaActivateMethod) != 0)
 			return false;
 
-		// Capture once to avoid a TOCTOU race: Activate() can null out _options on another thread
-		// between the null check and the dereference below. The field is volatile so a single
-		// read here is atomic and visible.
+		// Capture once: _options is volatile, and Activate() can null it on another thread.
 		var existingOptions = existing._options;
 
-		// If either side has no options yet, they could be part of the same bootstrap flow
+		// existingOptions may be null either because the logger was created without options
+		// (genuinely pre-activation) or because Activate() won a race between our first
+		// _activatedViaActivateMethod read above and this _options read. Re-check the flag
+		// to distinguish: if it is now 1, activation completed during that window and this
+		// instance is no longer a pre-activation singleton.
+		if (existingOptions is null && Volatile.Read(ref existing._activatedViaActivateMethod) != 0)
+			return false;
+
+		// If either side has no options yet, they could be part of the same bootstrap flow.
 		if (options is null || existingOptions is null)
 			return true;
 
-		// Same reference or equivalent options — same bootstrap flow
+		// Same reference or equivalent options — same bootstrap flow.
 		return ReferenceEquals(existingOptions, options) || existingOptions.Equals(options);
 	}
 
