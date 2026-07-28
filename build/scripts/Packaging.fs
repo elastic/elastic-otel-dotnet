@@ -74,11 +74,16 @@ let opAmpFiles tfm =
     else
         []
 
-/// OpenTelemetry.OpAmp.Client and its dependencies (needed for ALC loading on net8.0, and direct loading on net462)
+/// OpenTelemetry.OpAmp.Client and its dependencies (needed for ALC loading on net8.0)
 /// Note: Google.Protobuf is intentionally omitted — the OTel base distribution now ships it in net/ and netfx/.
-/// validateRedistributableContents verifies it is still present after packaging.
+/// Note: net462 is intentionally omitted too — the OTel base distribution now ships OpenTelemetry.OpAmp.Client.dll
+/// flat under netfx/ (byte-identical to ours), which is exactly where the net462 direct-load path probes.
+/// Injecting our own copy there produces a duplicate zip entry that breaks ZipFile extraction.
+/// The net8.0 ALC path still needs the client flat under net/ because upstream ships it under net/net8.0/ TFM
+/// subfolders, which the AssemblyDependencyResolver (driven by Elastic.OpenTelemetry.OpAmp.deps.json) does not probe.
+/// validateRedistributableContents verifies both remain present after packaging.
 let opAmpDependencyFiles tfm =
-    if tfm = "net8.0" || tfm = "net462" then
+    if tfm = "net8.0" then
         [
             "OpenTelemetry.OpAmp.Client"
         ]
