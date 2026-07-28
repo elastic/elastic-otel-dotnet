@@ -57,6 +57,14 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 	// before sub-loggers are fully assigned.
 	private int _activationState;
 
+	// Set to 1 only when Activate() successfully transitions a deferred-mode logger to active
+	// (i.e. the CAS on _activationState succeeds). Active-mode loggers have _activationState=1
+	// from the constructor but never go through the CAS-success path, so this stays 0.
+	// IsCompatible() uses this flag rather than _activationState so that active-mode loggers
+	// stored in PreActivationInstance remain shareable across GetOrCreate() calls until they are
+	// cleared, preventing multiple FileLogger instances from racing to open the same log file.
+	private int _activatedViaActivateMethod;
+
 	// Static singleton for pre-activation sharing
 	private static CompositeLogger? PreActivationInstance;
 	private static readonly Lock StaticLock = new();
@@ -251,23 +259,31 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 	/// </summary>
 	private static bool IsCompatible(CompositeLogger existing, CompositeElasticOpenTelemetryOptions? options)
 	{
-		// Already activated (or activating) — no longer a pre-activation singleton.
-		// Activation sets _activationState → 1 *before* nulling _options, so this guards
-		// the case where a concurrent thread observes _options == null due to activation
-		// and would otherwise incorrectly conclude "same bootstrap flow, options not yet available".
-		if (Volatile.Read(ref existing._activationState) != 0)
+		// A logger is no longer a pre-activation singleton once Activate() has successfully
+		// transitioned it from deferred to active mode. We use _activatedViaActivateMethod
+		// rather than _activationState because active-mode loggers set _activationState = 1
+		// in their constructor (before being adopted by any Bootstrap call), and excluding
+		// them would cause GetOrCreate() to create new CompositeLogger/FileLogger instances
+		// for every call in the bootstrap chain, each racing to open the same log file.
+		if (Volatile.Read(ref existing._activatedViaActivateMethod) != 0)
 			return false;
 
-		// Capture once to avoid a TOCTOU race: Activate() can null out _options on another thread
-		// between the null check and the dereference below. The field is volatile so a single
-		// read here is atomic and visible.
+		// Capture once: _options is volatile, and Activate() can null it on another thread.
 		var existingOptions = existing._options;
 
-		// If either side has no options yet, they could be part of the same bootstrap flow
+		// existingOptions may be null either because the logger was created without options
+		// (genuinely pre-activation) or because Activate() won a race between our first
+		// _activatedViaActivateMethod read above and this _options read. Re-check the flag
+		// to distinguish: if it is now 1, activation completed during that window and this
+		// instance is no longer a pre-activation singleton.
+		if (existingOptions is null && Volatile.Read(ref existing._activatedViaActivateMethod) != 0)
+			return false;
+
+		// If either side has no options yet, they could be part of the same bootstrap flow.
 		if (options is null || existingOptions is null)
 			return true;
 
-		// Same reference or equivalent options — same bootstrap flow
+		// Same reference or equivalent options — same bootstrap flow.
 		return ReferenceEquals(existingOptions, options) || existingOptions.Equals(options);
 	}
 
@@ -309,6 +325,11 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 
 			return;
 		}
+
+		// Mark as activated via Activate() before nulling _options. This ordering guarantees
+		// that IsCompatible()'s volatile read of _activatedViaActivateMethod = 0 implies
+		// _options is still valid (not yet nulled), preventing a TOCTOU race.
+		Interlocked.Exchange(ref _activatedViaActivateMethod, 1);
 
 		ConcurrentQueue<DeferredLogEntry>? capturedQueue;
 
