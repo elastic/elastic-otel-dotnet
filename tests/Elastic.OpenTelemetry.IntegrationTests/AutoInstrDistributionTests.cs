@@ -175,7 +175,7 @@ public class AutoInstrDistributionTests
 		var analyzer = new EdotLogAnalyzer(runner.EdotLogFilePath);
 		analyzer.AssertNoErrors(
 			allowedErrorEventIds: [116],
-			allowedMessageSubstrings: ["Failed to send heartbeat"]);
+			allowedMessageSubstrings: ["Failed to send heartbeat", "Failed to send agent disconnect message"]);
 		analyzer.AssertDoesNotContainEventId(131, "Should not receive initial config from unreachable server");
 	}
 
@@ -199,12 +199,12 @@ public class AutoInstrDistributionTests
 		Assert.NotNull(runner.EdotLogFilePath);
 
 		var analyzer = new EdotLogAnalyzer(runner.EdotLogFilePath);
-		// Allow EDOT's creation-failed error (EventId 116) and heartbeat errors from the
+		// Allow EDOT's creation-failed error (EventId 116) and send errors from the
 		// upstream OpenTelemetry.OpAmp.Client library (no EDOT EventId — logged via
-		// the library's own ILogger category, observed on net462 but may also appear here)
+		// the library's own ILogger category) that are expected when no server is reachable
 		analyzer.AssertNoErrors(
 			allowedErrorEventIds: [116],
-			allowedMessageSubstrings: ["Failed to send heartbeat"]);
+			allowedMessageSubstrings: ["Failed to send heartbeat", "Failed to send agent disconnect message"]);
 		// ALC path was still attempted even though OpAmp server is unreachable
 		analyzer.AssertContainsEventId(102, "UsingIsolatedLoadContext — ALC path attempted");
 		analyzer.AssertDoesNotContainEventId(131, "Should not receive initial config from unreachable server");
