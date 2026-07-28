@@ -1,4 +1,4 @@
-# Default: normalize line endings to LF in the repo, convert to platform on checkout
+# Default: normalize line endings to LF in the repo and check out as LF (except overrides below)
 * text=auto eol=lf
 
 # Windows scripts must use CRLF
