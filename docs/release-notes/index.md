@@ -27,6 +27,17 @@ To check for security updates, go to [Security announcements for the Elastic sta
 % ### Fixes [edot-dotnet-X.X.X-fixes]
 % *
 
+## 1.5.0 [edot-dotnet-1.5.0-release-notes]
+
+### Fixes [edot-dotnet-1.5.0-fixes]
+
+- Avoid multiple activation attempts on the composite logger. [#424](https://github.com/elastic/elastic-otel-dotnet/pull/424)
+
+### Features and enhancements [edot-dotnet-1.5.0-features-enhancements]
+
+- Improve diagnostic logging for loaded assemblies. [#416](https://github.com/elastic/elastic-otel-dotnet/pull/416)
+- Update to 1.16.x SDK, zero-code instrumentation distribution and latest instrumentation packages. [#426](https://github.com/elastic/elastic-otel-dotnet/pull/426)
+
 ## 1.4.0 [edot-dotnet-1.4.0-release-notes]
 
 :::{important}
