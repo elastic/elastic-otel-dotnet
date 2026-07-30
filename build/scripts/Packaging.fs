@@ -74,16 +74,22 @@ let opAmpFiles tfm =
     else
         []
 
-/// OpenTelemetry.OpAmp.Client and its dependencies (needed for ALC loading on net8.0, and direct loading on net462)
+/// OpenTelemetry.OpAmp.Client and its dependencies (needed for ALC loading on net8.0)
+/// Note: Google.Protobuf is intentionally omitted — the OTel base distribution now ships it in net/ and netfx/.
+/// Note: net462 is intentionally omitted too — the OTel base distribution now ships OpenTelemetry.OpAmp.Client.dll
+/// flat under netfx/ (byte-identical to ours), which is exactly where the net462 direct-load path probes.
+/// Injecting our own copy there produces a duplicate zip entry that breaks ZipFile extraction.
+/// The net8.0 ALC path still needs the client flat under net/ because upstream ships it under net/net8.0/ TFM
+/// subfolders, which the AssemblyDependencyResolver (driven by Elastic.OpenTelemetry.OpAmp.deps.json) does not probe.
+/// validateRedistributableContents verifies both remain present after packaging.
 let opAmpDependencyFiles tfm =
-    if tfm = "net8.0" || tfm = "net462" then
+    if tfm = "net8.0" then
         [
             "OpenTelemetry.OpAmp.Client"
-            "Google.Protobuf"
         ]
         |> List.collect(fun pkg ->
             ["dll"; "pdb"]
-            |> List.map(fun e -> 
+            |> List.map(fun e ->
                 let pkgPath = Path.Combine(".artifacts", "bin", "Elastic.OpenTelemetry.OpAmp", $"release_{tfm}", "")
                 Path.Combine(pkgPath, $"%s{pkg}.%s{e}")
             )
@@ -126,9 +132,9 @@ let downloadArtifacts (_:ParseResults<Build>) =
     } |> Async.RunSynchronously
     assets
 
-let injectPluginFiles (asset: ReleaseAsset) (stagedZip: FileInfo) tfm target  = 
+let injectPluginFiles (asset: ReleaseAsset) (stagedZip: FileInfo) tfm target  =
     use zipArchive = ZipFile.Open(stagedZip.FullName, ZipArchiveMode.Update)
-    
+
     // Inject main plugin files
     // Use forward slashes for zip entry paths (zip standard) — Path.Combine uses backslashes on Windows
     pluginFiles tfm  |> List.iter(fun f ->
@@ -154,7 +160,7 @@ let injectPluginFiles (asset: ReleaseAsset) (stagedZip: FileInfo) tfm target  =
             printfn $"Warning: OpAmp file not found: %s{f.FullName}"
     )
 
-    // Inject OpAmp dependency files (OpenTelemetry.OpAmp.Client + Google.Protobuf)
+    // Inject OpAmp dependency files (OpenTelemetry.OpAmp.Client)
     opAmpDependencyFiles tfm |> List.iter(fun f ->
         if f.Exists then
             printfn $"Staging zip: %s{stagedZip.Name}, Adding OpAmp dependency: %s{f.Name} (%s{tfm}) to %s{target}"

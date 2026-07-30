@@ -1,0 +1,15 @@
+# Default: normalize line endings to LF in the repo and check out as LF (except overrides below)
+* text=auto eol=lf
+
+# Windows scripts must use CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Shell scripts must use LF
+*.sh text eol=lf
+
+# Binary files — no line ending conversion
+*.ico binary
+*.png binary
+*.snk binary
+*.map binary
