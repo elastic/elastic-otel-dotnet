@@ -11,6 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="SSH.NET" />
     <PackageReference Include="Testcontainers" />
   </ItemGroup>
 
