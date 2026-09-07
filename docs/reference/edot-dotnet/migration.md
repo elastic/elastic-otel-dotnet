@@ -31,7 +31,7 @@ While you can use the [OpenTelemetry SDK for .NET](https://github.com/open-telem
 Follow these steps to migrate from the legacy Elastic APM .NET agent to the {{edot}} .NET.
 
 :::{agent-skill}
-:url: https://github.com/elastic/agent-skills/tree/main/skills/observability/edot-dotnet-migrate
+:url: https://github.com/elastic/agent-skills/tree/main/skills/observability/onboarding
 
 Use this skill to migrate from the Elastic APM .NET agent to EDOT .NET.
 :::
