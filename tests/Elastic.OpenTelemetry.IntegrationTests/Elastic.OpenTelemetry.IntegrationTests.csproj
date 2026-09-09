@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+    <PackageReference Include="SSH.NET" />
     <PackageReference Include="Testcontainers" />
   </ItemGroup>
 

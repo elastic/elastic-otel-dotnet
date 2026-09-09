@@ -48,6 +48,11 @@
         to avoid build warnings for AoT consumers.
     -->
     <PackageVersion Include="Google.Protobuf" Version="3.34.1" />
+    <!--
+        SSH.NET is a transitive dependency of Testcontainers. Version 2025.1.0 has a known high
+        severity vulnerability (GHSA-q939-rpr3-3284). We force a newer version to fix the vulnerability.
+    -->
+    <PackageVersion Include="SSH.NET" Version="2026.0.0" />
     <!-- Build -->
     <PackageVersion Include="Argu" Version="6.2.5" />
     <PackageVersion Include="Bullseye" Version="6.1.0" />
