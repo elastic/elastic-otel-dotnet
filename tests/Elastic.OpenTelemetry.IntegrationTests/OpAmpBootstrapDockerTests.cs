@@ -51,7 +51,9 @@ public class OpAmpBootstrapDockerTests : IAsyncLifetime
 			.WithCreateParameterModifier(p =>
 			{
 				// Enable host.docker.internal on Linux (Docker 20.10+)
-				p.HostConfig.ExtraHosts ??= [];
+				// HostConfig should never be null based on the TestContainers source code.
+				// This can throw a NullReferenceException if the TestContainers library changes in the future.
+				p.HostConfig!.ExtraHosts ??= [];
 				p.HostConfig.ExtraHosts.Add("host.docker.internal:host-gateway");
 			})
 			.WithEnvironment("ELASTIC_OTEL_OPAMP_ENDPOINT", $"http://host.docker.internal:{_server.Port}")
