@@ -9,6 +9,8 @@ using Elastic.OpenTelemetry.Exporters;
 using Elastic.OpenTelemetry.Resources;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
+using OpenTelemetry.AutoInstrumentation.PluginApi;
+using OpenTelemetry.AutoInstrumentation.PluginApi.Telemetry;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
@@ -23,7 +25,14 @@ namespace Elastic.OpenTelemetry;
 /// Elastic Distribution of OpenTelemetry .NET plugin for Auto Instrumentation.
 /// <para>Ensures all signals are rich enough to report to Elastic.</para>
 /// </summary>
-public class AutoInstrumentationPlugin
+public class AutoInstrumentationPlugin :
+	IPlugin,
+	ITelemetryPlugin,
+	IConfigureTracesOptions<OtlpExporterOptions>,
+	IConfigureMetricsOptions<OtlpExporterOptions>,
+	IConfigureMetricsOptions<MetricReaderOptions>,
+	IConfigureLogsOptions<OtlpExporterOptions>,
+	IConfigureLogsOptions<OpenTelemetryLoggerOptions>
 {
 	// NOTE: We don't use nameof + string interpolation for the bootstrap log messages.
 	// This avoids cluttering the code with a check to see if bootstrap logging is enabled before the log message.
@@ -52,6 +61,22 @@ public class AutoInstrumentationPlugin
 				ex);
 		}
 	}
+
+	/// <inheritdoc />
+	public void Initializing() =>
+		BootstrapLogger.Log("AutoInstrumentationPlugin: Initializing invoked");
+
+	/// <inheritdoc />
+	public void Initialized() =>
+		BootstrapLogger.Log("AutoInstrumentationPlugin: Initialized invoked");
+
+	/// <inheritdoc />
+	public void TracerProviderInitialized(TracerProvider tracerProvider) =>
+		BootstrapLogger.Log("AutoInstrumentationPlugin: TracerProviderInitialized invoked");
+
+	/// <inheritdoc />
+	public void MeterProviderInitialized(MeterProvider meterProvider) =>
+		BootstrapLogger.Log("AutoInstrumentationPlugin: MeterProviderInitialized invoked");
 
 	/// <summary>
 	/// Configure Resource Builder for Logs, Metrics and Traces
@@ -92,6 +117,15 @@ public class AutoInstrumentationPlugin
 
 		return builder;
 	}
+
+	/// <inheritdoc />
+	public MeterProviderBuilder BeforeConfigureMeterProvider(MeterProviderBuilder builder) => builder;
+
+	/// <inheritdoc />
+	public TracerProviderBuilder AfterConfigureTracerProvider(TracerProviderBuilder builder) => builder;
+
+	/// <inheritdoc />
+	public MeterProviderBuilder AfterConfigureMeterProvider(MeterProviderBuilder builder) => builder;
 
 	/// <summary>
 	/// Configure traces OTLP exporter options.

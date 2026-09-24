@@ -64,6 +64,7 @@ namespace Elastic.OpenTelemetry.OpAmp
 					opts.Identification.AddIdentifyingAttribute("application.name", serviceName);
 					if (!string.IsNullOrEmpty(serviceVersion))
 						opts.Identification.AddIdentifyingAttribute("application.version", serviceVersion!);
+					opts.RemoteConfiguration.AcceptsRemoteConfig = true;
 					opts.Heartbeat.IsEnabled = false;
 				};
 	}
