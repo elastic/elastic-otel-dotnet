@@ -210,9 +210,13 @@ let stageInstallationBashScript () =
     let staged = installScript.CopyTo ((stageFile installScript).FullName, true)
     let contents =
         (File.ReadAllText staged.FullName)
+            .Replace("open-telemetry/opentelemetry-dotnet-instrumentation", "elastic/elastic-otel-dotnet")
             .Replace("/open-telemetry/opentelemetry-dotnet-instrumentation/", "/elastic/elastic-otel-dotnet/")
             .Replace("opentelemetry-dotnet-instrumentation", "elastic-dotnet-instrumentation")
-            .Replace("v" + Software.OpenTelemetryAutoInstrumentationVersion.AsString, Software.Version.Normalize())
+            .Replace("v" + Software.OpenTelemetryAutoInstrumentationVersion.AsString, "v" + Software.Version.Normalize())
+            // EDOT releases do not yet use immutable GitHub releases. Do not require
+            // consumers to install the GitHub CLI while release verification is unavailable.
+            .Replace("SKIP_RELEASE_VERIFICATION:-false", "SKIP_RELEASE_VERIFICATION:-true")
             
     let elasticInstall = distroFile installScript
     File.WriteAllText(elasticInstall.FullName, contents)
@@ -231,10 +235,13 @@ let stageInstallationPsScript () =
     let envMarker = "\"OTEL_DOTNET_AUTO_HOME\"               = $OTEL_DOTNET_AUTO_HOME;"
     let contents =
         (File.ReadAllText staged.FullName)
+            .Replace("open-telemetry/opentelemetry-dotnet-instrumentation", "elastic/elastic-otel-dotnet")
             .Replace("/open-telemetry/opentelemetry-dotnet-instrumentation/", "/elastic/elastic-otel-dotnet/")
             .Replace("opentelemetry-dotnet-instrumentation", "elastic-dotnet-instrumentation")
             .Replace("OpenTelemetry .NET Automatic Instrumentation", "Elastic Distribution of OpenTelemetry (EDOT) .NET")
             .Replace("OpenTelemetry.DotNet.Auto", "Elastic.OpenTelemetry.DotNet")
+            // Keep the Windows module aligned with the Bash installer above.
+            .Replace("[switch]$SkipReleaseVerification", "[switch]$SkipReleaseVerification = $true")
             .Replace(envMarker,
                      [
                         envMarker
@@ -243,7 +250,7 @@ let stageInstallationPsScript () =
                      ]
                      |> String.concat "\r\n        "
             )
-            .Replace("v" + Software.OpenTelemetryAutoInstrumentationVersion.AsString, Software.Version.Normalize())
+            .Replace("v" + Software.OpenTelemetryAutoInstrumentationVersion.AsString, "v" + Software.Version.Normalize())
     let elasticInstall = distroFile installScript
     //ensure we write our new module name
     File.WriteAllText(elasticInstall.FullName.Replace("elastic.DotNet.Auto", "Elastic.OpenTelemetry.DotNet"), contents);

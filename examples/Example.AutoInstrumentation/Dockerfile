@@ -4,10 +4,7 @@ ARG TARGETARCH
 ARG TARGETVARIANT
 FROM mcr.microsoft.com/dotnet/runtime:10.0 AS base
 RUN apt-get update && apt-get install -y unzip curl strace
-# Would love to run as non root but TestContainers does not utilize buildkit like `docker build` does OOTB
-#USER $APP_UID
 WORKDIR /app
-RUN chown app:app .
 
 FROM base AS otel
 ARG OTEL_VERSION
@@ -16,7 +13,8 @@ ARG OTEL_VERSION
 #ADD --chown=$APP_UID --chmod=777 https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation/releases/download/v${OTEL_VERSION}/otel-dotnet-auto-install.sh otel-dotnet-auto-install.sh
 ADD https://github.com/open-telemetry/opentelemetry-dotnet-instrumentation/releases/download/v${OTEL_VERSION}/otel-dotnet-auto-install.sh otel-dotnet-auto-install.sh
 RUN chmod +x otel-dotnet-auto-install.sh
-RUN OTEL_DOTNET_AUTO_HOME="/app/otel" sh otel-dotnet-auto-install.sh
+RUN SKIP_RELEASE_VERIFICATION=true OTEL_DOTNET_AUTO_HOME="/app/otel" sh otel-dotnet-auto-install.sh
+RUN chown -R app:app /app/otel
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build_example
 ENV _PROJECT="Example.AutoInstrumentation"
@@ -83,5 +81,8 @@ ENV DOTNET_SHARED_STORE="/app/otel/store"
 ENV DOTNET_STARTUP_HOOKS="/app/otel/net/OpenTelemetry.AutoInstrumentation.StartupHook.dll"
 
 ENV OTEL_DOTNET_AUTO_FAIL_FAST_ENABLED=true
+
+RUN chown -R app:app /app
+USER $APP_UID
 
 ENTRYPOINT ["dotnet", "/app/example/Example.AutoInstrumentation.dll"]
