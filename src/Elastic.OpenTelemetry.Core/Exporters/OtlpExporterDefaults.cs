@@ -5,10 +5,6 @@
 using Elastic.OpenTelemetry.Core;
 using OpenTelemetry.Exporter;
 
-#if NETFRAMEWORK
-using System.Net.Http;
-#endif
-
 #pragma warning disable IDE0130 // Namespace does not match folder structure
 namespace Elastic.OpenTelemetry.Exporters;
 #pragma warning restore IDE0130 // Namespace does not match folder structure
@@ -18,11 +14,7 @@ internal static class OtlpExporterDefaults
 	private static string UserAgent => $"elastic-otlp-dotnet/{VersionHelper.InformationalVersion}";
 
 	internal static void OtlpExporterOptions(OtlpExporterOptions options) =>
-		options.HttpClientFactory = () =>
-		{
-			var client = new HttpClient(new ElasticUserAgentHandler(UserAgent));
-			return client;
-		};
+		options.UserAgentProductIdentifier = UserAgent;
 
 	internal static OtlpExporterOptions ConfigureElasticUserAgent(this OtlpExporterOptions options)
 	{
