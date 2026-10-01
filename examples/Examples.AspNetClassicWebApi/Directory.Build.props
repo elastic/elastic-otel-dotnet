@@ -1,0 +1,6 @@
+<Project>
+  <!--
+    Isolates this legacy (non-SDK) project from the repository-wide build settings.
+    It is built with MSBuild on Windows only and is not part of Elastic.OpenTelemetry.slnx.
+  -->
+</Project>
