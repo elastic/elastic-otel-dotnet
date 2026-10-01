@@ -1,0 +1,6 @@
+<Project>
+  <!-- This legacy project specifies package versions inline rather than via central package management. -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>

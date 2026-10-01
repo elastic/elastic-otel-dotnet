@@ -23,6 +23,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       code: ${{ steps.filter.outputs.code }}
+      aspnet-classic: ${{ steps.filter.outputs.aspnet-classic }}
     steps:
       # Required for push events; pull_request events use the GitHub API directly
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -33,6 +34,12 @@ jobs:
           filters: |
             code:
               - '!(docs/**)'
+            aspnet-classic:
+              - 'examples/Examples.AspNetClassicWebApi/**'
+              - 'src/**'
+              - 'Directory.Build.props'
+              - 'Directory.Packages.props'
+              - '.github/workflows/ci.yml'
 
   unit-tests-windows:
     name: Windows Tests
@@ -114,6 +121,31 @@ jobs:
 
       - name: Integration Tests
         run: ./build.sh test --test-suite=integration --skip-build --skip-restore
+
+  aspnet-classic-example-windows:
+    name: ASP.NET Classic Example Build
+    needs: [check-paths]
+    if: needs.check-paths.outputs.aspnet-classic == 'true'
+    runs-on:
+      group: elastic-otel-dotnet
+      labels: elastic-otel-dotnet-windows2025-16
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Bootstrap Action Workspace
+        id: bootstrap
+        uses: ./.github/workflows/bootstrap
+
+      # The example is a legacy (non-SDK) web project that is not part of Elastic.OpenTelemetry.slnx.
+      # It requires Visual Studio's MSBuild and web targets, so `dotnet build` can't be used.
+      - name: Build ASP.NET Classic Example
+        shell: pwsh
+        run: |
+          $msbuild = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.Component.MSBuild -find "MSBuild\**\Bin\MSBuild.exe" | Select-Object -First 1
+          if (-not $msbuild) { throw "MSBuild was not found on the runner." }
+          & $msbuild examples/Examples.AspNetClassicWebApi/Examples.AspNetClassicWebApi.csproj -restore -p:Configuration=Release -warnaserror -nologo -v:m
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   aot-tests-windows:
     name: AOT Compatibility Tests
