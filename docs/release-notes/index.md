@@ -27,6 +27,14 @@ To check for security updates, go to [Security announcements for the Elastic sta
 % ### Fixes [edot-dotnet-X.X.X-fixes]
 % *
 
+## 1.6.0 [edot-dotnet-1.6.0-release-notes]
+
+### Features and enhancements [edot-dotnet-1.6.0-features-enhancements]
+
+- Update to latest upstream packages (SDK 1.19.1 and instrumentation 1.17.0). [#437](https://github.com/elastic/elastic-otel-dotnet/pull/437)
+- Add ASP.NET classic example. [#97](https://github.com/elastic/elastic-otel-dotnet/pull/97)
+- Use `UserAgentProductIdentifier` rather than custom `HttpClientFactory` [#438](https://github.com/elastic/elastic-otel-dotnet/pull/438)
+
 ## 1.5.0 [edot-dotnet-1.5.0-release-notes]
 
 ### Fixes [edot-dotnet-1.5.0-fixes]
