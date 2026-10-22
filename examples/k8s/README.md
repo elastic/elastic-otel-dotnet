@@ -18,6 +18,11 @@ kubectl create secret generic elastic-otel -n my-dotnet-ns \
 
 Next create an `Instrumentation` resource by creating an [`elastic-otel-dotnet.yml`](elastic-otel-dotnet.yml) file.
 
+The manifest sets `OTEL_DOTNET_AUTO_PLUGINS` in `spec.dotnet.env` to load the EDOT .NET plugin.
+Keep this setting when customizing the manifest: the operator copies the instrumentation files
+but does not run `instrument.sh` or propagate the instrumentation image's environment variables
+to the application container. Selecting the EDOT image alone does not load the plugin.
+
 Then apply it to create it in our namespace
 
 ```bash
@@ -70,11 +75,13 @@ Once spun up we can query the logs with
 kubectl logs my-dotnet-application -n my-dotnet-ns
 ```
 
-It should print the Elastic Distribution of OpenTelemetry .NET preamble 
+The application logs should include the EDOT .NET startup message (the version varies):
 
 ```log
-[2024-09-06 18:49:36.011][00001][------][Information]  Elastic Distribution of OpenTelemetry .NET: 1.0.0-alpha.6.1
+Elastic Distribution of OpenTelemetry (EDOT) .NET: <version>
 ```
+
+This message confirms that the EDOT plugin loaded, but does not by itself confirm that the native profiler attached.
 
 TIP: You can expose this pod locally to your host using:
 
@@ -112,8 +119,8 @@ NOTE: Make sure `imagePullPolicy` is set to `Never`
 
 ### Debug deployments 
 
-The `describe` command is great to validate the init-container ran and exposed
-all the necessary environment variables.
+The `describe` command shows the init-container status and the environment variables
+injected into the application container.
 
 ```bash
 kubectl describe pod my-dotnet-application -n my-dotnet-ns
@@ -124,5 +131,28 @@ You can use `exec` to inspect the container to see if it matches your expectatio
 kubectl exec my-dotnet-application -n my-dotnet-ns -- ls -la /otel-auto-instrumentation-dotnet
 ```
 
+### Run operator image smoke tests
 
+The smoke tests exercise the root `Dockerfile` without requiring a Kubernetes cluster.
+They copy its payload as the nonroot init-container user, then run an uninstrumented .NET
+application using the operator's environment variables and a read-only instrumentation volume.
+They cover Linux amd64 and arm64, glibc and musl, and both legacy and current profiler paths.
+Assertions include native-profiler attachment, EDOT plugin initialization, and copied symlinks.
 
+Docker with Buildx, the .NET SDK, and arm64 execution support (a native arm64 host or QEMU
+on amd64) are required. Hosts must also support amd64 execution. Docker Desktop typically
+provides cross-architecture execution; Linux CI installs QEMU explicitly.
+
+```bash
+dotnet format
+./build.sh redistribute
+export EDOT_OPERATOR_SMOKE_IMAGE_PREFIX=edot-operator-smoke
+docker buildx build --platform linux/amd64 --load --tag "$EDOT_OPERATOR_SMOKE_IMAGE_PREFIX:amd64" .
+docker buildx build --platform linux/arm64 --load --tag "$EDOT_OPERATOR_SMOKE_IMAGE_PREFIX:arm64" .
+dotnet test tests/Elastic.OpenTelemetry.IntegrationTests/Elastic.OpenTelemetry.IntegrationTests.csproj \
+  -c Release --filter FullyQualifiedName~OperatorImageSmokeTests -bl:{}
+docker image rm "$EDOT_OPERATOR_SMOKE_IMAGE_PREFIX:amd64" "$EDOT_OPERATOR_SMOKE_IMAGE_PREFIX:arm64"
+```
+
+The tests are skipped when `EDOT_OPERATOR_SMOKE_IMAGE_PREFIX` is unset. Linux integration
+CI builds both images and sets this variable, so all eight combinations run there.
