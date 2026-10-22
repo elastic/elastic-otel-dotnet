@@ -14,4 +14,8 @@
     <ProjectReference Include="..\Example.MinimalApi\Example.MinimalApi.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="MessagePack" />
+  </ItemGroup>
+
 </Project>
