@@ -27,6 +27,12 @@ To check for security updates, go to [Security announcements for the Elastic sta
 % ### Fixes [edot-dotnet-X.X.X-fixes]
 % *
 
+## 1.6.1 [edot-dotnet-1.6.1-release-notes]
+
+### Features and enhancements [edot-dotnet-1.6.1-features-enhancements]
+
+- Update the operator dockerfile to align with upstream [#437](https://github.com/elastic/elastic-otel-dotnet/pull/442)
+
 ## 1.6.0 [edot-dotnet-1.6.0-release-notes]
 
 ### Features and enhancements [edot-dotnet-1.6.0-features-enhancements]
