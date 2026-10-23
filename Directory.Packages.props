@@ -66,6 +66,11 @@
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.15" Condition="'$(TargetFramework)' == 'net9.0'" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.7" Condition="'$(TargetFramework)' == 'net10.0'" />
     <!-- Examples -->
+    <!--
+        Aspire.Hosting brings in MessagePack 2.5.302 (via StreamJsonRpc), which is affected by
+        GHSA-qhrr-8q5h-9q3h. Pin the patched version until Aspire picks it up.
+    -->
+    <PackageVersion Include="MessagePack" Version="2.5.303" />
   </ItemGroup>
   <!-- Per-TFM overrides for Microsoft.Extensions.* to match the shared framework major version. -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">

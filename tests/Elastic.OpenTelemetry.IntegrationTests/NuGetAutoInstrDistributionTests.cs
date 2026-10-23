@@ -36,6 +36,8 @@ public class NuGetAutoInstrDistributionTests
 		await server.StartAsync();
 
 		var envVars = ProfilerEnvironment.ForCoreCLR(_fixture.InstallationDirectory);
+		// Match NuGet startup scripts: use the application's resolved dependency versions.
+		envVars["OTEL_DOTNET_AUTO_REDIRECT_ENABLED"] = "false";
 		envVars["ELASTIC_OTEL_OPAMP_ENDPOINT"] = server.Endpoint;
 		envVars["OTEL_SERVICE_NAME"] = "nuget-autoinstr-net10-opamp-test";
 
@@ -62,6 +64,8 @@ public class NuGetAutoInstrDistributionTests
 		await server.StartAsync();
 
 		var envVars = ProfilerEnvironment.ForCoreCLR(_fixture.InstallationDirectory);
+		// Match NuGet startup scripts: use the application's resolved dependency versions.
+		envVars["OTEL_DOTNET_AUTO_REDIRECT_ENABLED"] = "false";
 		envVars["ELASTIC_OTEL_OPAMP_ENDPOINT"] = server.Endpoint;
 		envVars["OTEL_SERVICE_NAME"] = "nuget-autoinstr-net10-config-test";
 

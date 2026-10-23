@@ -108,7 +108,9 @@ jobs:
     runs-on:
       group: elastic-otel-dotnet
       labels: elastic-otel-dotnet-ubuntu24-16
-    timeout-minutes: 20
+    timeout-minutes: 30
+    env:
+      EDOT_OPERATOR_SMOKE_IMAGE_PREFIX: edot-operator-smoke-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -119,8 +121,33 @@ jobs:
       - name: Build Redistributable Artifacts
         run: ./build.sh redistribute
 
+      - name: Set up QEMU for arm64 smoke tests
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        with:
+          platforms: arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        with:
+          cache-binary: false
+
+      - name: Build operator smoke images
+        run: |
+          docker buildx build --platform linux/amd64 --load --tag "$EDOT_OPERATOR_SMOKE_IMAGE_PREFIX:amd64" .
+          docker buildx build --platform linux/arm64 --load --tag "$EDOT_OPERATOR_SMOKE_IMAGE_PREFIX:arm64" .
+
       - name: Integration Tests
         run: ./build.sh test --test-suite=integration --skip-build --skip-restore
+
+      - name: Clean up operator smoke images
+        if: always()
+        run: |
+          for arch in amd64 arm64; do
+            image="$EDOT_OPERATOR_SMOKE_IMAGE_PREFIX:$arch"
+            if docker image inspect "$image" > /dev/null 2>&1; then
+              docker image rm "$image"
+            fi
+          done
 
   aspnet-classic-example-windows:
     name: ASP.NET Classic Example Build

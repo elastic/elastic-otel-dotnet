@@ -21,6 +21,8 @@ spec:
   dotnet:
     image: docker.elastic.co/observability/elastic-otel-dotnet:edge
     env:
+      - name: OTEL_DOTNET_AUTO_PLUGINS
+        value: "Elastic.OpenTelemetry.AutoInstrumentationPlugin, Elastic.OpenTelemetry.AutoInstrumentation"
       - name: OTEL_EXPORTER_OTLP_HEADERS
         valueFrom:
           secretKeyRef:
@@ -30,5 +32,4 @@ spec:
         value: "info"
       - name: ELASTIC_OTEL_LOG_TARGETS
         value: "stdout"
-
 
