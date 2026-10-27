@@ -27,3 +27,5 @@ such as which instrumentation sources are observed by default.
 ## Read the docs
 
 Read our complete [EDOT .NET documentation](https://www.elastic.co/docs/reference/opentelemetry/edot-sdks/dotnet) for more information.
+
+<!-- CI path check: harmless documentation note -->
