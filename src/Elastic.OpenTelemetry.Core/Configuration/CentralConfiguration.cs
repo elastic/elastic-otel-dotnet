@@ -142,13 +142,13 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 	//   OpAmpBlockingStartTimeoutMilliseconds (2000)  — CTS fires, cancelling StartAsync
 	//   + CleanupBudgetMs                     (500)   — worker runs StopAsync in finally
 	//   + SchedulingMarginMs                  (500)   — OS thread scheduling headroom
-	//   = 3000ms Join timeout
+	//   = 3000ms Join timeout                 (ElasticOpenTelemetry.OpAmpStartJoinTimeoutMs)
+	//
+	// These constants live on ElasticOpenTelemetry so the CompositeLogger safety timer
+	// budget is derived from the same values and cannot drift from the real Join timeout.
 
 	/// <summary>Maximum time the worker's StopAsync cleanup is allowed to run.</summary>
-	private const int CleanupBudgetMs = 500;
-
-	/// <summary>Headroom for OS thread scheduling between cancellation and thread exit.</summary>
-	private const int SchedulingMarginMs = 500;
+	private const int CleanupBudgetMs = ElasticOpenTelemetry.OpAmpStartCleanupBudgetMs;
 
 	/// <summary>
 	/// Outcome of the worker thread's StartAsync attempt. Stored as <c>int</c> because
@@ -260,8 +260,7 @@ internal sealed class CentralConfiguration : IDisposable, IAsyncDisposable
 		// Join waits for actual thread termination — a stronger gate than signalling.
 		// If Join returns true the worker is fully done (including its finally block),
 		// so all cleanup has completed and the outcome field is in its final state.
-		var joinTimeout = OpAmpBlockingStartTimeoutMilliseconds + CleanupBudgetMs + SchedulingMarginMs;
-		var workerCompleted = thread.Join(joinTimeout);
+		var workerCompleted = thread.Join(ElasticOpenTelemetry.OpAmpStartJoinTimeoutMs);
 
 		// When workerCompleted is true, Thread.Join provides a happens-before guarantee,
 		// making the Volatile.Read technically redundant — but it makes the cross-thread
