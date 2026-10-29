@@ -90,6 +90,7 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 
 	private bool? _isOpAmpEnabled;
 	private bool _identityResolved;
+	private string? _resolvedServiceName;
 
 	/// <summary>
 	/// Creates a new instance of <see cref="CompositeElasticOpenTelemetryOptions"/> with properties
@@ -199,34 +200,32 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 	/// Calculates whether global logging is enabled based on
 	/// <see cref="LogTargets"/>, <see cref="LogDirectory"/> and <see cref="LogLevel"/>
 	/// </summary>
-	internal bool GlobalLogEnabled
+	internal bool GlobalLogEnabled => IsGlobalLogEnabled(_logLevel.Value);
+
+	private bool IsGlobalLogEnabled(LogLevel? level)
 	{
-		get
-		{
-			var level = _logLevel.Value;
-			var targets = _logTargets.Value;
+		var targets = _logTargets.Value;
 
-			// Determine if logging is initially active based on:
-			// - Log level being Debug or more verbose (lower value)
-			// - Log directory being explicitly configured
-			// - Log targets having a value
-			var isActive = level is <= LogLevel.Debug || !string.IsNullOrWhiteSpace(_logDirectory.Value) || targets.HasValue;
+		// Determine if logging is initially active based on:
+		// - Log level being Debug or more verbose (lower value)
+		// - Log directory being explicitly configured
+		// - Log targets having a value
+		var isActive = level is <= LogLevel.Debug || !string.IsNullOrWhiteSpace(_logDirectory.Value) || targets.HasValue;
 
-			// If none of the above conditions are met, return false immediately
-			if (!isActive)
-				return isActive;
-
-			// If log level is explicitly set to None, disable logging
-			if (level is LogLevel.None)
-				isActive = false;
-
-			// If log targets is explicitly set to None, disable logging
-			else if (targets is LogTargets.None)
-				isActive = false;
-
-			// Return the final determination of whether global logging should be enabled
+		// If none of the above conditions are met, return false immediately
+		if (!isActive)
 			return isActive;
-		}
+
+		// If log level is explicitly set to None, disable logging
+		if (level is LogLevel.None)
+			isActive = false;
+
+		// If log targets is explicitly set to None, disable logging
+		else if (targets is LogTargets.None)
+			isActive = false;
+
+		// Return the final determination of whether global logging should be enabled
+		return isActive;
 	}
 
 	/// <summary>
@@ -255,11 +254,14 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 	/// <inheritdoc cref="ElasticOpenTelemetryOptions.LogTargets"/>
 	internal LogTargets LogTargets
 	{
-		get => _logTargets.Value ?? (GlobalLogEnabled
-			? _runningInContainer.Value.HasValue && _runningInContainer.Value.Value ? LogTargets.StdOut : LogTargets.File
-			: LogTargets.None);
+		get => ResolveLogTargets(_logLevel.Value);
 		init => _logTargets.AssignFromProperty(value);
 	}
+
+	private LogTargets ResolveLogTargets(LogLevel? level) =>
+		_logTargets.Value ?? (IsGlobalLogEnabled(level)
+			? _runningInContainer.Value.HasValue && _runningInContainer.Value.Value ? LogTargets.StdOut : LogTargets.File
+			: LogTargets.None);
 
 	/// <inheritdoc cref="ElasticOpenTelemetryOptions.SkipOtlpExporter"/>
 	internal bool SkipOtlpExporter
@@ -338,11 +340,11 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 
 	internal string? ServiceVersion { get; private set; }
 
-	internal string? ServiceName
-	{
-		get => _serviceName.Value ?? null;
-		private set => _serviceName.AssignFromProperty(value);
-	}
+	/// <summary>
+	/// The configured service name or, once <see cref="ResolveOpAmpServiceIdentity"/> has run,
+	/// the name resolved from <see cref="ResourceAttributes"/>.
+	/// </summary>
+	internal string? ServiceName => _serviceName.Value ?? _resolvedServiceName;
 
 	internal string? ResourceAttributes
 	{
@@ -364,7 +366,9 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 			if (string.IsNullOrEmpty(ServiceName))
 			{
 				logger.LogDebug("OpAMP setting service name from resource attributes");
-				ServiceName = LookupResourceAttribute(ResourceAttributes!, ResourceSemanticConventions.AttributeServiceName);
+				// Stored separately from _serviceName so that resolution does not affect equality
+				// (it is derived entirely from ResourceAttributes, which is already compared).
+				_resolvedServiceName = LookupResourceAttribute(ResourceAttributes!, ResourceSemanticConventions.AttributeServiceName);
 			}
 
 			if (string.IsNullOrEmpty(ServiceVersion))
@@ -435,14 +439,22 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 		return null;
 	}
 
+	// Equality and hashing deliberately use only locally configured values. State mutated during
+	// bootstrap (central config log level, service name resolved from resource attributes) is
+	// excluded so that an options instance built later from the same inputs still matches and
+	// reuses the shared components, rather than creating a second OpAmp client and file logger.
+	private LogLevel LocalLogLevel => _logLevel.LocalValue ?? LogLevel.Warning;
+
+	private LogTargets LocalLogTargets => ResolveLogTargets(_logLevel.LocalValue);
+
 	public override bool Equals(object? obj)
 	{
 		if (obj is not CompositeElasticOpenTelemetryOptions other)
 			return false;
 
 		return LogDirectory == other.LogDirectory &&
-			   LogLevel == other.LogLevel &&
-			   LogTargets == other.LogTargets &&
+			   LocalLogLevel == other.LocalLogLevel &&
+			   LocalLogTargets == other.LocalLogTargets &&
 			   SkipOtlpExporter == other.SkipOtlpExporter &&
 			   SkipInstrumentationAssemblyScanning == other.SkipInstrumentationAssemblyScanning &&
 			   Signals == other.Signals &&
@@ -451,7 +463,7 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 			   Logging.SetEquals(other.Logging) &&
 			   OpAmpEndpoint == other.OpAmpEndpoint &&
 			   OpAmpHeaders == other.OpAmpHeaders &&
-			   ServiceName == other.ServiceName &&
+			   _serviceName.Value == other._serviceName.Value &&
 			   ResourceAttributes == other.ResourceAttributes &&
 			   ReferenceEquals(AdditionalLogger, other.AdditionalLogger);
 	}
@@ -460,8 +472,8 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 	{
 #if NET462 || NETSTANDARD2_0
 		return LogDirectory.GetHashCode()
-			^ LogLevel.GetHashCode()
-			^ LogTargets.GetHashCode()
+			^ LocalLogLevel.GetHashCode()
+			^ LocalLogTargets.GetHashCode()
 			^ SkipOtlpExporter.GetHashCode()
 			^ SkipInstrumentationAssemblyScanning.GetHashCode()
 			^ Signals.GetHashCode()
@@ -470,13 +482,13 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 			^ Logging.GetHashCode()
 			^ (OpAmpEndpoint?.GetHashCode() ?? 0)
 			^ (OpAmpHeaders?.GetHashCode() ?? 0)
-			^ (ServiceName?.GetHashCode() ?? 0)
+			^ (_serviceName.Value?.GetHashCode() ?? 0)
 			^ (ResourceAttributes?.GetHashCode() ?? 0)
 			^ (AdditionalLogger?.GetHashCode() ?? 0);
 #else
-		var hash1 = HashCode.Combine(LogDirectory, LogLevel, LogTargets, SkipOtlpExporter);
+		var hash1 = HashCode.Combine(LogDirectory, LocalLogLevel, LocalLogTargets, SkipOtlpExporter);
 		var hash2 = HashCode.Combine(Signals, Tracing, Metrics, Logging, AdditionalLogger);
-		var hash3 = HashCode.Combine(SkipInstrumentationAssemblyScanning, OpAmpEndpoint, OpAmpHeaders, ResourceAttributes, ServiceName);
+		var hash3 = HashCode.Combine(SkipInstrumentationAssemblyScanning, OpAmpEndpoint, OpAmpHeaders, ResourceAttributes, _serviceName.Value);
 		return HashCode.Combine(hash1, hash2, hash3);
 #endif
 	}
