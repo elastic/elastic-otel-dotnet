@@ -18,16 +18,32 @@ namespace Elastic.OpenTelemetry.OpAmp
 		{
 			_logger.LogReceivedRemoteConfig(nameof(RemoteConfigMessageListener));
 
+			// Subscribers are notified for every message, even when it carries no usable log level,
+			// so that waiting for the first config completes as soon as the server has responded
+			// rather than running to the timeout.
+			var mapped = new ElasticRemoteConfig(ExtractLogLevel(message));
+
+			// Paired with Interlocked.CompareExchange in Subscribe
+			var subscribers = Volatile.Read(ref _subscribers);
+
+			_logger.LogNotifyingSubscribers(nameof(RemoteConfigMessageListener), subscribers.Length);
+
+			foreach (var subscriber in subscribers)
+				subscriber.HandleMessage(mapped);
+		}
+
+		private string? ExtractLogLevel(RemoteConfigMessage message)
+		{
 			if (!message.AgentConfigMap.TryGetValue("elastic", out var config))
 			{
 				_logger.LogNoElasticConfigKey(nameof(RemoteConfigMessageListener));
-				return;
+				return null;
 			}
 
 			if (config.ContentType != "application/json")
 			{
 				_logger.LogConfigNotJsonFormat(nameof(RemoteConfigMessageListener));
-				return;
+				return null;
 			}
 
 			var body = config.Body;
@@ -37,20 +53,12 @@ namespace Elastic.OpenTelemetry.OpAmp
 			if (!parser.TryParseLogLevel(out var logLevel))
 			{
 				_logger.LogNoValidLogLevel(nameof(RemoteConfigMessageListener));
-				return;
+				return null;
 			}
 
 			_logger.LogExtractedLogLevel(nameof(RemoteConfigMessageListener), logLevel!);
 
-			var mapped = new ElasticRemoteConfig(logLevel);
-
-			// Paired with Interlocked.CompareExchange in Subscribe
-			var subscribers = Volatile.Read(ref _subscribers);
-
-			_logger.LogNotifyingSubscribers(nameof(RemoteConfigMessageListener), subscribers.Length);
-
-			foreach (var subscriber in subscribers)
-				subscriber.HandleMessage(mapped);
+			return logLevel;
 		}
 
 		internal void Subscribe(IOpAmpRemoteConfigMessageSubscriber subscriber)
