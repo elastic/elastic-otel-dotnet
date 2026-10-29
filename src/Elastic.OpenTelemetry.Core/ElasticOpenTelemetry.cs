@@ -191,11 +191,15 @@ internal static class ElasticOpenTelemetry
 
 					if (centralConfig.WaitForFirstConfig(TimeSpan.FromMilliseconds(WaitForFirstConfigTimeoutMs)) && centralConfig.TryGetInitialConfig(out var config))
 					{
-						logger.LogDebug("{ClassName}.{MethodName}: Successfully retrieved initial central configuration.", nameof(ElasticOpenTelemetry), nameof(CreateComponents));
-
 						if (config.LogLevel is not null)
 						{
+							logger.LogDebug("{ClassName}.{MethodName}: Successfully retrieved initial central configuration.", nameof(ElasticOpenTelemetry), nameof(CreateComponents));
 							options.SetLogLevelFromCentralConfig(config.LogLevel, logger);
+						}
+						else
+						{
+							logger.LogDebug("{ClassName}.{MethodName}: The OpAMP server responded without an applicable log level in the central configuration, proceeding with local configuration.",
+								nameof(ElasticOpenTelemetry), nameof(CreateComponents));
 						}
 					}
 					else

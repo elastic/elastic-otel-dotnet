@@ -20,11 +20,11 @@ namespace Elastic.OpenTelemetry.OpAmp
 		internal static partial void LogReceivedRemoteConfig(this ILogger logger, string className);
 
 		[LoggerMessage(EventId = 202, EventName = "NoElasticConfigKey", Level = LogLevel.Debug,
-			Message = "{ClassName}: Remote config message does not contain 'elastic' config. Skipping.")]
+			Message = "{ClassName}: Remote config message does not contain 'elastic' config. Skipping log level extraction.")]
 		internal static partial void LogNoElasticConfigKey(this ILogger logger, string className);
 
 		[LoggerMessage(EventId = 203, EventName = "ConfigNotJsonFormat", Level = LogLevel.Debug,
-			Message = "{ClassName}: Remote config message 'elastic' config is not in expected JSON format. Skipping.")]
+			Message = "{ClassName}: Remote config message 'elastic' config is not in expected JSON format. Skipping log level extraction.")]
 		internal static partial void LogConfigNotJsonFormat(this ILogger logger, string className);
 
 		[LoggerMessage(EventId = 204, EventName = "NoValidLogLevel", Level = LogLevel.Debug,

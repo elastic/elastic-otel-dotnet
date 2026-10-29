@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information
 
 using System.Collections;
+using System.Diagnostics;
 using Elastic.OpenTelemetry.Configuration;
 using Elastic.OpenTelemetry.Core.Configuration;
 using Elastic.OpenTelemetry.IntegrationTests.Helpers;
@@ -50,7 +51,7 @@ public class OpAmpCentralConfigTests
 	}
 
 	[SkipOnCiFact("Times out on CI; need investigation.", Timeout = 60_000)]
-	public async Task ServerReturnsNoElasticKey_WaitReturnsFalse()
+	public async Task ServerReturnsNoElasticKey_WaitReturnsTrueWithNullLogLevel()
 	{
 		await using var server = OpAmpTestServer.OpAmpTestServer.CreateWithEmptyConfigMap();
 		await server.StartAsync();
@@ -59,14 +60,21 @@ public class OpAmpCentralConfigTests
 
 		using var centralConfig = new CentralConfiguration(options, NullLogger.Instance);
 
-		// The client connects but no "elastic" key is present, so no config is dispatched.
-		// WaitForFirstConfig should time out.
+		// The server responds but no "elastic" key is present. Subscribers are still notified so
+		// the wait completes promptly with a config that carries no log level, rather than
+		// blocking until the timeout.
+		var stopwatch = Stopwatch.StartNew();
 		var received = centralConfig.WaitForFirstConfig(TimeSpan.FromSeconds(10));
-		Assert.False(received, "Expected WaitForFirstConfig to return false when no 'elastic' key is present.");
+		stopwatch.Stop();
+
+		Assert.True(received, "Expected WaitForFirstConfig to return true when the server responds without an 'elastic' key.");
+		Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(5), $"Expected the first config well within the wait, but it took {stopwatch.Elapsed}.");
+		Assert.True(centralConfig.TryGetInitialConfig(out var config));
+		Assert.Null(config.LogLevel);
 	}
 
 	[SkipOnCiFact("Times out on CI; need investigation.", Timeout = 60_000)]
-	public async Task ServerReturnsNonJsonContentType_WaitReturnsFalse()
+	public async Task ServerReturnsNonJsonContentType_WaitReturnsTrueWithNullLogLevel()
 	{
 		await using var server = new OpAmpTestServer.OpAmpTestServer("""{"log_level":"debug"}""", "text/plain");
 		await server.StartAsync();
@@ -75,9 +83,16 @@ public class OpAmpCentralConfigTests
 
 		using var centralConfig = new CentralConfiguration(options, NullLogger.Instance);
 
-		// RemoteConfigMessageListener drops entries where ContentType != "application/json".
+		// RemoteConfigMessageListener ignores the body of entries where ContentType != "application/json",
+		// but still notifies subscribers so the wait completes promptly with a null log level.
+		var stopwatch = Stopwatch.StartNew();
 		var received = centralConfig.WaitForFirstConfig(TimeSpan.FromSeconds(10));
-		Assert.False(received, "Expected WaitForFirstConfig to return false for non-JSON content type.");
+		stopwatch.Stop();
+
+		Assert.True(received, "Expected WaitForFirstConfig to return true for a non-JSON content type.");
+		Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(5), $"Expected the first config well within the wait, but it took {stopwatch.Elapsed}.");
+		Assert.True(centralConfig.TryGetInitialConfig(out var config));
+		Assert.Null(config.LogLevel);
 	}
 
 	[SkipOnCiFact("Times out on CI; need investigation.", Timeout = 60_000)]
