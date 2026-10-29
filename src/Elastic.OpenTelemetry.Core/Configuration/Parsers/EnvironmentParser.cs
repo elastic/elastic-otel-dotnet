@@ -94,7 +94,7 @@ internal class EnvironmentParser(IDictionary environmentVariables)
 		else
 			signals &= ~Signals.Metrics;
 
-		if (logs.HasValue || traces.HasValue || traces.HasValue || allEnabled.HasValue)
+		if (logs.HasValue || traces.HasValue || metrics.HasValue || allEnabled.HasValue)
 			signalsCell.AssignFromEnvironmentVariable(signals);
 
 		if (optedLogs || optedMetrics || optedTraces)

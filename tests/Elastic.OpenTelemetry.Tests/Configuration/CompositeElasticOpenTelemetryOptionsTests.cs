@@ -392,6 +392,23 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 		Assert.NotEqual(options1, options2);
 	}
 
+	[Theory]
+	[InlineData(OTEL_DOTNET_AUTO_TRACES_INSTRUMENTATION_ENABLED, (int)Signals.Traces)]
+	[InlineData(OTEL_DOTNET_AUTO_METRICS_INSTRUMENTATION_ENABLED, (int)Signals.Metrics)]
+	[InlineData(OTEL_DOTNET_AUTO_LOGS_INSTRUMENTATION_ENABLED, (int)Signals.Logs)]
+	public void SignalInstrumentationEnabled_SetToFalse_DisablesOnlyThatSignal(string environmentVariable, int disabledSignalValue)
+	{
+		// Signals is internal, so the expected flag is passed as an int to keep the test method public.
+		var disabledSignal = (Signals)disabledSignalValue;
+
+		var sut = new CompositeElasticOpenTelemetryOptions(new Hashtable
+		{
+			{ environmentVariable, "false" }
+		});
+
+		Assert.Equal(Signals.All & ~disabledSignal, sut.Signals);
+	}
+
 	[Fact]
 	public void SetLogLevelFromCentralConfig_OverwritesValueSetViaOptions_CentralConfigWins()
 	{
