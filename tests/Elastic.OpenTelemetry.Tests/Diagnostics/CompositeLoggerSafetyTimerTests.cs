@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information
 
 using Elastic.OpenTelemetry.Configuration;
+using Elastic.OpenTelemetry.Core;
 using Elastic.OpenTelemetry.Diagnostics;
 
 namespace Elastic.OpenTelemetry.Tests.Diagnostics;
@@ -124,4 +125,95 @@ public class CompositeLoggerSafetyTimerTests
 		}
 	}
 
+	[Fact]
+	public void SafetyTimer_DuringBootstrap_DoesNotActivate_UntilBootstrapActivates()
+	{
+		var (logger, sink, options) = CreateDeferredLogger();
+
+		try
+		{
+			logger.EnterBootstrap();
+
+			for (var i = 0; i < 5; i++)
+				logger.Log(LogLevel.Information, new EventId(i), $"pre-timer {i}", null, (s, _) => s);
+
+			// Safety timer fires while bootstrap is still waiting for central config — must not activate
+			logger.OnSafetyTimerElapsed();
+			Assert.Equal(0, sink.Count);
+
+			// Bootstrap completes normally and activates with the final options
+			logger.Activate(options);
+			logger.ExitBootstrap();
+
+			// 7 total: 1 init debug + 5 queued = 6 drained + 1 CompositeLoggerActivated
+			Assert.Equal(7, sink.Count);
+
+			logger.Log(LogLevel.Information, new EventId(5), "post-bootstrap", null, (s, _) => s);
+			Assert.Equal(8, sink.Count);
+		}
+		finally
+		{
+			logger.Dispose();
+		}
+	}
+
+	[Fact]
+	public void SafetyTimer_DuringBootstrap_ActivatesOnExit_WhenBootstrapDidNotActivate()
+	{
+		var (logger, sink, _) = CreateDeferredLogger();
+
+		try
+		{
+			logger.EnterBootstrap();
+
+			for (var i = 0; i < 5; i++)
+				logger.Log(LogLevel.Information, new EventId(i), $"pre-timer {i}", null, (s, _) => s);
+
+			logger.OnSafetyTimerElapsed();
+			Assert.Equal(0, sink.Count);
+
+			// Bootstrap fails before reaching Activate — exiting runs the deferred safety timer logic
+			logger.ExitBootstrap();
+
+			// 7 total: 1 init debug + 5 queued = 6 drained + 1 CompositeLoggerActivated
+			Assert.Equal(7, sink.Count);
+		}
+		finally
+		{
+			logger.Dispose();
+		}
+	}
+
+	[Fact]
+	public void ExitBootstrap_WithoutSafetyTimerFiring_DoesNotActivate()
+	{
+		var (logger, sink, _) = CreateDeferredLogger();
+
+		try
+		{
+			logger.EnterBootstrap();
+			logger.ExitBootstrap();
+
+			// Nothing deferred, so the logger remains in deferred mode until the timer fires
+			Assert.Equal(0, sink.Count);
+
+			logger.OnSafetyTimerElapsed();
+
+			// 2 total: 1 init debug drained + 1 CompositeLoggerActivated
+			Assert.Equal(2, sink.Count);
+		}
+		finally
+		{
+			logger.Dispose();
+		}
+	}
+
+	[Fact]
+	public void SafetyTimerMs_ExceedsWorstCaseBootstrapWait()
+	{
+		var worstCaseBootstrapWaitMs = ElasticOpenTelemetry.OpAmpStartJoinTimeoutMs + ElasticOpenTelemetry.WaitForFirstConfigTimeoutMs;
+
+		Assert.True(ElasticOpenTelemetry.SafetyTimerMs > worstCaseBootstrapWaitMs,
+			$"SafetyTimerMs ({ElasticOpenTelemetry.SafetyTimerMs}) must exceed the worst-case bootstrap wait ({worstCaseBootstrapWaitMs}).");
+	}
 }

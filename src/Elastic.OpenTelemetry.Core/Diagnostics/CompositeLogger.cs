@@ -21,7 +21,8 @@ namespace Elastic.OpenTelemetry.Diagnostics;
 /// options instance in place) or options are not yet available, the logger defers until
 /// <see cref="Activate"/> is called. If the safety timer fires before activation and options
 /// are available, the logger activates with the current state of those options (which may
-/// already reflect central config mutations).
+/// already reflect central config mutations). If the safety timer fires while a bootstrap flow is in
+/// progress (see <see cref="EnterBootstrap"/>), activation is deferred until that flow completes.
 /// If disposed, triggers disposal of the <see cref="FileLogger"/>.
 /// </remarks>
 internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
@@ -64,6 +65,17 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 	// stored in PreActivationInstance remain shareable across GetOrCreate() calls until they are
 	// cleared, preventing multiple FileLogger instances from racing to open the same log file.
 	private int _activatedViaActivateMethod;
+
+	// Number of bootstrap flows currently creating components with this logger. While non-zero,
+	// the safety timer must not activate: bootstrap may still be waiting for central config, and
+	// activating early would create sub-loggers (notably FileLogger, which decides whether to open
+	// a log file at construction) and drain the deferred queue using the local log level.
+	private int _bootstrapDepth;
+
+	// Set to 1 when the safety timer fires while bootstrap is in progress. The final ExitBootstrap
+	// call consumes this flag and runs the deferred safety timer logic. Paired with _bootstrapDepth
+	// using full-fence Interlocked operations so at least one side always observes the other.
+	private int _safetyTimerDeferred;
 
 	// Static singleton for pre-activation sharing
 	private static CompositeLogger? PreActivationInstance;
@@ -149,6 +161,26 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 		if (_isDisposed)
 			return;
 
+		// Already activated (e.g. a deferred timer run from ExitBootstrap after bootstrap called
+		// Activate). Activate has already cleared the singleton and disposed the timer.
+		if (Volatile.Read(ref _activationState) != 0)
+			return;
+
+		// If bootstrap is in progress, defer to ExitBootstrap rather than activating with options
+		// that central config may not have updated yet. The flag is published before reading the
+		// depth (Dekker-style), so either we see the bootstrap still running and ExitBootstrap sees
+		// our flag, or we see it finished and proceed ourselves. Both sides proceeding is harmless
+		// because Activate is idempotent.
+		Interlocked.Exchange(ref _safetyTimerDeferred, 1);
+		if (Volatile.Read(ref _bootstrapDepth) > 0)
+		{
+			if (BootstrapLogger.IsEnabled)
+				BootstrapLogger.Log($"{nameof(CompositeLogger)}: Safety timer fired during bootstrap. Deferring activation of instance '{InstanceId}' until bootstrap completes.");
+
+			return;
+		}
+		Interlocked.Exchange(ref _safetyTimerDeferred, 0);
+
 		// If we have options, activate with them. Since options are mutated in place by
 		// SetLogLevelFromCentralConfig, they already reflect any central config updates.
 		// Capture to a local first: _options is volatile and another thread may null it
@@ -189,6 +221,24 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 			elapsed.Stop();
 			elapsed.Dispose();
 		}
+	}
+
+	/// <summary>
+	/// Marks the start of a bootstrap flow that will call <see cref="Activate"/> once the final
+	/// configuration (including any central config) is known. While a bootstrap is in progress the
+	/// safety timer will not activate the logger. Every call must be paired with <see cref="ExitBootstrap"/>.
+	/// </summary>
+	internal void EnterBootstrap() => Interlocked.Increment(ref _bootstrapDepth);
+
+	/// <summary>
+	/// Marks the end of a bootstrap flow. If the safety timer fired while bootstrap was in progress
+	/// (for example, bootstrap threw before reaching <see cref="Activate"/>), the deferred safety timer
+	/// logic runs now so queued entries are not stranded.
+	/// </summary>
+	internal void ExitBootstrap()
+	{
+		if (Interlocked.Decrement(ref _bootstrapDepth) == 0 && Interlocked.Exchange(ref _safetyTimerDeferred, 0) == 1)
+			OnSafetyTimerElapsed();
 	}
 
 	/// <summary>
