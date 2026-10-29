@@ -59,25 +59,7 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 	private readonly ConfigCell<bool?> _skipInstrumentationAssemblyScanning = new(nameof(SkipInstrumentationAssemblyScanning), false);
 	private readonly ConfigCell<bool?> _runningInContainer = new(nameof(_runningInContainer), false);
 	private readonly ConfigCell<string?> _opAmpEndpoint = new(nameof(OpAmpEndpoint), null);
-	private readonly ConfigCell<string?> _opAmpHeaders = new(nameof(OpAmpHeaders), null, value =>
-	{
-		const string authorizationHeaderPrefix = "Authorization=";
-
-		if (string.IsNullOrEmpty(value))
-			return value;
-
-		var headers = value.Split(',', StringSplitOptions.RemoveEmptyEntries);
-
-		for (var i = 0; i < headers.Length; i++)
-		{
-			if (headers[i].StartsWith(authorizationHeaderPrefix, StringComparison.OrdinalIgnoreCase))
-			{
-				headers[i] = authorizationHeaderPrefix + "<redacted>";
-			}
-		}
-
-		return string.Join(',', headers);
-	});
+	private readonly ConfigCell<string?> _opAmpHeaders = new(nameof(OpAmpHeaders), null, RedactHeaderValues);
 	private readonly ConfigCell<Signals?> _signals = new(nameof(Signals), Signals.All);
 	private readonly ConfigCell<TraceInstrumentations> _tracing = new(nameof(Tracing), TraceInstrumentations.All);
 	private readonly ConfigCell<MetricInstrumentations> _metrics = new(nameof(Metrics), MetricInstrumentations.All);
@@ -568,7 +550,7 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 		value ??= string.Empty;
 
 		if (BootstrapLogger.IsEnabled)
-			BootstrapLogger.Log($"{nameof(CompositeElasticOpenTelemetryOptions)}.{nameof(GetSafeEnvironmentVariable)}: Environment variable '{key}' = '{value}'");
+			BootstrapLogger.Log($"{nameof(CompositeElasticOpenTelemetryOptions)}.{nameof(GetSafeEnvironmentVariable)}: Environment variable '{key}' = '{RedactIfSensitive(key, value)}'");
 
 		return value;
 	}
@@ -627,12 +609,10 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 
 						if (provider.TryGet(key, out var value) && value is not null)
 						{
-							if (SensitiveEnvironmentVariables.Contains(key))
-							{
-								value = "<redacted>";
-							}
+							value = RedactIfSensitive(key, value);
 
-							logger.LogInformation("IConfiguration [{providerName}] '{Key}' = '{Value}'", providerName, key, value);
+							if (logger.IsEnabled(LogLevel.Information))
+								logger.LogInformation("IConfiguration [{providerName}] '{Key}' = '{Value}'", providerName, key, value);
 						}
 					}
 
@@ -640,11 +620,37 @@ internal sealed class CompositeElasticOpenTelemetryOptions
 					{
 						if (provider.TryGet($"Elastic:OpenTelemetry:{key}", out var value) && value is not null)
 						{
-							logger.LogInformation("IConfiguration [{providerName}] '{Key}' = '{Value}'", providerName, key, value);
+							if (key == nameof(OpAmpHeaders))
+								value = RedactHeaderValues(value);
+
+							if (logger.IsEnabled(LogLevel.Information))
+								logger.LogInformation("IConfiguration [{providerName}] '{Key}' = '{Value}'", providerName, key, value);
 						}
 					}
 				}
 			}
 		}
+	}
+
+	/// <summary>
+	/// Replaces the value of every header within a comma-separated <c>key=value</c> header list with
+	/// <c>&lt;redacted&gt;</c> so that credentials are never written to diagnostic logs. Header names are
+	/// kept (trimmed, as they are when sent) so the logs still show which headers are configured. A segment
+	/// without <c>=</c> is redacted entirely, as it may be the tail of a value that itself contains a comma.
+	/// </summary>
+	private static string? RedactHeaderValues(string? value)
+	{
+		if (string.IsNullOrEmpty(value))
+			return value;
+
+		var headers = value.Split(',', StringSplitOptions.RemoveEmptyEntries);
+
+		for (var i = 0; i < headers.Length; i++)
+		{
+			var parts = headers[i].Split(['='], 2);
+			headers[i] = parts.Length == 2 ? $"{parts[0].Trim()}=<redacted>" : "<redacted>";
+		}
+
+		return string.Join(',', headers);
 	}
 }

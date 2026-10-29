@@ -260,8 +260,8 @@ internal static partial class LoggerMessages
 
 		if (logger.IsEnabled(LogLevel.Information))
 		{
-			LogPrefixedEnvironmentVariables(logger, "OTEL_");
-			LogPrefixedEnvironmentVariables(logger, "ELASTIC_OTEL_");
+			LogPrefixedEnvironmentVariables(logger, "OTEL_", Environment.GetEnvironmentVariables);
+			LogPrefixedEnvironmentVariables(logger, "ELASTIC_OTEL_", Environment.GetEnvironmentVariables);
 
 			string[] microsoftEnvironmentVariables =
 			[
@@ -292,75 +292,81 @@ internal static partial class LoggerMessages
 
 		components.Options.LogApplicationConfigurationValues(logger);
 		components.Options.LogConfigSources(logger);
+	}
 
-		static void LogPrefixedEnvironmentVariables(ILogger logger, string prefix)
+	/// <summary>
+	/// Logs the environment variables starting with <paramref name="prefix"/>, redacting the values of any
+	/// <see cref="EnvironmentVariables.SensitiveEnvironmentVariables"/>.
+	/// </summary>
+	/// <param name="logger">The logger to write to.</param>
+	/// <param name="prefix">The environment variable name prefix to match.</param>
+	/// <param name="getEnvironmentVariables">
+	/// Reads the environment variables for an <see cref="EnvironmentVariableTarget"/>. Production code passes
+	/// <see cref="Environment.GetEnvironmentVariables(EnvironmentVariableTarget)"/>; tests supply their own so the
+	/// machine and user scopes can be exercised without modifying them.
+	/// </param>
+	internal static void LogPrefixedEnvironmentVariables(ILogger logger, string prefix, Func<EnvironmentVariableTarget, IDictionary> getEnvironmentVariables)
+	{
+		if (!logger.IsEnabled(LogLevel.Information))
+			return;
+
+		try
 		{
-			if (!logger.IsEnabled(LogLevel.Information))
-				return;
-
-			try
+			if (logger.IsEnabled(LogLevel.Debug))
 			{
-				if (logger.IsEnabled(LogLevel.Debug))
+				var systemEnvVars = getEnvironmentVariables(EnvironmentVariableTarget.Machine);
+
+				foreach (DictionaryEntry entry in systemEnvVars)
 				{
-					var systemEnvVars = Environment.GetEnvironmentVariables(EnvironmentVariableTarget.Machine);
-
-					foreach (DictionaryEntry entry in systemEnvVars)
-					{
-						if (entry.Key is not string key || !key.StartsWith(prefix))
-							continue;
-
-						var value = entry.Value?.ToString() ?? string.Empty;
-						logger.LogDebug("System-level environment variable '{EnvironmentVariable}' = '{EnvironmentVariableValue}'", key, value);
-					}
-
-					var userEnvVars = Environment.GetEnvironmentVariables(EnvironmentVariableTarget.User);
-
-					foreach (DictionaryEntry entry in userEnvVars)
-					{
-						if (entry.Key is not string key || !key.StartsWith(prefix))
-							continue;
-
-						var value = entry.Value?.ToString() ?? string.Empty;
-						logger.LogDebug("User-level environment variable '{EnvironmentVariable}' = '{EnvironmentVariableValue}'", key, value);
-					}
-				}
-
-				var allVars = Environment.GetEnvironmentVariables();
-
-				foreach (DictionaryEntry entry in allVars)
-				{
-					if (entry.Key is not string key || !key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+					if (entry.Key is not string key || !key.StartsWith(prefix))
 						continue;
 
-					var value = entry.Value?.ToString() ?? string.Empty;
-					var source = "unknown";
+					var value = EnvironmentVariables.RedactIfSensitive(key, entry.Value?.ToString() ?? string.Empty);
+					logger.LogDebug("System-level environment variable '{EnvironmentVariable}' = '{EnvironmentVariableValue}'", key, value);
+				}
 
-					// Check process, user, and machine scopes
-					var processValue = Environment.GetEnvironmentVariable(key, EnvironmentVariableTarget.Process);
-					var userValue = Environment.GetEnvironmentVariable(key, EnvironmentVariableTarget.User);
-					var machineValue = Environment.GetEnvironmentVariable(key, EnvironmentVariableTarget.Machine);
+				var userEnvVars = getEnvironmentVariables(EnvironmentVariableTarget.User);
 
-					if (!string.IsNullOrEmpty(processValue))
-						source = "process";
-					else if (!string.IsNullOrEmpty(userValue))
-						source = "user";
-					else if (!string.IsNullOrEmpty(machineValue))
-						source = "system";
-					else
-						source = "unknown";
+				foreach (DictionaryEntry entry in userEnvVars)
+				{
+					if (entry.Key is not string key || !key.StartsWith(prefix))
+						continue;
 
-					if (EnvironmentVariables.SensitiveEnvironmentVariables.Contains(key, StringComparer.OrdinalIgnoreCase))
-					{
-						value = "<redacted>";
-					}
-
-					logger.LogInformation("Effective environment variable '{EnvironmentVariable}' = '{EnvironmentVariableValue}' (source: {Source})", key, value, source);
+					var value = EnvironmentVariables.RedactIfSensitive(key, entry.Value?.ToString() ?? string.Empty);
+					logger.LogDebug("User-level environment variable '{EnvironmentVariable}' = '{EnvironmentVariableValue}'", key, value);
 				}
 			}
-			catch (Exception ex)
+
+			var allVars = getEnvironmentVariables(EnvironmentVariableTarget.Process);
+
+			foreach (DictionaryEntry entry in allVars)
 			{
-				logger.LogError(ex, "An error occurred while reading environment variables with prefix '{Prefix}'.", prefix);
+				if (entry.Key is not string key || !key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+					continue;
+
+				var value = EnvironmentVariables.RedactIfSensitive(key, entry.Value?.ToString() ?? string.Empty);
+				var source = "unknown";
+
+				// Check process, user, and machine scopes
+				var processValue = Environment.GetEnvironmentVariable(key, EnvironmentVariableTarget.Process);
+				var userValue = Environment.GetEnvironmentVariable(key, EnvironmentVariableTarget.User);
+				var machineValue = Environment.GetEnvironmentVariable(key, EnvironmentVariableTarget.Machine);
+
+				if (!string.IsNullOrEmpty(processValue))
+					source = "process";
+				else if (!string.IsNullOrEmpty(userValue))
+					source = "user";
+				else if (!string.IsNullOrEmpty(machineValue))
+					source = "system";
+				else
+					source = "unknown";
+
+				logger.LogInformation("Effective environment variable '{EnvironmentVariable}' = '{EnvironmentVariableValue}' (source: {Source})", key, value, source);
 			}
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "An error occurred while reading environment variables with prefix '{Prefix}'.", prefix);
 		}
 	}
 }
