@@ -35,10 +35,11 @@ COPY ".artifacts/elastic-distribution/elastic-dotnet-instrumentation-linux-glibc
 COPY ".artifacts/elastic-distribution/elastic-dotnet-instrumentation-linux-musl-arm64.zip" .
 COPY ".artifacts/elastic-distribution/elastic-dotnet-instrumentation-linux-musl-x64.zip" .
 
-# The glibc x64 archive provides the architecture-neutral files (net/, scripts, LICENSE, VERSION);
-# only the native profiler directory is taken from the other archives.
-# The upstream distribution no longer contains store/ or AdditionalDeps/ (removed in
-# opentelemetry-dotnet-instrumentation 1.15.0), so there is nothing else to extract.
+# The glibc archive for the target architecture provides the shared files (net/, scripts, LICENSE,
+# VERSION, additional-deps-*); only the musl native profiler directory is taken from the musl archive.
+# The glibc archive must match the target architecture: additional-deps-copy-plan.txt (added in
+# opentelemetry-dotnet-instrumentation 1.18.0 for generate-additional-deps.sh) differs per
+# architecture, as it writes the store/ under store/x64 or store/arm64.
 #
 # Each platform image keeps only its own native profilers, under the architecture-agnostic
 # linux/ and linux-musl/ directories expected by operator 0.157.0+. The RID-named directories
@@ -51,16 +52,11 @@ RUN case "${TARGETARCH}" in \
       arm64) arch=arm64 ;; \
       *) echo "unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
     esac &&\
-    unzip elastic-dotnet-instrumentation-linux-glibc-x64.zip &&\
-    unzip elastic-dotnet-instrumentation-linux-glibc-arm64.zip "linux-arm64/*" -d . &&\
-    unzip elastic-dotnet-instrumentation-linux-musl-x64.zip "linux-musl-x64/*" -d . &&\
-    unzip elastic-dotnet-instrumentation-linux-musl-arm64.zip "linux-musl-arm64/*" -d . &&\
+    unzip "elastic-dotnet-instrumentation-linux-glibc-${arch}.zip" &&\
+    unzip "elastic-dotnet-instrumentation-linux-musl-${arch}.zip" "linux-musl-${arch}/*" -d . &&\
     rm elastic-dotnet-instrumentation-*.zip &&\
-    mv "linux-${arch}" linux-tmp &&\
-    mv "linux-musl-${arch}" linux-musl-tmp &&\
-    rm -rf linux-x64 linux-arm64 linux-musl-x64 linux-musl-arm64 &&\
-    mv linux-tmp linux &&\
-    mv linux-musl-tmp linux-musl &&\
+    mv "linux-${arch}" linux &&\
+    mv "linux-musl-${arch}" linux-musl &&\
     ln -s linux "linux-${arch}" &&\
     ln -s linux-musl "linux-musl-${arch}" &&\
     if [ "${arch}" = "arm64" ]; then \

@@ -105,6 +105,10 @@ public class OperatorImageSmokeTests(OperatorImageSmokeFixture fixture, ITestOut
 				  machine=$(od -An -t u2 -j 18 -N 2 "$OTEL_DOTNET_AUTO_HOME/$rid/OpenTelemetry.AutoInstrumentation.Native.so")
 				  test "$machine" -eq {{(architecture == "arm64" ? 183 : 62)}}
 				done
+				grep -q "|store/{{nativeArchitecture}}/" "$OTEL_DOTNET_AUTO_HOME/additional-deps-copy-plan.txt"
+				if grep -q "|store/{{(nativeArchitecture == "arm64" ? "x64" : "arm64")}}/" "$OTEL_DOTNET_AUTO_HOME/additional-deps-copy-plan.txt"; then
+				  echo "additional-deps-copy-plan.txt does not match the image architecture" >&2; exit 1
+				fi
 				exec dotnet AutoInstr.Console.Net10.dll
 				""")
 			.WithWaitStrategy(WaitForCompletion("APP_COMPLETE"))
