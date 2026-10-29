@@ -1193,4 +1193,59 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 		// no ResolveOpAmpServiceIdentity call needed
 		Assert.True(sut.IsOpAmpEnabled());
 	}
+
+	[Fact]
+	public void Equals_IgnoresServiceNameResolvedFromResourceAttributes()
+	{
+		var env = new Hashtable
+		{
+			{ ELASTIC_OTEL_OPAMP_ENDPOINT, "http://localhost:4320" },
+			{ OTEL_RESOURCE_ATTRIBUTES, "service.name=my-service" }
+		};
+
+		var bootstrapped = new CompositeElasticOpenTelemetryOptions(env);
+		var fresh = new CompositeElasticOpenTelemetryOptions(env);
+
+		bootstrapped.ResolveOpAmpServiceIdentity();
+
+		Assert.Equal("my-service", bootstrapped.ServiceName);
+		Assert.Null(fresh.ServiceName);
+		Assert.Equal(bootstrapped, fresh);
+		Assert.Equal(bootstrapped.GetHashCode(), fresh.GetHashCode());
+	}
+
+	[Fact]
+	public void Equals_IgnoresLogLevelFromCentralConfig()
+	{
+		var env = new Hashtable();
+
+		var bootstrapped = new CompositeElasticOpenTelemetryOptions(env);
+		var fresh = new CompositeElasticOpenTelemetryOptions(env);
+
+		// Debug also flips the derived LogTargets from None to File/StdOut
+		bootstrapped.SetLogLevelFromCentralConfig("debug", new TestLogger(output));
+
+		Assert.Equal(LogLevel.Debug, bootstrapped.LogLevel);
+		Assert.NotEqual(bootstrapped.LogTargets, fresh.LogTargets);
+		Assert.Equal(bootstrapped, fresh);
+		Assert.Equal(bootstrapped.GetHashCode(), fresh.GetHashCode());
+	}
+
+	[Fact]
+	public void Equals_StillDistinguishesDifferentLocalLogLevels()
+	{
+		var a = new CompositeElasticOpenTelemetryOptions(new Hashtable { { OTEL_LOG_LEVEL, "debug" } });
+		var b = new CompositeElasticOpenTelemetryOptions(new Hashtable { { OTEL_LOG_LEVEL, "error" } });
+
+		Assert.NotEqual(a, b);
+	}
+
+	[Fact]
+	public void Equals_StillDistinguishesDifferentConfiguredServiceNames()
+	{
+		var a = new CompositeElasticOpenTelemetryOptions(new Hashtable { { OTEL_SERVICE_NAME, "service-a" } });
+		var b = new CompositeElasticOpenTelemetryOptions(new Hashtable { { OTEL_SERVICE_NAME, "service-b" } });
+
+		Assert.NotEqual(a, b);
+	}
 }
