@@ -1,4 +1,4 @@
-<Project Sdk="Aspire.AppHost.Sdk/13.4.6">
+<Project Sdk="Aspire.AppHost.Sdk/13.6.4">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -12,10 +12,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Example.AspNetCore.Mvc\Example.AspNetCore.Mvc.csproj" />
     <ProjectReference Include="..\Example.MinimalApi\Example.MinimalApi.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="MessagePack" />
   </ItemGroup>
 
 </Project>

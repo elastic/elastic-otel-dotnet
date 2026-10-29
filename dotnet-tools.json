@@ -3,7 +3,7 @@
   "isRoot": true,
   "tools": {
     "minver-cli": {
-      "version": "7.0.0",
+      "version": "8.0.0",
       "commands": [
         "minver"
       ]
@@ -15,7 +15,7 @@
       ]
     },
     "nuget-license": {
-      "version": "3.1.7",
+      "version": "4.0.18",
       "commands": [
         "nuget-license"
       ]
