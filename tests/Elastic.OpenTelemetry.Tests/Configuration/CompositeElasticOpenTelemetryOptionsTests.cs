@@ -522,15 +522,21 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 		Assert.Equal(LogLevel.Debug, sut.LogLevel);
 	}
 
-	[Fact]
-	public void LogValueRedaction_WorksAsExpected()
+	[Theory]
+	[InlineData("Custom=SECRET1,Authorization=ApiKey SECRET2,Custom2=SECRET3", "Custom=<redacted>,Authorization=<redacted>,Custom2=<redacted>")]
+	[InlineData("Custom=SECRET1, Authorization=ApiKey SECRET2,Custom2=SECRET3", "Custom=<redacted>,Authorization=<redacted>,Custom2=<redacted>")]
+	[InlineData("Custom=SECRET1,Authorization =ApiKey SECRET2,Custom2=SECRET3", "Custom=<redacted>,Authorization=<redacted>,Custom2=<redacted>")]
+	[InlineData("Custom=SECRET1, \taUtHoRiZaTiOn \t=ApiKey SECRET2,Custom2=SECRET3", "Custom=<redacted>,aUtHoRiZaTiOn=<redacted>,Custom2=<redacted>")]
+	[InlineData("X-Api-Key=SECRET1", "X-Api-Key=<redacted>")]
+	[InlineData("Authorization=Bearer SECRET1,SECRET2", "Authorization=<redacted>,<redacted>")]
+	public void LogValueRedaction_WorksAsExpected(string headers, string expected)
 	{
 		var options = new ElasticOpenTelemetryOptions
 		{
 			OpAmpClientOptions = new OpAmpClientOptions
 			{
 				Endpoint = "http://my-endpoint.com",
-				Headers = "Custom=123,Authorization=ApiKey ABC123,Custom2=ABC"
+				Headers = headers
 			}
 		};
 
@@ -539,7 +545,63 @@ public class CompositeElasticOpenTelemetryOptionsTests(ITestOutputHelper output)
 
 		sut.LogConfigSources(logger);
 
-		Assert.Contains(logger.Messages, s => s.EndsWith("Configured value for OpAmpHeaders: 'Custom=123,Authorization=<redacted>,Custom2=ABC' from [Options]", StringComparison.Ordinal));
+		Assert.DoesNotContain(logger.Messages, s => s.Contains("SECRET", StringComparison.Ordinal));
+		Assert.Contains(logger.Messages, s => s.EndsWith($"Configured value for OpAmpHeaders: '{expected}' from [Options]", StringComparison.Ordinal));
+	}
+
+	[Fact]
+	public void LogConfigSources_RedactsHeaderValues_InOpAmpHeadersFromEnvironment()
+	{
+		var sut = new CompositeElasticOpenTelemetryOptions(new Hashtable
+		{
+			{ ELASTIC_OTEL_OPAMP_HEADERS, "X-Api-Key=SECRET1, Authorization=ApiKey SECRET2" }
+		});
+		var logger = new TestLogger(output);
+
+		sut.LogConfigSources(logger);
+
+		Assert.DoesNotContain(logger.Messages, s => s.Contains("SECRET", StringComparison.Ordinal));
+		Assert.Contains(logger.Messages, s => s.EndsWith("Configured value for OpAmpHeaders: 'X-Api-Key=<redacted>,Authorization=<redacted>' from [Environment]", StringComparison.Ordinal));
+	}
+
+	[Theory]
+	[InlineData("X-Other=SECRET1,Authorization=ApiKey SECRET2", "X-Other=<redacted>,Authorization=<redacted>")]
+	[InlineData("X-Other=SECRET1, Authorization=ApiKey SECRET2", "X-Other=<redacted>,Authorization=<redacted>")]
+	[InlineData("X-Other=SECRET1,Authorization =ApiKey SECRET2", "X-Other=<redacted>,Authorization=<redacted>")]
+	[InlineData("X-Other=SECRET1, \taUtHoRiZaTiOn \t=ApiKey SECRET2", "X-Other=<redacted>,aUtHoRiZaTiOn=<redacted>")]
+	[InlineData("X-Elastic-Api-Key=SECRET1", "X-Elastic-Api-Key=<redacted>")]
+	public void LogApplicationConfigurationValues_RedactsHeaderValues_InOpAmpHeadersFromIConfiguration(string headers, string expected)
+	{
+		var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+		{
+			{ "Elastic:OpenTelemetry:OpAmpHeaders", headers }
+		}).Build();
+
+		var sut = new CompositeElasticOpenTelemetryOptions(config, new Hashtable());
+		var logger = new TestLogger(output);
+
+		sut.LogApplicationConfigurationValues(logger);
+
+		Assert.DoesNotContain(logger.Messages, s => s.Contains("SECRET", StringComparison.Ordinal));
+		Assert.Contains(logger.Messages, s => s.Contains($"'OpAmpHeaders' = '{expected}'", StringComparison.Ordinal));
+	}
+
+	[Fact]
+	public void LogApplicationConfigurationValues_RedactsSensitiveOtelKeysFromIConfiguration_CaseInsensitively()
+	{
+		// IConfiguration keys are case-insensitive, so a differently-cased sensitive key must still be redacted.
+		var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+		{
+			{ "OTEL_EXPORTER_OTLP_Headers", "Authorization=ApiKey SUPERSECRET456" }
+		}).Build();
+
+		var sut = new CompositeElasticOpenTelemetryOptions(config, new Hashtable());
+		var logger = new TestLogger(output);
+
+		sut.LogApplicationConfigurationValues(logger);
+
+		Assert.DoesNotContain(logger.Messages, s => s.Contains("SUPERSECRET456", StringComparison.Ordinal));
+		Assert.Contains(logger.Messages, s => s.Contains("'OTEL_EXPORTER_OTLP_Headers' = '<redacted>'", StringComparison.Ordinal));
 	}
 
 	[Theory]

@@ -53,4 +53,14 @@ internal static class EnvironmentVariables
 		OTEL_EXPORTER_OTLP_LOGS_HEADERS,
 		ELASTIC_OTEL_OPAMP_HEADERS
 	];
+
+	/// <summary>
+	/// Returns <c>&lt;redacted&gt;</c> in place of <paramref name="value"/> when <paramref name="environmentVariable"/>
+	/// is one of the <see cref="SensitiveEnvironmentVariables"/> (matched case-insensitively);
+	/// otherwise returns <paramref name="value"/> unchanged.
+	/// </summary>
+	internal static string RedactIfSensitive(string environmentVariable, string value) =>
+		SensitiveEnvironmentVariables.Contains(environmentVariable, StringComparer.OrdinalIgnoreCase)
+			? "<redacted>"
+			: value;
 }

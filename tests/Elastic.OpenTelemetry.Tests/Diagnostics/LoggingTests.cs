@@ -2,7 +2,10 @@
 // Elasticsearch B.V licenses this file to you under the Apache 2.0 License.
 // See the LICENSE file in the project root for more information
 
+using System.Collections;
 using System.Text.RegularExpressions;
+using Elastic.OpenTelemetry.Configuration;
+using Elastic.OpenTelemetry.Diagnostics;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using Xunit.Abstractions;
@@ -18,6 +21,42 @@ public partial class LoggingTests(ITestOutputHelper output)
 
 	[GeneratedRegex(@"\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z\]\[\d{6}\]\[-*\]\[Debug\]\s+Reusing existing shared components\.\s+")]
 	private static partial Regex UsingSharedComponents();
+
+	[Theory]
+	[InlineData("OTEL_EXPORTER_OTLP_HEADERS")]
+	[InlineData("otel_exporter_otlp_traces_headers")]
+	[InlineData("Elastic_Otel_OpAmp_Headers")]
+	public void RedactIfSensitive_RedactsSensitiveEnvironmentVariables_CaseInsensitively(string environmentVariable) =>
+		Assert.Equal("<redacted>", EnvironmentVariables.RedactIfSensitive(environmentVariable, "Authorization=ApiKey SUPERSECRET123"));
+
+	[Theory]
+	[InlineData("OTEL_SERVICE_NAME")]
+	[InlineData("OTEL_EXPORTER_OTLP_ENDPOINT")]
+	[InlineData("ELASTIC_OTEL_OPAMP_ENDPOINT")]
+	public void RedactIfSensitive_PassesThroughNonSensitiveEnvironmentVariables(string environmentVariable) =>
+		Assert.Equal("my-value", EnvironmentVariables.RedactIfSensitive(environmentVariable, "my-value"));
+
+	[Theory]
+	[InlineData("OTEL_", EnvironmentVariables.OTEL_EXPORTER_OTLP_HEADERS)]
+	[InlineData("ELASTIC_OTEL_", EnvironmentVariables.ELASTIC_OTEL_OPAMP_HEADERS)]
+	public void LogPrefixedEnvironmentVariables_RedactsSensitiveValues_AtEveryScope(string prefix, string sensitiveVariable)
+	{
+		var logger = new TestLogger(_output);
+		var nonSensitiveVariable = $"{prefix}NOT_SENSITIVE";
+
+		// Supply distinct values per scope so the machine and user scopes are exercised without modifying them
+		LoggerMessages.LogPrefixedEnvironmentVariables(logger, prefix, target => new Hashtable
+		{
+			{ sensitiveVariable, $"Authorization=ApiKey {target}SECRET" },
+			{ nonSensitiveVariable, $"{target}-value" }
+		});
+
+		Assert.DoesNotContain(logger.Messages, s => s.Contains("SECRET", StringComparison.Ordinal));
+		Assert.Contains(logger.Messages, s => s.Contains($"System-level environment variable '{sensitiveVariable}' = '<redacted>'", StringComparison.Ordinal));
+		Assert.Contains(logger.Messages, s => s.Contains($"User-level environment variable '{sensitiveVariable}' = '<redacted>'", StringComparison.Ordinal));
+		Assert.Contains(logger.Messages, s => s.Contains($"Effective environment variable '{sensitiveVariable}' = '<redacted>'", StringComparison.Ordinal));
+		Assert.Contains(logger.Messages, s => s.Contains($"Effective environment variable '{nonSensitiveVariable}' = 'Process-value'", StringComparison.Ordinal));
+	}
 
 	[Fact]
 	public void LoggingIsEnabled_WhenConfiguredViaTracerProviderBuilder()
