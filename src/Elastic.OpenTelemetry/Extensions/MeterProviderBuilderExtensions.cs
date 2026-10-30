@@ -442,7 +442,7 @@ public static class MeterProviderBuilderExtensions
 			BootstrapLogger.LogBuilderOptions(builderOptions, nameof(MeterProviderBuilderExtensions), nameof(WithElasticDefaultsCore));
 		}
 
-		var logger = SignalBuilder.GetLogger(builder, components, options, null);
+		var logger = SignalBuilder.GetLogger(builder, components, options, services, null);
 		logger.LogCallerInfo(builderOptions);
 
 		if (callCount > 1)

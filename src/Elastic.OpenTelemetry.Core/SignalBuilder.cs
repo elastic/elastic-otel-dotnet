@@ -47,10 +47,16 @@ internal static class SignalBuilder
 	/// </summary>
 	internal static ILogger GetLogger(
 		ElasticOpenTelemetryComponents? components,
-		CompositeElasticOpenTelemetryOptions? options)
+		CompositeElasticOpenTelemetryOptions? options,
+		IServiceCollection? services)
 	{
 		if (components?.Logger is not null)
 			return components.Logger;
+
+		// Prefer the logger of any components that bootstrap will adopt. Creating a pre-activation
+		// logger here would leave it orphaned once bootstrap resolves to those components.
+		if (ElasticOpenTelemetry.TryGetExistingComponents(options, services, out var existingComponents))
+			return existingComponents.Logger;
 
 		return CompositeLogger.GetOrCreate(options);
 	}
@@ -62,6 +68,7 @@ internal static class SignalBuilder
 		T builder,
 		ElasticOpenTelemetryComponents? components,
 		CompositeElasticOpenTelemetryOptions? options,
+		IServiceCollection? services,
 		BuilderState? builderState) where T : class
 	{
 		if (builderState is not null)
@@ -70,7 +77,7 @@ internal static class SignalBuilder
 		if (BuilderStateTable.TryGetValue(builder, out builderState))
 			return builderState.Components.Logger;
 
-		return GetLogger(components, options);
+		return GetLogger(components, options, services);
 	}
 
 	/// <summary>
@@ -92,7 +99,7 @@ internal static class SignalBuilder
 			return HandleExistingBuilderState(builder, providerBuilderName, existingBuilderState);
 		}
 
-		var logger = GetLogger(components, options);
+		var logger = GetLogger(components, options, services);
 		var builderInstanceId = Guid.NewGuid().ToString(); // Used in logging to track duplicate calls to the same builder
 
 		// When dealing with a signal specific builder, we need to check if that signal is enabled.

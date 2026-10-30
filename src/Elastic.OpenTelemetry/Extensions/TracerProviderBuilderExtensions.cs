@@ -443,7 +443,7 @@ public static class TracerProviderBuilderExtensions
 			BootstrapLogger.LogBuilderOptions(builderOptions, nameof(TracerProviderBuilderExtensions), nameof(WithElasticDefaultsCore));
 		}
 
-		var logger = SignalBuilder.GetLogger(builder, components, options, null);
+		var logger = SignalBuilder.GetLogger(builder, components, options, services, null);
 		logger.LogCallerInfo(builderOptions);
 
 		if (callCount > 1)
