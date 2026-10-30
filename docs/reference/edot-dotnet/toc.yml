@@ -7,6 +7,7 @@ toc:
       - file: setup/console.md
       - file: setup/worker-services.md
       - file: setup/zero-code.md
+      - file: setup/zero-code-manual.md
       - file: setup/edot-defaults.md
   - file: configuration.md
   - file: supported-technologies.md
