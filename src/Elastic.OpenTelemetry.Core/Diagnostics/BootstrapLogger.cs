@@ -14,7 +14,7 @@ namespace Elastic.OpenTelemetry.Diagnostics;
 /// Used to log bootstrap information before the main logger is initialized.
 /// This is an experimental feature, mostly for debugging purposes but can be useful in certain support scenarios.
 /// This logger writes to a file in the directory specified by the OTEL_DOTNET_AUTO_LOG_DIRECTORY environment variable.
-/// It supports automatic disposal after 1 minute of inactivity to avoid unnecessary resource usage.
+/// It supports automatic disposal after 2 minutes of inactivity to avoid unnecessary resource usage.
 /// </summary>
 internal static class BootstrapLogger
 {
@@ -182,7 +182,7 @@ internal static class BootstrapLogger
 		{
 			if ((DateTime.UtcNow - LastActivityUtc).TotalMinutes >= 2)
 			{
-				Log("Disposing BootstrapLogger due to 1 minute of inactivity.");
+				Log("Disposing BootstrapLogger due to 2 minutes of inactivity.");
 				DisposeLogger();
 				AutoCloseTimer?.Stop();
 				AutoCloseTimer?.Dispose();

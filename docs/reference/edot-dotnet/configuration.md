@@ -145,9 +145,11 @@ A string specifying the output directory where the {{edot}} .NET writes diagnost
 #### `LogLevel`
 
 * Type: String
-* Default: `Information`
+* Default: `Warning`
 
 Sets the logging level for EDOT .NET. Valid options are `Critical`, `Error`, `Warning`, `Information`, `Debug`, `Trace`, and `None`. `None` disables the logging.
+
+When using `IConfiguration` and `Elastic:OpenTelemetry:LogLevel` is not set, EDOT .NET falls back to the standard .NET `Logging:LogLevel` section, using `Logging:LogLevel:Elastic.OpenTelemetry` if present, otherwise `Logging:LogLevel:Default`.
 
 | Configuration method | Key |
 |---|---|
@@ -157,7 +159,7 @@ Sets the logging level for EDOT .NET. Valid options are `Critical`, `Error`, `Wa
 #### `LogTargets`
 
 * Type: String
-* Default: `Information`
+* Default: Depends on the environment (see below)
 
 A comma-separated list of targets for log output. When global logging is not configured (a log directory or target is not specified) this defaults to `none`. When the instrumented application is running within a container, this defaults to direct logs to `stdout`. Otherwise defaults to `file`.
 

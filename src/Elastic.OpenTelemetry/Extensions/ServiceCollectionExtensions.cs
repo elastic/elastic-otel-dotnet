@@ -257,7 +257,7 @@ public static class ServiceCollectionExtensions
 		if (options is null)
 			throw new ArgumentNullException(nameof(options));
 
-		if (options is null)
+		if (configure is null)
 			throw new ArgumentNullException(nameof(configure));
 #endif
 
