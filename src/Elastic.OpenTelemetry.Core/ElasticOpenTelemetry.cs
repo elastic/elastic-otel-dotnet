@@ -58,6 +58,29 @@ internal static class ElasticOpenTelemetry
 		Bootstrap(activationMethod, CompositeElasticOpenTelemetryOptions.DefaultOptions, null);
 
 	/// <summary>
+	/// Attempts to find the components that <see cref="Bootstrap(SdkActivationMethod, CompositeElasticOpenTelemetryOptions, IServiceCollection?)"/>
+	/// would reuse for the given options and services, without creating any.
+	/// </summary>
+	/// <remarks>
+	/// Used by callers that need a logger before bootstrapping, so they log via the components that will be adopted
+	/// rather than creating a pre-activation <see cref="CompositeLogger"/> that bootstrap would then discard.
+	/// </remarks>
+	internal static bool TryGetExistingComponents(
+		CompositeElasticOpenTelemetryOptions? options,
+		IServiceCollection? services,
+		[NotNullWhen(true)] out ElasticOpenTelemetryComponents? components)
+	{
+		using (Lock.EnterScope())
+		{
+			if (TryGetExistingComponentsFromServiceCollection(services, out components))
+				return true;
+
+			// Bootstrap falls back to the default options when none are provided, so match on those.
+			return TryGetSharedComponents(options ?? CompositeElasticOpenTelemetryOptions.DefaultOptions, out components);
+		}
+	}
+
+	/// <summary>
 	/// This checks for any existing components on the IServiceCollection and reuse them if found.
 	/// It also attempts to used a shared components instance if available and suitable.
 	/// If neither are available, it will create a new instance.
@@ -109,8 +132,10 @@ internal static class ElasticOpenTelemetry
 							$"{Environment.NewLine}   With `{nameof(CompositeLogger)}` instance '{existingComponents.Logger.InstanceId}'.");
 					}
 
-					// Clear any pre-activation singleton that won't be adopted
-					CompositeLogger.ClearPreActivationInstance();
+					existingComponents.Logger.LogServiceCollectionComponentsReused();
+
+					// Retire any pre-activation logger created for this bootstrap flow, since it won't be adopted
+					CompositeLogger.RetirePreActivationInstance(existingComponents.Logger, options);
 
 					existingComponents.Logger.LogBootstrapInvoked(invocationCount);
 					return existingComponents;
@@ -130,8 +155,10 @@ internal static class ElasticOpenTelemetry
 					BootstrapLogger.Log($"{nameof(Bootstrap)}: Existing CompositeLogger instance '{sharedComponents.Logger.InstanceId}'.");
 				}
 
-				// Clear any pre-activation singleton that won't be adopted
-				CompositeLogger.ClearPreActivationInstance();
+				sharedComponents.Logger.LogSharedComponentsReused();
+
+				// Retire any pre-activation logger created for this bootstrap flow, since it won't be adopted
+				CompositeLogger.RetirePreActivationInstance(sharedComponents.Logger, options);
 
 				components = sharedComponents;
 			}
@@ -147,37 +174,6 @@ internal static class ElasticOpenTelemetry
 			services?.AddSingleton(components);
 
 			return components;
-		}
-
-		static bool TryGetExistingComponentsFromServiceCollection(IServiceCollection? services, [NotNullWhen(true)] out ElasticOpenTelemetryComponents? components)
-		{
-			components = null;
-
-			if (services?.FirstOrDefault(s => s.ServiceType == typeof(ElasticOpenTelemetryComponents))
-				?.ImplementationInstance as ElasticOpenTelemetryComponents is not { } existingComponents)
-				return false;
-
-			existingComponents.Logger.LogServiceCollectionComponentsReused();
-			components = existingComponents;
-			return true;
-		}
-
-		static bool TryGetSharedComponents(CompositeElasticOpenTelemetryOptions options,
-			[NotNullWhen(true)] out ElasticOpenTelemetryComponents? sharedComponents)
-		{
-			sharedComponents = null;
-
-			foreach (var cachedComponents in SharedComponents)
-			{
-				if (cachedComponents.Options.Equals(options))
-				{
-					sharedComponents = cachedComponents;
-					cachedComponents.Logger.LogSharedComponentsReused();
-					return true;
-				}
-			}
-
-			return false;
 		}
 
 		static ElasticOpenTelemetryComponents CreateComponents(
@@ -267,5 +263,37 @@ internal static class ElasticOpenTelemetry
 				logger.ExitBootstrap();
 			}
 		}
+	}
+
+	// Callers must hold Lock.
+	private static bool TryGetExistingComponentsFromServiceCollection(IServiceCollection? services,
+		[NotNullWhen(true)] out ElasticOpenTelemetryComponents? components)
+	{
+		components = null;
+
+		if (services?.FirstOrDefault(s => s.ServiceType == typeof(ElasticOpenTelemetryComponents))
+			?.ImplementationInstance as ElasticOpenTelemetryComponents is not { } existingComponents)
+			return false;
+
+		components = existingComponents;
+		return true;
+	}
+
+	// Callers must hold Lock.
+	private static bool TryGetSharedComponents(CompositeElasticOpenTelemetryOptions options,
+		[NotNullWhen(true)] out ElasticOpenTelemetryComponents? sharedComponents)
+	{
+		sharedComponents = null;
+
+		foreach (var cachedComponents in SharedComponents)
+		{
+			if (cachedComponents.Options.Equals(options))
+			{
+				sharedComponents = cachedComponents;
+				return true;
+			}
+		}
+
+		return false;
 	}
 }

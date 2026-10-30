@@ -994,7 +994,7 @@ public static class OpenTelemetryBuilderExtensions
 		// FullName may return null so we fallback to Name when required.
 		var providerBuilderName = builder.GetType().FullName ?? builder.GetType().Name;
 
-		var logger = SignalBuilder.GetLogger(builder, null, options, null);
+		var logger = SignalBuilder.GetLogger(builder, null, options, builder.Services, null);
 		logger.LogCallerInfo(builderOptions);
 
 		if (callCount > 1)

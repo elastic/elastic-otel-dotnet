@@ -87,7 +87,7 @@ internal static class ElasticTracerProviderBuilderExtensions
 
 		var callCount = Interlocked.Increment(ref AddElasticProcessorsCallCount);
 
-		var logger = SignalBuilder.GetLogger(builder, components, null, builderState);
+		var logger = SignalBuilder.GetLogger(builder, components, null, services, builderState);
 
 		if (callCount > 1)
 			logger.LogMultipleAddElasticProcessorsCallsWarning(callCount);

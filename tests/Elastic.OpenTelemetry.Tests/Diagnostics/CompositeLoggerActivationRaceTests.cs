@@ -94,10 +94,9 @@ public class CompositeLoggerActivationRaceTests
 	/// activated, a subsequent <see cref="CompositeLogger.GetOrCreate"/> call — even with
 	/// identical options — must return a fresh independent instance rather than the already-
 	/// activated logger. This is the behavioral guarantee behind the <c>IsCompatible</c>
-	/// <c>_activationState</c> guard: without that guard, a concurrent caller that captures
-	/// <c>PreActivationInstance</c> before <c>Activate</c> clears it would observe
-	/// <c>_options == null</c> (post-activation) and incorrectly conclude the logger was still
-	/// in a compatible pre-activation state.
+	/// <c>_activatedViaActivateMethod</c> guard: without that guard, a concurrent caller that captures
+	/// <c>PreActivationInstance</c> before <c>Activate</c> clears it would see matching options
+	/// and incorrectly conclude the logger was still in a compatible pre-activation state.
 	/// </summary>
 	[Fact]
 	public void GetOrCreate_AfterActivation_ReturnsFreshInstance()
