@@ -28,21 +28,31 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 		FileNameSuffix = $"{process.Id}-{process.ProcessName}-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmssfffZ}.log";
 	}
 
+	private static readonly TimeSpan DefaultDisposeTimeout = TimeSpan.FromSeconds(5);
+
 	private readonly ConcurrentQueue<string> _logQueue = new();
 	private readonly SemaphoreSlim _logSemaphore = new(0);
 	private readonly CancellationTokenSource _cancellationTokenSource = new();
 	private readonly StreamWriter _streamWriter;
 	private readonly LoggerExternalScopeProvider _scopeProvider;
 	private readonly CompositeElasticOpenTelemetryOptions _options;
+	private readonly TimeSpan _disposeTimeout;
 	private readonly bool _fileLoggingEnabled;
 
 	private int _disposed;
+	private volatile bool _writingFailed;
 
 	internal Guid InstanceId { get; } = Guid.NewGuid();
 
 	public bool FileLoggingEnabled => _fileLoggingEnabled;
 
 	public FileLogger(CompositeElasticOpenTelemetryOptions options)
+		: this(options, DefaultDisposeTimeout, null)
+	{
+	}
+
+	// Allows tests to substitute the destination stream and shorten the dispose timeout.
+	internal FileLogger(CompositeElasticOpenTelemetryOptions options, TimeSpan disposeTimeout, Func<string, Stream>? createStream)
 	{
 		if (BootstrapLogger.IsEnabled)
 		{
@@ -52,6 +62,7 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 
 		_scopeProvider = new LoggerExternalScopeProvider();
 		_options = options;
+		_disposeTimeout = disposeTimeout;
 
 		// Making this decision here is okay for now, based on how we activate the composite logger.
 		// When we need to make options dynamic from central config, we willl need to revisit this to implement a more dynamic approach
@@ -77,7 +88,7 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 				Directory.CreateDirectory(logDirectory);
 
 			// StreamWriter.Dispose disposes underlying stream too.
-			var stream = new FileStream(LogFilePath, FileMode.Append, FileAccess.Write, FileShare.Read);
+			var stream = createStream?.Invoke(LogFilePath) ?? new FileStream(LogFilePath, FileMode.Append, FileAccess.Write, FileShare.Read);
 
 			_streamWriter = new StreamWriter(stream, Encoding.UTF8);
 
@@ -101,41 +112,13 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 					}
 
 					// Process all queued log entries
-					while (_logQueue.TryDequeue(out var logEntry))
-					{
-						// Check if disposal has started before writing
-						if (Volatile.Read(ref _disposed) == 1)
-							return;
-
-						try
-						{
-							await _streamWriter.WriteLineAsync(logEntry).ConfigureAwait(false);
-						}
-						catch (ObjectDisposedException)
-						{
-							// Stream was disposed during shutdown, exit gracefully
-							return;
-						}
-					}
+					if (!await DrainQueueAsync().ConfigureAwait(false))
+						return;
 				}
 
-				// Flush remaining log entries before exiting
-				while (_logQueue.TryDequeue(out var logEntry))
-				{
-					// Check if disposal has started before writing
-					if (Volatile.Read(ref _disposed) == 1)
-						return;
-
-					try
-					{
-						await _streamWriter.WriteLineAsync(logEntry).ConfigureAwait(false);
-					}
-					catch (ObjectDisposedException)
-					{
-						// Stream was disposed, exit gracefully
-						return;
-					}
-				}
+				// Flush remaining log entries before exiting. Dispose waits for this task before
+				// disposing the stream, so entries queued prior to shutdown are not lost.
+				await DrainQueueAsync().ConfigureAwait(false);
 			});
 
 			_streamWriter.AutoFlush = true; // Ensure we don't lose logs by not flushing to the file.
@@ -161,10 +144,51 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 		_fileLoggingEnabled = false;
 	}
 
+	private async Task<bool> DrainQueueAsync()
+	{
+		while (_logQueue.TryDequeue(out var logEntry))
+		{
+			try
+			{
+				await _streamWriter.WriteLineAsync(logEntry).ConfigureAwait(false);
+			}
+			catch (ObjectDisposedException)
+			{
+				return false;
+			}
+			catch (Exception ex)
+			{
+				OnWriteFailed(ex);
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	private void OnWriteFailed(Exception ex)
+	{
+		// Once a write fails (e.g. disk full), stop accepting entries. Nothing will drain the queue
+		// after the writing task exits, so continuing to enqueue would grow memory without bound.
+		_writingFailed = true;
+
+		while (_logQueue.TryDequeue(out _))
+		{
+			// Discard entries that can no longer be written.
+		}
+
+		BootstrapLogger.Log($"{nameof(FileLogger)}: [ERROR] An exception occurred while writing to the log file: {ex.Message}.");
+
+		if (_options.AdditionalLogger is not null)
+			_options.AdditionalLogger.LogError(new EventId(530, "FileLoggingFailure"), ex, "File logging disabled after failing to write to '{LogFilePath}': {ExceptionMessage}.", LogFilePath, ex.Message);
+		else
+			Console.Error.WriteLine($"File logging disabled after failing to write to '{LogFilePath}': {ex.Message}.");
+	}
+
 	public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
 	{
 		// We skip logging for any log level higher (numerically) than the configured log level
-		if (!IsEnabled(logLevel))
+		if (!IsEnabled(logLevel) || Volatile.Read(ref _disposed) == 1)
 			return;
 
 		var logLine = LogFormatter.Format(logLevel, eventId, state, exception, formatter);
@@ -173,10 +197,18 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 			logLine = $"{logLine}{Environment.NewLine}{exception}";
 
 		_logQueue.Enqueue(logLine);
-		_logSemaphore.Release();
+
+		try
+		{
+			_logSemaphore.Release();
+		}
+		catch (ObjectDisposedException)
+		{
+			// Lost a race with Dispose; the entry is dropped.
+		}
 	}
 
-	public bool IsEnabled(LogLevel logLevel) => FileLoggingEnabled && _options.LogLevel <= logLevel;
+	public bool IsEnabled(LogLevel logLevel) => FileLoggingEnabled && !_writingFailed && _options.LogLevel <= logLevel;
 
 	public IDisposable BeginScope<TState>(TState state) where TState : notnull => _scopeProvider.Push(state);
 
@@ -195,20 +227,19 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 		try
 		{
 			// Wait for the writing task to complete with a timeout to prevent hanging
-			WritingTask?.Wait(TimeSpan.FromSeconds(5));
+			if (!WritingTask.Wait(_disposeTimeout))
+			{
+				DisposeAfterWritingCompletes();
+				return;
+			}
 		}
-		catch (AggregateException ex) when (ex.InnerException is OperationCanceledException)
+		catch (Exception ex)
 		{
-			// Expected when cancellation token is triggered
-		}
-		catch (OperationCanceledException)
-		{
-			// Expected when cancellation token is triggered
+			// Not expected, as the writing task handles its own failures, but disposal must not throw.
+			BootstrapLogger.Log($"{nameof(FileLogger)}: [ERROR] The writing task failed: {ex.GetBaseException().Message}.");
 		}
 
-		_streamWriter.Dispose();
-		_logSemaphore.Dispose();
-		_cancellationTokenSource.Dispose();
+		DisposeResources();
 	}
 
 	public async ValueTask DisposeAsync()
@@ -222,23 +253,41 @@ internal sealed class FileLogger : IDisposable, IAsyncDisposable, ILogger
 		try
 		{
 			// Wait for the writing task to complete with a timeout to prevent hanging
-			await WritingTask.WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+			await WritingTask.WaitAsync(_disposeTimeout).ConfigureAwait(false);
 		}
 		catch (TimeoutException)
 		{
-			// Task didn't complete in time, proceed with disposal
+			DisposeAfterWritingCompletes();
+			return;
 		}
-		catch (OperationCanceledException)
+		catch (Exception ex)
 		{
-			// Expected when cancellation token is triggered
+			// Not expected, as the writing task handles its own failures, but disposal must not throw.
+			BootstrapLogger.Log($"{nameof(FileLogger)}: [ERROR] The writing task failed: {ex.Message}.");
 		}
 
-#if NET
-        await _streamWriter.DisposeAsync().ConfigureAwait(false);
-#else
-		_streamWriter.Dispose();
-#endif
-		_logSemaphore.Dispose();
-		_cancellationTokenSource.Dispose();
+		// Synchronous disposal is sufficient: AutoFlush means nothing remains buffered by this point.
+		DisposeResources();
+	}
+
+	private void DisposeAfterWritingCompletes() =>
+		// Schedule cleanup even if the writing task completed just as the timeout elapsed.
+		_ = WritingTask.ContinueWith(_ => DisposeResources(), CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default);
+
+	private void DisposeResources()
+	{
+		try
+		{
+			_streamWriter.Dispose();
+		}
+		catch (Exception ex)
+		{
+			BootstrapLogger.Log($"{nameof(FileLogger)}: [ERROR] An exception occurred while disposing the file logger: {ex.Message}.");
+		}
+		finally
+		{
+			_logSemaphore.Dispose();
+			_cancellationTokenSource.Dispose();
+		}
 	}
 }
