@@ -259,41 +259,29 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 		if (BootstrapLogger.IsEnabled)
 			BootstrapLogger.LogWithStackTrace($"{nameof(CompositeLogger)}: {nameof(GetOrCreate)} invoked.");
 
-		var existing = PreActivationInstance;
-		if (existing is not null)
-		{
-			if (IsCompatible(existing, options))
-			{
-				// If options become available after initial creation, store them so the safety
-				// timer can use them as fallback for activation.
-				if (options is not null && existing._options is null)
-					existing._options = options;
-
-				if (BootstrapLogger.IsEnabled)
-					BootstrapLogger.Log($"{nameof(CompositeLogger)}: {nameof(GetOrCreate)} returning existing instance.");
-
-				return existing;
-			}
-
-			// Options don't match — this is a concurrent bootstrap flow (e.g., parallel tests).
-			// Create an isolated instance that is NOT stored as the singleton.
-			if (BootstrapLogger.IsEnabled)
-				BootstrapLogger.Log($"{nameof(CompositeLogger)}: {nameof(GetOrCreate)} options mismatch, creating isolated instance.");
-
-			return new CompositeLogger(options);
-		}
-
+		// Keep reuse and late-options assignment atomic with retirement's ownership check and removal.
 		using (StaticLock.EnterScope())
 		{
-			if (PreActivationInstance is not null)
+			var existing = PreActivationInstance;
+			if (existing is not null)
 			{
-				if (IsCompatible(PreActivationInstance, options))
+				if (IsCompatible(existing, options))
 				{
-					if (options is not null && PreActivationInstance._options is null)
-						PreActivationInstance._options = options;
+					// If options become available after initial creation, store them so the safety
+					// timer can use them as fallback for activation.
+					if (options is not null && existing._options is null)
+						existing._options = options;
 
-					return PreActivationInstance;
+					if (BootstrapLogger.IsEnabled)
+						BootstrapLogger.Log($"{nameof(CompositeLogger)}: {nameof(GetOrCreate)} returning existing instance.");
+
+					return existing;
 				}
+
+				// Options don't match — this is a concurrent bootstrap flow (e.g., parallel tests).
+				// Create an isolated instance that is NOT stored as the singleton.
+				if (BootstrapLogger.IsEnabled)
+					BootstrapLogger.Log($"{nameof(CompositeLogger)}: {nameof(GetOrCreate)} options mismatch, creating isolated instance.");
 
 				return new CompositeLogger(options);
 			}
@@ -353,37 +341,44 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 
 	/// <summary>
 	/// Called when Bootstrap resolves to existing shared or service-collection components, meaning the
-	/// pre-activation logger will not be adopted. Clears the static singleton and, when it belongs to the
-	/// bootstrap flow for <paramref name="options"/>, retires it into <paramref name="adopted"/> so its
+	/// pre-activation logger will not be adopted. When the static singleton belongs to the bootstrap flow
+	/// for <paramref name="options"/>, clears it and retires it into <paramref name="adopted"/> so its
 	/// safety timer cannot later activate it and create a second file and console logger.
 	/// </summary>
 	/// <remarks>
 	/// Must be called under the bootstrap lock. Components activate their logger under that same lock, and
 	/// activation always clears the singleton, so an instance still found here is never owned by components —
 	/// even when its own safety timer has started (or finished) activating it.
+	/// An instance for other options belongs to a concurrent bootstrap flow, which still holds it and will
+	/// adopt it from the singleton when it bootstraps, so it is left in place.
 	/// </remarks>
 	internal static void RetirePreActivationInstance(CompositeLogger adopted, CompositeElasticOpenTelemetryOptions options)
 	{
 		CompositeLogger? orphan;
 
+		// Ownership is decided under the same lock as the removal, so GetOrCreate() assigning options to
+		// an instance created without them cannot leave it removed from the singleton but not retired.
 		using (StaticLock.EnterScope())
 		{
 			orphan = PreActivationInstance;
+
+			if (orphan is null || !orphan.BelongsToFlow(options))
+				return;
+
 			PreActivationInstance = null;
 		}
 
-		if (orphan is null || ReferenceEquals(orphan, adopted))
+		if (ReferenceEquals(orphan, adopted))
 			return;
 
-		orphan.RetireIntoIfOwned(adopted, options);
+		orphan.RetireInto(adopted);
 	}
 
 	/// <summary>
-	/// If this instance belongs to the bootstrap flow for <paramref name="options"/>, permanently deactivates it,
-	/// forwarding any deferred entries to <paramref name="adopted"/> and disposing the safety timer and any
-	/// sub-loggers already created. Subsequent log calls are dropped.
+	/// Permanently deactivates this instance, forwarding any deferred entries to <paramref name="adopted"/>
+	/// and disposing the safety timer and any sub-loggers already created. Subsequent log calls are dropped.
 	/// </summary>
-	private void RetireIntoIfOwned(CompositeLogger adopted, CompositeElasticOpenTelemetryOptions options)
+	private void RetireInto(CompositeLogger adopted)
 	{
 		ConcurrentQueue<DeferredLogEntry>? capturedQueue;
 
@@ -392,9 +387,7 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 		// creates none.
 		using (_activationLock.EnterScope())
 		{
-			// An instance for other options belongs to a concurrent bootstrap flow (e.g., parallel tests),
-			// which still holds and will activate it, so it is only cleared from the singleton slot.
-			if (_isDisposed || !BelongsToFlow(options))
+			if (_isDisposed)
 				return;
 
 			_isDisposed = true;
@@ -450,7 +443,7 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 		// thread can enqueue into the old queue after we've captured it.
 		using (_activationLock.EnterScope())
 		{
-			// Retired via RetireIntoIfOwned() before we acquired the lock — its queue has been forwarded
+			// Retired via RetireInto() before we acquired the lock — its queue has been forwarded
 			// and it must not create sub-loggers that nothing would dispose.
 			if (_isDisposed)
 				return;
