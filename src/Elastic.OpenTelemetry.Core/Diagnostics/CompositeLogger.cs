@@ -42,6 +42,10 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 	// Deferred mode infrastructure
 	private ConcurrentQueue<DeferredLogEntry>? _deferredQueue;
 	private System.Timers.Timer? _safetyTimer;
+
+	// Once assigned, never cleared: besides supplying the safety timer fallback, it identifies the
+	// bootstrap flow that owns this instance, which RetirePreActivationInstance() matches on even
+	// after (or while) the instance is activated.
 	private volatile CompositeElasticOpenTelemetryOptions? _options;
 
 	// Per-instance lock guarding the deferred-to-active handoff.
@@ -64,6 +68,7 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 	// IsCompatible() uses this flag rather than _activationState so that active-mode loggers
 	// stored in PreActivationInstance remain shareable across GetOrCreate() calls until they are
 	// cleared, preventing multiple FileLogger instances from racing to open the same log file.
+	// Set before _activationLock is acquired, so it only governs sharing — never retirement.
 	private int _activatedViaActivateMethod;
 
 	// Number of bootstrap flows currently creating components with this logger. While non-zero,
@@ -183,8 +188,7 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 
 		// If we have options, activate with them. Since options are mutated in place by
 		// SetLogLevelFromCentralConfig, they already reflect any central config updates.
-		// Capture to a local first: _options is volatile and another thread may null it
-		// inside Activate() between the null check and the call site.
+		// Capture to a local first: _options is volatile and GetOrCreate() may assign it concurrently.
 		var options = _options;
 		if (options is not null)
 		{
@@ -255,41 +259,29 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 		if (BootstrapLogger.IsEnabled)
 			BootstrapLogger.LogWithStackTrace($"{nameof(CompositeLogger)}: {nameof(GetOrCreate)} invoked.");
 
-		var existing = PreActivationInstance;
-		if (existing is not null)
-		{
-			if (IsCompatible(existing, options))
-			{
-				// If options become available after initial creation, store them so the safety
-				// timer can use them as fallback for activation.
-				if (options is not null && existing._options is null)
-					existing._options = options;
-
-				if (BootstrapLogger.IsEnabled)
-					BootstrapLogger.Log($"{nameof(CompositeLogger)}: {nameof(GetOrCreate)} returning existing instance.");
-
-				return existing;
-			}
-
-			// Options don't match — this is a concurrent bootstrap flow (e.g., parallel tests).
-			// Create an isolated instance that is NOT stored as the singleton.
-			if (BootstrapLogger.IsEnabled)
-				BootstrapLogger.Log($"{nameof(CompositeLogger)}: {nameof(GetOrCreate)} options mismatch, creating isolated instance.");
-
-			return new CompositeLogger(options);
-		}
-
+		// Keep reuse and late-options assignment atomic with retirement's ownership check and removal.
 		using (StaticLock.EnterScope())
 		{
-			if (PreActivationInstance is not null)
+			var existing = PreActivationInstance;
+			if (existing is not null)
 			{
-				if (IsCompatible(PreActivationInstance, options))
+				if (IsCompatible(existing, options))
 				{
-					if (options is not null && PreActivationInstance._options is null)
-						PreActivationInstance._options = options;
+					// If options become available after initial creation, store them so the safety
+					// timer can use them as fallback for activation.
+					if (options is not null && existing._options is null)
+						existing._options = options;
 
-					return PreActivationInstance;
+					if (BootstrapLogger.IsEnabled)
+						BootstrapLogger.Log($"{nameof(CompositeLogger)}: {nameof(GetOrCreate)} returning existing instance.");
+
+					return existing;
 				}
+
+				// Options don't match — this is a concurrent bootstrap flow (e.g., parallel tests).
+				// Create an isolated instance that is NOT stored as the singleton.
+				if (BootstrapLogger.IsEnabled)
+					BootstrapLogger.Log($"{nameof(CompositeLogger)}: {nameof(GetOrCreate)} options mismatch, creating isolated instance.");
 
 				return new CompositeLogger(options);
 			}
@@ -303,9 +295,8 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 	}
 
 	/// <summary>
-	/// Checks whether the existing singleton is compatible with the requested options.
-	/// Compatible means: either side has no options (same bootstrap flow, options not yet available),
-	/// or both have the same options reference or equal options.
+	/// Checks whether the existing singleton can be handed out for the requested options: it must still be
+	/// a pre-activation singleton and belong to the same bootstrap flow (see <see cref="BelongsToFlow"/>).
 	/// </summary>
 	private static bool IsCompatible(CompositeLogger existing, CompositeElasticOpenTelemetryOptions? options)
 	{
@@ -315,32 +306,30 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 		// in their constructor (before being adopted by any Bootstrap call), and excluding
 		// them would cause GetOrCreate() to create new CompositeLogger/FileLogger instances
 		// for every call in the bootstrap chain, each racing to open the same log file.
-		if (Volatile.Read(ref existing._activatedViaActivateMethod) != 0)
+		if (existing._isDisposed || Volatile.Read(ref existing._activatedViaActivateMethod) != 0)
 			return false;
 
-		// Capture once: _options is volatile, and Activate() can null it on another thread.
-		var existingOptions = existing._options;
-
-		// existingOptions may be null either because the logger was created without options
-		// (genuinely pre-activation) or because Activate() won a race between our first
-		// _activatedViaActivateMethod read above and this _options read. Re-check the flag
-		// to distinguish: if it is now 1, activation completed during that window and this
-		// instance is no longer a pre-activation singleton.
-		if (existingOptions is null && Volatile.Read(ref existing._activatedViaActivateMethod) != 0)
-			return false;
-
-		// If either side has no options yet, they could be part of the same bootstrap flow.
-		if (options is null || existingOptions is null)
-			return true;
-
-		// Same reference or equivalent options — same bootstrap flow.
-		return ReferenceEquals(existingOptions, options) || existingOptions.Equals(options);
+		return existing.BelongsToFlow(options);
 	}
 
 	/// <summary>
-	/// Clears the static pre-activation singleton without activating it.
-	/// Called when Bootstrap resolves to existing shared or service-collection components,
-	/// meaning the pre-activation logger will not be adopted and should be discarded.
+	/// Checks whether this instance belongs to the bootstrap flow for <paramref name="options"/>: either side has
+	/// no options (same bootstrap flow, options not yet available), or both have the same or equal options.
+	/// Independent of activation state, as <c>_options</c> is never cleared once assigned.
+	/// </summary>
+	private bool BelongsToFlow(CompositeElasticOpenTelemetryOptions? options)
+	{
+		var ownOptions = _options;
+
+		if (options is null || ownOptions is null)
+			return true;
+
+		return ReferenceEquals(ownOptions, options) || ownOptions.Equals(options);
+	}
+
+	/// <summary>
+	/// Clears the static pre-activation singleton without activating or retiring it.
+	/// Used by tests to reset static state between runs.
 	/// </summary>
 	internal static void ClearPreActivationInstance()
 	{
@@ -348,6 +337,75 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 		{
 			PreActivationInstance = null;
 		}
+	}
+
+	/// <summary>
+	/// Called when Bootstrap resolves to existing shared or service-collection components, meaning the
+	/// pre-activation logger will not be adopted. When the static singleton belongs to the bootstrap flow
+	/// for <paramref name="options"/>, clears it and retires it into <paramref name="adopted"/> so its
+	/// safety timer cannot later activate it and create a second file and console logger.
+	/// </summary>
+	/// <remarks>
+	/// Must be called under the bootstrap lock. Components activate their logger under that same lock, and
+	/// activation always clears the singleton, so an instance still found here is never owned by components —
+	/// even when its own safety timer has started (or finished) activating it.
+	/// An instance for other options belongs to a concurrent bootstrap flow, which still holds it and will
+	/// adopt it from the singleton when it bootstraps, so it is left in place.
+	/// </remarks>
+	internal static void RetirePreActivationInstance(CompositeLogger adopted, CompositeElasticOpenTelemetryOptions options)
+	{
+		CompositeLogger? orphan;
+
+		// Ownership is decided under the same lock as the removal, so GetOrCreate() assigning options to
+		// an instance created without them cannot leave it removed from the singleton but not retired.
+		using (StaticLock.EnterScope())
+		{
+			orphan = PreActivationInstance;
+
+			if (orphan is null || !orphan.BelongsToFlow(options))
+				return;
+
+			PreActivationInstance = null;
+		}
+
+		if (ReferenceEquals(orphan, adopted))
+			return;
+
+		orphan.RetireInto(adopted);
+	}
+
+	/// <summary>
+	/// Permanently deactivates this instance, forwarding any deferred entries to <paramref name="adopted"/>
+	/// and disposing the safety timer and any sub-loggers already created. Subsequent log calls are dropped.
+	/// </summary>
+	private void RetireInto(CompositeLogger adopted)
+	{
+		ConcurrentQueue<DeferredLogEntry>? capturedQueue;
+
+		// Decided under the activation lock so that Activate() (e.g., from an in-flight safety timer) either
+		// created sub-loggers before us, leaving them for Dispose() to clean up, or observes _isDisposed and
+		// creates none.
+		using (_activationLock.EnterScope())
+		{
+			if (_isDisposed)
+				return;
+
+			_isDisposed = true;
+			capturedQueue = _deferredQueue;
+			_deferredQueue = null;
+		}
+
+		if (BootstrapLogger.IsEnabled)
+			BootstrapLogger.Log($"{nameof(CompositeLogger)}: Retiring orphaned pre-activation instance '{InstanceId}' " +
+				$"into adopted instance '{adopted.InstanceId}'.");
+
+		if (capturedQueue is not null)
+		{
+			while (capturedQueue.TryDequeue(out var entry))
+				adopted.Log(entry.LogLevel, entry.EventId, entry.State, entry.Exception, entry.Formatter);
+		}
+
+		Dispose();
 	}
 
 	/// <summary>
@@ -376,9 +434,6 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 			return;
 		}
 
-		// Mark as activated via Activate() before nulling _options. This ordering guarantees
-		// that IsCompatible()'s volatile read of _activatedViaActivateMethod = 0 implies
-		// _options is still valid (not yet nulled), preventing a TOCTOU race.
 		Interlocked.Exchange(ref _activatedViaActivateMethod, 1);
 
 		ConcurrentQueue<DeferredLogEntry>? capturedQueue;
@@ -388,12 +443,16 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 		// thread can enqueue into the old queue after we've captured it.
 		using (_activationLock.EnterScope())
 		{
+			// Retired via RetireInto() before we acquired the lock — its queue has been forwarded
+			// and it must not create sub-loggers that nothing would dispose.
+			if (_isDisposed)
+				return;
+
 			// Create sub-loggers from final options while holding the lock so that
 			// any Log() call that wins the lock after us sees active sub-loggers.
 			_fileLogger = new FileLogger(options);
 			_consoleLogger = new StandardOutLogger(options);
 			_additionalLogger = options.AdditionalLogger;
-			_options = null; // No longer needed — sub-loggers are created
 
 			capturedQueue = _deferredQueue;
 			_deferredQueue = null;
