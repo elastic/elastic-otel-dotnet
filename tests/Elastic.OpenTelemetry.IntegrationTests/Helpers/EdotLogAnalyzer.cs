@@ -13,6 +13,9 @@ namespace Elastic.OpenTelemetry.IntegrationTests.Helpers;
 /// <remarks>
 /// Format produced by <c>LogFormatter.Format</c>:
 /// <code>[ISO8601][ThreadId][SpanId][Level]  message {{EventId: id, EventName: name}} &lt;traceContext&gt;</code>
+/// <para>Events forwarded by <c>LoggingEventListener</c> from <c>OpenTelemetry-*</c> event sources
+/// have no EventId and a message prefixed with the source name and OS thread ID:</para>
+/// <code>[ISO8601][------][SpanId][Level]  OpenTelemetry-Sdk: [osThreadId] message</code>
 /// </remarks>
 internal sealed record EdotLogEntry(
 	DateTime Timestamp,
@@ -21,7 +24,8 @@ internal sealed record EdotLogEntry(
 	string Level,
 	string Message,
 	int? EventId,
-	string? EventName);
+	string? EventName,
+	string? EventSourceName);
 
 /// <summary>
 /// Parses an EDOT log file and provides assertion helpers for integration tests.
@@ -47,6 +51,11 @@ internal sealed class EdotLogAnalyzer
 	// EventName is optional (LogFormatter omits it when EventId.Name is null/empty).
 	private static readonly Regex EventIdPattern = new(
 		@"\{\{EventId:\s*(?<eventId>\d+)(?:,\s*EventName:\s*(?<eventName>\w+))?\}\}",
+		RegexOptions.Compiled);
+
+	// Matches the prefix LoggingEventListener adds to forwarded events: "OpenTelemetry-Sdk: [1234] "
+	private static readonly Regex EventSourcePattern = new(
+		@"^(?<eventSource>OpenTelemetry-[^:\s]+): \[-?\d+\] ",
 		RegexOptions.Compiled);
 
 	public EdotLogAnalyzer(string logFilePath)
@@ -121,6 +130,43 @@ internal sealed class EdotLogAnalyzer
 				$"  [{e.Level}] EventId={e.EventId}: {e.Message}")));
 	}
 
+	/// <summary>Entries forwarded from the named <c>OpenTelemetry-*</c> event source, in file order.</summary>
+	public IReadOnlyList<EdotLogEntry> FromEventSource(string eventSourceName) =>
+		[.. Entries.Where(e => string.Equals(e.EventSourceName, eventSourceName, StringComparison.Ordinal))];
+
+	/// <summary>Index of the first entry whose message contains <paramref name="substring"/>, or -1.</summary>
+	public int IndexOfMessage(string substring)
+	{
+		for (var i = 0; i < Entries.Count; i++)
+		{
+			if (Entries[i].Message.Contains(substring, StringComparison.Ordinal))
+				return i;
+		}
+
+		return -1;
+	}
+
+	/// <summary>Assert that exactly one entry's message contains <paramref name="substring"/>.</summary>
+	/// <remarks>Guards against a line being both captured live and replayed, or written by two loggers.</remarks>
+	public void AssertMessageOccursOnce(string substring, string because = "")
+	{
+		var matching = Entries.Where(e => e.Message.Contains(substring, StringComparison.Ordinal)).ToList();
+		var reason = string.IsNullOrEmpty(because) ? "" : $" because {because}";
+		Assert.True(matching.Count == 1,
+			$"Expected exactly one log entry containing \"{substring}\"{reason}, " +
+			$"but found {matching.Count} among {Entries.Count} entries." +
+			(matching.Count > 1 ? $"\n{string.Join("\n", matching.Select(e => $"  [{e.Timestamp:O}] {e.Message}"))}" : ""));
+	}
+
+	/// <summary>Assert that at least one entry's message contains <paramref name="substring"/>.</summary>
+	public void AssertContainsMessage(string substring, string because = "")
+	{
+		var reason = string.IsNullOrEmpty(because) ? "" : $" because {because}";
+		Assert.True(IndexOfMessage(substring) >= 0,
+			$"Expected log to contain an entry with \"{substring}\"{reason}, " +
+			$"but it was not found among {Entries.Count} entries.");
+	}
+
 	/// <summary>Assert that a specific log level appears at least once.</summary>
 	public void AssertContainsLevel(string level)
 	{
@@ -170,6 +216,11 @@ internal sealed class EdotLogAnalyzer
 		if (traceContextIndex >= 0)
 			message = message[..traceContextIndex];
 
-		return new EdotLogEntry(timestamp, threadId, spanId, level, message, eventId, eventName);
+		var eventSourceMatch = EventSourcePattern.Match(message);
+		var eventSourceName = eventSourceMatch.Success
+			? eventSourceMatch.Groups["eventSource"].Value
+			: null;
+
+		return new EdotLogEntry(timestamp, threadId, spanId, level, message, eventId, eventName, eventSourceName);
 	}
 }

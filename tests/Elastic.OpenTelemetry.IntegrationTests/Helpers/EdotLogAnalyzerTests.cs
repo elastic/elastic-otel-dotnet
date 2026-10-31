@@ -253,6 +253,123 @@ public class EdotLogAnalyzerTests : IDisposable
 	}
 
 	[Fact]
+	public void ParsesForwardedEventSourceLine()
+	{
+		var path = WriteLogFile(
+			"[2026-10-29T17:18:15.2378151Z][------][------][Debug]       OpenTelemetry-AutoInstrumentation: [70228] Continuous profiling configuration: Thread sampling enabled: False");
+
+		var analyzer = new EdotLogAnalyzer(path);
+
+		Assert.Single(analyzer.Entries);
+		var entry = analyzer.Entries[0];
+		Assert.Equal("OpenTelemetry-AutoInstrumentation", entry.EventSourceName);
+		Assert.Equal("------", entry.ThreadId);
+		Assert.Null(entry.EventId);
+		Assert.Contains("Continuous profiling configuration:", entry.Message);
+	}
+
+	[Fact]
+	public void ParsesForwardedEventSourceLine_WithHyphenatedSourceName()
+	{
+		var path = WriteLogFile(
+			"[2026-10-29T17:18:15.1927491Z][------][------][Debug]       OpenTelemetry-AutoInstrumentation-Loader: [0] Check resolving assembly");
+
+		var analyzer = new EdotLogAnalyzer(path);
+
+		Assert.Equal("OpenTelemetry-AutoInstrumentation-Loader", analyzer.Entries[0].EventSourceName);
+	}
+
+	[Fact]
+	public void EventSourceName_IsNull_ForEdotLine()
+	{
+		var path = WriteLogFile(
+			"[2026-03-19T10:30:00.0000000Z][000001][------][Debug]  Message {{EventId: 1, EventName: BootstrapInvoked}}");
+
+		var analyzer = new EdotLogAnalyzer(path);
+
+		Assert.Null(analyzer.Entries[0].EventSourceName);
+	}
+
+	[Fact]
+	public void FromEventSource_MatchesExactSourceName()
+	{
+		var path = WriteLogFile(
+			"[2026-10-29T17:18:15.0000000Z][------][------][Debug]  OpenTelemetry-AutoInstrumentation-Loader: [1] Loading assembly",
+			"[2026-10-29T17:18:15.1000000Z][------][------][Information]  OpenTelemetry-AutoInstrumentation: [1] OpenTelemetry tracer initialized.",
+			"[2026-10-29T17:18:15.2000000Z][------][------][Debug]  OpenTelemetry-Sdk: [1] Building TracerProvider.");
+
+		var analyzer = new EdotLogAnalyzer(path);
+
+		var entry = Assert.Single(analyzer.FromEventSource("OpenTelemetry-AutoInstrumentation"));
+		Assert.Contains("OpenTelemetry tracer initialized.", entry.Message);
+	}
+
+	[Fact]
+	public void IndexOfMessage_ReturnsFirstMatch_OrMinusOne()
+	{
+		var path = WriteLogFile(
+			"[2026-03-19T10:30:00.0000000Z][000001][------][Debug]  First",
+			"[2026-03-19T10:30:01.0000000Z][000001][------][Debug]  Second",
+			"[2026-03-19T10:30:02.0000000Z][000001][------][Debug]  Second again");
+
+		var analyzer = new EdotLogAnalyzer(path);
+
+		Assert.Equal(1, analyzer.IndexOfMessage("Second"));
+		Assert.Equal(-1, analyzer.IndexOfMessage("Missing"));
+	}
+
+	[Fact]
+	public void AssertMessageOccursOnce_Passes_WhenSingle()
+	{
+		var path = WriteLogFile(
+			"[2026-03-19T10:30:00.0000000Z][000001][------][Information]  Elastic Distribution of OpenTelemetry (EDOT) .NET: 1.0.0");
+
+		var analyzer = new EdotLogAnalyzer(path);
+		analyzer.AssertMessageOccursOnce("Elastic Distribution of OpenTelemetry (EDOT) .NET:"); // should not throw
+	}
+
+	[Fact]
+	public void AssertMessageOccursOnce_Fails_WhenDuplicated()
+	{
+		var path = WriteLogFile(
+			"[2026-03-19T10:30:00.0000000Z][------][------][Information]  OpenTelemetry-AutoInstrumentation: [1] OpenTelemetry tracer initialized.",
+			"[2026-03-19T10:30:01.0000000Z][------][------][Information]  OpenTelemetry-AutoInstrumentation: [1] OpenTelemetry tracer initialized.");
+
+		var analyzer = new EdotLogAnalyzer(path);
+		Assert.ThrowsAny<Exception>(() => analyzer.AssertMessageOccursOnce("OpenTelemetry tracer initialized."));
+	}
+
+	[Fact]
+	public void AssertMessageOccursOnce_Fails_WhenAbsent()
+	{
+		var path = WriteLogFile(
+			"[2026-03-19T10:30:00.0000000Z][000001][------][Debug]  Message");
+
+		var analyzer = new EdotLogAnalyzer(path);
+		Assert.ThrowsAny<Exception>(() => analyzer.AssertMessageOccursOnce("Missing"));
+	}
+
+	[Fact]
+	public void AssertContainsMessage_Passes_WhenPresent()
+	{
+		var path = WriteLogFile(
+			"[2026-03-19T10:30:00.0000000Z][000001][------][Debug]  Activation method: AutoInstrumentation");
+
+		var analyzer = new EdotLogAnalyzer(path);
+		analyzer.AssertContainsMessage("Activation method: AutoInstrumentation"); // should not throw
+	}
+
+	[Fact]
+	public void AssertContainsMessage_Fails_WhenAbsent()
+	{
+		var path = WriteLogFile(
+			"[2026-03-19T10:30:00.0000000Z][000001][------][Debug]  Activation method: NuGet");
+
+		var analyzer = new EdotLogAnalyzer(path);
+		Assert.ThrowsAny<Exception>(() => analyzer.AssertContainsMessage("Activation method: AutoInstrumentation"));
+	}
+
+	[Fact]
 	public void ThrowsFileNotFoundException_ForMissingFile() =>
 		Assert.Throws<FileNotFoundException>(() => new EdotLogAnalyzer("/nonexistent/path.log"));
 }
