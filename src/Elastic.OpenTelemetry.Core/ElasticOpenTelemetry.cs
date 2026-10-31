@@ -18,6 +18,18 @@ internal static class ElasticOpenTelemetry
 	/// <summary>Maximum time to wait for the OpAmp client to start.</summary>
 	internal const int OpAmpStartTimeoutMs = 2000;
 
+	/// <summary>Maximum time the OpAmp start worker's StopAsync cleanup is allowed to run.</summary>
+	internal const int OpAmpStartCleanupBudgetMs = 500;
+
+	/// <summary>Headroom for OS thread scheduling between OpAmp start cancellation and worker thread exit.</summary>
+	internal const int OpAmpStartSchedulingMarginMs = 500;
+
+	/// <summary>
+	/// Maximum time the bootstrap thread blocks waiting for the OpAmp start worker to finish.
+	/// This is the worst-case duration of the OpAmp start phase of bootstrap.
+	/// </summary>
+	internal const int OpAmpStartJoinTimeoutMs = OpAmpStartTimeoutMs + OpAmpStartCleanupBudgetMs + OpAmpStartSchedulingMarginMs;
+
 	/// <summary>Maximum time to wait for the first central config response after OpAmp starts.</summary>
 	internal const int WaitForFirstConfigTimeoutMs = 3000;
 
@@ -26,10 +38,13 @@ internal static class ElasticOpenTelemetry
 
 	/// <summary>
 	/// Safety timer for CompositeLogger deferred mode.
-	/// Computed as OpAmpStartTimeout + WaitForFirstConfigTimeout + margin so the timer
+	/// Computed as OpAmpStartJoinTimeout + WaitForFirstConfigTimeout + margin so the timer
 	/// fires only after the normal bootstrap path has had time to activate the logger.
+	/// The timer is also bootstrap-aware: if it fires while bootstrap is creating components and is
+	/// still running, activation is deferred until bootstrap completes (see
+	/// <c>CompositeLogger.EnterBootstrap</c>), so this value only bounds the fallback case.
 	/// </summary>
-	internal const int SafetyTimerMs = OpAmpStartTimeoutMs + WaitForFirstConfigTimeoutMs + SafetyTimerMarginMs;
+	internal const int SafetyTimerMs = OpAmpStartJoinTimeoutMs + WaitForFirstConfigTimeoutMs + SafetyTimerMarginMs;
 
 	private static int BootstrapCounter;
 
@@ -173,6 +188,11 @@ internal static class ElasticOpenTelemetry
 			CentralConfiguration? centralConfig = null;
 			LoggingEventListener? eventListener = null;
 
+			// Prevent the safety timer from activating the logger with local config while we may
+			// still be waiting on central config. If bootstrap fails before Activate, ExitBootstrap
+			// runs any safety timer activation that was deferred.
+			logger.EnterBootstrap();
+
 			try
 			{
 				// Resolve service identity from resource attributes before checking enablement.
@@ -237,6 +257,10 @@ internal static class ElasticOpenTelemetry
 				centralConfig?.Dispose();
 				eventListener?.Dispose();
 				throw;
+			}
+			finally
+			{
+				logger.ExitBootstrap();
 			}
 		}
 	}

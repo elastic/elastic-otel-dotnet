@@ -10,16 +10,20 @@ internal class ConfigCell<T>
 {
 	private readonly Lock _lock = new();
 
+	private T? _localValue;
+
 	internal ConfigCell(string key, T? value)
 	{
 		Key = key;
 		Value = value;
+		_localValue = value;
 	}
 
 	internal ConfigCell(string key, T? value, Func<T?, T?> valueRedactor)
 	{
 		Key = key;
 		Value = value;
+		_localValue = value;
 		ValueRedactor = valueRedactor;
 	}
 
@@ -28,6 +32,20 @@ internal class ConfigCell<T>
 	internal Func<T?, T?> ValueRedactor { get; } = original => original;
 
 	internal T? Value { get; private set; }
+
+	/// <summary>
+	/// The value as resolved from local sources only, ignoring any <see cref="ConfigSource.CentralConfig"/>
+	/// assignment. Used for options equality so that central config updates applied after bootstrap
+	/// do not prevent reuse of shared components by an options instance built from the same inputs.
+	/// </summary>
+	internal T? LocalValue
+	{
+		get
+		{
+			lock (_lock)
+				return _localValue;
+		}
+	}
 
 	internal ConfigSource Source { get; private set; } = ConfigSource.Default;
 
@@ -61,6 +79,9 @@ internal class ConfigCell<T>
 
 			Value = value;
 			Source = source;
+
+			if (source != ConfigSource.CentralConfig)
+				_localValue = value;
 		}
 	}
 

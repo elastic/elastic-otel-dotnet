@@ -197,35 +197,178 @@ public class CompositeLoggerOrphanTests
 	private static T GetStaticField<T>(string name) =>
 		(T)typeof(CompositeLogger).GetField(name, BindingFlags.Static | BindingFlags.NonPublic)!.GetValue(null)!;
 
-	[Fact]
-	public void RetirePreActivationInstance_IncompatibleInstance_IsClearedButNotRetired()
-	{
-		CompositeLogger.ClearPreActivationInstance();
+	// Options that are not equal to those of the pending instances in these tests — a different bootstrap flow.
+	private static CompositeElasticOpenTelemetryOptions CreateOtherFlowOptions() =>
+		new(new Dictionary<string, string>
+		{
+			["OTEL_EXPORTER_OTLP_ENDPOINT"] = "http://localhost:9999",
+		});
 
+	[Fact]
+	public void RetirePreActivationInstance_OtherFlowDeferredInstance_RemainsSingletonAndActivates()
+	{
 		var otherFlowSink = new CountingLogger();
 		var otherFlowOptions = CreateOpAmpOptions(otherFlowSink);
-		var otherFlowLogger = CompositeLogger.GetOrCreate(otherFlowOptions);
 
 		using var adopted = new CompositeLogger(CreateNonOpAmpOptions(new CountingLogger()));
+		CompositeLogger? otherFlowLogger = null;
 
 		try
 		{
-			// Options that are not equal to those of the pending instance — a different bootstrap flow.
-			var bootstrapOptions = new CompositeElasticOpenTelemetryOptions(new Dictionary<string, string>
+			using (ClaimSingletonSlot())
 			{
-				["OTEL_EXPORTER_OTLP_ENDPOINT"] = "http://localhost:9999",
-			});
+				otherFlowLogger = CompositeLogger.GetOrCreate(otherFlowOptions);
+				otherFlowLogger.Log(LogLevel.Information, new EventId(1), "pre-bootstrap", null, (s, _) => s);
 
-			CompositeLogger.RetirePreActivationInstance(adopted, bootstrapOptions);
+				CompositeLogger.RetirePreActivationInstance(adopted, CreateOtherFlowOptions());
 
-			// The other flow can still activate its logger as before.
+				// The other flow adopts its own pending instance when it bootstraps, rather than a new one.
+				Assert.Same(otherFlowLogger, CompositeLogger.GetOrCreate(otherFlowOptions));
+			}
+
 			otherFlowLogger.Activate(otherFlowOptions);
+
 			Assert.True(otherFlowLogger.IsEnabled(LogLevel.Information));
-			Assert.True(otherFlowSink.Count > 0);
+			Assert.True(otherFlowLogger.HasAdditionalLogger);
+			// 1 init debug (queued in ctor) + 1 queued entry, drained into the other flow's own sub-loggers
+			Assert.True(otherFlowSink.Count >= 2);
 		}
 		finally
 		{
-			otherFlowLogger.Dispose();
+			otherFlowLogger?.Dispose();
+			CompositeLogger.ClearPreActivationInstance();
+		}
+	}
+
+	[Fact]
+	public void RetirePreActivationInstance_OtherFlowActiveModeInstance_RemainsSingleton()
+	{
+		var otherFlowSink = new CountingLogger();
+		var otherFlowOptions = CreateNonOpAmpOptions(otherFlowSink);
+
+		using var adopted = new CompositeLogger(CreateNonOpAmpOptions(new CountingLogger()));
+		CompositeLogger? otherFlowLogger = null;
+
+		try
+		{
+			using (ClaimSingletonSlot())
+			{
+				otherFlowLogger = CompositeLogger.GetOrCreate(otherFlowOptions);
+
+				CompositeLogger.RetirePreActivationInstance(adopted, CreateOtherFlowOptions());
+
+				// Handing out a second instance here would create a second FileLogger for the same log file.
+				Assert.Same(otherFlowLogger, CompositeLogger.GetOrCreate(otherFlowOptions));
+			}
+
+			var countBefore = otherFlowSink.Count;
+			otherFlowLogger.Log(LogLevel.Information, new EventId(1), "still active", null, (s, _) => s);
+			Assert.Equal(countBefore + 1, otherFlowSink.Count);
+		}
+		finally
+		{
+			otherFlowLogger?.Dispose();
+			CompositeLogger.ClearPreActivationInstance();
+		}
+	}
+
+	[Fact]
+	public void RetirePreActivationInstance_InstanceWithoutOptions_IsRetiredByFirstRetiringFlow()
+	{
+		var adoptedSink = new CountingLogger();
+		using var adopted = new CompositeLogger(CreateNonOpAmpOptions(adoptedSink));
+		CompositeLogger? pending = null;
+
+		try
+		{
+			using (ClaimSingletonSlot())
+			{
+				pending = CompositeLogger.GetOrCreate();
+				pending.Log(LogLevel.Information, new EventId(1), "pre-bootstrap", null, (s, _) => s);
+
+				var adoptedCountBefore = adoptedSink.Count;
+
+				CompositeLogger.RetirePreActivationInstance(adopted, CreateOtherFlowOptions());
+
+				// 1 init debug (queued in ctor) + 1 queued entry forwarded to the adopted logger
+				Assert.Equal(adoptedCountBefore + 2, adoptedSink.Count);
+
+				var next = CompositeLogger.GetOrCreate();
+				Assert.NotSame(pending, next);
+				next.Dispose();
+			}
+
+			Assert.False(pending.IsEnabled(LogLevel.Information));
+		}
+		finally
+		{
+			pending?.Dispose();
+			CompositeLogger.ClearPreActivationInstance();
+		}
+	}
+
+	[Fact]
+	public void GetOrCreate_LateOptionsDuringRetirement_ReturnsNewInstance()
+	{
+		var adoptedSink = new CountingLogger();
+		var otherFlowSink = new CountingLogger();
+		var otherFlowOptions = CreateOpAmpOptions(otherFlowSink);
+		using var adopted = new CompositeLogger(CreateNonOpAmpOptions(adoptedSink));
+		CompositeLogger? pending = null;
+		CompositeLogger? otherFlowLogger = null;
+		Exception? getterException = null;
+		var getter = new Thread(() =>
+		{
+			try
+			{
+				otherFlowLogger = CompositeLogger.GetOrCreate(otherFlowOptions);
+			}
+			catch (Exception exception)
+			{
+				getterException = exception;
+			}
+		})
+		{
+			IsBackground = true
+		};
+
+		try
+		{
+			using (ClaimSingletonSlot())
+			{
+				pending = CompositeLogger.GetOrCreate();
+				pending.Log(LogLevel.Information, new EventId(1), "pending retirement", null, (s, _) => s);
+				getter.Start();
+
+				// Wait until the getter has either blocked on the singleton lock or incorrectly bypassed it.
+				Assert.True(SpinWait.SpinUntil(
+					() => !getter.IsAlive || (getter.ThreadState & System.Threading.ThreadState.WaitSleepJoin) != 0,
+					TimeSpan.FromSeconds(10)));
+
+				var adoptedCountBefore = adoptedSink.Count;
+				CompositeLogger.RetirePreActivationInstance(adopted, CreateOtherFlowOptions());
+
+				Assert.False(pending.IsEnabled(LogLevel.Information));
+				Assert.Equal(adoptedCountBefore + 2, adoptedSink.Count);
+			}
+
+			Assert.True(getter.Join(TimeSpan.FromSeconds(10)));
+			Assert.Null(getterException);
+			Assert.NotNull(otherFlowLogger);
+			Assert.NotSame(pending, otherFlowLogger);
+
+			otherFlowLogger.Log(LogLevel.Information, new EventId(2), "other flow", null, (s, _) => s);
+			otherFlowLogger.Activate(otherFlowOptions);
+
+			Assert.Equal(3, otherFlowSink.Count);
+		}
+		finally
+		{
+			if (getter.IsAlive)
+				getter.Join(TimeSpan.FromSeconds(10));
+
+			otherFlowLogger?.Dispose();
+			pending?.Dispose();
 			CompositeLogger.ClearPreActivationInstance();
 		}
 	}

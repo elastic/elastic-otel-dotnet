@@ -21,7 +21,8 @@ namespace Elastic.OpenTelemetry.Diagnostics;
 /// options instance in place) or options are not yet available, the logger defers until
 /// <see cref="Activate"/> is called. If the safety timer fires before activation and options
 /// are available, the logger activates with the current state of those options (which may
-/// already reflect central config mutations).
+/// already reflect central config mutations). If the safety timer fires while a bootstrap flow is in
+/// progress (see <see cref="EnterBootstrap"/>), activation is deferred until that flow completes.
 /// If disposed, triggers disposal of the <see cref="FileLogger"/>.
 /// </remarks>
 internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
@@ -69,6 +70,17 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 	// cleared, preventing multiple FileLogger instances from racing to open the same log file.
 	// Set before _activationLock is acquired, so it only governs sharing — never retirement.
 	private int _activatedViaActivateMethod;
+
+	// Number of bootstrap flows currently creating components with this logger. While non-zero,
+	// the safety timer must not activate: bootstrap may still be waiting for central config, and
+	// activating early would create sub-loggers (notably FileLogger, which decides whether to open
+	// a log file at construction) and drain the deferred queue using the local log level.
+	private int _bootstrapDepth;
+
+	// Set to 1 when the safety timer fires while bootstrap is in progress. The final ExitBootstrap
+	// call consumes this flag and runs the deferred safety timer logic. Paired with _bootstrapDepth
+	// using full-fence Interlocked operations so at least one side always observes the other.
+	private int _safetyTimerDeferred;
 
 	// Static singleton for pre-activation sharing
 	private static CompositeLogger? PreActivationInstance;
@@ -154,6 +166,26 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 		if (_isDisposed)
 			return;
 
+		// Already activated (e.g. a deferred timer run from ExitBootstrap after bootstrap called
+		// Activate). Activate has already cleared the singleton and disposed the timer.
+		if (Volatile.Read(ref _activationState) != 0)
+			return;
+
+		// If bootstrap is in progress, defer to ExitBootstrap rather than activating with options
+		// that central config may not have updated yet. The flag is published before reading the
+		// depth (Dekker-style), so either we see the bootstrap still running and ExitBootstrap sees
+		// our flag, or we see it finished and proceed ourselves. Both sides proceeding is harmless
+		// because Activate is idempotent.
+		Interlocked.Exchange(ref _safetyTimerDeferred, 1);
+		if (Volatile.Read(ref _bootstrapDepth) > 0)
+		{
+			if (BootstrapLogger.IsEnabled)
+				BootstrapLogger.Log($"{nameof(CompositeLogger)}: Safety timer fired during bootstrap. Deferring activation of instance '{InstanceId}' until bootstrap completes.");
+
+			return;
+		}
+		Interlocked.Exchange(ref _safetyTimerDeferred, 0);
+
 		// If we have options, activate with them. Since options are mutated in place by
 		// SetLogLevelFromCentralConfig, they already reflect any central config updates.
 		// Capture to a local first: _options is volatile and GetOrCreate() may assign it concurrently.
@@ -196,6 +228,24 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 	}
 
 	/// <summary>
+	/// Marks the start of a bootstrap flow that will call <see cref="Activate"/> once the final
+	/// configuration (including any central config) is known. While a bootstrap is in progress the
+	/// safety timer will not activate the logger. Every call must be paired with <see cref="ExitBootstrap"/>.
+	/// </summary>
+	internal void EnterBootstrap() => Interlocked.Increment(ref _bootstrapDepth);
+
+	/// <summary>
+	/// Marks the end of a bootstrap flow. If the safety timer fired while bootstrap was in progress
+	/// (for example, bootstrap threw before reaching <see cref="Activate"/>), the deferred safety timer
+	/// logic runs now so queued entries are not stranded.
+	/// </summary>
+	internal void ExitBootstrap()
+	{
+		if (Interlocked.Decrement(ref _bootstrapDepth) == 0 && Interlocked.Exchange(ref _safetyTimerDeferred, 0) == 1)
+			OnSafetyTimerElapsed();
+	}
+
+	/// <summary>
 	/// Returns the singleton instance, creating it if needed. The logger decides internally
 	/// whether to defer based on the options:
 	/// <list type="bullet">
@@ -209,41 +259,29 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 		if (BootstrapLogger.IsEnabled)
 			BootstrapLogger.LogWithStackTrace($"{nameof(CompositeLogger)}: {nameof(GetOrCreate)} invoked.");
 
-		var existing = PreActivationInstance;
-		if (existing is not null)
-		{
-			if (IsCompatible(existing, options))
-			{
-				// If options become available after initial creation, store them so the safety
-				// timer can use them as fallback for activation.
-				if (options is not null && existing._options is null)
-					existing._options = options;
-
-				if (BootstrapLogger.IsEnabled)
-					BootstrapLogger.Log($"{nameof(CompositeLogger)}: {nameof(GetOrCreate)} returning existing instance.");
-
-				return existing;
-			}
-
-			// Options don't match — this is a concurrent bootstrap flow (e.g., parallel tests).
-			// Create an isolated instance that is NOT stored as the singleton.
-			if (BootstrapLogger.IsEnabled)
-				BootstrapLogger.Log($"{nameof(CompositeLogger)}: {nameof(GetOrCreate)} options mismatch, creating isolated instance.");
-
-			return new CompositeLogger(options);
-		}
-
+		// Keep reuse and late-options assignment atomic with retirement's ownership check and removal.
 		using (StaticLock.EnterScope())
 		{
-			if (PreActivationInstance is not null)
+			var existing = PreActivationInstance;
+			if (existing is not null)
 			{
-				if (IsCompatible(PreActivationInstance, options))
+				if (IsCompatible(existing, options))
 				{
-					if (options is not null && PreActivationInstance._options is null)
-						PreActivationInstance._options = options;
+					// If options become available after initial creation, store them so the safety
+					// timer can use them as fallback for activation.
+					if (options is not null && existing._options is null)
+						existing._options = options;
 
-					return PreActivationInstance;
+					if (BootstrapLogger.IsEnabled)
+						BootstrapLogger.Log($"{nameof(CompositeLogger)}: {nameof(GetOrCreate)} returning existing instance.");
+
+					return existing;
 				}
+
+				// Options don't match — this is a concurrent bootstrap flow (e.g., parallel tests).
+				// Create an isolated instance that is NOT stored as the singleton.
+				if (BootstrapLogger.IsEnabled)
+					BootstrapLogger.Log($"{nameof(CompositeLogger)}: {nameof(GetOrCreate)} options mismatch, creating isolated instance.");
 
 				return new CompositeLogger(options);
 			}
@@ -303,37 +341,44 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 
 	/// <summary>
 	/// Called when Bootstrap resolves to existing shared or service-collection components, meaning the
-	/// pre-activation logger will not be adopted. Clears the static singleton and, when it belongs to the
-	/// bootstrap flow for <paramref name="options"/>, retires it into <paramref name="adopted"/> so its
+	/// pre-activation logger will not be adopted. When the static singleton belongs to the bootstrap flow
+	/// for <paramref name="options"/>, clears it and retires it into <paramref name="adopted"/> so its
 	/// safety timer cannot later activate it and create a second file and console logger.
 	/// </summary>
 	/// <remarks>
 	/// Must be called under the bootstrap lock. Components activate their logger under that same lock, and
 	/// activation always clears the singleton, so an instance still found here is never owned by components —
 	/// even when its own safety timer has started (or finished) activating it.
+	/// An instance for other options belongs to a concurrent bootstrap flow, which still holds it and will
+	/// adopt it from the singleton when it bootstraps, so it is left in place.
 	/// </remarks>
 	internal static void RetirePreActivationInstance(CompositeLogger adopted, CompositeElasticOpenTelemetryOptions options)
 	{
 		CompositeLogger? orphan;
 
+		// Ownership is decided under the same lock as the removal, so GetOrCreate() assigning options to
+		// an instance created without them cannot leave it removed from the singleton but not retired.
 		using (StaticLock.EnterScope())
 		{
 			orphan = PreActivationInstance;
+
+			if (orphan is null || !orphan.BelongsToFlow(options))
+				return;
+
 			PreActivationInstance = null;
 		}
 
-		if (orphan is null || ReferenceEquals(orphan, adopted))
+		if (ReferenceEquals(orphan, adopted))
 			return;
 
-		orphan.RetireIntoIfOwned(adopted, options);
+		orphan.RetireInto(adopted);
 	}
 
 	/// <summary>
-	/// If this instance belongs to the bootstrap flow for <paramref name="options"/>, permanently deactivates it,
-	/// forwarding any deferred entries to <paramref name="adopted"/> and disposing the safety timer and any
-	/// sub-loggers already created. Subsequent log calls are dropped.
+	/// Permanently deactivates this instance, forwarding any deferred entries to <paramref name="adopted"/>
+	/// and disposing the safety timer and any sub-loggers already created. Subsequent log calls are dropped.
 	/// </summary>
-	private void RetireIntoIfOwned(CompositeLogger adopted, CompositeElasticOpenTelemetryOptions options)
+	private void RetireInto(CompositeLogger adopted)
 	{
 		ConcurrentQueue<DeferredLogEntry>? capturedQueue;
 
@@ -342,9 +387,7 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 		// creates none.
 		using (_activationLock.EnterScope())
 		{
-			// An instance for other options belongs to a concurrent bootstrap flow (e.g., parallel tests),
-			// which still holds and will activate it, so it is only cleared from the singleton slot.
-			if (_isDisposed || !BelongsToFlow(options))
+			if (_isDisposed)
 				return;
 
 			_isDisposed = true;
@@ -400,7 +443,7 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 		// thread can enqueue into the old queue after we've captured it.
 		using (_activationLock.EnterScope())
 		{
-			// Retired via RetireIntoIfOwned() before we acquired the lock — its queue has been forwarded
+			// Retired via RetireInto() before we acquired the lock — its queue has been forwarded
 			// and it must not create sub-loggers that nothing would dispose.
 			if (_isDisposed)
 				return;

@@ -156,7 +156,7 @@ public class AutoInstrumentationPlugin :
 		BootstrapLogger.Log("AutoInstrumentationPlugin: ConfigureMetricsOptions(MetricReaderOptions) invoked");
 		var logger = Components.Logger;
 		options.TemporalityPreference = MetricReaderTemporalityPreference.Delta;
-		logger.LogInformation("Configured Elastic Distribution of OpenTelemetry .NET defaults for logging auto-instrumentation.");
+		logger.LogInformation("Configured Elastic Distribution of OpenTelemetry .NET defaults for metrics auto-instrumentation.");
 	}
 
 	/// <summary>

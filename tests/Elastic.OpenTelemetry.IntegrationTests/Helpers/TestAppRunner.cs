@@ -270,8 +270,11 @@ internal sealed class TestAppRunner : IAsyncDisposable
 		if (!Directory.Exists(_logDirectory))
 			return;
 
-		// Pick the newest log file — avoids stale files from prior crashed runs
+		// Pick the newest log file — avoids stale files from prior crashed runs.
+		// Skip the bootstrap log, written alongside when ELASTIC_OTEL_EXPERIMENTAL_ENABLE_BOOTSTRAP_LOGGING
+		// is inherited from the test environment.
 		EdotLogFilePath = Directory.GetFiles(_logDirectory, "edot-*.log")
+			.Where(f => !Path.GetFileName(f).StartsWith("edot-dotnet-bootstrap-", StringComparison.Ordinal))
 			.OrderByDescending(File.GetLastWriteTimeUtc)
 			.FirstOrDefault();
 	}
