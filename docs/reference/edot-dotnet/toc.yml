@@ -1,13 +1,14 @@
 toc:
   - file: index.md
-  - file: setup/index.md
+  - folder: setup
     children:
-      - file: setup/aspnet.md
-      - hidden: setup/aspnetcore.md
-      - file: setup/console.md
-      - file: setup/worker-services.md
-      - file: setup/zero-code.md
-      - file: setup/edot-defaults.md
+      - file: index.md
+      - file: aspnet.md
+      - hidden: aspnetcore.md
+      - file: console.md
+      - file: worker-services.md
+      - file: zero-code.md
+      - file: edot-defaults.md
   - file: configuration.md
   - file: supported-technologies.md
   - file: migration.md
