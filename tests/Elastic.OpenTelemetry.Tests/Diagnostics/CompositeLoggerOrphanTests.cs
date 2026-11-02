@@ -137,28 +137,34 @@ public class CompositeLoggerOrphanTests
 	}
 
 	[Fact]
-	public void RetirePreActivationInstance_SafetyTimerCreatedSubLoggers_DisposesThem()
+	public void RetirePreActivationInstance_SafetyTimerCreatedSubLoggers_ForwardsDeferredEntriesAndDisposesThem()
 	{
 		var orphanSink = new CountingLogger();
+		var adoptedSink = new CountingLogger();
 		var options = CreateOpAmpOptions(orphanSink);
 
-		using var adopted = new CompositeLogger(CreateNonOpAmpOptions(new CountingLogger()));
+		using var adopted = new CompositeLogger(CreateNonOpAmpOptions(adoptedSink));
 		CompositeLogger? orphan = null;
 
 		try
 		{
 			Thread timerCallback;
+			int adoptedCountBefore;
 
 			// Holding the singleton lock also parks the timer callback after it has created sub-loggers but before
 			// it clears the singleton slot.
 			using (ClaimSingletonSlot())
 			{
 				orphan = CompositeLogger.GetOrCreate(options);
+				for (var i = 0; i < 3; i++)
+					orphan.Log(LogLevel.Information, new EventId(i), $"pre-bootstrap {i}", null, (s, _) => s);
+
+				adoptedCountBefore = adoptedSink.Count;
 				timerCallback = new Thread(orphan.OnSafetyTimerElapsed);
 
 				timerCallback.Start();
 				var activating = orphan;
-				Assert.True(SpinWait.SpinUntil(() => GetField<object?>(activating, "_deferredQueue") is null, TimeSpan.FromSeconds(10)));
+				Assert.True(SpinWait.SpinUntil(() => activating.HasAdditionalLogger, TimeSpan.FromSeconds(10)));
 				Assert.True(orphan.HasAdditionalLogger);
 
 				CompositeLogger.RetirePreActivationInstance(adopted, options);
@@ -166,11 +172,16 @@ public class CompositeLoggerOrphanTests
 
 			Assert.True(timerCallback.Join(TimeSpan.FromSeconds(10)));
 
+			// 1 init debug (queued in ctor) + 3 queued entries, all forwarded exactly once
+			Assert.Equal(adoptedCountBefore + 4, adoptedSink.Count);
+			Assert.Equal(0, orphanSink.Count);
+
 			var orphanCountAfterRetire = orphanSink.Count;
 			orphan.Log(LogLevel.Information, new EventId(99), "post-retire", null, (s, _) => s);
 
 			Assert.False(orphan.HasAdditionalLogger);
 			Assert.Equal(orphanCountAfterRetire, orphanSink.Count);
+			Assert.Equal(adoptedCountBefore + 4, adoptedSink.Count);
 		}
 		finally
 		{

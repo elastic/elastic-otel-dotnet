@@ -71,6 +71,10 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 	// Set before _activationLock is acquired, so it only governs sharing — never retirement.
 	private int _activatedViaActivateMethod;
 
+	// Guarded by StaticLock. Retirement owns the deferred queue as soon as it removes the singleton,
+	// even if it is still waiting for an in-flight activation to release _activationLock.
+	private bool _retirementClaimed;
+
 	// Number of bootstrap flows currently creating components with this logger. While non-zero,
 	// the safety timer must not activate: bootstrap may still be waiting for central config, and
 	// activating early would create sub-loggers (notably FileLogger, which decides whether to open
@@ -366,10 +370,12 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 				return;
 
 			PreActivationInstance = null;
-		}
 
-		if (ReferenceEquals(orphan, adopted))
-			return;
+			if (ReferenceEquals(orphan, adopted))
+				return;
+
+			orphan._retirementClaimed = true;
+		}
 
 		orphan.RetireInto(adopted);
 	}
@@ -438,9 +444,8 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 
 		ConcurrentQueue<DeferredLogEntry>? capturedQueue;
 
-		// Under per-instance lock: create sub-loggers, capture queue, null it out.
-		// This is the same lock that Log() holds when checking + enqueuing, so no
-		// thread can enqueue into the old queue after we've captured it.
+		// Keep the queue attached until singleton ownership is settled, so retirement can
+		// forward it even if these sub-loggers have already been created.
 		using (_activationLock.EnterScope())
 		{
 			// Retired via RetireInto() before we acquired the lock — its queue has been forwarded
@@ -448,21 +453,30 @@ internal sealed class CompositeLogger : IDisposable, IAsyncDisposable, ILogger
 			if (_isDisposed)
 				return;
 
-			// Create sub-loggers from final options while holding the lock so that
-			// any Log() call that wins the lock after us sees active sub-loggers.
+			// Hold the lock during construction so retirement cannot dispose partially created sub-loggers.
 			_fileLogger = new FileLogger(options);
 			_consoleLogger = new StandardOutLogger(options);
 			_additionalLogger = options.AdditionalLogger;
+		}
+
+		using (StaticLock.EnterScope())
+		{
+			if (_retirementClaimed)
+				return;
+
+			if (ReferenceEquals(PreActivationInstance, this))
+				PreActivationInstance = null;
+		}
+
+		// Once activation clears the singleton, retirement can no longer claim this queue.
+		// Capture under the same lock that Log() holds when checking and enqueuing.
+		using (_activationLock.EnterScope())
+		{
+			if (_isDisposed)
+				return;
 
 			capturedQueue = _deferredQueue;
 			_deferredQueue = null;
-		}
-
-		// Clear static singleton reference (separate concern, separate lock)
-		using (StaticLock.EnterScope())
-		{
-			if (ReferenceEquals(PreActivationInstance, this))
-				PreActivationInstance = null;
 		}
 
 		var count = 0;
