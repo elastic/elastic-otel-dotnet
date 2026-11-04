@@ -92,4 +92,6 @@ Get-Command -Module OpenTelemetry.DotNet.Auto
 Get-Help Install-OpenTelemetryCore -Detailed
 ```
 
+If you can't use the installer scripts, for example in containers, Windows services, IIS, or Kubernetes with the OpenTelemetry Operator, refer to [Configure zero-code instrumentation manually](/reference/edot-dotnet/setup/zero-code-manual.md) for the environment variables you need to set.
+
 For more information on instrumenting specific application types visit the [contrib OpenTelemetry documentation](https://opentelemetry.io/docs/zero-code/dotnet/).
