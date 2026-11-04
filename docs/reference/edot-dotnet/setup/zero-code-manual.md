@@ -44,7 +44,7 @@ Path to `net/OpenTelemetry.AutoInstrumentation.StartupHook.dll` under `OTEL_DOTN
 
 ## Profiler variables by platform
 
-Set the variables for your platform in addition to the ones above. `<HOME>` is the value of `OTEL_DOTNET_AUTO_HOME`.
+Set the variables for your platform in addition to the [required variables](#required-for-all-scenarios). `<HOME>` is the value of `OTEL_DOTNET_AUTO_HOME`.
 
 ### Linux and macOS
 
@@ -76,11 +76,11 @@ Use one of these runtime identifiers (RID) in `CORECLR_PROFILER_PATH`:
 | `COR_PROFILER_PATH_32` | `<HOME>\win-x86\OpenTelemetry.AutoInstrumentation.Native.dll` | .NET Framework |
 | `ASPNETCORE_HOSTINGSTARTUPASSEMBLIES` | `OpenTelemetry.AutoInstrumentation.AspNetCoreBootstrapper` | ASP.NET Core |
 
-The `COR_` prefix configures .NET Framework and the `CORECLR_` prefix configures .NET. The PowerShell module sets all of these, together with `OTEL_DOTNET_AUTO_HOME`, `DOTNET_STARTUP_HOOKS` and `OTEL_DOTNET_AUTO_PLUGINS`, for the current session or for a Windows service.
+The `COR_` prefix configures .NET Framework and the `CORECLR_` prefix configures .NET. The PowerShell module sets these, together with `OTEL_DOTNET_AUTO_HOME`, `DOTNET_STARTUP_HOOKS`, and `OTEL_DOTNET_AUTO_PLUGINS`, for the current session or for a Windows service.
 
 ## Kubernetes with the OpenTelemetry Operator
 
-The [OpenTelemetry Operator](https://github.com/open-telemetry/opentelemetry-operator) injects the upstream variables into the application container. It sets `CORECLR_ENABLE_PROFILING`, `CORECLR_PROFILER`, `CORECLR_PROFILER_PATH`, `DOTNET_STARTUP_HOOKS`, `DOTNET_ADDITIONAL_DEPS`, `DOTNET_SHARED_STORE` and `OTEL_DOTNET_AUTO_HOME`. It doesn't set `OTEL_DOTNET_AUTO_PLUGINS`.
+The [OpenTelemetry Operator](https://github.com/open-telemetry/opentelemetry-operator) injects the upstream variables into the application container. It sets `CORECLR_ENABLE_PROFILING`, `CORECLR_PROFILER`, `CORECLR_PROFILER_PATH`, `DOTNET_STARTUP_HOOKS`, `DOTNET_ADDITIONAL_DEPS`, `DOTNET_SHARED_STORE`, and `OTEL_DOTNET_AUTO_HOME`. It doesn't set `OTEL_DOTNET_AUTO_PLUGINS`.
 
 Add it to the `dotnet` section of your `Instrumentation` resource, next to the EDOT .NET image:
 
