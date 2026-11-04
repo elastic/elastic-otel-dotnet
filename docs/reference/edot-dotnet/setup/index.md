@@ -35,6 +35,7 @@ This quickstart guide documents the introductory steps required to set up OpenTe
 * [Console applications](/reference/edot-dotnet/setup/console.md)
 * [Worker services](/reference/edot-dotnet/setup/worker-services.md)
 * [Zero code](/reference/edot-dotnet/setup/zero-code.md)
+* [Zero code manual setup](/reference/edot-dotnet/setup/zero-code-manual.md)
 
 :::{warning}
 Avoid using the .NET SDK alongside any other APM agent, including Elastic APM agents. Running multiple agents in the same application process may lead to conflicting instrumentation, duplicate telemetry, or other unexpected behavior.
