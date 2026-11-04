@@ -32,7 +32,7 @@ To check for security updates, go to [Security announcements for the Elastic sta
 ### Features and enhancements [edot-dotnet-1.7.0-features-enhancements]
 
 - Update to latest upstream packages (SDK 1.20.1 and instrumentation 1.18.0). [#452](https://github.com/elastic/elastic-otel-dotnet/pull/452)
-- Notify subscribers when OpAMP remote config has no usable log level. [#453](https://github.com/elastic/elastic-otel-dotnet/pull/453)
+- Notify subscribers when OpAMP remote configuration has no usable log level. [#453](https://github.com/elastic/elastic-otel-dotnet/pull/453)
 
 ### Fixes [edot-dotnet-1.7.0-fixes]
 
