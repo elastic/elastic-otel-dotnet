@@ -37,7 +37,7 @@ To check for security updates, go to [Security announcements for the Elastic sta
 ### Fixes [edot-dotnet-1.7.0-fixes]
 
 - Fix to ensure `OTEL_DOTNET_AUTO_METRICS_INSTRUMENTATION_ENABLED` is honored. [#451](https://github.com/elastic/elastic-otel-dotnet/pull/451)
-- Fix redaction of header secrets in `IConfiguration` and machine/user env var diagnostics. [#455](https://github.com/elastic/elastic-otel-dotnet/pull/455)
+- Fix redaction of header secrets, such as OTLP authorization headers, in the diagnostics output for `IConfiguration` and for machine and user environment variables. [#455](https://github.com/elastic/elastic-otel-dotnet/pull/455)
 - Fix options equality. [#457](https://github.com/elastic/elastic-otel-dotnet/pull/457)
 - Fix safety timer. [#461](https://github.com/elastic/elastic-otel-dotnet/pull/461)
 - Fix low-severity cleanups. [#463](https://github.com/elastic/elastic-otel-dotnet/pull/463)
