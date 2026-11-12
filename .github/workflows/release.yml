@@ -42,6 +42,8 @@ jobs:
 
     - run: ./build.sh release
       name: Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
     - name: List distributions
       run: ls -al ${{ env.RELEASE_DISTRO }}

@@ -36,6 +36,8 @@ jobs:
       # The redistributable artifacts are needed for the test step, and the packages are needed for the publish steps that follow
       - name: Release
         run: ./build.sh release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Test
         run: ./build.sh test --skip-build --skip-restore
