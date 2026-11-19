@@ -6,7 +6,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"] = "http://blah";
 
-builder.AddProject<Projects.Example_AspNetCore_Mvc>("mvc");
-builder.AddProject<Projects.Example_MinimalApi>("minimal-api");
+builder.AddDotnetProject("mvc", "../Example.AspNetCore.Mvc/Example.AspNetCore.Mvc.csproj");
+builder.AddDotnetProject("minimal-api", "../Example.MinimalApi/Example.MinimalApi.csproj");
 
 builder.Build().Run();
