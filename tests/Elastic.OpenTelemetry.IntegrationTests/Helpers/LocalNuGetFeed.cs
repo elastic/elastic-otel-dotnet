@@ -69,6 +69,7 @@ internal sealed class LocalNuGetFeed : IDisposable
 			UseShellExecute = false,
 			CreateNoWindow = true,
 		};
+		psi.Environment["MSBUILDDISABLENODEREUSE"] = "1";
 
 		using var process = Process.Start(psi)
 			?? throw new InvalidOperationException($"Failed to start: {command}");
@@ -98,7 +99,11 @@ internal sealed class LocalNuGetFeed : IDisposable
 				$"stdout:\n{stdout}\nstderr:\n{stderr}", ex);
 		}
 
+		// Build workers can inherit the pipes and keep them open after dotnet exits.
+		outputDrainCts.CancelAfter(PostTimeoutLogDrain);
 		await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
+		if (outputDrainCts.IsCancellationRequested)
+			WriteDiagnostic(diagnosticMessageSink, "dotnet pack exited, but output pipes remained open; stopped draining output.");
 
 		if (process.ExitCode != 0)
 		{

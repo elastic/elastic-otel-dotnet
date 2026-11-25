@@ -16,7 +16,7 @@
 // While that API is available on net462 (via the Microsoft.Extensions.Hosting
 // NuGet package targeting netstandard2.0), it's not representative of how
 // most legacy apps work. The hosting/DI path (AddElasticOpenTelemetry) is
-// already tested by the NuGetConsumer.Net8 app on a modern runtime.
+// already tested by the NuGetConsumer.Net10 app on a modern runtime.
 //
 // Built at test time against a local NuGet feed containing freshly packed .nupkg files.
 // Configures EDOT via env vars (OpAmp endpoint, log targets, etc.).

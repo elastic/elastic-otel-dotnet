@@ -6,7 +6,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Logging;
 
-#if NET8_0 || NETSTANDARD2_1
+#if NETSTANDARD2_1
 using System.Runtime.CompilerServices;
 #endif
 
@@ -25,7 +25,7 @@ internal static class StackTraceLoggerExtensions
 
 		try
 		{
-#if NET8_0 || NETSTANDARD2_1
+#if NETSTANDARD2_1
 			// For now, we skip this log line entirely for AOT
 			// TODO: We should be able to provide some fallback and/or even use GetMethod safely in this scenario
 			// We need to test these scenarios and enhance in a future PR.
@@ -39,7 +39,7 @@ internal static class StackTraceLoggerExtensions
 
 			foreach (var frame in stackTrace.GetFrames() ?? [])
 			{
-#if NETFRAMEWORK || NETSTANDARD2_0 || NET8_0 || NETSTANDARD2_1
+#if NETFRAMEWORK || NETSTANDARD2_0 || NETSTANDARD2_1
 				var caller = $"{frame.GetType().AssemblyQualifiedName}.{frame.GetMethod()}";
 
 				var method = frame.GetMethod();
@@ -81,7 +81,7 @@ internal static class StackTraceLoggerExtensions
 					}
 				}
 				break;
-#elif NET9_0_OR_GREATER
+#elif NET
 				var method = DiagnosticMethodInfo.Create(frame);
 
 				if (method is null ||

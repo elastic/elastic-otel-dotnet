@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFrameworks>netstandard2.0;netstandard2.1;net462;net8.0;net9.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;netstandard2.1;net462;net10.0;net11.0</TargetFrameworks>
     <Title>Elastic Distribution of OpenTelemetry .NET</Title>
     <Description>OpenTelemetry extensions for Elastic Observability.</Description>
     <PackageTags>Elastic;EDOT;OpenTelemetry;OTel;Observability;APM;Monitoring;Logging;Metrics;Tracing;Telemetry;O11y</PackageTags>
@@ -14,7 +14,7 @@
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0' OR '$(TargetFramework)' == 'net9.0'">
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0' OR '$(TargetFramework)' == 'net11.0'">
     <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
     <IsAotCompatible>true</IsAotCompatible>
     <SuppressTrimAnalysisWarnings>false</SuppressTrimAnalysisWarnings>
@@ -50,10 +50,10 @@
     </PackageReference>
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' != 'net9.0'">
-    <!-- We skip this on .NET 9, since we prefer to use the native instrumentation from the built in Meter -->
+  <ItemGroup Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0'))">
+    <!-- We skip this on .NET 10+, since we prefer to use the native instrumentation from the built in Meter -->
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
-    <!-- We skip this on .NET 9, since we prefer to use the native instrumentation from the built in ActivitySource -->
+    <!-- We skip this on .NET 10+, since we prefer to use the native instrumentation from the built in ActivitySource -->
     <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
   </ItemGroup>
 

@@ -1,5 +1,5 @@
-ARG OTEL_VERSION=1.13.0
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+ARG OTEL_VERSION=1.20.0
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:11.0 AS build
 ARG TARGETPLATFORM
 ARG TARGETARCH
 ARG TARGETVARIANT

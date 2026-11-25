@@ -15,19 +15,11 @@ public partial class InstrumentationScanningTests(ITestOutputHelper output)
 {
 	private readonly ITestOutputHelper _output = output;
 
-#if NET8_0
-	[GeneratedRegex(@"^\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z\]\[\d{6}\]\[-*\]\[Debug\]\s+Added contrib instrumentation 'HTTP' to TracerProviderBuilder*")]
-	private static partial Regex HttpTracerProviderBuilderRegex();
-
-	[GeneratedRegex(@"^\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z\]\[\d{6}\]\[-*\]\[Debug\]\s+Added contrib instrumentation 'HTTP' to MeterProviderBuilder*")]
-	private static partial Regex HttpMeterProviderBuilderRegex();
-#elif NET9_0_OR_GREATER
 	[GeneratedRegex(@"^\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z\]\[\d{6}\]\[-*\]\[Debug\]\s+Added 'System.Net.Http' to TracerProviderBuilder.*")]
 	private static partial Regex HttpTracerProviderBuilderRegex();
 
 	[GeneratedRegex(@"^\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z\]\[\d{6}\]\[-*\]\[Debug\]\s+Added 'System.Net.Http' meter to MeterProviderBuilder.*")]
 	private static partial Regex HttpMeterProviderBuilderRegex();
-#endif
 
 	[Fact]
 	public async Task InstrumentationAssemblyScanning_AddsAspNetCoreInstrumentation()
@@ -42,13 +34,7 @@ public partial class InstrumentationScanningTests(ITestOutputHelper output)
 
 		// Explicitly not using a shared fixture for this test to avoid potential cross-test pollution
 		// of the exported items collection, which would make assertions more difficult to write and maintain.
-#if NET8_0
-		await using var factory = new WebApplicationFactory<WebApiDotNet8.ProgramV8>()
-#elif NET9_0
-		await using var factory = new WebApplicationFactory<WebApiDotNet9.ProgramV9>()
-#else
 		await using var factory = new WebApplicationFactory<Program>()
-#endif
 			.WithWebHostBuilder(builder => builder
 				.ConfigureTestServices(services => services
 				.AddElasticOpenTelemetry(options)
@@ -81,9 +67,8 @@ public partial class InstrumentationScanningTests(ITestOutputHelper output)
 	[Fact]
 	public async Task InstrumentationAssemblyScanning_AddsHttpInstrumentation()
 	{
-		// NOTE: When this runs on NET8, we expect the contrib library to be used.
-		// On NET9+, the library dependency is not included with Elastic.OpenTelemetry,
-		// so we expect the native instrumentation to be used.
+		// NOTE: The contrib HTTP instrumentation dependency is not included with Elastic.OpenTelemetry
+		// on .NET 9+, so we expect the native instrumentation to be used.
 
 		var exportedItems = new List<Activity>();
 		var logger = new TestLogger(_output);
@@ -95,13 +80,7 @@ public partial class InstrumentationScanningTests(ITestOutputHelper output)
 
 		// Explicitly not using a shared fixture for this test to avoid potential cross-test pollution
 		// of the exported items collection, which would make assertions more difficult to write and maintain.
-#if NET8_0
-		await using var factory = new WebApplicationFactory<WebApiDotNet8.ProgramV8>()
-#elif NET9_0
-		await using var factory = new WebApplicationFactory<WebApiDotNet9.ProgramV9>()
-#else
 		await using var factory = new WebApplicationFactory<Program>()
-#endif
 			.WithWebHostBuilder(builder => builder
 				.ConfigureTestServices(services => services
 				.AddElasticOpenTelemetry(options)

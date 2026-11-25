@@ -4,34 +4,34 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- OpenTelemetry -->
-    <PackageVersion Include="OpenTelemetry" Version="1.20.1" />
-    <PackageVersion Include="OpenTelemetry.AutoInstrumentation" Version="1.18.0" />
-    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.20.1" />
-    <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.20.1" />
-    <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.20.1" />
-    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.20.1" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.20.1" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.GrpcNetClient" Version="1.20.1-beta.1" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.20.1" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Process" Version="1.20.1-rc.1" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.20.1" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.SqlClient" Version="1.20.1" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.StackExchangeRedis" Version="1.20.1-beta.1" />
-    <PackageVersion Include="OpenTelemetry.Resources.Host" Version="1.20.1-beta.1" />
-    <PackageVersion Include="OpenTelemetry.Resources.ProcessRuntime" Version="1.20.1-beta.1" />
+    <PackageVersion Include="OpenTelemetry" Version="1.21.0" />
+    <PackageVersion Include="OpenTelemetry.AutoInstrumentation" Version="1.20.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.21.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.21.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.21.0" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.21.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.21.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.GrpcNetClient" Version="1.21.0-beta.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.21.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Process" Version="1.21.0-rc.1" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.21.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.SqlClient" Version="1.21.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.StackExchangeRedis" Version="1.21.0-beta.1" />
+    <PackageVersion Include="OpenTelemetry.Resources.Host" Version="1.21.0-beta.1" />
+    <PackageVersion Include="OpenTelemetry.Resources.ProcessRuntime" Version="1.21.0-beta.1" />
     <!--
         Keep this on the exact version that OpenTelemetry.AutoInstrumentation depends on. The zip
         distribution relies on the netfx/OpenTelemetry.OpAmp.Client.dll shipped by upstream (see
         opAmpDependencyFiles in build/scripts/Packaging.fs), so on .NET Framework our plugin runs
         against upstream's copy rather than the version we compile against.
     -->
-    <PackageVersion Include="OpenTelemetry.OpAmp.Client" Version="0.9.0-alpha.1" />
+    <PackageVersion Include="OpenTelemetry.OpAmp.Client" Version="0.11.0-alpha.1" />
     <!-- Microsoft Extensions -->
     <!--
         Match the major version of Microsoft.Extensions.* packages to the major version of the TFM's
-        shared framework. Pinning 10.0.0 across all TFMs breaks the zip/profiler scenario: the net8.0
-        build of the plugin ends up with a hard reference to M.E.* 10.0.0 which cannot be resolved on
-        a .NET 8 host (shared framework only supplies 8.x). It also forces NuGet consumers onto a
+        shared framework (e.g. net11.0 needs 11.x). Pinning a single version across all TFMs can break the zip/profiler scenario: a plugin
+        build ends up with a hard reference to a higher M.E.* version which cannot be resolved on
+        a host whose shared framework only supplies an older major. It also forces NuGet consumers onto a
         higher runtime version than necessary. Pattern follows upstream OpenTelemetry-dotnet.
     -->
     <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="[10.0.0,)" />
@@ -71,25 +71,16 @@
     <PackageVersion Include="Testcontainers" Version="4.17.0" />
     <PackageVersion Include="GitHubActionsTestLogger" Version="3.0.5" />
     <PackageVersion Include="Grpc.Tools" Version="2.85.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.34" Condition="'$(TargetFramework)' == 'net8.0'" />
-    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.23" Condition="'$(TargetFramework)' == 'net9.0'" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.15" Condition="'$(TargetFramework)' == 'net10.0'" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="11.0.0" Condition="'$(TargetFramework)' == 'net11.0'" />
   </ItemGroup>
-  <!-- Per-TFM overrides for Microsoft.Extensions.* to match the shared framework major version. -->
-  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
-    <PackageVersion Update="Microsoft.Extensions.Configuration.Binder" Version="[8.0.2,)" />
-    <PackageVersion Update="Microsoft.Extensions.Hosting" Version="[8.0.0,)" />
-    <PackageVersion Update="Microsoft.Extensions.Http.Resilience" Version="[8.10.0,)" />
-    <PackageVersion Update="Microsoft.Extensions.Logging.Console" Version="[8.0.0,)" />
-    <PackageVersion Update="Microsoft.Extensions.ServiceDiscovery" Version="10.7.0" />
-    <PackageVersion Update="Microsoft.Extensions.Logging.Abstractions" Version="[8.0.0,)" />
-  </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
-    <PackageVersion Update="Microsoft.Extensions.Configuration.Binder" Version="[9.0.0,)" />
-    <PackageVersion Update="Microsoft.Extensions.Hosting" Version="[9.0.0,)" />
-    <PackageVersion Update="Microsoft.Extensions.Http.Resilience" Version="[9.8.0,)" />
-    <PackageVersion Update="Microsoft.Extensions.Logging.Console" Version="[9.0.0,)" />
-    <PackageVersion Update="Microsoft.Extensions.ServiceDiscovery" Version="[9.3.1,)" />
-    <PackageVersion Update="Microsoft.Extensions.Logging.Abstractions" Version="[9.0.0,)" />
+  <!-- Per-TFM overrides for Microsoft.Extensions.* to match the shared framework major version.
+       net10.0 uses the default floors above. net11.0 must use 11.x since OpenTelemetry 1.21.0 depends on
+       Microsoft.Extensions.* 11.0.0 for net11.0. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net11.0'">
+    <PackageVersion Update="Microsoft.Extensions.Configuration.Binder" Version="[11.0.0,)" />
+    <PackageVersion Update="Microsoft.Extensions.Hosting" Version="[11.0.0,)" />
+    <PackageVersion Update="Microsoft.Extensions.Logging.Console" Version="[11.0.0,)" />
+    <PackageVersion Update="Microsoft.Extensions.Logging.Abstractions" Version="[11.0.0,)" />
   </ItemGroup>
 </Project>

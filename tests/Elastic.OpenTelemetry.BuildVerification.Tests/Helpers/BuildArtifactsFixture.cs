@@ -48,10 +48,10 @@ public class BuildArtifactsFixture : IAsyncLifetime, IDisposable
 			// safe to run concurrently.
 			var buildSpecs = new (string Project, Dictionary<string, string> Props)[]
 			{
-				(AutoInstProject, new() { ["TargetFramework"] = "net8.0", ["BuildingForZipDistribution"] = "true" }),
+				(AutoInstProject, new() { ["TargetFramework"] = "net10.0", ["BuildingForZipDistribution"] = "true" }),
 				(AutoInstProject, new() { ["TargetFramework"] = "net462", ["BuildingForZipDistribution"] = "true" }),
-				(ElasticOTelProject, new() { ["TargetFramework"] = "net8.0" }),
-				(ElasticOTelProject, new() { ["TargetFramework"] = "net9.0" })
+				(ElasticOTelProject, new() { ["TargetFramework"] = "net10.0" }),
+				(ElasticOTelProject, new() { ["TargetFramework"] = "net11.0" })
 			};
 
 			var buildTasks = buildSpecs.Select(async spec =>

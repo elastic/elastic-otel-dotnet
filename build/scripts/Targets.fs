@@ -53,7 +53,7 @@ type private TestProject =
 let private unitTestProject =
     {
         Path = "tests/Elastic.OpenTelemetry.Tests/Elastic.OpenTelemetry.Tests.csproj"
-        TfmArgs = if OS.Current = Windows then [] else ["-f"; "net10.0"]
+        TfmArgs = []
     }
 
 let private buildVerificationTestProject =

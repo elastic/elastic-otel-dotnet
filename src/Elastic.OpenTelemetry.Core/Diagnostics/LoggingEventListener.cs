@@ -14,7 +14,7 @@ namespace Elastic.OpenTelemetry.Diagnostics;
 /// Enables logging of OpenTelemetry-SDK event source events.
 /// </summary>
 internal sealed
-#if NET8_0_OR_GREATER
+#if NET
 	partial
 #endif
 	class LoggingEventListener : EventListener, IAsyncDisposable
@@ -22,7 +22,7 @@ internal sealed
 	public const string OpenTelemetryEventSourceNamePrefix = "OpenTelemetry-";
 
 	private const string TraceParentRegularExpressionString = "^\\d{2}-[a-f0-9]{32}-[a-f0-9]{16}-\\d{2}$";
-#if NET8_0_OR_GREATER
+#if NET
 	[GeneratedRegex(TraceParentRegularExpressionString)]
 	private static partial Regex TraceParentRegex();
 #else

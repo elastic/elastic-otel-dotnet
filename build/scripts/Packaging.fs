@@ -54,9 +54,9 @@ let pluginFiles tfm =
     |> List.map(fun f -> Path.Combine(".artifacts", "bin", "Elastic.OpenTelemetry.AutoInstrumentation", $"release_{tfm}", "", f))
     |> List.map(fun f -> FileInfo(f))
 
-/// Additional files needed for OpAmp abstractions layer (NET8+ only)
+/// Additional files needed for OpAmp abstractions layer (.NET 10+ only)
 let opAmpAbstractionsFiles tfm =
-    if tfm = "net8.0" then
+    if tfm = "net10.0" then
         ["dll"; "pdb"]
         |> List.map(fun e -> $"Elastic.OpenTelemetry.OpAmp.Abstractions.%s{e}")
         |> List.map(fun f -> Path.Combine(".artifacts", "bin", "Elastic.OpenTelemetry.OpAmp.Abstractions", $"release_{tfm}", "", f))
@@ -64,9 +64,9 @@ let opAmpAbstractionsFiles tfm =
     else
         []
 
-/// Additional files needed for OpAmp client implementation (NET8+ only)
+/// Additional files needed for OpAmp client implementation (.NET 10+ only)
 let opAmpFiles tfm =
-    if tfm = "net8.0" then
+    if tfm = "net10.0" then
         ["dll"; "pdb"; "deps.json"]
         |> List.map(fun e -> $"Elastic.OpenTelemetry.OpAmp.%s{e}")
         |> List.map(fun f -> Path.Combine(".artifacts", "bin", "Elastic.OpenTelemetry.OpAmp", $"release_{tfm}", "", f))
@@ -74,21 +74,23 @@ let opAmpFiles tfm =
     else
         []
 
-/// OpenTelemetry.OpAmp.Client and its dependencies (needed for ALC loading on net8.0)
+/// OpenTelemetry.OpAmp.Client and its dependencies (needed for ALC loading on net10.0)
 /// Note: Google.Protobuf is intentionally omitted — the OTel base distribution now ships it in net/ and netfx/.
 /// Note: net462 is intentionally omitted too — the OTel base distribution now ships OpenTelemetry.OpAmp.Client.dll
 /// flat under netfx/ (byte-identical to ours), which is exactly where the net462 direct-load path probes.
 /// Injecting our own copy there produces a duplicate zip entry that breaks ZipFile extraction.
-/// The net8.0 ALC path still needs the client flat under net/ because upstream ships it under net/net8.0/ TFM
+/// The net10.0 ALC path still needs the client flat under net/ because upstream ships it under net/net10.0/ TFM
 /// subfolders, which the AssemblyDependencyResolver (driven by Elastic.OpenTelemetry.OpAmp.deps.json) does not probe.
 /// validateRedistributableContents verifies both remain present after packaging.
+// TODO: Investigate whether OpenTelemetry.OpAmp.Client 0.11+ intentionally stopped shipping a pdb in its package.
+// Only the dll is staged for now; previously a missing pdb produced a warning on every redistribute run.
 let opAmpDependencyFiles tfm =
-    if tfm = "net8.0" then
+    if tfm = "net10.0" then
         [
             "OpenTelemetry.OpAmp.Client"
         ]
         |> List.collect(fun pkg ->
-            ["dll"; "pdb"]
+            ["dll"]
             |> List.map(fun e ->
                 let pkgPath = Path.Combine(".artifacts", "bin", "Elastic.OpenTelemetry.OpAmp", $"release_{tfm}", "")
                 Path.Combine(pkgPath, $"%s{pkg}.%s{e}")
@@ -142,7 +144,7 @@ let injectPluginFiles (asset: ReleaseAsset) (stagedZip: FileInfo) tfm target  =
         zipArchive.CreateEntryFromFile(f.FullName, $"{target}/{f.Name}") |> ignore
     )
 
-    // Inject OpAmp abstractions files (NET8+ only)
+    // Inject OpAmp abstractions files (.NET 10+ only)
     opAmpAbstractionsFiles tfm |> List.iter(fun f ->
         if f.Exists then
             printfn $"Staging zip: %s{stagedZip.Name}, Adding OpAmp abstraction: %s{f.Name} (%s{tfm}) to %s{target}"
@@ -151,7 +153,7 @@ let injectPluginFiles (asset: ReleaseAsset) (stagedZip: FileInfo) tfm target  =
             printfn $"Warning: OpAmp abstraction file not found: %s{f.FullName}"
     )
 
-    // Inject OpAmp implementation files (NET8+ only)
+    // Inject OpAmp implementation files (.NET 10+ only)
     opAmpFiles tfm |> List.iter(fun f ->
         if f.Exists then
             printfn $"Staging zip: %s{stagedZip.Name}, Adding OpAmp: %s{f.Name} (%s{tfm}) to %s{target}"
@@ -272,11 +274,12 @@ let stageArtifacts (assets:List<ReleaseAsset * FileInfo>) =
         
     stagedZips |> List.iter (fun (asset, path) ->
         
-        // We inject net8.0 as the minimum supported TFM version
+        // We inject net10.0 as the minimum supported .NET TFM. The upstream distribution (1.20.0+) supports
+        // .NET 10, .NET 11 and .NET Framework, with TFM-specific dependencies under net/net10.0 and net/net11.0.
         // Previously we used netstandard2.1, but this causes issues with adding a handler for the HttpClient
         // used for OTLP export as the SDK prefers the `Send` rather than `SendAsync` method which is only available in net8.0+ TFM
         // Whe using netstandard2.1 there is no handler code to run so the default user agent is sent.
-        injectPluginFiles asset path "net8.0" "net"
+        injectPluginFiles asset path "net10.0" "net"
         if asset.Name.EndsWith "-windows.zip" then
             injectPluginFiles asset path "net462" "netfx"
             
@@ -357,12 +360,12 @@ let redistribute (arguments:ParseResults<Build>) =
         Directory.Delete(distroFolder.FullName, true)
     Directory.CreateDirectory(distroFolder.FullName) |> ignore
 
-    // We build net8.0 as the minimum supported TFM version - See above for details
-    exec { run "dotnet" "build" "src/Elastic.OpenTelemetry.AutoInstrumentation/Elastic.OpenTelemetry.AutoInstrumentation.csproj" "-f" "net8.0" "-c" "release" "-p:BuildingForZipDistribution=true" }
+    // We build net10.0 as the minimum supported TFM version - See above for details
+    exec { run "dotnet" "build" "src/Elastic.OpenTelemetry.AutoInstrumentation/Elastic.OpenTelemetry.AutoInstrumentation.csproj" "-f" "net10.0" "-c" "release" "-p:BuildingForZipDistribution=true" }
     exec { run "dotnet" "build" "src/Elastic.OpenTelemetry.AutoInstrumentation/Elastic.OpenTelemetry.AutoInstrumentation.csproj" "-f" "net462" "-c" "release" "-p:BuildingForZipDistribution=true" }
     // Build OpAmp project with CopyLocalLockFileAssemblies to ensure Google.Protobuf and OpenTelemetry.OpAmp.Client DLLs
     // are copied to the output directory for inclusion in the redistributable
-    exec { run "dotnet" "build" "src/Elastic.OpenTelemetry.OpAmp/Elastic.OpenTelemetry.OpAmp.csproj" "-f" "net8.0" "-c" "release" "-p:CopyLocalLockFileAssemblies=true" }
+    exec { run "dotnet" "build" "src/Elastic.OpenTelemetry.OpAmp/Elastic.OpenTelemetry.OpAmp.csproj" "-f" "net10.0" "-c" "release" "-p:CopyLocalLockFileAssemblies=true" }
     exec { run "dotnet" "build" "src/Elastic.OpenTelemetry.OpAmp/Elastic.OpenTelemetry.OpAmp.csproj" "-f" "net462" "-c" "release" "-p:CopyLocalLockFileAssemblies=true" }
     let assets = downloadArtifacts arguments
     printfn ""

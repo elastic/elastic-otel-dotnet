@@ -24,7 +24,7 @@ namespace Elastic.OpenTelemetry.IntegrationTests;
 /// While <c>Host.CreateApplicationBuilder</c> IS available on net462 (via the
 /// <c>Microsoft.Extensions.Hosting</c> NuGet package targeting netstandard2.0), it's not
 /// representative of real-world usage. The hosting/DI path (<c>AddElasticOpenTelemetry</c>)
-/// is already tested on a modern runtime by <see cref="NuGetDistributionTests"/> (net8.0).
+/// is already tested on a modern runtime by <see cref="NuGetDistributionTests"/> (net10.0).
 /// </para>
 /// <para>Windows only — .NET Framework does not run on Linux.</para>
 /// </remarks>

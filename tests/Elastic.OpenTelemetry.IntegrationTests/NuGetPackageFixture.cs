@@ -20,7 +20,7 @@ namespace Elastic.OpenTelemetry.IntegrationTests;
 ///
 /// <para>Builds the following consumer apps:</para>
 /// <list type="bullet">
-///   <item><b>NuGetConsumer.Net8</b> — net8.0 hosting/DI path (AddElasticOpenTelemetry)</item>
+///   <item><b>NuGetConsumer.Net10</b> — net10.0/net11.0 hosting/DI path (AddElasticOpenTelemetry)</item>
 ///   <item><b>NuGetConsumer.Net462</b> — net462 manual builder path
 ///     (Sdk.CreateTracerProviderBuilder().WithElasticDefaults()) — represents realistic legacy
 ///     .NET Framework usage without any hosting dependency</item>
@@ -41,8 +41,11 @@ public class NuGetPackageFixture : IAsyncLifetime
 
 	public NuGetPackageFixture(IMessageSink diagnosticMessageSink) => _diagnosticMessageSink = diagnosticMessageSink;
 
-	/// <summary>Path to the published NuGetConsumer.Net8.dll, ready to run via <c>dotnet</c>.</summary>
-	public string Net8AppPath { get; private set; } = string.Empty;
+	/// <summary>Path to the net10.0 NuGetConsumer.Net10.dll, ready to run via <c>dotnet</c>.</summary>
+	public string Net10AppPath { get; private set; } = string.Empty;
+
+	/// <summary>Path to the net11.0 NuGetConsumer.Net10.dll, ready to run via <c>dotnet</c>.</summary>
+	public string Net11AppPath { get; private set; } = string.Empty;
 
 	/// <summary>
 	/// Path to the published NuGetConsumer.Net462.exe, ready to run directly. Windows only.
@@ -54,7 +57,7 @@ public class NuGetPackageFixture : IAsyncLifetime
 	/// <summary>The version of the packed Elastic.OpenTelemetry NuGet package.</summary>
 	public string PackageVersion { get; private set; } = string.Empty;
 
-	/// <summary>Whether the net8.0 fixture initialized successfully.</summary>
+	/// <summary>Whether both modern .NET consumer apps initialized successfully.</summary>
 	public bool IsReady { get; private set; }
 
 	/// <summary>Whether the net462 fixture initialized successfully.</summary>
@@ -68,7 +71,7 @@ public class NuGetPackageFixture : IAsyncLifetime
 
 	public async Task InitializeAsync()
 	{
-		// Shared setup budget covers: pack + restore + publish for net8.
+		// Shared setup budget covers: pack + restore + publish for net10 and net11.
 		// net462 setup runs under a separate timeout to avoid inheriting an expired token.
 		using var sharedSetupCts = new CancellationTokenSource(SharedSetupTimeout);
 		var ct = sharedSetupCts.Token;
@@ -98,14 +101,16 @@ public class NuGetPackageFixture : IAsyncLifetime
 			configFilePath = Path.Combine(_nugetConfigDirectory, "nuget.config");
 			WriteFixtureLog($"[Stage 2/4] nuget.config written to '{configFilePath}'.");
 
-			// 3. Build net8.0 consumer app
-			WriteFixtureLog($"[Stage 3/4] Publishing NuGetConsumer.Net8.");
-			Net8AppPath = await PublishConsumerAppAsync(
-				solutionRoot, "NuGetConsumer.Net8", "NuGetConsumer.Net8.dll",
+			// 3. Build the modern .NET consumer apps
+			WriteFixtureLog($"[Stage 3/4] Publishing NuGetConsumer.Net10 for net10.0 and net11.0.");
+			Net10AppPath = await PublishConsumerAppAsync(
+				solutionRoot, "NuGetConsumer.Net10", "NuGetConsumer.Net10.dll", "net10.0",
 				configFilePath, ct).ConfigureAwait(false);
-			WriteFixtureLog($"[Stage 3/4] NuGetConsumer.Net8 published to '{Net8AppPath}'.");
+			Net11AppPath = await PublishConsumerAppAsync(
+				solutionRoot, "NuGetConsumer.Net10", "NuGetConsumer.Net10.dll", "net11.0",
+				configFilePath, ct).ConfigureAwait(false);
 			IsReady = true;
-			WriteFixtureLog($"Fixture ready (net8). Total elapsed: {_sw.Elapsed.TotalSeconds:F1}s.");
+			WriteFixtureLog($"Fixture ready (net10/net11). Total elapsed: {_sw.Elapsed.TotalSeconds:F1}s.");
 		}
 		catch (Exception ex)
 		{
@@ -133,7 +138,7 @@ public class NuGetPackageFixture : IAsyncLifetime
 			WriteFixtureLog($"[Stage 4/4] Publishing NuGetConsumer.Net462. Timeout={Net462SetupTimeout.TotalMinutes:F0}m.");
 			using var net462SetupCts = new CancellationTokenSource(Net462SetupTimeout);
 			Net462AppPath = await PublishConsumerAppAsync(
-				solutionRoot, "NuGetConsumer.Net462", "NuGetConsumer.Net462.exe",
+				solutionRoot, "NuGetConsumer.Net462", "NuGetConsumer.Net462.exe", "net462",
 				configFilePath, net462SetupCts.Token).ConfigureAwait(false);
 			Net462IsReady = true;
 			WriteFixtureLog($"[Stage 4/4] NuGetConsumer.Net462 published to '{Net462AppPath}'. Total elapsed: {_sw.Elapsed.TotalSeconds:F1}s.");
@@ -146,7 +151,7 @@ public class NuGetPackageFixture : IAsyncLifetime
 	}
 
 	private async Task<string> PublishConsumerAppAsync(
-		string solutionRoot, string projectName, string outputFileName,
+		string solutionRoot, string projectName, string outputFileName, string targetFramework,
 		string configFilePath, CancellationToken ct)
 	{
 		var consumerProjectPath = Path.Combine(solutionRoot,
@@ -155,23 +160,24 @@ public class NuGetPackageFixture : IAsyncLifetime
 		// Isolate obj/bin from .artifacts/ so a prior solution-wide build's project.assets.json
 		// can't cache-hit this restore and override the PackageReference path we're exercising.
 		// See CreateIsolatedBuildPaths for the detailed rationale.
-		var (baseOutputArg, baseIntermediateOutputArg, _) = CreateIsolatedBuildPaths(projectName, _tempDirectories);
+		var (baseOutputArg, baseIntermediateOutputArg, _) = CreateIsolatedBuildPaths($"{projectName}-{targetFramework}", _tempDirectories);
 
-		WriteFixtureLog($"  Restoring '{projectName}' (elapsed {_sw.Elapsed.TotalSeconds:F1}s). ConfigFile='{configFilePath}'.");
+		WriteFixtureLog($"  Restoring '{projectName}' for {targetFramework} (elapsed {_sw.Elapsed.TotalSeconds:F1}s). ConfigFile='{configFilePath}'.");
 		await RunDotnetAsync(
 			$"restore \"{consumerProjectPath}\" " +
 			$"--configfile \"{configFilePath}\" " +
+			$"-p:TargetFramework={targetFramework} " +
 			$"{baseOutputArg} {baseIntermediateOutputArg} " +
 			$"-p:ElasticOtelVersion={PackageVersion}", ct).ConfigureAwait(false);
-		WriteFixtureLog($"  Restore complete for '{projectName}' (elapsed {_sw.Elapsed.TotalSeconds:F1}s).");
+		WriteFixtureLog($"  Restore complete for '{projectName}' ({targetFramework}, elapsed {_sw.Elapsed.TotalSeconds:F1}s).");
 
-		var publishDir = Path.Combine(Path.GetTempPath(), $"edot-{projectName.ToLowerInvariant()}-{Guid.NewGuid():N}");
+		var publishDir = Path.Combine(Path.GetTempPath(), $"edot-{projectName.ToLowerInvariant()}-{targetFramework}-{Guid.NewGuid():N}");
 		_tempDirectories.Add(publishDir);
 
 		WriteFixtureLog($"  Publishing '{projectName}' to '{publishDir}' (elapsed {_sw.Elapsed.TotalSeconds:F1}s).");
 		await RunDotnetAsync(
 			$"publish \"{consumerProjectPath}\" --no-restore " +
-			$"-c Release -o \"{publishDir}\" " +
+			$"-c Release -f {targetFramework} -o \"{publishDir}\" " +
 			$"{baseOutputArg} {baseIntermediateOutputArg} " +
 			$"-p:ElasticOtelVersion={PackageVersion}", ct).ConfigureAwait(false);
 		WriteFixtureLog($"  Publish complete for '{projectName}' (elapsed {_sw.Elapsed.TotalSeconds:F1}s).");
@@ -286,6 +292,7 @@ public class NuGetPackageFixture : IAsyncLifetime
 			UseShellExecute = false,
 			CreateNoWindow = true,
 		};
+		psi.Environment["MSBUILDDISABLENODEREUSE"] = "1";
 
 		using var process = Process.Start(psi)
 			?? throw new InvalidOperationException($"Failed to start: {command}");
@@ -321,7 +328,11 @@ public class NuGetPackageFixture : IAsyncLifetime
 			throw;
 		}
 
+		// Build workers can inherit the pipes and keep them open after dotnet exits.
+		outputDrainCts.CancelAfter(PostTimeoutLogDrain);
 		await Task.WhenAll(stdoutTask, stderrTask).ConfigureAwait(false);
+		if (outputDrainCts.IsCancellationRequested)
+			log("dotnet exited, but output pipes remained open; stopped draining output.");
 
 		log($"Completed in {sw.Elapsed.TotalSeconds:F1}s (exit code {process.ExitCode}): dotnet {arguments.Split(' ')[0]}");
 

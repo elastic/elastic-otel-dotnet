@@ -18,7 +18,7 @@ internal static class ProfilerEnvironment
 		"Elastic.OpenTelemetry.AutoInstrumentationPlugin, Elastic.OpenTelemetry.AutoInstrumentation";
 
 	/// <summary>
-	/// Generates env vars for .NET (net8.0+) auto-instrumentation via CoreCLR profiler.
+	/// Generates env vars for .NET (net10.0+) auto-instrumentation via CoreCLR profiler.
 	/// </summary>
 	public static Dictionary<string, string> ForCoreCLR(string installDir) =>
 		new()

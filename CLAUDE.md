@@ -57,7 +57,7 @@ dotnet test -c release --filter "FullyQualifiedName~SomeTestClass"
 dotnet format
 ```
 
-**Required SDK**: .NET 10.0.100 (see `global.json`)
+**Required SDK**: .NET 11.0.100 (see `global.json`)
 
 ## Architecture
 
@@ -65,11 +65,11 @@ dotnet format
 
 **Source projects** (`src/`):
 
-- **Elastic.OpenTelemetry** — Main NuGet package. Extensions for `HostApplicationBuilder`, `TracerProviderBuilder`, `MeterProviderBuilder`, `LoggerProviderBuilder`. Targets netstandard2.0/2.1, net462, net8.0, net9.0.
+- **Elastic.OpenTelemetry** — Main NuGet package. Extensions for `HostApplicationBuilder`, `TracerProviderBuilder`, `MeterProviderBuilder`, `LoggerProviderBuilder`. Targets netstandard2.0/2.1, net462, net10.0, net11.0.
 - **Elastic.OpenTelemetry.Core** — Core implementation (configuration, diagnostics/logging, builder state). **Not a separate NuGet package** — source-linked into the main package. Marked `IsSourceOnlyProject=true`; skips compilation during solution builds because its `.cs` files are compile-included into consuming projects.
-- **Elastic.OpenTelemetry.OpAmp** — OpAmp client implementation with ALC isolation on net8.0+. Source-linked for NuGet builds, separate DLL for zip distribution builds. **Not source-only** — produces assemblies for the redistributable (zip) packaging flow.
+- **Elastic.OpenTelemetry.OpAmp** — OpAmp client implementation with ALC isolation on net10.0+. Source-linked for NuGet builds, separate DLL for zip distribution builds. **Not source-only** — produces assemblies for the redistributable (zip) packaging flow.
 - **Elastic.OpenTelemetry.OpAmp.Abstractions** — Interfaces for OpAmp version isolation. Source-linked for NuGet builds. **Not source-only** — produces assemblies for the redistributable (zip) packaging flow.
-- **Elastic.OpenTelemetry.AutoInstrumentation** — Profiler-based auto-instrumentation plugin. Targets net462, net8.0. Packaged as both NuGet and redistributable zip.
+- **Elastic.OpenTelemetry.AutoInstrumentation** — Profiler-based auto-instrumentation plugin. Targets net462, net10.0. Packaged as both NuGet and redistributable zip.
 
 **Key architectural pattern**: Core, OpAmp, and OpAmp.Abstractions are **source-linked** into the main Elastic.OpenTelemetry package (not separate NuGet packages). They exist as separate projects for code organization but compile into one assembly for NuGet distribution. However, only Core is a **source-only project** — OpAmp and OpAmp.Abstractions also produce standalone assemblies for the zip distribution build (`BuildingForZipDistribution=true`) where they are loaded via `AssemblyLoadContext` isolation.
 
@@ -78,7 +78,7 @@ dotnet format
 Two packaging strategies with different OpAmp compilation:
 
 - **NuGet package builds**: OpAmp source compiled directly into AutoInstrumentation.dll
-- **Zip distribution builds** (`redistribute` target): Separate OpAmp DLLs with `AssemblyLoadContext` isolation on net8.0+ to prevent version conflicts. Controlled by `BuildingForZipDistribution` MSBuild property and `USE_ISOLATED_OPAMP_CLIENT` compiler directive.
+- **Zip distribution builds** (`redistribute` target): Separate OpAmp DLLs with `AssemblyLoadContext` isolation on net10.0+ to prevent version conflicts. Controlled by `BuildingForZipDistribution` MSBuild property and `USE_ISOLATED_OPAMP_CLIENT` compiler directive.
 
 ### Build System Details
 
@@ -89,12 +89,12 @@ Two packaging strategies with different OpAmp compilation:
 
 ### Test Structure
 
-- `tests/Elastic.OpenTelemetry.Tests/` — Unit tests (net10.0)
+- `tests/Elastic.OpenTelemetry.Tests/` — Unit tests (net10.0, net11.0)
 - `tests/Elastic.OpenTelemetry.BuildVerification.Tests/` — Package verification tests (net10.0)
 - `tests/AutoInstrumentation.IntegrationTests/` — Integration tests (net10.0)
-- `test-applications/` — Test web apps (WebApi for .NET Framework, WebApiDotNet8, WebApiDotNet9)
+- `test-applications/` — Test web apps (WebApi targeting net10.0/net11.0), console apps for auto-instrumentation and NuGet consumption (AutoInstr.Console.Net10/Net462, NuGetConsumer.Net10/Net462)
 
-Test framework: xunit. On Linux, tests only run against net10.0 TFM.
+Test framework: xunit. Unit tests run against both net10.0 and net11.0 (the .NET 10 and 11 runtimes must be installed).
 
 ## Code Style
 

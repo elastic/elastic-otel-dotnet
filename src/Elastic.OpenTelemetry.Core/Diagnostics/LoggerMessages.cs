@@ -191,10 +191,10 @@ internal static partial class LoggerMessages
 
 		logger.LogDebug("Activation method: {ActivationMethod}", activationMethod.ToString());
 
-#if NET8_0
-		logger.LogDebug("Matched TFM: {TargetFrameworkMoniker}", "net8.0");
-#elif NET9_0_OR_GREATER
-		logger.LogDebug("Matched TFM: {TargetFrameworkMoniker}", "net9.0");
+#if NET11_0_OR_GREATER
+		logger.LogDebug("Matched TFM: {TargetFrameworkMoniker}", "net11.0");
+#elif NET10_0
+		logger.LogDebug("Matched TFM: {TargetFrameworkMoniker}", "net10.0");
 #elif NETSTANDARD2_0
 		logger.LogDebug("Matched TFM: {TargetFrameworkMoniker}", "netstandard2.0");
 #elif NETSTANDARD2_1

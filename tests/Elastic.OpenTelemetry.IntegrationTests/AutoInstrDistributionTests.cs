@@ -10,7 +10,7 @@ namespace Elastic.OpenTelemetry.IntegrationTests;
 /// Integration tests that verify the redistributable zip distribution path
 /// with auto-instrumentation via the CoreCLR profiler.
 /// The test app has no Elastic references — the profiler injects EDOT at runtime.
-/// On net8.0+, OpAmp assemblies load via <c>AssemblyLoadContext</c> isolation.
+/// On net10.0+, OpAmp assemblies load via <c>AssemblyLoadContext</c> isolation.
 /// </summary>
 /// <remarks>
 /// Parameterized by TFM so a dep-version regression (e.g. pinning Microsoft.Extensions.*
@@ -30,16 +30,14 @@ public class AutoInstrDistributionTests
 
 	private string GetAppPath(string tfm) => tfm switch
 	{
-		"net8.0" => _fixture.Net8AppPath,
-		"net9.0" => _fixture.Net9AppPath,
 		"net10.0" => _fixture.Net10AppPath,
+		"net11.0" => _fixture.Net11AppPath,
 		_ => throw new ArgumentOutOfRangeException(nameof(tfm), tfm, "No published app for this TFM.")
 	};
 
 	[Theory(Timeout = 90_000)]
-	[InlineData("net8.0")]
-	[InlineData("net9.0")]
 	[InlineData("net10.0")]
+	[InlineData("net11.0")]
 	public async Task AutoInstr_AlcPath_OpAmpWorks(string tfm)
 	{
 		AssertFixtureReady();
@@ -60,7 +58,7 @@ public class AutoInstrDistributionTests
 
 		var analyzer = new EdotLogAnalyzer(runner.EdotLogFilePath);
 		analyzer.AssertNoErrors();
-		// Confirms ALC path was used (net8.0+ zip distribution)
+		// Confirms ALC path was used (net10.0+ zip distribution)
 		analyzer.AssertContainsEventId(102, "UsingIsolatedLoadContext — confirms ALC path");
 		// Confirms ALC loaded assemblies
 		analyzer.AssertContainsEventId(150, "AssemblyResolved — confirms ALC loaded assemblies");
@@ -70,9 +68,8 @@ public class AutoInstrDistributionTests
 	}
 
 	[Theory(Timeout = 90_000)]
-	[InlineData("net8.0")]
-	[InlineData("net9.0")]
 	[InlineData("net10.0")]
+	[InlineData("net11.0")]
 	public async Task AutoInstr_AlcPath_CentralConfigReceived(string tfm)
 	{
 		AssertFixtureReady();
@@ -180,9 +177,8 @@ public class AutoInstrDistributionTests
 	}
 
 	[Theory(Timeout = 90_000)]
-	[InlineData("net8.0")]
-	[InlineData("net9.0")]
 	[InlineData("net10.0")]
+	[InlineData("net11.0")]
 	public async Task AutoInstr_AlcPath_NoOpAmpServer_GracefulFallback(string tfm)
 	{
 		AssertFixtureReady();
