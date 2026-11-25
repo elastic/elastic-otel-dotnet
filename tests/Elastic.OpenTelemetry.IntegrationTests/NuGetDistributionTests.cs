@@ -122,10 +122,14 @@ public class NuGetDistributionTests
 		Assert.NotNull(runner.EdotLogFilePath);
 
 		var analyzer = new EdotLogAnalyzer(runner.EdotLogFilePath);
-		// The client starts and attempts to connect, but never receives config.
-		// Allow timeout warnings since the server is unreachable.
-		// The upstream OpenTelemetry OpAmp client logs connection failures as Error with no EDOT EventId.
-		analyzer.AssertNoErrors(allowedErrorEventIds: [116], allowedMessageSubstrings: ["Failed to send heartbeat message"]); // OpAmpClientCreationFailed
+		// Upstream reports the expected connection failure through ILogger or its EventSource.
+		analyzer.AssertNoErrors(
+			allowedErrorEventIds: [116],
+			allowedMessageSubstrings:
+			[
+				"Failed to send heartbeat message",
+				"Failed to send OpAMP message: System.Net.Http.HttpRequestException: Connection refused (127.0.0.1:1)"
+			]);
 		analyzer.AssertDoesNotContainEventId(131, "Should not receive initial config from unreachable server");
 	}
 }
