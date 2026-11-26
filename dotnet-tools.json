@@ -15,7 +15,7 @@
       ]
     },
     "nuget-license": {
-      "version": "4.0.18",
+      "version": "4.0.19",
       "commands": [
         "nuget-license"
       ]
