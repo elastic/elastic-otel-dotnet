@@ -43,16 +43,14 @@ public class AutoInstrStartupLoggingTests(RedistributableFixture fixture)
 
 	private string GetAppPath(string tfm) => tfm switch
 	{
-		"net8.0" => _fixture.Net8AppPath,
-		"net9.0" => _fixture.Net9AppPath,
 		"net10.0" => _fixture.Net10AppPath,
+		"net11.0" => _fixture.Net11AppPath,
 		_ => throw new ArgumentOutOfRangeException(nameof(tfm), tfm, "No published app for this TFM.")
 	};
 
 	[Theory(Timeout = 90_000)]
-	[InlineData("net8.0")]
-	[InlineData("net9.0")]
 	[InlineData("net10.0")]
+	[InlineData("net11.0")]
 	public async Task AutoInstr_StartupLog_ContainsPreambleAndAgentStartupMessages(string tfm)
 	{
 		AssertFixtureReady();

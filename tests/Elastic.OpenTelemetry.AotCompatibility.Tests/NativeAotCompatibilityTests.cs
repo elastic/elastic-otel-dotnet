@@ -17,19 +17,23 @@ namespace Elastic.OpenTelemetry.AotCompatibility.Tests
 		[Fact]
 		public async Task CanPublishAotApp()
 		{
-			var workingDir = Environment.CurrentDirectory;
-			var indexOfSolutionFolder = workingDir.AsSpan().LastIndexOf("elastic-otel-dotnet");
-			workingDir = workingDir.AsSpan()[..(indexOfSolutionFolder + "elastic-otel-dotnet".Length)].ToString();
-			workingDir = Path.Combine(workingDir, "examples", "Example.AspNetCore.WebApiAot");
+			var solutionDirectory = new DirectoryInfo(AppContext.BaseDirectory);
+			while (solutionDirectory is not null && !File.Exists(Path.Combine(solutionDirectory.FullName, "build.bat")))
+				solutionDirectory = solutionDirectory.Parent;
+
+			Assert.NotNull(solutionDirectory);
+			var workingDir = Path.Combine(solutionDirectory.FullName, "examples", "Example.AspNetCore.WebApiAot");
+			var logDirectory = Path.Combine(solutionDirectory.FullName, ".artifacts", "tests", "aot-compatibility");
+			Directory.CreateDirectory(logDirectory);
 
 			var rid = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "win-x64" : "linux-x64";
 
-			var dotnetPublishProcess = new Process
+			using var dotnetPublishProcess = new Process
 			{
 				StartInfo =
 				{
 					FileName = "dotnet",
-					Arguments = $"publish -c Release -r {rid}",
+					ArgumentList = { "publish", "-c", "Release", "-r", rid, $"-bl:{Path.Combine(logDirectory, "{}.binlog")}" },
 					WorkingDirectory = workingDir,
 					RedirectStandardError = true,
 					RedirectStandardOutput = true,
@@ -37,30 +41,51 @@ namespace Elastic.OpenTelemetry.AotCompatibility.Tests
 					CreateNoWindow = true
 				}
 			};
+			dotnetPublishProcess.StartInfo.Environment["MSBUILDDISABLENODEREUSE"] = "1";
 
-			dotnetPublishProcess.ErrorDataReceived += (sender, args) =>
-			{
-				if (!string.IsNullOrEmpty(args.Data))
-				{
-					_output.WriteLine("[ERROR] " + args.Data);
-				}
-			};
-
-			dotnetPublishProcess.OutputDataReceived += (sender, args) =>
-			{
-				if (!string.IsNullOrEmpty(args.Data))
-				{
-					_output.WriteLine(args.Data);
-				}
-			};
+			using var timeoutCts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+			using var outputDrainCts = new CancellationTokenSource();
+			var stopwatch = Stopwatch.StartNew();
 
 			dotnetPublishProcess.Start();
-			dotnetPublishProcess.BeginOutputReadLine();
-			dotnetPublishProcess.BeginErrorReadLine();
+			var stdoutTask = PumpOutputAsync(dotnetPublishProcess.StandardOutput, string.Empty, outputDrainCts.Token);
+			var stderrTask = PumpOutputAsync(dotnetPublishProcess.StandardError, "[ERROR] ", outputDrainCts.Token);
 
-			await dotnetPublishProcess.WaitForExitAsync();
+			try
+			{
+				await dotnetPublishProcess.WaitForExitAsync(timeoutCts.Token);
+			}
+			catch (OperationCanceledException ex) when (timeoutCts.IsCancellationRequested)
+			{
+				try
+				{ dotnetPublishProcess.Kill(entireProcessTree: true); }
+				catch { /* best effort */ }
+
+				throw new TimeoutException("dotnet publish timed out after 10 minutes.", ex);
+			}
+			finally
+			{
+				// WaitForExitAsync must not also wait indefinitely for inherited output pipes.
+				outputDrainCts.CancelAfter(TimeSpan.FromSeconds(30));
+				await Task.WhenAll(stdoutTask, stderrTask);
+				if (outputDrainCts.IsCancellationRequested)
+					_output.WriteLine("Output pipes remained open; stopped draining after 30 seconds.");
+				_output.WriteLine($"dotnet publish finished after {stopwatch.Elapsed.TotalSeconds:F1}s.");
+			}
 
 			Assert.Equal(0, dotnetPublishProcess.ExitCode);
+		}
+
+		private async Task PumpOutputAsync(StreamReader reader, string prefix, CancellationToken cancellationToken)
+		{
+			try
+			{
+				while (await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false) is { } line)
+					_output.WriteLine(prefix + line);
+			}
+			catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+			{
+			}
 		}
 	}
 }

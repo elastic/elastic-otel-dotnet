@@ -56,7 +56,7 @@ internal sealed class OpAmpIsolatedLoadContext : AssemblyLoadContext
 			throw new FileNotFoundException(
 				$"{nameof(OpAmpIsolatedLoadContext)}: OpAmp DLL not found at: {opAmpPath} " +
 				$"(BaseDirectory: {AppContext.BaseDirectory}). " +
-				"Ensure the project is built with -f net8.0 -p:BuildingForZipDistribution=true.",
+				"Ensure the project is built with -f net10.0 -p:BuildingForZipDistribution=true.",
 				opAmpPath);
 		}
 

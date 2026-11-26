@@ -7,13 +7,13 @@ using Elastic.OpenTelemetry.IntegrationTests.Helpers;
 namespace Elastic.OpenTelemetry.IntegrationTests;
 
 /// <summary>
-/// Integration tests that verify the NuGet package distribution path on net8.0.
+/// Integration tests that verify the NuGet package distribution path on net10.0 and net11.0.
 /// Tests run against the packed <c>.nupkg</c> consumed by a standalone test app —
 /// not project references. This validates the real end-user consumption model.
 /// </summary>
 /// <remarks>
 /// <para>
-/// These tests use the hosting/DI path (<c>AddElasticOpenTelemetry()</c>) on net8.0.
+/// These tests use the hosting/DI path (<c>AddElasticOpenTelemetry()</c>) on net10.0 and net11.0.
 /// For .NET Framework (net462) coverage using the manual builder APIs
 /// (<c>Sdk.CreateTracerProviderBuilder().WithElasticDefaults()</c>), see
 /// <see cref="NuGetNet462DistributionTests"/>.
@@ -30,8 +30,17 @@ public class NuGetDistributionTests
 		Assert.True(_fixture.IsReady,
 			$"NuGet fixture failed to initialize — test cannot run.\n{_fixture.InitializationError}");
 
-	[SkipOnCiFact(Timeout = 30_000)]
-	public async Task NuGet_Net8_DirectPath_OpAmpWorks()
+	private string GetAppPath(string tfm) => tfm switch
+	{
+		"net10.0" => _fixture.Net10AppPath,
+		"net11.0" => _fixture.Net11AppPath,
+		_ => throw new ArgumentOutOfRangeException(nameof(tfm), tfm, "No published app for this TFM.")
+	};
+
+	[Theory(Timeout = 30_000)]
+	[InlineData("net10.0")]
+	[InlineData("net11.0")]
+	public async Task NuGet_DirectPath_OpAmpWorks(string tfm)
 	{
 		AssertFixtureReady();
 
@@ -41,10 +50,10 @@ public class NuGetDistributionTests
 		var envVars = new Dictionary<string, string>
 		{
 			["ELASTIC_OTEL_OPAMP_ENDPOINT"] = server.Endpoint,
-			["OTEL_SERVICE_NAME"] = "nuget-net8-opamp-test",
+			["OTEL_SERVICE_NAME"] = $"nuget-{tfm}-opamp-test",
 		};
 
-		await using var runner = new TestAppRunner(_fixture.Net8AppPath, envVars);
+		await using var runner = new TestAppRunner(GetAppPath(tfm), envVars);
 		await runner.RunToCompletionAsync();
 
 		runner.AssertExitCodeZero();
@@ -53,6 +62,7 @@ public class NuGetDistributionTests
 
 		var analyzer = new EdotLogAnalyzer(runner.EdotLogFilePath);
 		analyzer.AssertNoErrors();
+		analyzer.AssertContainsMessage($"Matched TFM: {tfm}", "the consumer should load its matching NuGet asset");
 		// No ALC in NuGet builds — OpAmp source compiled directly into the assembly
 		analyzer.AssertDoesNotContainEventId(102, "NuGet builds should not use ALC isolation");
 		analyzer.AssertContainsEventId(101, "InitializingCentralConfig");
@@ -61,8 +71,10 @@ public class NuGetDistributionTests
 		Assert.True(server.RequestCount >= 1, "Server should have received at least one request.");
 	}
 
-	[SkipOnCiFact(Timeout = 30_000)]
-	public async Task NuGet_Net8_DirectPath_CentralConfigReceived()
+	[Theory(Timeout = 30_000)]
+	[InlineData("net10.0")]
+	[InlineData("net11.0")]
+	public async Task NuGet_DirectPath_CentralConfigReceived(string tfm)
 	{
 		AssertFixtureReady();
 
@@ -72,10 +84,10 @@ public class NuGetDistributionTests
 		var envVars = new Dictionary<string, string>
 		{
 			["ELASTIC_OTEL_OPAMP_ENDPOINT"] = server.Endpoint,
-			["OTEL_SERVICE_NAME"] = "nuget-net8-config-test",
+			["OTEL_SERVICE_NAME"] = $"nuget-{tfm}-config-test",
 		};
 
-		await using var runner = new TestAppRunner(_fixture.Net8AppPath, envVars);
+		await using var runner = new TestAppRunner(GetAppPath(tfm), envVars);
 		await runner.RunToCompletionAsync();
 
 		runner.AssertExitCodeZero();
@@ -88,8 +100,10 @@ public class NuGetDistributionTests
 		analyzer.AssertContainsEventId(205, "ExtractedLogLevel");
 	}
 
-	[SkipOnCiFact(Timeout = 30_000)]
-	public async Task NuGet_Net8_DirectPath_NoOpAmpServer_GracefulFallback()
+	[Theory(Timeout = 30_000)]
+	[InlineData("net10.0")]
+	[InlineData("net11.0")]
+	public async Task NuGet_DirectPath_NoOpAmpServer_GracefulFallback(string tfm)
 	{
 		AssertFixtureReady();
 
@@ -97,10 +111,10 @@ public class NuGetDistributionTests
 		var envVars = new Dictionary<string, string>
 		{
 			["ELASTIC_OTEL_OPAMP_ENDPOINT"] = "http://127.0.0.1:1",
-			["OTEL_SERVICE_NAME"] = "nuget-net8-fallback-test",
+			["OTEL_SERVICE_NAME"] = $"nuget-{tfm}-fallback-test",
 		};
 
-		await using var runner = new TestAppRunner(_fixture.Net8AppPath, envVars);
+		await using var runner = new TestAppRunner(GetAppPath(tfm), envVars);
 		await runner.RunToCompletionAsync();
 
 		runner.AssertExitCodeZero();
@@ -108,10 +122,14 @@ public class NuGetDistributionTests
 		Assert.NotNull(runner.EdotLogFilePath);
 
 		var analyzer = new EdotLogAnalyzer(runner.EdotLogFilePath);
-		// The client starts and attempts to connect, but never receives config.
-		// Allow timeout warnings since the server is unreachable.
-		// The upstream OpenTelemetry OpAmp client logs connection failures as Error with no EDOT EventId.
-		analyzer.AssertNoErrors(allowedErrorEventIds: [116], allowedMessageSubstrings: ["Failed to send heartbeat message"]); // OpAmpClientCreationFailed
+		// Upstream reports the expected connection failure through ILogger or its EventSource.
+		analyzer.AssertNoErrors(
+			allowedErrorEventIds: [116],
+			allowedMessageSubstrings:
+			[
+				"Failed to send heartbeat message",
+				"Failed to send OpAMP message: System.Net.Http.HttpRequestException: Connection refused (127.0.0.1:1)"
+			]);
 		analyzer.AssertDoesNotContainEventId(131, "Should not receive initial config from unreachable server");
 	}
 }

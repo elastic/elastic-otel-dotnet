@@ -29,9 +29,8 @@ public class RedistributableFixture : IAsyncLifetime
 	{
 		var apps = new List<(string Tfm, string ProjectName)>
 		{
-			("net8.0",  "AutoInstr.Console.Net8"),
-			("net9.0",  "AutoInstr.Console.Net9"),
 			("net10.0", "AutoInstr.Console.Net10"),
+			("net11.0", "AutoInstr.Console.Net11"),
 		};
 		if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 			apps.Add(("net462", "AutoInstr.Console.Net462"));
@@ -50,14 +49,11 @@ public class RedistributableFixture : IAsyncLifetime
 	/// </summary>
 	public string InstallationDirectory { get; private set; } = string.Empty;
 
-	/// <summary>Path to the published AutoInstr.Console.Net8.dll, ready to run under the profiler.</summary>
-	public string Net8AppPath { get; private set; } = string.Empty;
-
-	/// <summary>Path to the published AutoInstr.Console.Net9.dll, ready to run under the profiler.</summary>
-	public string Net9AppPath { get; private set; } = string.Empty;
-
 	/// <summary>Path to the published AutoInstr.Console.Net10.dll, ready to run under the profiler.</summary>
 	public string Net10AppPath { get; private set; } = string.Empty;
+
+	/// <summary>Path to the published AutoInstr.Console.Net11.dll, ready to run under the profiler.</summary>
+	public string Net11AppPath { get; private set; } = string.Empty;
 
 	/// <summary>Path to the published AutoInstr.Console.Net462.exe, ready to run under the .NET Framework profiler. Windows only.</summary>
 	public string Net462AppPath { get; private set; } = string.Empty;
@@ -113,14 +109,11 @@ public class RedistributableFixture : IAsyncLifetime
 
 				switch (tfm)
 				{
-					case "net8.0":
-						Net8AppPath = appPath;
-						break;
-					case "net9.0":
-						Net9AppPath = appPath;
-						break;
 					case "net10.0":
 						Net10AppPath = appPath;
+						break;
+					case "net11.0":
+						Net11AppPath = appPath;
 						break;
 					case "net462":
 						Net462AppPath = appPath;

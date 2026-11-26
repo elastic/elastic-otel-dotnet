@@ -2,13 +2,13 @@
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFrameworks>netstandard2.0;netstandard2.1;net462;net8.0;net9.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;netstandard2.1;net462;net10.0;net11.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <IsSourceOnlyProject>true</IsSourceOnlyProject>
     <LangVersion>latest</LangVersion>
-    <!-- NU1702: OpAmp targets net462/net8.0 only; TFM mismatch is expected since Core is source-only -->
+    <!-- NU1702: OpAmp targets net462/net10.0 only; TFM mismatch is expected since Core is source-only -->
     <NoWarn>$(NoWarn);NU1702</NoWarn>
   </PropertyGroup>
 
@@ -25,7 +25,7 @@
     </PackageReference>
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0' OR '$(TargetFramework)' == 'net9.0'">
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0' OR '$(TargetFramework)' == 'net11.0'">
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
   </ItemGroup>
 
@@ -35,10 +35,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Elastic.OpenTelemetry.OpAmp.Abstractions\Elastic.OpenTelemetry.OpAmp.Abstractions.csproj" Private="true" />
-    <!-- OpAmp targets net462;net8.0 only. Restrict this reference to matching TFMs to avoid
+    <!-- OpAmp targets net462;net10.0 only. Restrict this reference to matching TFMs to avoid
          MSB3277 System.Memory version conflicts when building for netstandard2.0/2.1 -->
     <ProjectReference Include="..\Elastic.OpenTelemetry.OpAmp\Elastic.OpenTelemetry.OpAmp.csproj" Private="true"
-      Condition="'$(TargetFramework)' == 'net462' OR '$(TargetFramework)' == 'net8.0' OR '$(TargetFramework)' == 'net9.0'" />
+      Condition="'$(TargetFramework)' == 'net462' OR '$(TargetFramework)' == 'net10.0' OR '$(TargetFramework)' == 'net11.0'" />
   </ItemGroup>
 
 </Project>

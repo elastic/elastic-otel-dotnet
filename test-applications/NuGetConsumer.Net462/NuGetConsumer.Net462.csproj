@@ -17,7 +17,7 @@
   Host.CreateApplicationBuilder IS available on net462 — it comes from the
   Microsoft.Extensions.Hosting NuGet package (which targets netstandard2.0),
   not from the .NET Framework itself. We intentionally don't test that path
-  here because (a) it's already covered by the NuGetConsumer.Net8 tests, and
+  here because (a) it's already covered by the NuGetConsumer.Net10 tests, and
   (b) the manual builder path is far more representative of real-world
   net462 usage.
 

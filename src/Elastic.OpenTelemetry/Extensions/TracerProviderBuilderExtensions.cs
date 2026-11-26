@@ -483,7 +483,7 @@ public static class TracerProviderBuilderExtensions
 			logger.LogConfiguredOtlpExporterOptions("traces");
 		}
 
-#if NET9_0_OR_GREATER
+#if NET
 		// .NET 9 introduced semantic convention compatible instrumentation in System.Net.Http so it's recommended to no longer
 		// use the contrib instrumentation. We don't bring in the dependency for .NET 9+. However, if the consuming app depends
 		// on it, it will be assumed that the user prefers it and therefore we allow the assembly scanning to add it. We don't

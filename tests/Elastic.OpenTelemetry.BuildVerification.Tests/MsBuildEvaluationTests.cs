@@ -34,10 +34,10 @@ public class MsBuildEvaluationTests
 	[InlineData("netstandard2.0", "Release")]
 	[InlineData("netstandard2.1", "Release")]
 	[InlineData("net462", "Release")]
-	[InlineData("net8.0", "Release")]
-	[InlineData("net9.0", "Release")]
-	[InlineData("net8.0", "Debug")]
-	[InlineData("net9.0", "Debug")]
+	[InlineData("net10.0", "Release")]
+	[InlineData("net11.0", "Release")]
+	[InlineData("net10.0", "Debug")]
+	[InlineData("net11.0", "Debug")]
 	public async Task ElasticOpenTelemetry_NeverDefines_UseIsolatedOpAmpClient(
 		string tfm, string configuration)
 	{
@@ -53,8 +53,8 @@ public class MsBuildEvaluationTests
 	[InlineData("netstandard2.0")]
 	[InlineData("netstandard2.1")]
 	[InlineData("net462")]
-	[InlineData("net8.0")]
-	[InlineData("net9.0")]
+	[InlineData("net10.0")]
+	[InlineData("net11.0")]
 	public async Task ElasticOpenTelemetry_AlwaysCompilesOpAmpSource(string tfm)
 	{
 		var compileItems = await DotNetHelper.EvaluateItemsAsync(
@@ -74,8 +74,8 @@ public class MsBuildEvaluationTests
 	[InlineData("netstandard2.0")]
 	[InlineData("netstandard2.1")]
 	[InlineData("net462")]
-	[InlineData("net8.0")]
-	[InlineData("net9.0")]
+	[InlineData("net10.0")]
+	[InlineData("net11.0")]
 	public async Task ElasticOpenTelemetry_HasNoOpAmpProjectReferences(string tfm)
 	{
 		var projectRefs = await DotNetHelper.EvaluateItemsAsync(
@@ -89,7 +89,7 @@ public class MsBuildEvaluationTests
 	// ── AutoInstrumentation — NuGet (no BuildingForZipDistribution) ───────
 
 	[Theory]
-	[InlineData("net8.0")]
+	[InlineData("net10.0")]
 	[InlineData("net462")]
 	public async Task AutoInstrumentation_NuGet_DoesNotDefine_UseIsolatedOpAmpClient(string tfm)
 	{
@@ -102,7 +102,7 @@ public class MsBuildEvaluationTests
 	}
 
 	[Theory]
-	[InlineData("net8.0")]
+	[InlineData("net10.0")]
 	[InlineData("net462")]
 	public async Task AutoInstrumentation_NuGet_CompilesOpAmpSource(string tfm)
 	{
@@ -122,17 +122,17 @@ public class MsBuildEvaluationTests
 		Assert.DoesNotContain(projectRefs, item => item.Contains("OpAmp"));
 	}
 
-	// ── AutoInstrumentation — Zip + net8.0 (ALC isolation) ────────────────
+	// ── AutoInstrumentation — Zip + net10.0 (ALC isolation) ────────────────
 
 	[Fact]
-	public async Task AutoInstrumentation_Zip_Net80_Defines_UseIsolatedOpAmpClient()
+	public async Task AutoInstrumentation_Zip_Net100_Defines_UseIsolatedOpAmpClient()
 	{
 		var defines = await DotNetHelper.EvaluatePropertyAsync(
 			AutoInstrumentationProject,
 			"DefineConstants",
 			new()
 			{
-				["TargetFramework"] = "net8.0",
+				["TargetFramework"] = "net10.0",
 				["Configuration"] = "Release",
 				["BuildingForZipDistribution"] = "true"
 			});
@@ -141,11 +141,11 @@ public class MsBuildEvaluationTests
 	}
 
 	[Fact]
-	public async Task AutoInstrumentation_Zip_Net80_UsesProjectReferences_NotCompiledSource()
+	public async Task AutoInstrumentation_Zip_Net100_UsesProjectReferences_NotCompiledSource()
 	{
 		var props = new Dictionary<string, string>
 		{
-			["TargetFramework"] = "net8.0",
+			["TargetFramework"] = "net10.0",
 			["BuildingForZipDistribution"] = "true"
 		};
 

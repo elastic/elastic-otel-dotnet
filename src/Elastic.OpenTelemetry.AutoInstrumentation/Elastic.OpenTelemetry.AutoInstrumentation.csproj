@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net462;net8.0</TargetFrameworks>
+    <TargetFrameworks>net462;net10.0</TargetFrameworks>
     <Title>Elastic Distribution of OpenTelemetry .NET Automatic Instrumentation package with all required components to enable automatic instrumentation.</Title>
     <Description>OpenTelemetry extensions for Elastic Observability.</Description>
     <PackageTags>Elastic;EDOT;OpenTelemetry;OTel;Observability;APM;Monitoring;Logging;Metrics;Tracing;Telemetry;O11y</PackageTags>
@@ -12,8 +12,8 @@
     <GenerateNuspecDependsOn>$(GenerateNuspecDependsOn)</GenerateNuspecDependsOn>
   </PropertyGroup>
 
-  <!-- When building for zip distribution with net8.0, use AssemblyLoadContext to load OpAmp assemblies in isolation -->
-  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0' AND '$(BuildingForZipDistribution)' == 'true'">
+  <!-- When building for zip distribution with net10.0, use AssemblyLoadContext to load OpAmp assemblies in isolation -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0' AND '$(BuildingForZipDistribution)' == 'true'">
     <DefineConstants>$(DefineConstants);USE_ISOLATED_OPAMP_CLIENT</DefineConstants>
   </PropertyGroup>
 
@@ -67,8 +67,8 @@
     <Compile Include="..\Elastic.OpenTelemetry.OpAmp\**\*.cs" />
   </ItemGroup>
 
-  <!-- For zip + net8.0: Build as separate assemblies for ALC isolation -->
-  <ItemGroup Condition="'$(BuildingForZipDistribution)' == 'true' AND '$(TargetFramework)' == 'net8.0'">
+  <!-- For zip + net10.0: Build as separate assemblies for ALC isolation -->
+  <ItemGroup Condition="'$(BuildingForZipDistribution)' == 'true' AND '$(TargetFramework)' == 'net10.0'">
     <ProjectReference Include="..\Elastic.OpenTelemetry.OpAmp.Abstractions\Elastic.OpenTelemetry.OpAmp.Abstractions.csproj" />
     <ProjectReference Include="..\Elastic.OpenTelemetry.OpAmp\Elastic.OpenTelemetry.OpAmp.csproj" />
   </ItemGroup>

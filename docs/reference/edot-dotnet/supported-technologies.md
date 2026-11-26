@@ -53,11 +53,10 @@ This includes the currently supported Microsoft .NET frameworks:
 | .NET Framework 4.7.2   | Not announced       |
 | .NET Framework 4.8     | Not announced       |
 | .NET Framework 4.8.1   | Not announced       |
-| .NET 8                 | 10th November 2026  |
-| .NET 9                 | 12th May 2026       |
-| .NET 10 (preview)¹     | Not announced       |
+| .NET 10                | 14th November 2028  |
+| .NET 11                | 14th November 2028  |
 
-1. Official support begins once this is released (generally available) in November 2025
+.NET 8 and .NET 9 have reached end of support and are no longer supported by the current EDOT .NET release. Upgrade to a supported .NET runtime before updating EDOT .NET. Applications that cannot yet migrate must remain on the EDOT .NET 1.7.x release line; this does not extend support for those end-of-life runtimes.
 
 For further details, see [Microsoft .NET Framework support dates](https://learn.microsoft.com/lifecycle/products/microsoft-net-framework)
 and [.NET Support Policy](https://dotnet.microsoft.com/platform/support/policy).

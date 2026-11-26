@@ -48,10 +48,10 @@ public class BuildArtifactsFixture : IAsyncLifetime, IDisposable
 			// safe to run concurrently.
 			var buildSpecs = new (string Project, Dictionary<string, string> Props)[]
 			{
-				(AutoInstProject, new() { ["TargetFramework"] = "net8.0", ["BuildingForZipDistribution"] = "true" }),
+				(AutoInstProject, new() { ["TargetFramework"] = "net10.0", ["BuildingForZipDistribution"] = "true" }),
 				(AutoInstProject, new() { ["TargetFramework"] = "net462", ["BuildingForZipDistribution"] = "true" }),
-				(ElasticOTelProject, new() { ["TargetFramework"] = "net8.0" }),
-				(ElasticOTelProject, new() { ["TargetFramework"] = "net9.0" })
+				(ElasticOTelProject, new() { ["TargetFramework"] = "net10.0" }),
+				(ElasticOTelProject, new() { ["TargetFramework"] = "net11.0" })
 			};
 
 			var buildTasks = buildSpecs.Select(async spec =>
@@ -59,7 +59,7 @@ public class BuildArtifactsFixture : IAsyncLifetime, IDisposable
 				var label = $"{Path.GetFileNameWithoutExtension(spec.Project)} [{spec.Props.GetValueOrDefault("TargetFramework", "?")}]";
 				Log($"  Build starting: {label}");
 				var sw = Stopwatch.StartNew();
-				var result = await DotNetHelper.BuildAsync(spec.Project, spec.Props).ConfigureAwait(false);
+				var result = await DotNetHelper.BuildAsync(spec.Project, spec.Props, cts.Token).ConfigureAwait(false);
 				Log($"  Build finished: {label} — {sw.Elapsed.TotalSeconds:F1}s, exit={result.ExitCode}");
 				return (label, result);
 			}).ToArray();
@@ -90,7 +90,7 @@ public class BuildArtifactsFixture : IAsyncLifetime, IDisposable
 			{
 				Log($"  Pack starting: {spec.Label}");
 				var sw = Stopwatch.StartNew();
-				var result = await DotNetHelper.PackAsync(spec.Project, PackOutputDir).ConfigureAwait(false);
+				var result = await DotNetHelper.PackAsync(spec.Project, PackOutputDir, cancellationToken: cts.Token).ConfigureAwait(false);
 				Log($"  Pack finished: {spec.Label} — {sw.Elapsed.TotalSeconds:F1}s, exit={result.ExitCode}");
 				return (spec.Label, result);
 			}).ToArray();
@@ -106,11 +106,11 @@ public class BuildArtifactsFixture : IAsyncLifetime, IDisposable
 
 			Log($"BuildArtifactsFixture completed in {fixtureTimer.Elapsed.TotalSeconds:F1}s");
 		}
-		catch (OperationCanceledException)
+		catch (OperationCanceledException ex) when (cts.IsCancellationRequested)
 		{
 			InitializationError = $"BuildArtifactsFixture timed out after {fixtureTimer.Elapsed.TotalSeconds:F0}s (20 min budget).";
 			Log(InitializationError);
-			throw new TimeoutException(InitializationError);
+			throw new TimeoutException(InitializationError, ex);
 		}
 		catch (Exception ex)
 		{

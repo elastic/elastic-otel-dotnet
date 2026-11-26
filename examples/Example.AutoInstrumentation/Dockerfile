@@ -1,4 +1,4 @@
-ARG OTEL_VERSION=1.18.0
+ARG OTEL_VERSION=1.20.0
 ARG TARGETPLATFORM
 ARG TARGETARCH
 ARG TARGETVARIANT
@@ -16,7 +16,7 @@ RUN chmod +x otel-dotnet-auto-install.sh
 RUN SKIP_RELEASE_VERIFICATION=true OTEL_DOTNET_AUTO_HOME="/app/otel" sh otel-dotnet-auto-install.sh
 RUN chown -R app:app /app/otel
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build_example
+FROM mcr.microsoft.com/dotnet/sdk:11.0 AS build_example
 ENV _PROJECT="Example.AutoInstrumentation"
 ENV _PROJECTPATH="${_PROJECT}/${_PROJECT}.csproj"
 WORKDIR /work
@@ -30,7 +30,7 @@ RUN dotnet build "${_PROJECT}.csproj" -c Release -o /app/build_example
 FROM build_example AS publish_example
 RUN dotnet publish "Example.AutoInstrumentation.csproj" -c Release -o /app/example /p:UseAppHost=false
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build_distro
+FROM mcr.microsoft.com/dotnet/sdk:11.0 AS build_distro
 ENV _PROJECT="Elastic.OpenTelemetry"
 ENV _PROJECTPATH="${_PROJECT}/${_PROJECT}.csproj"
 WORKDIR /work
@@ -55,10 +55,10 @@ ARG TARGETARCH
 ARG TARGETVARIANT
 WORKDIR /app
 COPY --from=publish_example /app/example /app/example
-COPY --from=build_distro /work/.artifacts/bin/Elastic.OpenTelemetry/release_net8.0/Elastic.OpenTelemetry.dll /app/otel/net/
-COPY --from=build_distro /work/.artifacts/bin/Elastic.OpenTelemetry/release_net8.0/Elastic.OpenTelemetry.pdb /app/otel/net/
-COPY --from=build_distro /work/.artifacts/bin/Elastic.OpenTelemetry.AutoInstrumentation/release_net8.0/Elastic.OpenTelemetry.AutoInstrumentation.dll /app/otel/net/
-COPY --from=build_distro /work/.artifacts/bin/Elastic.OpenTelemetry.AutoInstrumentation/release_net8.0/Elastic.OpenTelemetry.AutoInstrumentation.pdb /app/otel/net/
+COPY --from=build_distro /work/.artifacts/bin/Elastic.OpenTelemetry/release_net10.0/Elastic.OpenTelemetry.dll /app/otel/net/
+COPY --from=build_distro /work/.artifacts/bin/Elastic.OpenTelemetry/release_net10.0/Elastic.OpenTelemetry.pdb /app/otel/net/
+COPY --from=build_distro /work/.artifacts/bin/Elastic.OpenTelemetry.AutoInstrumentation/release_net10.0/Elastic.OpenTelemetry.AutoInstrumentation.dll /app/otel/net/
+COPY --from=build_distro /work/.artifacts/bin/Elastic.OpenTelemetry.AutoInstrumentation/release_net10.0/Elastic.OpenTelemetry.AutoInstrumentation.pdb /app/otel/net/
 
 ENV CORECLR_ENABLE_PROFILING="1"
 ENV CORECLR_PROFILER="{918728DD-259F-4A6A-AC2B-B85E1B658318}"

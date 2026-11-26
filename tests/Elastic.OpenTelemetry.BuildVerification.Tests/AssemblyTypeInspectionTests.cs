@@ -24,28 +24,28 @@ public class AssemblyTypeInspectionTests(BuildArtifactsFixture fixture, ITestOut
 		Assert.Null(fixture.InitializationError);
 	}
 
-	// ── AutoInstrumentation — Zip + net8.0 ────────────────────────────────
+	// ── AutoInstrumentation — Zip + net10.0 ────────────────────────────────
 
 	[SkipOnCiFact("BuildArtifactsFixture times out on CI; needs investigation.")]
-	public void AutoInstrumentation_ZipNet80_ContainsIsolatedLoadContext()
+	public void AutoInstrumentation_ZipNet100_ContainsIsolatedLoadContext()
 	{
 		AssertFixtureReady();
-		var path = GetAssemblyPath("Elastic.OpenTelemetry.AutoInstrumentation", "release_net8.0");
+		var path = GetAssemblyPath("Elastic.OpenTelemetry.AutoInstrumentation", "release_net10.0");
 		output.WriteLine($"Inspecting: {path}");
 		Assert.True(File.Exists(path), $"Assembly not found: {path}");
 		Assert.True(AssemblyHelper.ContainsType(path, "OpAmpIsolatedLoadContext"),
-			"AutoInstrumentation net8.0 zip build should contain OpAmpIsolatedLoadContext for ALC isolation");
+			"AutoInstrumentation net10.0 zip build should contain OpAmpIsolatedLoadContext for ALC isolation");
 	}
 
 	[SkipOnCiFact("BuildArtifactsFixture times out on CI; needs investigation.")]
-	public void AutoInstrumentation_ZipNet80_DoesNotContainElasticOpAmpClient()
+	public void AutoInstrumentation_ZipNet100_DoesNotContainElasticOpAmpClient()
 	{
 		AssertFixtureReady();
-		var path = GetAssemblyPath("Elastic.OpenTelemetry.AutoInstrumentation", "release_net8.0");
+		var path = GetAssemblyPath("Elastic.OpenTelemetry.AutoInstrumentation", "release_net10.0");
 		output.WriteLine($"Inspecting: {path}");
 		Assert.True(File.Exists(path), $"Assembly not found: {path}");
 		Assert.False(AssemblyHelper.ContainsType(path, "ElasticOpAmpClient"),
-			"AutoInstrumentation net8.0 zip build should NOT embed ElasticOpAmpClient (it lives in a separate assembly for ALC)");
+			"AutoInstrumentation net10.0 zip build should NOT embed ElasticOpAmpClient (it lives in a separate assembly for ALC)");
 	}
 
 	// ── AutoInstrumentation — Zip + net462 ────────────────────────────────
@@ -72,48 +72,48 @@ public class AssemblyTypeInspectionTests(BuildArtifactsFixture fixture, ITestOut
 			"AutoInstrumentation net462 zip build should NOT contain OpAmpIsolatedLoadContext (no ALC on .NET Framework)");
 	}
 
-	// ── Elastic.OpenTelemetry — NuGet net8.0 ──────────────────────────────
+	// ── Elastic.OpenTelemetry — NuGet net10.0 ──────────────────────────────
 
 	[SkipOnCiFact("BuildArtifactsFixture times out on CI; needs investigation.")]
-	public void ElasticOpenTelemetry_Net80_ContainsElasticOpAmpClient()
+	public void ElasticOpenTelemetry_Net100_ContainsElasticOpAmpClient()
 	{
 		AssertFixtureReady();
-		var path = GetAssemblyPath("Elastic.OpenTelemetry", "release_net8.0");
+		var path = GetAssemblyPath("Elastic.OpenTelemetry", "release_net10.0");
 		output.WriteLine($"Inspecting: {path}");
 		Assert.True(File.Exists(path), $"Assembly not found: {path}");
 		Assert.True(AssemblyHelper.ContainsType(path, "ElasticOpAmpClient"),
-			"Elastic.OpenTelemetry net8.0 should contain ElasticOpAmpClient (source compiled in for NuGet)");
+			"Elastic.OpenTelemetry net10.0 should contain ElasticOpAmpClient (source compiled in for NuGet)");
 	}
 
 	[SkipOnCiFact("BuildArtifactsFixture times out on CI; needs investigation.")]
-	public void ElasticOpenTelemetry_Net80_DoesNotContainIsolatedLoadContext()
+	public void ElasticOpenTelemetry_Net100_DoesNotContainIsolatedLoadContext()
 	{
 		AssertFixtureReady();
-		var path = GetAssemblyPath("Elastic.OpenTelemetry", "release_net8.0");
+		var path = GetAssemblyPath("Elastic.OpenTelemetry", "release_net10.0");
 		output.WriteLine($"Inspecting: {path}");
 		Assert.True(File.Exists(path), $"Assembly not found: {path}");
 		Assert.False(AssemblyHelper.ContainsType(path, "OpAmpIsolatedLoadContext"),
 			"Elastic.OpenTelemetry NuGet package should NOT contain OpAmpIsolatedLoadContext (no ALC isolation for NuGet consumers)");
 	}
 
-	// ── Elastic.OpenTelemetry — NuGet net9.0 ──────────────────────────────
+	// ── Elastic.OpenTelemetry — NuGet net11.0 ──────────────────────────────
 
 	[SkipOnCiFact("BuildArtifactsFixture times out on CI; needs investigation.")]
-	public void ElasticOpenTelemetry_Net90_ContainsElasticOpAmpClient()
+	public void ElasticOpenTelemetry_Net110_ContainsElasticOpAmpClient()
 	{
 		AssertFixtureReady();
-		var path = GetAssemblyPath("Elastic.OpenTelemetry", "release_net9.0");
+		var path = GetAssemblyPath("Elastic.OpenTelemetry", "release_net11.0");
 		output.WriteLine($"Inspecting: {path}");
 		Assert.True(File.Exists(path), $"Assembly not found: {path}");
 		Assert.True(AssemblyHelper.ContainsType(path, "ElasticOpAmpClient"),
-			"Elastic.OpenTelemetry net9.0 should contain ElasticOpAmpClient (source compiled in for NuGet)");
+			"Elastic.OpenTelemetry net11.0 should contain ElasticOpAmpClient (source compiled in for NuGet)");
 	}
 
 	[SkipOnCiFact("BuildArtifactsFixture times out on CI; needs investigation.")]
-	public void ElasticOpenTelemetry_Net90_DoesNotContainIsolatedLoadContext()
+	public void ElasticOpenTelemetry_Net110_DoesNotContainIsolatedLoadContext()
 	{
 		AssertFixtureReady();
-		var path = GetAssemblyPath("Elastic.OpenTelemetry", "release_net9.0");
+		var path = GetAssemblyPath("Elastic.OpenTelemetry", "release_net11.0");
 		output.WriteLine($"Inspecting: {path}");
 		Assert.True(File.Exists(path), $"Assembly not found: {path}");
 		Assert.False(AssemblyHelper.ContainsType(path, "OpAmpIsolatedLoadContext"),
