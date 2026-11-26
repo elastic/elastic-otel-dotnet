@@ -27,6 +27,13 @@ To check for security updates, go to [Security announcements for the Elastic sta
 % ### Fixes [edot-dotnet-X.X.X-fixes]
 % *
 
+## 1.8.0 [edot-dotnet-1.8.0-release-notes]
+
+### Features and enhancements [edot-dotnet-1.8.0-features-enhancements]
+
+- Support .NET 11 targets and drop support for the end-of-life .NET 8 and .NET 9 runtimes. Applications that remain on .NET 8 or .NET 9 lose features such as central configuration (OpAMP) and Native AOT support. Refer to [breaking changes](/release-notes/breaking-changes.md#edot-dotnet-1.8.0-breaking-changes) before upgrading. [#476](https://github.com/elastic/elastic-otel-dotnet/pull/476)
+- Update to latest upstream packages (SDK 1.21.0 and instrumentation 1.20.0). [#476](https://github.com/elastic/elastic-otel-dotnet/pull/476)
+
 ## 1.7.0 [edot-dotnet-1.7.0-release-notes]
 
 ### Features and enhancements [edot-dotnet-1.7.0-features-enhancements]
