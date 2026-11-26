@@ -184,6 +184,7 @@ let private validatePackages _ =
             |> Seq.map (fun p -> Paths.RelativePathToRoot p.FullName)
 
         let args = ["-v"; Software.Version.AsString; "-k"; Software.SignKey; "-t"; output]
+        System.Environment.SetEnvironmentVariable("DOTNET_ROLL_FORWARD", "LatestMajor")
         nugetPackages
         |> Seq.iter (fun p ->
             exec { run "dotnet" (["nupkg-validator"; p] @ args) }
