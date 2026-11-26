@@ -53,13 +53,9 @@ runs:
       shell: bash
       run: |
         dotnet --list-sdks
-        # `dotnet tool restore` restores tools in parallel and can intermittently fail, so retry before failing the job.
-        for attempt in 1 2 3; do
-          dotnet tool restore && break
-          if [ "$attempt" -eq 3 ]; then echo "dotnet tool restore failed after 3 attempts"; exit 1; fi
-          echo "dotnet tool restore failed (attempt ${attempt}), retrying..."
-          sleep 5
-        done
+        # NOTE: tool order in dotnet-tools.json matters (nupkg-validator must stay last).
+        # Works around https://github.com/dotnet/sdk/issues/53783 (cold-cache restore misattributes commands).
+        dotnet tool restore
         AGENT_VERSION=$(dotnet minver -p='canary.0' -v=e)
         echo "Version Number: ${AGENT_VERSION}"
         echo "AGENT_VERSION=${AGENT_VERSION}" >> $GITHUB_ENV
