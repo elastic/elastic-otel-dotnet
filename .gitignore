@@ -403,3 +403,6 @@ FodyWeavers.xsd
 
 # Agents
 .claude/settings.local.json
+
+# Serena
+.serena/
